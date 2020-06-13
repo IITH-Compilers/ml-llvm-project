@@ -70,6 +70,7 @@ static_library("Analysis") {
     "LoopInfo.cpp",
     "LoopPass.cpp",
     "LoopUnrollAnalyzer.cpp",
+    "RDG.cpp",
     "MemDepPrinter.cpp",
     "MemDerefPrinter.cpp",
     "MemoryBuiltins.cpp",
