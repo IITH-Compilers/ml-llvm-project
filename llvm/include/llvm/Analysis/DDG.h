@@ -277,10 +277,13 @@
    /// Return the label that is used to name this graph.
    const StringRef getName() const { return Name; }
  
+   bool hasRoot() const {
+     return Root;
+   }
    /// Return the root node of the graph.
    NodeType &getRoot() const {
-     assert(Root && "Root node is not available yet. Graph construction may "
-                    "still be in progress\n");
+    //  assert(Root && "Root node is not available yet. Graph construction may "
+    //                 "still be in progress\n");
      return *Root;
    }
  

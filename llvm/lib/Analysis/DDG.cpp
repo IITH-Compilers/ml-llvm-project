@@ -51,8 +51,8 @@
        PN->collectInstructions(Pred, TmpIList);
        IList.insert(IList.end(), TmpIList.begin(), TmpIList.end());
      }
-   } else
-     llvm_unreachable("unimplemented type of node");
+   } //else
+    //  llvm_unreachable("unimplemented type of node");
    return !IList.empty();
  }
  
@@ -230,6 +230,7 @@
    // always reachable by the root, because they represent components that are
    // already reachable by root.
    auto *Pi = dyn_cast<PiBlockDDGNode>(&N);
+  //  if (!Pi)
    assert((!Root || Pi) &&
           "Root node is already added. No more nodes can be added.");
  
