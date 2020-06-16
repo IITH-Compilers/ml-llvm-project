@@ -56,7 +56,10 @@
        IMap.insert(std::make_pair(&I, &NewNode));
        NodeOrdinalMap.insert(std::make_pair(&NewNode, getOrdinal(I)));
        ++TotalFineGrainedNodes;
+      //  errs() << getOrdinal(I) << ": " << I << "\n";
      }
+    //  errs() << "TotalGraphs: " << TotalGraphs << "\n";
+    //  errs() << "TotalFineGrainedNodes: " << TotalFineGrainedNodes << "\n";
  }
  
  template <class G>
@@ -76,17 +79,17 @@
    // root node is added to both nodes if B is visited before A. While it does
    // not result in minimal number of edges, this approach saves compile-time
    // while keeping the number of edges in check.
-   errs()<<"createAndConnectRootNode()";
-   createRootNode();
-  //  auto &RootNode = createRootNode();
-  //  df_iterator_default_set<const NodeType *, 4> Visited;
-  //  for (auto *N : Graph) {
-  //    if (*N == RootNode)
-  //      continue;
-  //    for (auto I : depth_first_ext(N, Visited))
-  //      if (I == N)
-  //        createRootedEdge(RootNode, *N);
-  //  }
+   errs()<<"createAndConnectRootNode()" << "\n";
+  //  createRootNode();
+   auto &RootNode = (!Graph.hasRoot())? createRootNode() : Graph.getRoot();
+   df_iterator_default_set<const NodeType *, 4> Visited;
+   for (auto *N : Graph) {
+     if (*N == RootNode)
+       continue;
+     for (auto I : depth_first_ext(N, Visited))
+       if (I == N)
+         createRootedEdge(RootNode, *N);
+   }
  }
  
  template <class G> void AbstractDependenceGraphBuilder<G>::createPiBlocks() {

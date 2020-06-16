@@ -63,8 +63,8 @@
      createMemoryDependencyEdges();
      simplify();
      createAndConnectRootNode();   
-    //  createPiBlocks();
-    //  sortNodesTopologically();
+     createPiBlocks();
+     sortNodesTopologically();
    }
  
    /// Compute ordinal numbers for each instruction and store them in a map for
@@ -163,8 +163,8 @@
  
    /// Given a node \p N return its associated ordinal number.
    size_t getOrdinal(NodeType &N) {
-     assert(NodeOrdinalMap.find(&N) != NodeOrdinalMap.end() &&
-            "No ordinal computed for this node.");
+    //  assert(NodeOrdinalMap.find(&N) != NodeOrdinalMap.end() && ///////////////commented
+            // "No ordinal computed for this node."); /////////////////////commented
      return NodeOrdinalMap[&N];
    }
  
