@@ -56,10 +56,9 @@
        IMap.insert(std::make_pair(&I, &NewNode));
        NodeOrdinalMap.insert(std::make_pair(&NewNode, getOrdinal(I)));
        ++TotalFineGrainedNodes;
-      //  errs() << getOrdinal(I) << ": " << I << "\n";
      }
-    //  errs() << "TotalGraphs: " << TotalGraphs << "\n";
-    //  errs() << "TotalFineGrainedNodes: " << TotalFineGrainedNodes << "\n";
+     errs() << "TotalGraphs: " << TotalGraphs << "\n";
+     errs() << "TotalFineGrainedNodes: " << TotalFineGrainedNodes << "\n";
  }
  
  template <class G>
@@ -79,9 +78,11 @@
    // root node is added to both nodes if B is visited before A. While it does
    // not result in minimal number of edges, this approach saves compile-time
    // while keeping the number of edges in check.
-   errs()<<"createAndConnectRootNode()" << "\n";
-  //  createRootNode();
-   auto &RootNode = (!Graph.hasRoot())? createRootNode() : Graph.getRoot();
+  //  if(Graph.hasRoot()){
+  //    return;
+  //  }
+   auto &RootNode = createRootNode();
+   //(!Graph.hasRoot())? createRootNode() : Graph.getRoot();
    df_iterator_default_set<const NodeType *, 4> Visited;
    for (auto *N : Graph) {
      if (*N == RootNode)
@@ -222,6 +223,7 @@
        }
      }
    }
+   errs() << "TotalPiBlockNodes: " << TotalPiBlockNodes << "\n";
  
    // Ordinal maps are no longer needed.
    InstOrdinalMap.clear();
@@ -234,7 +236,15 @@
    for (NodeType *N : Graph) {
      InstructionListType SrcIList;
      N->collectInstructions([](const Instruction *I) { return true; }, SrcIList);
- 
+
+///////////////////////////////////
+    //  errs() << "SrcIList: ";
+    //  for(InstructionListType::iterator i=SrcIList.begin(), e=SrcIList.end(); i!=e; ++i){
+    //    errs() << **i << "\n";
+    //  }
+    //  errs() << "\n";
+/////////////////////////////////////// 
+
      // Use a set to mark the targets that we link to N, so we don't add
      // duplicate def-use edges when more than one instruction in a target node
      // use results of instructions that are contained in N.
@@ -272,15 +282,18 @@
  
          if (VisitedTargets.insert(DstNode).second) {
            createDefUseEdge(*N, *DstNode);
+          //  errs() << "DU Edge: " << *N << "\t" << *DstNode <<"\n"; ///////////////////////////////
            ++TotalDefUseEdges;
          }
        }
      }
    }
+  //  errs() << "Total DU Edges: " << TotalDefUseEdges << "\n";
  }
  
  template <class G>
  void AbstractDependenceGraphBuilder<G>::createMemoryDependencyEdges() {
+   errs() << "....................enter MD..........................\n";
    using DGIterator = typename G::iterator;
    auto isMemoryAccess = [](const Instruction *I) {
      return I->mayReadOrWriteMemory();
@@ -288,20 +301,45 @@
    for (DGIterator SrcIt = Graph.begin(), E = Graph.end(); SrcIt != E; ++SrcIt) {
      InstructionListType SrcIList;
      (*SrcIt)->collectInstructions(isMemoryAccess, SrcIList);
+     
      if (SrcIList.empty())
        continue;
+
+///////////////////////////////////
+    //  errs() << "SrcIList: ";
+    //  for(InstructionListType::iterator i=SrcIList.begin(), e=SrcIList.end(); i!=e; ++i){
+    //    errs() << **i << "\n";
+    //  }
+    //  errs() << "\n";
+/////////////////////////////////////// 
  
+    //  for (Instruction *ISrc : SrcIList) {
+    //      errs() << "Complete Source List:" << "\n";
+    //      errs() << *ISrc << "\n";
+    //    }
+
      for (DGIterator DstIt = SrcIt; DstIt != E; ++DstIt) {
        if (**SrcIt == **DstIt)
          continue;
        InstructionListType DstIList;
        (*DstIt)->collectInstructions(isMemoryAccess, DstIList);
+
+////////////////////////////////////////////////
+    //  errs() << "DstIList: ";
+    //  for(InstructionListType::iterator i=DstIList.begin(), e=DstIList.end(); i!=e; ++i){
+    //    errs() << **i << "\n";
+    //  }
+////////////////////////////////////////////////
+
        if (DstIList.empty())
          continue;
        bool ForwardEdgeCreated = false;
        bool BackwardEdgeCreated = false;
+      
        for (Instruction *ISrc : SrcIList) {
+        //  errs() << "..........................SrcList: " << *ISrc << "\n";
          for (Instruction *IDst : DstIList) {
+          //  errs() << "DstList: " << *IDst << "\n";
            auto D = DI.depends(ISrc, IDst, true);
            if (!D)
              continue;
@@ -313,8 +351,10 @@
            // represent the possibility of a cycle.
  
            auto createConfusedEdges = [&](NodeType &Src, NodeType &Dst) {
+            //  errs() << "Confuse Edge : \n";
+            //  errs() << *Src << "\n" << * Dst << "\n";
              if (!ForwardEdgeCreated) {
-               createMemoryEdge(Src, Dst);
+               createMemoryEdge(Src, Dst);    
                ++TotalMemoryEdges;
              }
              if (!BackwardEdgeCreated) {
@@ -326,6 +366,8 @@
            };
  
            auto createForwardEdge = [&](NodeType &Src, NodeType &Dst) {
+            //  errs() << "Forward Edge : \n";
+            //  errs() << *Src << "\n" << * Dst << "\n";
              if (!ForwardEdgeCreated) {
                createMemoryEdge(Src, Dst);
                ++TotalMemoryEdges;
@@ -334,6 +376,8 @@
            };
  
            auto createBackwardEdge = [&](NodeType &Src, NodeType &Dst) {
+            //  errs() << "Backward Edge : \n";
+            //  errs() << *Src << "\n" << * Dst << "\n";
              if (!BackwardEdgeCreated) {
                createMemoryEdge(Dst, Src);
                ++TotalMemoryEdges;
@@ -341,15 +385,20 @@
              BackwardEdgeCreated = true;
            };
  
-           if (D->isConfused())
+           if (D->isConfused()){
              createConfusedEdges(**SrcIt, **DstIt);
+            //  errs() << "ConfusedEdge \n";///////////////
+           }
            else if (D->isOrdered() && !D->isLoopIndependent()) {
              bool ReversedEdge = false;
+            //  errs() << "$$$$$$$$$$$$$$$$$$$$ dependence $$$$$$$$$$$";
              for (unsigned Level = 1; Level <= D->getLevels(); ++Level) {
+              //  errs() << "getLevels: " << D->getLevels() << "\n";
                if (D->getDirection(Level) == Dependence::DVEntry::EQ)
                  continue;
                else if (D->getDirection(Level) == Dependence::DVEntry::GT) {
                  createBackwardEdge(**SrcIt, **DstIt);
+                //  errs() << "BackwardEdge: " << **SrcIt << "\t" << **DstIt;//////////////////////
                  ReversedEdge = true;
                  ++TotalEdgeReversals;
                  break;
@@ -357,13 +406,17 @@
                  break;
                else {
                  createConfusedEdges(**SrcIt, **DstIt);
+                //  errs() << "ConfusedEdge: " << **SrcIt <<"\t" << **DstIt;////////////////////////
                  break;
                }
              }
              if (!ReversedEdge)
                createForwardEdge(**SrcIt, **DstIt);
-           } else
+              //  errs() << "ForwardEdge: " << **SrcIt << "\t" << **DstIt;////////////////////
+           } else{
              createForwardEdge(**SrcIt, **DstIt);
+            //  errs() << "ForwardEdge creaed \n" ;
+           }
  
            // Avoid creating duplicate edges.
            if (ForwardEdgeCreated && BackwardEdgeCreated)
@@ -376,8 +429,16 @@
          if (ForwardEdgeCreated && BackwardEdgeCreated)
            break;
        }
+///////////////////////////////////
+    //  errs() << "DstIList: ";
+    //  for(InstructionListType::iterator i=DstIList.begin(), e=DstIList.end(); i!=e; ++i){
+    //    errs() << **i << "\n";
+    //  }
+    //  errs() << "\n";
+/////////////////////////////////////// 
      }
    }
+   errs() << ".......................exit MD..........................\n";
  }
  
  template <class G> void AbstractDependenceGraphBuilder<G>::simplify() {
@@ -409,6 +470,8 @@
      TargetInDegreeMap.insert({&Edge.getTargetNode(), 0});
    }
  
+ errs()<<"Size of candidate src node list:" << CandidateSourceNodes.size()
+            << "\nNode with single outgoing def-use edge:\n";
    LLVM_DEBUG({
      dbgs() << "Size of candidate src node list:" << CandidateSourceNodes.size()
             << "\nNode with single outgoing def-use edge:\n";
@@ -426,6 +489,8 @@
      }
    }
  
+ errs()<<"Size of target in-degree map:" << TargetInDegreeMap.size()
+            << "\nContent of in-degree map:\n";
    LLVM_DEBUG({
      dbgs() << "Size of target in-degree map:" << TargetInDegreeMap.size()
             << "\nContent of in-degree map:\n";
@@ -442,7 +507,7 @@
      // the candidate set (see below).
      if (!CandidateSourceNodes.erase(&Src))
        continue;
- 
+//  errs()<<"node erased\n";
      assert(Src.getEdges().size() == 1 &&
             "Expected a single edge from the candidate src node.");
      NodeType &Tgt = Src.back().getTargetNode();
@@ -485,7 +550,6 @@
  
  template <class G>
  void AbstractDependenceGraphBuilder<G>::sortNodesTopologically() {
- 
    // If we don't create pi-blocks, then we may not have a DAG.
    if (!shouldCreatePiBlocks())
      return;
