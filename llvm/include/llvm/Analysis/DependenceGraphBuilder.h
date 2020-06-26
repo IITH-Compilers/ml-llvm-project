@@ -60,7 +60,7 @@
      computeInstructionOrdinals();
      createFineGrainedNodes();
      createDefUseEdges();
-     createMemoryDependencyEdges();
+    //  createMemoryDependencyEdges();
      simplify();
      createAndConnectRootNode();   
      createPiBlocks();
