@@ -34,6 +34,7 @@ class RDGWrapperPass : public FunctionPass{
 
 	void getAnalysisUsage(AnalysisUsage &AU) const override;
 
+<<<<<<< HEAD
 	void PrintDotFile_DI(DataDependenceGraph &G, std::string Filename);
 
 	void PrintDotFile_LAI(DataDependenceGraph &G, std::string Filename, SmallVector<int64_t, 8> DependenceDistances);
@@ -41,6 +42,13 @@ class RDGWrapperPass : public FunctionPass{
 	void BuildRDG_DI(DataDependenceGraph &G);
 	
 	const SmallVector<int64_t, 8> BuildRDG_LAI(DataDependenceGraph &G, DependenceInfo &DI, const LoopAccessInfo &LAI);
+=======
+	void PrintDotFile(DataDependenceGraph &G, std::string Filename);
+
+	void BuildRDG_DI(DataDependenceGraph &G);
+	
+	void BuildRDG_LAI(DataDependenceGraph &G, DependenceInfo &DI, const LoopAccessInfo &LAI);
+>>>>>>> a99dbe28be90f702c5e8d7db6cc8009b0fe78af2
 
 	// std::vector<std::string> getNodeInstructionList(){
 	// 	return nodeData;
