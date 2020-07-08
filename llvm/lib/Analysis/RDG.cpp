@@ -40,7 +40,7 @@ INITIALIZE_PASS_BEGIN(RDGWrapperPass, "RDG", "Build ReducedDependenceGraph", tru
 // INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_END(RDGWrapperPass, "RDG", "Build ReducedDependenceGraph", true, true)
 
-void RDGWrapperPass::PrintDotFile(DataDependenceGraph &G, std::string Filename){
+void RDGWrapperPass::PrintDotFile_DI(DataDependenceGraph &G, std::string Filename){
 	// Code to generate DOT File to store RDG
 
 	std::error_code EC;
@@ -96,10 +96,75 @@ void RDGWrapperPass::PrintDotFile(DataDependenceGraph &G, std::string Filename){
 	}
 }
 
+void RDGWrapperPass::PrintDotFile_LAI(DataDependenceGraph &G, std::string Filename, SmallVector<int64_t, 8> DependenceDistances){
+	// Code to generate DOT File to store RDG
+	std::error_code EC;
+	raw_fd_ostream File (Filename.c_str(), EC, sys::fs::F_Text);
+	int x = 0;
+	int md = 0;
+
+	if(!EC){
+		File << "digraph G {\n";
+		for(auto *N : G){
+			x++;
+			InstructionListType IList;
+			N->collectInstructions([] (const Instruction *I) {return true;}, IList);
+			std::string str = "";
+			int tmp = 0;
+			for(Instruction *II : IList){
+				tmp++;;
+				std::string s;
+				llvm::raw_string_ostream(s) << *II;
+				if(tmp>1){
+					str = str + "\n";
+				}
+				str = str + s;
+			}
+
+			File << x << " [label=\"" << str << "\"];\n";
+			
+			NodeNumber.insert(std::make_pair(N, x));
+		}
+			
+		for(auto *N : G){
+			for (auto &E : N->getEdges()){
+				int64_t distance;
+				if((*E).isMemoryDependence()){
+					int tmp = 1;
+					md++;
+					for(auto dd : DependenceDistances){
+						if(tmp == md){
+							distance = dd;
+						}
+						tmp++;
+					}
+					File << NodeNumber.find(N)->second << " -> " 
+						<< NodeNumber.find(&E->getTargetNode())->second 
+						<<"[label=\"  " << (*E).getKind() << ": " << distance << "\"];\n";
+				} else {
+					File << NodeNumber.find(N)->second << " -> " 
+						<< NodeNumber.find(&E->getTargetNode())->second 
+						<<"[label=\"  " << (*E).getKind() << "\"];\n";
+				}
+			}
+		}
+		File << "}";
+	}
+	else{
+		errs() << "error opening file for writing! \n";
+	}
+}
+
 void RDGWrapperPass::BuildRDG_DI(DataDependenceGraph &G){}
 
-void RDGWrapperPass::BuildRDG_LAI(DataDependenceGraph &G, DependenceInfo &DI, const LoopAccessInfo &LAI){
+const SmallVector<int64_t, 8> RDGWrapperPass::BuildRDG_LAI(DataDependenceGraph &G, DependenceInfo &DI, const LoopAccessInfo &LAI){
 	const auto alldependences = LAI.getDepChecker().getDependences();
+	const auto alldependencedistances = LAI.getDepChecker().getDependenceDistance();
+	const SmallVector<int64_t, 8> DependenceDistances = LAI.getDepChecker().getDDist();
+
+	for(auto dd : *alldependencedistances){
+		errs() << "dd: " << &dd << "\n";
+	}
 		
 	if(alldependences == nullptr){
 		errs() << "######################\n";
@@ -111,9 +176,25 @@ void RDGWrapperPass::BuildRDG_LAI(DataDependenceGraph &G, DependenceInfo &DI, co
 	errs() << "+++++++++++++++++++++++++++++ " << alldependences->size() << "\n";
 
 	bool ControlDependence = false;
+	int x = 1;
 	for(auto dep : *alldependences){
 		errs() << "$$$$$$$$$$$$$$$$$$$$$\n";
+		int tmp = 1;
+		for(auto i : DependenceDistances){
+			if(x == tmp){
+				errs() << "#######Distance: " << i << "\n";
+			}
+			tmp++;
+		}
+		x++;
+
 		// errs() << "dep: " << &dep << "\n";
+		// if(alldependencedistances->find(&dep)->second)
+		// {
+		// 	errs() << "#######################\n";
+		// }
+		// errs() << "DDfirst :" << alldependencedistances->find(&dep)->first << "\n";
+		// errs() << "DD: " << alldependencedistances->find(&dep)->second << "\n";
 		Instruction *Src, *Dst;
 		if(dep.Type == MemoryDepChecker::Dependence::DepType::Forward ||
 			dep.Type == MemoryDepChecker::Dependence::DepType::ForwardButPreventsForwarding){
@@ -187,6 +268,7 @@ void RDGWrapperPass::BuildRDG_LAI(DataDependenceGraph &G, DependenceInfo &DI, co
 			errs() << "DstNodeList: " << *DstIt << "\n";
 		}
 	}
+	return DependenceDistances;
 }
 
 bool RDGWrapperPass::runOnFunction(Function &F){
@@ -218,7 +300,7 @@ bool RDGWrapperPass::runOnFunction(Function &F){
 
 		const LoopAccessInfo &LAI = LAA->getInfo(L);
 
-		BuildRDG_LAI(G1, DI, LAI);
+		auto DDist = BuildRDG_LAI(G1, DI, LAI);
 
 			// for(DGIterator SrcIt = G.begin(), eIt = G.end(); SrcIt!=eIt; ++SrcIt){
 			// 	InstructionListType SrcList;
@@ -233,12 +315,12 @@ bool RDGWrapperPass::runOnFunction(Function &F){
 		std::string Filename1 = "DDG_" + F.getName().str() + "_Loop" + std::to_string(loopNum) + ".dot";
 		errs() << "Writing " + Filename1 + "\n";
 
-		PrintDotFile(G, Filename1);
+		PrintDotFile_DI(G, Filename1);
 
 		std::string Filename2 = "DDG_New_" + F.getName().str() + "_Loop" + std::to_string(loopNum) + ".dot";
 		errs() << "Writing " + Filename2 + "\n";
 
-		PrintDotFile(G1, Filename2);
+		PrintDotFile_LAI(G1, Filename2, DDist);
 	}
 	return false;
 

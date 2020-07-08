@@ -231,6 +231,15 @@ public:
     return RecordDependences ? &Dependences : nullptr;
   }
 
+  using DepDist = DenseMap<Dependence *, int64_t>;
+  const DepDist *getDependenceDistance() const {
+    return &DependenceDistance;
+  }
+
+  const SmallVector<int64_t, 8> getDDist() const {
+    return DDist;
+  }
+
   void clearDependences() { Dependences.clear(); }
 
   /// The vector of memory access instructions.  The indices are used as
@@ -299,6 +308,21 @@ private:
   /// Memory dependences collected during the analysis.  Only valid if
   /// RecordDependences is true.
   SmallVector<Dependence, 8> Dependences;
+
+  ////////////////////////////////////////////////////////////////////////////
+  // add variable "Distance" to return dependence distance between two memmory accesses //
+  ////////////////////////////////////////////////////////////////////////////
+  int64_t dist;
+  // using DepDist = DenseMap<Dependence *, int64_t>;
+  DepDist DependenceDistance; 
+  SmallVector<int64_t, 8> DDist;
+/////////////////////////////////////////////////////
+  // add Function "isDep
+  ///////////////////////endent" to return dependence distance between two memmory accesses //
+  ////////////////////////////////////////////////////////////////////////////
+  // Dependence::DepType isDependent(const MemAccessInfo &A, unsigned AIdx,
+  //                                 const MemAccessInfo &B, unsigned BIdx,
+  //                                 const ValueToValueMap &Strides, int64_t Distance);
 
   /// Check whether there is a plausible dependence between the two
   /// accesses.
