@@ -1,3 +1,9 @@
+#IR2Vec-Engine 
+- While cloning this repo use `-recursive` flag so as to get IR2Vec-Engine submodule
+- If missed, use `git submodule update --init --recursive` after git clone
+- To pull and track the remote IR2Vec-Engine repo, use `git submodule update --remote --merge`
+
+
 # The LLVM Compiler Infrastructure
 
 This directory and its subdirectories contain source code for LLVM,
