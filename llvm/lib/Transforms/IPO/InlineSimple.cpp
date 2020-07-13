@@ -24,10 +24,16 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/Inliner.h"
+#include "llvm/IR/Dominators.h"
+#include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "inline"
+
+static cl::opt<bool> EnableLoopInlining
+    ("enable-loop-inline", cl::init(false), cl::Hidden);
 
 namespace {
 
@@ -69,6 +75,44 @@ public:
         [&](Function &F) -> AssumptionCache & {
       return ACT->getAssumptionCache(F);
     };
+
+    if (EnableLoopInlining) {
+      Function *CallFn = CS.getInstruction()->getParent()->getParent();
+      if (CallFn) {
+        const DominatorTree DT(*CallFn);
+        LoopInfo LI(DT);
+        if (isa<CallInst>(CS.getInstruction())) {
+          Loop *L = LI.getLoopFor(CS.getInstruction()->getParent());
+          if (L && isInlineViable(*Callee)) {
+            // Rule#1: Inline all the callsite inside the innermost loop
+            if (L->empty()) {
+              LLVM_DEBUG(dbgs() << "IITH: Inlined call in innermost loop\n");
+              LLVM_DEBUG(dbgs() << "Caller : " << CallFn->getName() << "\n");
+              LLVM_DEBUG(dbgs() << "Callee : " << Callee->getName() << "\n\n");
+              return llvm::InlineCost::
+                          getAlways("IITH: Inlined call in innermost loop");
+            } else {
+            //Rule#2: Inline the callsites in the loop if there is an innmost loop adjacent to it
+              bool EmptySubloop = false;
+              for (auto SubLoop : L->getSubLoops()) {
+                if (SubLoop->empty()) {
+                  EmptySubloop = true;
+                  break;
+                }
+              }
+              if (EmptySubloop) {
+                LLVM_DEBUG(dbgs() << "IITH: Inlined call in non-inner-most loop\n");
+                LLVM_DEBUG(dbgs() << "Caller : " << CallFn->getName() << "\n");
+                LLVM_DEBUG(dbgs() << "Callee : " << Callee->getName() << "\n\n");
+                return llvm::InlineCost::
+                            getAlways("IITH: Inlined call in non-inner-most loop");
+              }
+            }
+          }
+        }
+      }
+    }
+
     return llvm::getInlineCost(
         cast<CallBase>(*CS.getInstruction()), Params, TTI, GetAssumptionCache,
         /*GetBFI=*/None, PSI, RemarksEnabled ? &ORE : nullptr);
