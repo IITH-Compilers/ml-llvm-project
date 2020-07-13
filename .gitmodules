@@ -1,0 +1,3 @@
+[submodule "IR2Vec-Engine"]
+	path = IR2Vec-Engine
+	url = https://github.com/svkeerthy/IR2Vec-Engine.git
