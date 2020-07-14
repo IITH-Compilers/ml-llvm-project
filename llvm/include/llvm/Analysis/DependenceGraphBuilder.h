@@ -61,7 +61,8 @@
      createFineGrainedNodes();
      createDefUseEdges();
     //  createMemoryDependencyEdges();
-     simplify();
+    //  simplify();
+     simplify_Inst();
      createAndConnectRootNode();   
      createPiBlocks();
      sortNodesTopologically();
@@ -104,6 +105,9 @@
    ///   - all instructions in 'a' and 'b' belong to the same basic block and
    ///   - both 'a' and 'b' are simple (single or multi instruction) nodes.
    void simplify();
+
+   void simplify_Inst();
+   void NodeMergeRecursion(NodeType &SI, Instruction &II);
  
    /// Topologically sort the graph nodes.
    void sortNodesTopologically();

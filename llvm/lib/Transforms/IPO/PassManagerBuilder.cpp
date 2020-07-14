@@ -648,6 +648,7 @@ void PassManagerBuilder::populateModulePassManager(
   if (RunInliner) {
     MPM.add(createGlobalOptimizerPass());
     MPM.add(createGlobalDCEPass());
+    MPM.add(createLoopFusePass());
   }
 
   // If we are planning to perform ThinLTO later, let's not bloat the code with
@@ -951,6 +952,9 @@ void PassManagerBuilder::addLTOOptimizationPasses(legacy::PassManagerBase &PM) {
   // link-time inlining, and visibility of nocapture attribute.
   if (OptLevel > 1)
     PM.add(createTailCallEliminationPass());
+
+  if (RunInliner)
+    PM.add(createLoopFusePass());
 
   // Infer attributes on declarations, call sites, arguments, etc.
   PM.add(createPostOrderFunctionAttrsLegacyPass()); // Add nocapture.

@@ -145,6 +145,18 @@
             N->getKind() == NodeKind::MultiInstruction;
    }
    static bool classof(const SimpleDDGNode *N) { return true; }
+
+   ///////////////////////////////////////////////////////////////////////////
+   //added to support Store Node
+   //////////////////////////////////////////////////////////////////////////
+   void appendInstructionsStoreNode(const InstructionListType &Input){
+     InstList.insert(InstList.end(), Input.begin(), Input.end());
+   }
+
+   void appendInstructionsStoreNode(const SimpleDDGNode &Input){
+     appendInstructionsStoreNode(Input.getInstructions());
+   }
+   ///////////////////////////////////////////////////////////////////////////////
  
  private:
    /// Append the list of instructions in \p Input to this node.
@@ -478,7 +490,7 @@
    static DDGNode *DDGGetTargetNode(DGEdge<DDGNode, DDGEdge> *P) {
      return &P->getTargetNode();
    }
- 
+
    // Provide a mapped iterator so that the GraphTrait-based implementations can
    // find the target nodes without having to explicitly go through the edges.
    using ChildIteratorType =

@@ -1465,10 +1465,10 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   const SCEV *Src = PSE.getSCEV(APtr);
   const SCEV *Sink = PSE.getSCEV(BPtr);
 
-  errs() << "src: " << *dyn_cast<Instruction>(APtr) << "\n";
-  errs() << "Sink: " << *dyn_cast<Instruction>(BPtr) << "\n";
-  errs() << "src: " << Src << "\n";
-  errs() << "Sink: " << Sink << "\n";
+  // errs() << "src: " << *dyn_cast<Instruction>(APtr) << "\n";
+  // errs() << "Sink: " << *dyn_cast<Instruction>(BPtr) << "\n";
+  // errs() << "src: " << Src << "\n";
+  // errs() << "Sink: " << Sink << "\n";
 
   // If the induction step is negative we have to invert source and sink of the
   // dependence.
@@ -1481,7 +1481,7 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   }
 
   const SCEV *Dist = PSE.getSE()->getMinusSCEV(Sink, Src);
-  errs() << "SCEV *Dist: " << *Dist << "\n";
+  // errs() << "SCEV *Dist: " << *Dist << "\n";
 
   LLVM_DEBUG(dbgs() << "LAA: Src Scev: " << *Src << "Sink Scev: " << *Sink
                     << "(Induction step: " << StrideAPtr << ")\n");
@@ -1516,7 +1516,7 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
 
   const APInt &Val = C->getAPInt();
   int64_t Distance = Val.getSExtValue();
-  errs() << "Distance: " << Distance << "\n"; ///////////////////////////////////////
+  // errs() << "Distance: " << Distance << "\n"; ///////////////////////////////////////
   dist = Distance;
 
   // Attempt to prove strided accesses independent.
@@ -1697,17 +1697,17 @@ bool MemoryDepChecker::areDepsSafe(DepCandidates &AccessSets,
               if (Type != Dependence::NoDep){
                 
                 Dependences.push_back(Dependence(A.second, B.second, Type));
-                errs() << "New distance: " << dist << "\n";
+                // errs() << "New distance: " << dist << "\n";
                 int s = Dependences.size();
                 int tmp = 1;
 
                 // std::string currentDependence = "";
                 DDist.push_back(dist);
-                for(auto i: DDist){
-                  errs() << "DDist: " << i<< "  ";
-                }
+                // for(auto i: DDist){
+                //   errs() << "DDist: " << i<< "  ";
+                // }
 
-                errs()<< "Dependences: " << A.first << "  "<< A.second << "  " << B.first << "  "<< B.second << "  " << Type << "\n";
+                // errs()<< "Dependences: " << A.first << "  "<< A.second << "  " << B.first << "  "<< B.second << "  " << Type << "\n";
 
                 // auto i = Dependences.begin();
                 // // Dependence *curr_dependence = Dependence(A.second, B.second, Type);
