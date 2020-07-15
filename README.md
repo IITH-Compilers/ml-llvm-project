@@ -1,7 +1,7 @@
-# IR2Vec-Engine 
-- While cloning this repo use `-recursive` flag so as to get IR2Vec-Engine submodule
-- If missed, use `git submodule update --init --recursive` after git clone
-- To pull and track the remote IR2Vec-Engine repo, use `git submodule update --remote --merge`
+# IR2Vec-Engine -- Added as subtree
+- Added using: `git subtree add --prefix IR2Vec-Engine https://github.com/svkeerthy/IR2Vec-Engine.git master --squash`
+- To pull from `IR2Vec-Engine`: `git subtree pull --prefix IR2Vec-Engine https://github.com/svkeerthy/IR2Vec-Engine.git master --squash`
+- To push to `IR2Vec-Engine`: `git subtree push IR2Vec-Engine https://github.com/svkeerthy/IR2Vec-Engine.git master`
 
 
 # The LLVM Compiler Infrastructure
