@@ -1,0 +1,44 @@
+name: Build
+
+on:
+  push:
+    branches: [ master ]
+    paths-ignore:
+    - '.github/workflows/**'
+    - 'README.md'
+    - 'IR2Vec-Binaries'
+    - 'Vocabulary'
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Install LLVM10
+      run: wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add - && sudo apt-add-repository "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-10 main" && sudo apt-get update && sudo apt-get install -y llvm-10 llvm-10-dev clang-10 llvm-10-tools
+    - uses: actions/checkout@v2
+    - name: cmake 
+      run: cmake IR2Vec/
+    - name: make
+      run: make IR2Vec-RD
+    - name: moving .so to binaries directory
+      run: mkdir -p IR2Vec-Binaries && mv libIR2Vec-RD.so IR2Vec-Binaries/
+    - name: Commit files
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add IR2Vec-Binaries/
+        git commit -m "Pushing binary for $(git rev-parse HEAD)"
+    - name: Push changes
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+    - name: Repository Dispatch
+      run: |
+          curl -X POST https://api.github.com/repos/svkeerthy/IR2Vec-Engine/dispatches \
+          -H 'Accept: application/vnd.github.everest-preview+json' \
+          -u ${{ secrets.REPO_ACCESS_TOKEN }} \
+          --data '{"event_type": "Test", "client_payload": { "repository": "'"$GITHUB_REPOSITORY"'" }}'
