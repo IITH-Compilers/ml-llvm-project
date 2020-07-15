@@ -17,35 +17,6 @@ using namespace llvm;
 
 #define DIM 300
 
-static cl::opt<std::string> fname("file", cl::Hidden, cl::Required,
-                                  cl::desc("Use embeddings from file path"));
-
-static cl::opt<std::string> ofname("of", cl::Hidden, cl::Required,
-                                   cl::desc("output file path"));
-
-static cl::opt<unsigned int>
-    bprob("bpi", cl::Hidden, cl::Required,
-          cl::desc("consider branch probability information"));
-
-static cl::opt<char>
-    level("level", cl::Hidden, cl::Required,
-          cl::desc("Level of encoding - p=Program; f=Function"));
-
-static cl::opt<int> cls("class", cl::Hidden, cl::Optional, cl::init(-1),
-                        cl::desc("class information"));
-
-static cl::opt<char>
-    c2v("c2v", cl::Hidden, cl::Optional, cl::init('n'),
-        cl::desc("To enable the special function embedding in c2v format"));
-
-static cl::opt<float> WO("wo", cl::Hidden, cl::Optional, cl::init(1),
-                         cl::desc("Weight of Opcode"));
-
-static cl::opt<float> WA("wa", cl::Hidden, cl::Optional, cl::init(0.2),
-                         cl::desc("Weight of arguments"));
-
-static cl::opt<float> WT("wt", cl::Hidden, cl::Optional, cl::init(0.5),
-                         cl::desc("Weight of types"));
 
 class IR2Vec_RD : public ModulePass {
 
@@ -117,11 +88,25 @@ private:
   void print(SmallVector<double, DIM> t, unsigned pos) { dbgs() << t[pos]; }
   void print(SmallVector<double, DIM> vec);
 
+  std::string fname, ofname;
+  unsigned int bprob;
+  char level, c2v;
+  int cls;
+  float WO, WA, WT;
 public:
   static char ID;
   SmallVector<double, DIM> pgmVector;
 
-  IR2Vec_RD() : ModulePass(ID) {
+  IR2Vec_RD() : ModulePass(ID){}
+
+  IR2Vec_RD* setConfig(std::string fname, std::string ofname, unsigned int bprob, char level, int cls, char c2v, float WO, float WT, float WA) {
+    this->fname = fname;
+    this->ofname = ofname;
+    this->bprob = bprob;
+    this->level = level;
+    this->cls = cls;
+    this->c2v = c2v;
+    this->WO = WO; this->WA = WA; this->WT = WT;
     res = "";
     o.open(ofname, std::ios_base::app);
 
@@ -139,9 +124,10 @@ public:
     cyclicCounter = 0;
     missCount.open("missCount_" + ofname, std::ios_base::app);
     cyclicCount.open("cyclicCount_" + ofname, std::ios_base::app);
+    return this;
   }
-
-  bool runOnModule(Module &F);
+  bool runOnModule(Module &M){return false;}
+  bool computeVectors(Module &F);
   void getAnalysisUsage(AnalysisUsage &AU) const;
   std::map<std::string, SmallVector<double, DIM>> opcMap;
 

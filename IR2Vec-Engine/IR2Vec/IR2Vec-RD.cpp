@@ -317,7 +317,7 @@ std::string IR2Vec_RD::splitAndPipeFunctionName(std::string s) {
   return std::regex_replace(outString, sp, "");
 }
 
-bool IR2Vec_RD::runOnModule(Module &M) {
+bool IR2Vec_RD::computeVectors(Module &M) {
   collectData();
   initializeVectors();
   collectWriteDefsMap(M);
