@@ -267,9 +267,14 @@
    /// Return true if this is an edge stemming from the root node, and false
    /// otherwise.
    bool isRooted() const { return Kind == EdgeKind::Rooted; }
+
+   void insertWeight(int weight) { EdgeWeight = weight; }
+
+   int getEdgeWeight() { return EdgeWeight; }
  
  private:
    EdgeKind Kind;
+   int EdgeWeight;
  };
  
  /// Encapsulate some common data and functionality needed for different
@@ -398,6 +403,16 @@
      Graph.connect(Src, Tgt, *E);
      return *E;
    }
+
+   // Append edge weight to given edge
+   DDGEdge &createMemoryWeightedEdge(DDGNode &Src, DDGNode &Tgt, int Weight) {
+     auto *E = new DDGEdge(Tgt, DDGEdge::EdgeKind::MemoryDependence);
+     assert(E && "Failed to allocate memory for edge");
+     E->insertWeight(Weight);
+     Graph.connect(Src, Tgt, *E);
+     return *E;
+   }
+
    DDGEdge &createRootedEdge(DDGNode &Src, DDGNode &Tgt) final override {
      auto *E = new DDGEdge(Tgt, DDGEdge::EdgeKind::Rooted);
      assert(E && "Failed to allocate memory for edge");

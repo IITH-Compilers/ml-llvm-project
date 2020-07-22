@@ -207,13 +207,14 @@
    LoopBlocksDFS DFS(&L);
    DFS.perform(&LI);
    BasicBlockListType BBList;
+  //  auto latch = L.getLoopLatch();
    for (BasicBlock *BB : make_range(DFS.beginRPO(), DFS.endRPO())){
-     if(BB->getName() == "for.body"){
-       BBList.push_back(BB);
-      //  errs() << "This is correct" << "\n";
-     }
+    //  if(BB != latch){
+    //   BBList.push_back(BB);
+    //   //  errs() << "This is correct" << "\n";
+    //  }
     //  errs() << "BBBBBBBBBBB: " << BB->getName() << "\n";
-    //  BBList.push_back(BB);
+     BBList.push_back(BB);
    }
    DDGBuilder(*this, D, BBList).populate();
  }

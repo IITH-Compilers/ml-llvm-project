@@ -36,7 +36,7 @@
  //===--------------------------------------------------------------------===//
  // AbstractDependenceGraphBuilder implementation
  //===--------------------------------------------------------------------===//
- 
+  
  template <class G>
  void AbstractDependenceGraphBuilder<G>::computeInstructionOrdinals() {
    // The BBList is expected to be in program order.
@@ -580,30 +580,17 @@ LLVM_DEBUG({
  template class llvm::DependenceGraphInfo<DDGNode>;
 
  template <class G> void AbstractDependenceGraphBuilder<G>::NodeMergeRecursion(NodeType &SI, Instruction &II) {
-  using NodeKind = typename NodeType::NodeKind;
-  using EdgeKind = typename EdgeType::EdgeKind;
+    using NodeKind = typename NodeType::NodeKind;
+    using EdgeKind = typename EdgeType::EdgeKind;
 
-  SmallPtrSet<NodeType *, 32> NodeDeletionList;
+    SmallPtrSet<NodeType *, 32> NodeDeletionList;
 
-  SmallVector<EdgeType *, 10> EL;
-  for(NodeType *N : Graph){
-    for(EdgeType *e : *N){
-      EL.push_back(e);
+    SmallVector<EdgeType *, 10> EL;
+    for(NodeType *N : Graph){
+      for(EdgeType *e : *N){
+        EL.push_back(e);
+      }
     }
-  }
-
-  // for(EdgeType *el : EL){
-  //   errs() << "eeeeeeeeeeeeeelllllllllllllllllllllll: " << *el << "\n";
-  // }
-  
-  // for(NodeType *N : Graph){
-  //   errs() << *N << "\n";
-  //   errs() << "number of edges: " << N->getEdges().size() << "\n";        //outgoing edges
-  //   if (N->getKind() == NodeKind::PiBlock)
-  //     continue;
-  //   errs() << "Target Node: " << N->back() << "\n";
-  //   errs() << "Source Node: " << N->front() << "\n";
-  // }
 
    for(auto i = II.op_begin(), e = II.op_end(); i != e; ++i){
       // errs() << "Merging:" << II << "\nand:" << **i << "\n";
@@ -710,147 +697,17 @@ LLVM_DEBUG({
     }
 
     for(NodeType *SI : StoreInstList){
-      // for(auto iter = user.begin(); iter != user.end(); ++iter){
         InstructionListType InstList;
         SI->collectInstructions([](const Instruction *I) { return true; }, InstList);
 
         for(Instruction *II : InstList){
-          // for (Use &U : II->operands()) {
-          //   Value *v = U.get();
-          //   errs() << "value: " << *v << "\n";
-          // }
-          // errs() << "Number of oprands: " << II->getNumOperands() << "\n";
-
           NodeMergeRecursion(*SI, *II);
-
-          // for(auto i = II->op_begin(), e = II->op_end(); i != e; ++i){
-          //   errs() << "ooooooooooooooooooperand: " << i << " : " << *i << " : " << **i << "\n";
-          //   errs() << "Merging:" << *II << "\nand:" << **i << "\n";
-          //   Instruction *OP = dyn_cast<Instruction>(&(**i));
-          //   if(IMap.find(OP) != IMap.end()){
-          //     // errs() << "IMap1: " << *IMap.find(OP)->second << "\n";
-          //     cast<SimpleDDGNode>(SI)->appendInstructionsStoreNode(*cast<SimpleDDGNode>(IMap.find(OP)->second));
-          //   }
-          // }
-          
-          // errs() << "oprand: " << *II->getOperand(0) << " : " << *II->getOperand(1) << "\n";
-          // errs() << "Merging:" << *II->getOperand(0) << "\nand:" << *II->getOperand(1) << "\n";
-          // Instruction *OP1 = dyn_cast<Instruction>(&(*II->getOperand(0)));
-          // Instruction *OP2 = dyn_cast<Instruction>(&(*II->getOperand(1)));
-          // if(IMap.find(OP1) != IMap.end()){
-          //   errs() << "IMap1: " << *IMap.find(OP1)->second << "\n";
-          //   cast<SimpleDDGNode>(SI)->appendInstructionsStoreNode(*cast<SimpleDDGNode>(IMap.find(OP1)->second));
-          // }
-          // if(IMap.find(OP2) != IMap.end()){
-          //   errs() << "IMap2: " << *IMap.find(OP2)->second << "\n";
-          //   cast<SimpleDDGNode>(SI)->appendInstructionsStoreNode(*cast<SimpleDDGNode>(IMap.find(OP2)->second));
-          // }
         }
-      // errs() << "list: " << *SI << "\n";
     }
 
     for(NodeType *SI : StoreInstList) {
       InstructionListType InstList;
       SI->collectInstructions([](const Instruction *I) { return true; }, InstList);
-
-      for(Instruction *II : InstList){
-        errs() << "New Node: " << *II << "\n";
-      }
-      errs() << "\n";
     }
-
-    errs() << "after sort: \n";
-
-    
-
-
-// for (NodeType *N : Graph) {
-//   if (N->getEdges().size() != 1)
-//     continue;
-//   EdgeType &Edge = N->back();
-//   if (!Edge.isDefUse())
-//     continue;
-//   CandidateSourceNodes.insert(N);
-
-//   // Insert an element into the in-degree map and initialize to zero. The
-//   // count will get updated in the next step.
-//   TargetInDegreeMap.insert({&Edge.getTargetNode(), 0});
-// }
-
-// errs()<<"Size of candidate src node list:" << CandidateSourceNodes.size()
-//         << "\nNode with single outgoing def-use edge:\n";
-// LLVM_DEBUG({
-//   dbgs() << "Size of candidate src node list:" << CandidateSourceNodes.size()
-//         << "\nNode with single outgoing def-use edge:\n";
-//   for (NodeType *N : CandidateSourceNodes) {
-//     dbgs() << N << "\n";
-//   }
-// });
-
-// for (NodeType *N : Graph) {
-//   for (EdgeType *E : *N) {
-//     NodeType *Tgt = &E->getTargetNode();
-//     auto TgtIT = TargetInDegreeMap.find(Tgt);
-//     if (TgtIT != TargetInDegreeMap.end())
-//       ++(TgtIT->second);
-//   }
-// }
-
-// errs()<<"Size of target in-degree map:" << TargetInDegreeMap.size()
-//         << "\nContent of in-degree map:\n";
-// LLVM_DEBUG({
-//   dbgs() << "Size of target in-degree map:" << TargetInDegreeMap.size()
-//         << "\nContent of in-degree map:\n";
-//   for (auto &I : TargetInDegreeMap) {
-//     dbgs() << I.first << " --> " << I.second << "\n";
-//   }
-// });
-
-//   SmallVector<NodeType *, 32> Worklist(CandidateSourceNodes.begin(),
-//                                       CandidateSourceNodes.end());
-//    while (!Worklist.empty()) {
-//      NodeType &Src = *Worklist.pop_back_val();
-//      // As nodes get merged, we need to skip any node that has been removed from
-//      // the candidate set (see below).
-//      if (!CandidateSourceNodes.erase(&Src))
-//        continue;
-// //  errs()<<"node erased\n";
-//      assert(Src.getEdges().size() == 1 &&
-//             "Expected a single edge from the candidate src node.");
-//      NodeType &Tgt = Src.back().getTargetNode();
-//      assert(TargetInDegreeMap.find(&Tgt) != TargetInDegreeMap.end() &&
-//             "Expected target to be in the in-degree map.");
- 
-//      if (TargetInDegreeMap[&Tgt] != 1)
-//        continue;
- 
-//      if (!areNodesMergeable(Src, Tgt))
-//        continue;
- 
-//      // Do not merge if there is also an edge from target to src (immediate
-//      // cycle).
-//      if (Tgt.hasEdgeTo(Src))
-//        continue;
- 
-//      LLVM_DEBUG(dbgs() << "Merging:" << Src << "\nWith:" << Tgt << "\n");
- 
-//      mergeNodes(Src, Tgt);
- 
-//      // If the target node is in the candidate set itself, we need to put the
-//      // src node back into the worklist again so it gives the target a chance
-//      // to get merged into it. For example if we have:
-//      // {(a)->(b), (b)->(c), (c)->(d), ...} and the worklist is initially {b, a},
-//      // then after merging (a) and (b) together, we need to put (a,b) back in
-//      // the worklist so that (c) can get merged in as well resulting in
-//      // {(a,b,c) -> d}
-//      // We also need to remove the old target (b), from the worklist. We first
-//      // remove it from the candidate set here, and skip any item from the
-//      // worklist that is not in the set.
-//      if (CandidateSourceNodes.erase(&Tgt)) {
-//        Worklist.push_back(&Src);
-//        CandidateSourceNodes.insert(&Src);
-//        LLVM_DEBUG(dbgs() << "Putting " << &Src << " back in the worklist.\n");
-//      }
-//    }
    LLVM_DEBUG(dbgs() << "=== End of Graph Simplification ===\n");
  }

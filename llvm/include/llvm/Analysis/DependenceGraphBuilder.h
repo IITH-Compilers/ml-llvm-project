@@ -65,7 +65,7 @@
      simplify_Inst();
      createAndConnectRootNode();   
      createPiBlocks();
-     sortNodesTopologically();
+    //  sortNodesTopologically();
    }
  
    /// Compute ordinal numbers for each instruction and store them in a map for

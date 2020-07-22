@@ -6,6 +6,8 @@
 #include "llvm/Analysis/DDG.h"
 #include "llvm/Support/CommandLine.h"
 
+#define DIM 300
+
 namespace llvm{
 static cl::opt<std::string> fname("file", cl::Hidden, cl::Required,
                                   cl::desc("Use embeddings from file path"));
@@ -40,6 +42,7 @@ static cl::opt<float> WT("wt", cl::Hidden, cl::Optional, cl::init(0.5),cl::desc(
 class RDGWrapperPass : public FunctionPass{
   private:
 	using NodeType = DDGNode;
+	using EdgeType = DDGEdge;
 
 	using BasicBlockListType = SmallVector<BasicBlock *, 8>;
 	BasicBlockListType BBList; 
@@ -49,56 +52,20 @@ class RDGWrapperPass : public FunctionPass{
 	using NodeRef = DDGNode *;
 	using NodeToNumber = DenseMap<const DDGNode *, int>;
 	NodeToNumber NodeNumber;
-	// std::vector<std::string> nodeData;
 
   public:
 	static char ID;
 	RDGWrapperPass();
-	// ~RDGWrapperPass();
-
-	// using NodeRef = DDGNode *;
-	// using NodeToStringType = DenseMap<const DDGNode *, std::string>;
-	// static NodeToStringType nodeData;
 	
 	bool runOnFunction(Function &F) override;
 
 	void getAnalysisUsage(AnalysisUsage &AU) const override;
 
-// <<<<<<< HEAD
-	void PrintDotFile_DI(DataDependenceGraph &G, std::string Filename);
+	void PrintDotFile_LAI(DataDependenceGraph &G, std::string Filename);
 
-	void PrintDotFile_LAI(DataDependenceGraph &G, std::string Filename, SmallVector<int64_t, 8> DependenceDistances);
+	void Print_IR2Vec_File(DataDependenceGraph &G, std::string Filename, SmallDenseMap<const Instruction *, SmallVector<double, DIM>> instVecMap);
 
-	void Print_IR2Vec_File(DataDependenceGraph &G, std::string Filename, SmallVector<int64_t, 8> DependenceDistances);
-
-	void BuildRDG_DI(DataDependenceGraph &G);
-	
-	const SmallVector<int64_t, 8> BuildRDG_LAI(DataDependenceGraph &G, DependenceInfo &DI, const LoopAccessInfo &LAI);
-
-	// std::vector<std::string> getNodeInstructionList(){
-	// 	return nodeData;
-	// }
-
+	void BuildRDG_LAI(DataDependenceGraph &G, DependenceInfo &DI, const LoopAccessInfo &LAI);
 };
 
-	// std::string getNodeInstList(const DDGNode *N){
-	// 	return RDGWrapperPass::nodeData.find(N)->second;
-	// }
-
 }
-
-
-
-
-
-
-// auto *gr = new RDGWrapperPass();        //////////////////////////////////////////////
-    // std::vector<std::string> nodeDataList = gr->getNodeInstructionList();   ////////////////
-
-    // std::vector<std::string> nodeDataList = getNodeInstList();
-
-    // errs() << "nodeDataList size: " << nodeDataList.size() << "\n";
-    // for(int i=0; i<nodeDataList.size(); ++i){
-    //   errs()<< "nodeData: " << nodeDataList[i] << "\n";
-    // }
-    
