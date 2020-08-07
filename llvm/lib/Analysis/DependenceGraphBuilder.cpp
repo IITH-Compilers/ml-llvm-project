@@ -285,95 +285,57 @@
      });
 
      for(NodeType *Source : NL) {
-      //  auto Src = *SrcPi;
-       
-      //  for(auto &EPi : PiNode->getEdges()){
-      //    errs() << "edges: " << EPi << "\n";
-      //  }
       // errs() << "Source: " << *Source << "\n";
       for(NodeType *Target : NL){
         // errs() << "Target: "   << *Target << "\n";
-        
         if(Source == Target) {
           errs() << "same node \n"; // << *Source << " : " << *Target << "\n";
-          // DDGEdge &ee = Source->back();
-          // errs() << "back Edge: " << ee << "\n";
-          // errs() << "DDG Target: " << ee.getTargetNode();
-          // for(EdgeType *oldEdge : *Source){
-          //   NodeType *tgt = &oldEdge->getTargetNode();
-          //   errs() << "tgt: " << *tgt << "\n";
-          //   if(tgt == Source){
-          //     errs() << "aaaaaaaaaa store node: Do not connect" << "\n";
-          //     errs() << "aaaaaaaaaaa back edge: " << *oldEdge << "\n";
-          //   } else {
-          //     errs() << "aaaaaaaaaaaa connected\n";
-          //     createDefUseEdge(*Source, *tgt);
-          //     // Graph.connect(*Source, *tgt, *oldEdge);
-          //     // errs() << "Source: " << *Source << "\n";
-          //     // errs() << "Target: " << *Target << "\n";
-          //     // errs() << "back edge: " << *oldEdge << "\n";
-          //   }
-          // }
           continue;
         }
         errs() << "Merging:" << *Source  << " With:" << *Target << "\n";
-
         // NodeType *MergingNode = IMap.find(OP)->second;
         cast<SimpleDDGNode>(Source)->appendInstructionsStoreNode(*cast<SimpleDDGNode>(Target));
 
         InstructionListType InstList;
         Target->collectInstructions([](const Instruction *I) { return true; }, InstList);
 
-        for(EdgeType *oldEdge : *Target){
-              NodeType *tgt = &oldEdge->getTargetNode();
-              // errs() << "back edge: " << *oldEdge << "\n";
-              // DDGEdge &EdgeDel = Target->back();
-              // errs() << "begin............\n";
-              // errs() << "tgt: " << *tgt << "\n";
-              // errs() << "mid:.............\n";
-        //       // EdgeKind k = EdgeDel.getKind();
-              // if(EdgeDel.getKind() == EdgeKind::RegisterDefUse){
-                // errs()<<"def-use edge................\n";
-                if(tgt == Source){
-                  errs() << "store node: Do not connect" << "\n";
-                  errs() << "back edge: " << *oldEdge << "\n";
-                } else {
-                  errs() << "connected\n";
-                  Graph.connect(*Source, *tgt, *oldEdge);
-                  // errs() << "Source: " << *Source << "\n";
-                  // errs() << "Target: " << *Target << "\n";
-                  // errs() << "back edge: " << *oldEdge << "\n";
-                }
+        createDefUseEdgeMergedNode(*Source, *Target, NodeDeletionList);
+
+        // for(EdgeType *oldEdge : *Target){
+        //       NodeType *tgt = &oldEdge->getTargetNode();
+        //       // errs() << "back edge: " << *oldEdge << "\n";
+        //       // DDGEdge &EdgeDel = Target->back();
+        //       // errs() << "tgt: " << *tgt << "\n";
+        //         if(tgt == Source){
+        //           errs() << "store node: Do not connect" << "\n";
+        //           errs() << "back edge: " << *oldEdge << "\n";
+        //         } else {
+        //           errs() << "connected\n";
+        //           Graph.connect(*Source, *tgt, *oldEdge);
+        //           // errs() << "Source: " << *Source << "\n";
+        //           // errs() << "Target: " << *Target << "\n";
+        //           // errs() << "back edge: " << *oldEdge << "\n";
+        //         }
               
-              // Target->removeEdge(*oldEdge);
-              // destroyEdge(*oldEdge);
-        }
+        //       // Target->removeEdge(*oldEdge);
+        //       // destroyEdge(*oldEdge);
+        // }
 
-        for(EdgeType *oldEdge : *Source){
-          NodeType *tgt = &oldEdge->getTargetNode();
-          if(tgt != Target) {
-            for(NodeType *n : NodeDeletionList){
-              if(n == tgt){
-                for(EdgeType *e : *tgt) {
-                  NodeType *mergedtgt = &e->getTargetNode();                
-                  // errs() << "ssssstgt: " << *Source << " : " << *mergedtgt << "\n";
-                  createDefUseEdge(*Source, *mergedtgt);
-                }
-              }
-            }
-          }
-        }
+        // for(EdgeType *oldEdge : *Source){
+        //   NodeType *tgt = &oldEdge->getTargetNode();
+        //   if(tgt != Target) {
+        //     for(NodeType *n : NodeDeletionList){
+        //       if(n == tgt){
+        //         for(EdgeType *e : *tgt) {
+        //           NodeType *mergedtgt = &e->getTargetNode();                
+        //    `                 // errs() << "ssssstgt: " << *Source << " : " << *mergedtgt << "\n";
+        //           createDefUseEdge(*Source, *mergedtgt);
+        //         }
+        //       }
+        //     }
+        //   }
+        // }
 
-        
-          
-          // errs() << "PHI Merging Node: " << *MergingNode << "\n"; 
-          // DDGEdge &EdgeAlready = Target->back();
-          // NodeType *tgtPhi = &EdgeAlready.getTargetNode();
-          // errs() << "PHI Merging Node: " << *tgtPhi << "\n";
-          
-
-        // Graph.removeNode(*Target);
-        // destroyNode(*Target);
         bool ni = 0;
         for(NodeType *nd : NodeDeletionList){
           if(nd == Target){
@@ -880,7 +842,7 @@ LLVM_DEBUG({
           errs() << "Merging Node: " << PhiNode << "\n";
           errs() << "Merging Node SI: " << *MergingNode << "\n";
           // // Graph.connect(*MergingNode, PhiNode, EdgeAlready);
-          createDefUseEdge(*MergingNode, PhiNode);
+          // createDefUseEdge(*MergingNode, PhiNode);
         // }
       }
 
