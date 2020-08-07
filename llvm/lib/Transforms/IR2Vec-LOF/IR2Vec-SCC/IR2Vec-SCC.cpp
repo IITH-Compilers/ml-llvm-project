@@ -1,8 +1,8 @@
 #include "llvm/Transforms/IR2Vec-SCC.h"
-
 #include "llvm/Transforms/RDG.h"
 
 #include "./../../IR2Vec-Engine/include/IR2Vec-RD.h"
+
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/SmallVector.h"
@@ -55,10 +55,10 @@ static RegisterPass<RDGWrapperPass> X("RDG", "Build ReducedDependenceGraph",
 // 			x++;
 // 			InstructionListType IList;
 // 			N->collectInstructions([] (const Instruction *I) {return
-// true;}, IList); 			std::string str = ""; 			int tmp =
-// 0; 			for(Instruction *II :
-// IList){ 				tmp++;; 				std::string s;
-// llvm::raw_string_ostream(s) << *II; 				std::string s_new;
+// true;}, IList); 			std::string str = ""; int tmp = 0;
+// for(Instruction *II : IList){ 				tmp++;;
+// std::string s; llvm::raw_string_ostream(s) << *II;
+// std::string s_new;
 // 				// int s_len = s.size();
 // 				// errs() << "string size: " << s_len << " : ";
 
@@ -78,9 +78,9 @@ static RegisterPass<RDGWrapperPass> X("RDG", "Build ReducedDependenceGraph",
 // 		NodeToNumber SourceEdgeWeight;
 // 		// Appwnd all the edges into DOT File (including weights for
 // Memory
-// Dependence edges) 		for(auto *N : G){ 			for (auto &E :
-// N->getEdges()){ 				if((*E).isMemoryDependence()){ 					md++; 					errs() <<
-// NodeNumber.find(N)->second << " ->
+// Dependence edges) 		for(auto *N : G){ 			for
+// (auto &E : N->getEdges()){ if((*E).isMemoryDependence()){ md++;
+// errs() << NodeNumber.find(N)->second << " ->
 // "
 // 						<<
 // NodeNumber.find(&E->getTargetNode())->second
@@ -90,14 +90,19 @@ static RegisterPass<RDGWrapperPass> X("RDG", "Build ReducedDependenceGraph",
 // NodeNumber.find(N)->second << " -> "
 // 						<<
 // NodeNumber.find(&E->getTargetNode())->second
-// 						<<"[label=\"  " << (*E).getKind() << ": "
+// 						<<"[label=\"  " <<
+// (*E).getKind()
+// <<
+// ":
+// "
 // <<
 // (*E).getEdgeWeight() << "\"];\n"; 				} else {
 // File << NodeNumber.find(N)->second
 // << " -> "
 // 						<<
 // NodeNumber.find(&E->getTargetNode())->second
-// 						<<"[label=\"  " << (*E).getKind()
+// 						<<"[label=\"  " <<
+// (*E).getKind()
 // <<
 // "\"];\n";
 // 				}
@@ -200,7 +205,8 @@ void RDGWrapperPass::Print_IR2Vec_File(
 
 // 		if(dep.Type == MemoryDepChecker::Dependence::DepType::Backward
 // || 			dep.Type ==
-// MemoryDepChecker::Dependence::DepType::BackwardVectorizable || 			dep.Type ==
+// MemoryDepChecker::Dependence::DepType::BackwardVectorizable ||
+// dep.Type ==
 // MemoryDepChecker::Dependence::DepType::BackwardVectorizableButPreventsForwarding){
 // 				Dst = dep.getSource(LAI);
 // 				Src = dep.getDestination(LAI);
@@ -252,13 +258,16 @@ void RDGWrapperPass::Print_IR2Vec_File(
 // 					for(NodeType *DstIt : DstNodeList){
 // 						bool ew = 0;
 // 						for(EdgeType *e : *SrcIt){
-// 							// errs() << "srcIt: " << *e
+// 							// errs() << "srcIt: "
+// << *e
 // <<
 // "\n";
 // 							// errs() << "DstIt: "
 // <<
 // &e->getTargetNode() << "\n";
-// if(&e->getTargetNode() == DstIt) { 								if(e->getEdgeWeight() == i){ 									ew = 1;
+// if(&e->getTargetNode() == DstIt) {
+// if(e->getEdgeWeight() == i){
+// ew = 1;
 // // set 1 for removing redundant edges (same weight) between two nodes
 // 								}
 // 							}
