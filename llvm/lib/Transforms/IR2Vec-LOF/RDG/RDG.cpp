@@ -30,18 +30,14 @@
 using namespace llvm;
 
 
-RDGWrapperPass::RDGWrapperPass() : FunctionPass(ID) {
-  //initializeRDGWrapperPassPass(*PassRegistry::getPassRegistry());
-}
-
-char RDGWrapperPass::ID = 0;
-static RegisterPass<RDGWrapperPass> X("RDG", "Build ReducedDependenceGraph", true, true);
-//INITIALIZE_PASS_BEGIN(RDGWrapperPass, "RDG", "Build ReducedDependenceGraph", true, true)
+// char RDG::ID = 0;
+// static RegisterPass<RDG> X("RDG", "Build ReducedDependenceGraph", true, true);
+//INITIALIZE_PASS_BEGIN(RDG, "RDG", "Build ReducedDependenceGraph", true, true)
 // INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
-//INITIALIZE_PASS_END(RDGWrapperPass, "RDG", "Build ReducedDependenceGraph", true, true)
+//INITIALIZE_PASS_END(RDG, "RDG", "Build ReducedDependenceGraph", true, true)
 
 // Code to generate DOT File to store RDG
-void RDGWrapperPass::PrintDotFile_LAI(DataDependenceGraph &G, std::string Filename){
+void RDG::PrintDotFile_LAI(DataDependenceGraph &G, std::string Filename){
 	std::error_code EC;
 	raw_fd_ostream File (Filename.c_str(), EC, sys::fs::F_Text);
 	int x = 0;
@@ -57,7 +53,7 @@ void RDGWrapperPass::PrintDotFile_LAI(DataDependenceGraph &G, std::string Filena
 			std::string str = "";
 			int tmp = 0;
 			for(Instruction *II : IList){
-				tmp++;
+				tmp++;;
 				std::string s;
 				llvm::raw_string_ostream(s) << *II;
 				std::string s_new;
@@ -103,72 +99,72 @@ void RDGWrapperPass::PrintDotFile_LAI(DataDependenceGraph &G, std::string Filena
 	}
 }
 
-void RDGWrapperPass::Print_IR2Vec_File(DataDependenceGraph &G, std::string Filename,
-					SmallDenseMap<const Instruction *, SmallVector<double, DIM>> instVecMap){
-	// Code to generate Input File with IR2Vec Embedding as a node to an RDG
-	std::error_code EC;
-	raw_fd_ostream File (Filename.c_str(), EC, sys::fs::F_Text);
-	int x = 0;
-	int md = 0;
+// void RDG::Print_IR2Vec_File(DataDependenceGraph &G, std::string Filename,
+// 					SmallDenseMap<const Instruction *, SmallVector<double, DIM>> instVecMap){
+// 	// Code to generate Input File with IR2Vec Embedding as a node to an RDG
+// 	std::error_code EC;
+// 	raw_fd_ostream File (Filename.c_str(), EC, sys::fs::F_Text);
+// 	int x = 0;
+// 	int md = 0;
 
-	if(!EC){
-		File << "{\"graph\" :\n";
-		for(auto *N : G){
-			x++;
-			InstructionListType IList;
-			N->collectInstructions([] (const Instruction *I) {return true;}, IList);
-			std::string str = "";
-			int tmp = 0;
-			SmallVector<double, DIM> NodeVec;
-			std::string s;
-			File << "[\"nodeId\": " + std::to_string(x) + ",\n\"adjlists\": {";
-			for (auto &E : N->getEdges()){
+// 	if(!EC){
+// 		File << "{\"graph\" :\n";
+// 		for(auto *N : G){
+// 			x++;
+// 			InstructionListType IList;
+// 			N->collectInstructions([] (const Instruction *I) {return true;}, IList);
+// 			std::string str = "";
+// 			int tmp = 0;
+// 			SmallVector<double, DIM> NodeVec;
+// 			std::string s;
+// 			File << "[\"nodeId\": " + std::to_string(x) + ",\n\"adjlists\": {";
+// 			for (auto &E : N->getEdges()){
 				
-				if((*E).isMemoryDependence()){
-					md++;
-					File << "{M: (" << NodeNumber.find(N)->second << ", " 
-						<< NodeNumber.find(&E->getTargetNode())->second 
-						<< ", " << (*E).getEdgeWeight() << ")}";
-				} else {
-					File << "{D: (" << NodeNumber.find(N)->second << ", " 
-						<< NodeNumber.find(&E->getTargetNode())->second 
-						<< ")}";
-				}
-			}
+// 				if((*E).isMemoryDependence()){
+// 					md++;
+// 					File << "{M: (" << NodeNumber.find(N)->second << ", " 
+// 						<< NodeNumber.find(&E->getTargetNode())->second 
+// 						<< ", " << (*E).getEdgeWeight() << ")}";
+// 				} else {
+// 					File << "{D: (" << NodeNumber.find(N)->second << ", " 
+// 						<< NodeNumber.find(&E->getTargetNode())->second 
+// 						<< ")}";
+// 				}
+// 			}
 
-			File << "},\n\"NodeData\": {";
+// 			File << "},\n\"NodeData\": {";
 
-			for(Instruction *II : IList){
-				tmp++;
-				if(tmp == 0){
-					continue;
-				}
-				else if(tmp == 1){
-					NodeVec = instVecMap.find(II)->second;
-				}
-				else {
-					auto vec = instVecMap.find(II)->second;
-					for(int i = 0; i<DIM; ++i){
-				   		NodeVec[i] += vec[i];
-					}
-				}				
-			}			
+// 			for(Instruction *II : IList){
+// 				tmp++;
+// 				if(tmp == 0){
+// 					continue;
+// 				}
+// 				else if(tmp == 1){
+// 					NodeVec = instVecMap.find(II)->second;
+// 				}
+// 				else {
+// 					auto vec = instVecMap.find(II)->second;
+// 					for(int i = 0; i<DIM; ++i){
+// 				   		NodeVec[i] += vec[i];
+// 					}
+// 				}				
+// 			}			
 
-			for(auto i = NodeVec.begin(), e = NodeVec.end(); i!=e; ++i){
-				s += std::to_string(*i) + ", ";
-			}
-			File << s;
-			File << "}],\n";
-		}
-		File << "}\n";
-	}
-	else{
-		errs() << "error opening file for writing! \n";
-	}
-}
+// 			for(auto i = NodeVec.begin(), e = NodeVec.end(); i!=e; ++i){
+// 				s += std::to_string(*i) + ", ";
+// 			}
+// 			File << s;
+// 			File << "}],\n";
+// 		}
+// 		File << "}\n";
+// 	}
+// 	else{
+// 		errs() << "error opening file for writing! \n";
+// 	}
+// }
 
 // Append the Memory Dependence Edges with weights into Graph
-void RDGWrapperPass::BuildRDG_LAI(DataDependenceGraph &G, DependenceInfo &DI, const LoopAccessInfo &LAI){
+void RDG::BuildRDG_LAI(DataDependenceGraph &G, DependenceInfo &DI, const LoopAccessInfo &LAI){
 	const auto alldependences = LAI.getDepChecker().getDependences();	// List of dependences
 	const SmallVector<int64_t, 8> DependenceDistances = LAI.getDepChecker().getDDist();	// List of dependence distances
 		
@@ -261,29 +257,29 @@ void RDGWrapperPass::BuildRDG_LAI(DataDependenceGraph &G, DependenceInfo &DI, co
 }
 
 
-bool RDGWrapperPass::runOnFunction(Function &F){
+DataDependenceGraph RDG::computeRDGForInnerLoop(Loop &IL){
 	raw_ostream &operator<<(raw_ostream &OS, const DataDependenceGraph &G);
 	
-	// Collect IR2Vec encoding vector for each instruction in instVecMap
-    auto ir2vec = getAnalysis<IR2Vec_RD>().setConfig(fname, ofname, bprob, level, cls, c2v, WO, WT, WA);
-    ir2vec->computeVectors(*F.getParent());
-	SmallDenseMap<const Instruction *, SmallVector<double, DIM>> instVecMap;
-    instVecMap = ir2vec->getInstVecMap();
+	// // Collect IR2Vec encoding vector for each instruction in instVecMap
+    // auto ir2vec = getAnalysis<IR2Vec_RD>().setConfig(fname, ofname, bprob, level, cls, c2v, WO, WT, WA);
+    // ir2vec->computeVectors(*F.getParent());
+	// SmallDenseMap<const Instruction *, SmallVector<double, DIM>> instVecMap;
+    // instVecMap = ir2vec->getInstVecMap();
 
 	// Compute necessary parameters for DataDependenceGraph 
-	AAResults &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
-	ScalarEvolution &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
-	LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-    DependenceInfo DI = DependenceInfo(&F, &AA, &SE, &LI);
+	// AAResults &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
+	// ScalarEvolution &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
+	// LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+    // DependenceInfo DI = DependenceInfo(&F, &AA, &SE, &LI);
 
-	int loopNum = 0;
-	for(LoopInfo::iterator i = LI.begin(), e = LI.end(); i != e; ++i){
-		loopNum++;
-		Loop *L = *i;
-		for(auto il = df_begin(L), el = df_end(L); il != el; ++il){
-			if(il->getSubLoops().size() > 0){
-				continue;
-			}
+	// int loopNum = 0;
+	// for(LoopInfo::iterator i = LI.begin(), e = LI.end(); i != e; ++i){
+	// 	loopNum++;
+	// 	Loop *L = *i;
+	// 	for(auto il = df_begin(L), el = df_end(L); il != el; ++il){
+	// 		if(il->getSubLoops().size() > 0){
+	// 			continue;
+	// 		}
 			// errs() << "Loop: " << **il << "\n";
 			// auto p = il->getLoopLatch();
 			// errs() << "Loop Latch: " << *p << "\n";
@@ -292,15 +288,15 @@ bool RDGWrapperPass::runOnFunction(Function &F){
 			// Make Data Dependence Graph for IR instructions with def-use edges
 			// Merge nodes based on source code instructions
 			// DataDependenceGraph G1 = DataDependenceGraph(**il, LI, DI);
-			DataDependenceGraph G2 = DataDependenceGraph(**il, LI, DI, &SE);
+			DataDependenceGraph G2 = DataDependenceGraph(IL, LI, DI, &SE);
 
 			// Append Memory Dependence Edges with weights into Graph 
-			auto *LAA = &getAnalysis<LoopAccessLegacyAnalysis>();
-			const LoopAccessInfo &LAI = LAA->getInfo(*il);
+			// auto *LAA = &getAnalysis<LoopAccessLegacyAnalysis>();
+			const LoopAccessInfo &LAI = LAA.getInfo(&IL);
 			// BuildRDG_LAI(G1, DI, LAI);
 			// G1.populate();
 
-			// BuildRDG_LAI(G2, DI, LAI);
+			BuildRDG_LAI(G2, DI, LAI);
 
 			// for(NodeType *N : G){
 			// 	InstructionListType InstList;
@@ -324,24 +320,24 @@ bool RDGWrapperPass::runOnFunction(Function &F){
 			// PrintDotFile_LAI(G1, RDG_Filename);
 
 			// Print SCC DOT File
-			std::string SCC_Filename = "SCC_" + F.getName().str() + "_Loop" + std::to_string(loopNum) + ".dot";
-			errs() << "Writing " + SCC_Filename + "\n";
-			errs()<< "\n\n";
-			PrintDotFile_LAI(G2, SCC_Filename);
+			// std::string SCC_Filename = "SCC_" + IL.getHeader()->getParent()->getName().str() + "_Loop" + std::to_string(loopNum) + ".dot";
+			// errs() << "Writing " + SCC_Filename + "\n";
+			// errs()<< "\n\n";
+			// PrintDotFile_LAI(G2, SCC_Filename);
 
 			// Print Input File
 			// std::string Input_Filename = "InputGraph_" + F.getName().str() + "_Loop" + std::to_string(loopNum) + ".dot";
 			// errs() << "Writing " + Input_Filename + "\n";
 			// Print_IR2Vec_File(G, Input_Filename, instVecMap);
-		}
-	}
-	return true;
+	// 	}
+	// }
+	return G2;
 }
 
-void RDGWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
-	AU.addRequired<LoopInfoWrapperPass>();
-	AU.addRequired<ScalarEvolutionWrapperPass>();
-	AU.addRequired<AAResultsWrapperPass>();
-    AU.addRequired<LoopAccessLegacyAnalysis>();
-    AU.addRequired<IR2Vec_RD>();
-}
+// void RDG::getAnalysisUsage(AnalysisUsage &AU) const {
+// 	AU.addRequired<LoopInfoWrapperPass>();
+// 	AU.addRequired<ScalarEvolutionWrapperPass>();
+// 	AU.addRequired<AAResultsWrapperPass>();
+//     AU.addRequired<LoopAccessLegacyAnalysis>();
+//     AU.addRequired<IR2Vec_RD>();
+// }

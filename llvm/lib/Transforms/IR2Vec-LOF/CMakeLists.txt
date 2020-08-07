@@ -1,2 +1,2 @@
 add_llvm_library(RDG MODULE BUILDTREE_ONLY
-        RDG.cpp )
+        IR2Vec-SCC.cpp RDG/RDG.cpp)
