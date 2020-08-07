@@ -341,7 +341,7 @@
    DataDependenceGraph(DataDependenceGraph &&G)
        : DDGBase(std::move(G)), DDGInfo(std::move(G)) {}
    DataDependenceGraph(Function &F, DependenceInfo &DI);
-   DataDependenceGraph(Loop &L, LoopInfo &LI, DependenceInfo &DI);
+   DataDependenceGraph(Loop &L, LoopInfo &LI, DependenceInfo &DI, ScalarEvolution *SE);
    ~DataDependenceGraph();
  
    /// If node \p N belongs to a pi-block return a pointer to the pi-block,
@@ -371,8 +371,8 @@
  class DDGBuilder : public AbstractDependenceGraphBuilder<DataDependenceGraph> {
  public:
    DDGBuilder(DataDependenceGraph &G, DependenceInfo &D,
-              const BasicBlockListType &BBs)
-       : AbstractDependenceGraphBuilder(G, D, BBs) {}
+              const BasicBlockListType &BBs, const InstructionListType &RPHIList)
+       : AbstractDependenceGraphBuilder(G, D, BBs, RPHIList) {}
    DDGNode &createRootNode() final override {
      auto *RN = new RootDDGNode();
      assert(RN && "Failed to allocate memory for DDG root node.");
@@ -389,6 +389,11 @@
      auto *Pi = new PiBlockDDGNode(L);
      assert(Pi && "Failed to allocate memory for pi-block node.");
      Graph.addNode(*Pi);
+    //  for (DDGNode *NI : Pi->getNodes()){
+    //    errs() << "header Pi-block Node: \n";
+    //    Graph.removeNode(*NI);
+    //    destroyNode(*NI);
+    //  }
      return *Pi;
    }
    DDGEdge &createDefUseEdge(DDGNode &Src, DDGNode &Tgt) final override {

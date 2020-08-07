@@ -208,7 +208,7 @@ void RDGWrapperPass::BuildRDG_LAI(DataDependenceGraph &G, DependenceInfo &DI, co
 			continue;
 		}
 
-		errs() << "Src: " << *Src << "    " << "Dst: " << *Dst << "\n";
+		// errs() << "Src: " << *Src << "    " << "Dst: " << *Dst << "\n";
 
 		// Make List of source and destination nodes to connect by an edge
 		// by checking the presence of instruction inside Node
@@ -235,13 +235,13 @@ void RDGWrapperPass::BuildRDG_LAI(DataDependenceGraph &G, DependenceInfo &DI, co
 		int tmp = 1;
 		for(auto i : DependenceDistances){
 			if(x == tmp){
-				errs() << "#######Distance: " << i << "\n";
+				// errs() << "#######Distance: " << i << "\n";
 				for(NodeType *SrcIt : SrcNodeList){
 					for(NodeType *DstIt : DstNodeList){
 						bool ew = 0;
 						for(EdgeType *e : *SrcIt){
-							errs() << "srcIt: " << *e << "\n";
-							errs() << "DstIt: " << &e->getTargetNode() << "\n";
+							// errs() << "srcIt: " << *e << "\n";
+							// errs() << "DstIt: " << &e->getTargetNode() << "\n";
 							if(&e->getTargetNode() == DstIt) {
 								if(e->getEdgeWeight() == i){
 									ew = 1;		// set 1 for removing redundant edges (same weight) between two nodes
@@ -249,7 +249,7 @@ void RDGWrapperPass::BuildRDG_LAI(DataDependenceGraph &G, DependenceInfo &DI, co
 							}
 						}
 						if(ew == 0){
-							DDGBuilder(G, DI, BBList).createMemoryWeightedEdge(*SrcIt, *DstIt, i);
+							DDGBuilder(G, DI, BBList, ReductionPHIList).createMemoryWeightedEdge(*SrcIt, *DstIt, i);
 						}
 					}
 				}
@@ -284,27 +284,31 @@ bool RDGWrapperPass::runOnFunction(Function &F){
 			if(il->getSubLoops().size() > 0){
 				continue;
 			}
-			errs() << "Loop: " << **il << "\n";
+			// errs() << "Loop: " << **il << "\n";
 			// auto p = il->getLoopLatch();
 			// errs() << "Loop Latch: " << *p << "\n";
 		
 			// Use of DependenceGraphBuilder 
 			// Make Data Dependence Graph for IR instructions with def-use edges
 			// Merge nodes based on source code instructions
-			DataDependenceGraph G = DataDependenceGraph(**il, LI, DI);
+			// DataDependenceGraph G1 = DataDependenceGraph(**il, LI, DI);
+			DataDependenceGraph G2 = DataDependenceGraph(**il, LI, DI, &SE);
 
 			// Append Memory Dependence Edges with weights into Graph 
 			auto *LAA = &getAnalysis<LoopAccessLegacyAnalysis>();
 			const LoopAccessInfo &LAI = LAA->getInfo(*il);
-			BuildRDG_LAI(G, DI, LAI);
+			// BuildRDG_LAI(G1, DI, LAI);
+			// G1.populate();
+
+			// BuildRDG_LAI(G2, DI, LAI);
 
 			// for(NodeType *N : G){
 			// 	InstructionListType InstList;
 			// 	N->collectInstructions([](const Instruction *I) { return true; }, InstList);
 			// 	errs() << "Node...............\n";
-			// 	for(Instruction *II : InstList){
-			// 		errs() << "inst: " << *II << "\n";
-			// 	}
+			// 	// for(Instruction *II : InstList){
+			// 	// 	errs() << "inst: " << *II << "\n";
+			// 	// }
 			// }
 
 			// for(NodeType *N : G){
@@ -314,10 +318,16 @@ bool RDGWrapperPass::runOnFunction(Function &F){
 			// 	}
 			// }
 
-			// Print DOT File
-			std::string RDG_Filename = "RDG_" + F.getName().str() + "_Loop" + std::to_string(loopNum) + ".dot";
-			errs() << "Writing " + RDG_Filename + "\n";
-			PrintDotFile_LAI(G, RDG_Filename);
+			// Print RDG DOT File
+			// std::string RDG_Filename = "RDG_" + F.getName().str() + "_Loop" + std::to_string(loopNum) + ".dot";
+			// errs() << "Writing " + RDG_Filename + "\n";
+			// PrintDotFile_LAI(G1, RDG_Filename);
+
+			// Print SCC DOT File
+			std::string SCC_Filename = "SCC_" + F.getName().str() + "_Loop" + std::to_string(loopNum) + ".dot";
+			errs() << "Writing " + SCC_Filename + "\n";
+			errs()<< "\n\n";
+			PrintDotFile_LAI(G2, SCC_Filename);
 
 			// Print Input File
 			// std::string Input_Filename = "InputGraph_" + F.getName().str() + "_Loop" + std::to_string(loopNum) + ".dot";

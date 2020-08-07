@@ -48,6 +48,7 @@ class RDGWrapperPass : public FunctionPass{
 	BasicBlockListType BBList; 
 
 	using InstructionListType = SmallVector<Instruction *, 2>;
+	InstructionListType ReductionPHIList;
 
 	using NodeRef = DDGNode *;
 	using NodeToNumber = DenseMap<const DDGNode *, int>;

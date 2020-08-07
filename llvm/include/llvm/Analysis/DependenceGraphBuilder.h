@@ -31,6 +31,7 @@
  template <class GraphType> class AbstractDependenceGraphBuilder {
  protected:
    using BasicBlockListType = SmallVectorImpl<BasicBlock *>;
+   using InstructionListType = SmallVector<Instruction *, 2>;
  
  private:
    using NodeType = typename GraphType::NodeType;
@@ -41,8 +42,8 @@
    using NodeListType = SmallVector<NodeType *, 4>;
  
    AbstractDependenceGraphBuilder(GraphType &G, DependenceInfo &D,
-                                  const BasicBlockListType &BBs)
-       : Graph(G), DI(D), BBList(BBs) {}
+                                  const BasicBlockListType &BBs, const InstructionListType &RPHIList)
+       : Graph(G), DI(D), BBList(BBs), ReductionPHIList(RPHIList) {}
    virtual ~AbstractDependenceGraphBuilder() {}
  
    /// The main entry to the graph construction algorithm. It starts by
@@ -62,9 +63,11 @@
      createDefUseEdges();
     //  createMemoryDependencyEdges();
     //  simplify();
+    // createAndConnectRootNode(); 
      simplify_Inst();
-     createAndConnectRootNode();   
-     createPiBlocks();
+    //  createAndConnectRootNode();   
+    //  createPiBlocks();
+    // createMergedPiBlocks();
     //  sortNodesTopologically();
    }
  
@@ -96,6 +99,9 @@
    /// program elements that need to stay together during codegen and turn
    /// the dependence graph into an acyclic graph.
    void createPiBlocks();
+
+   void createMergedPiBlocks();
+   
  
    /// Go through all the nodes in the graph and collapse any two nodes
    /// 'a' and 'b' if all of the following are true:
@@ -107,7 +113,9 @@
    void simplify();
 
    void simplify_Inst();
-   void NodeMergeRecursion(NodeType &SI, Instruction &II);
+   void PhiNodeMerge(NodeType &SI, Instruction &II, NodeListType &NodeDeletionList);
+   void NodeMergeRecursion(NodeType &SI, Instruction &II, NodeListType &NodeDeletionList);
+   void createDefUseEdgeMergedNode(NodeType &FinalNode, NodeType &MergingNode, NodeListType &NodeDeletionList);
  
    /// Topologically sort the graph nodes.
    void sortNodesTopologically();
@@ -189,6 +197,8 @@
  
    /// The list of basic blocks to consider when building the graph.
    const BasicBlockListType &BBList;
+
+   const InstructionListType &ReductionPHIList;
  
    /// A mapping from instructions to the corresponding nodes in the graph.
    InstToNodeMap IMap;

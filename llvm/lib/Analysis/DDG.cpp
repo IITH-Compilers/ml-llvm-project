@@ -13,6 +13,7 @@
  #include "llvm/Analysis/LoopInfo.h"
  #include "llvm/Analysis/LoopIterator.h"
  #include "llvm/Support/CommandLine.h"
+ #include "llvm/Analysis/IVDescriptors.h"
  
  using namespace llvm;
  
@@ -183,21 +184,23 @@
  // DataDependenceGraph implementation
  //===--------------------------------------------------------------------===//
  using BasicBlockListType = SmallVector<BasicBlock *, 8>;
+ using InstructionListType = SmallVector<Instruction *, 2>;
  
  DataDependenceGraph::DataDependenceGraph(Function &F, DependenceInfo &D)
      : DependenceGraphInfo(F.getName().str(), D) {
    // Put the basic blocks in program order for correct dependence
    // directions.
    BasicBlockListType BBList;
+   InstructionListType ReductionPHIList;
    for (auto &SCC : make_range(scc_begin(&F), scc_end(&F)))
      for (BasicBlock * BB : SCC)
        BBList.push_back(BB);
    std::reverse(BBList.begin(), BBList.end());
-   DDGBuilder(*this, D, BBList).populate();
+   DDGBuilder(*this, D, BBList, ReductionPHIList).populate();
  }
  
  DataDependenceGraph::DataDependenceGraph(Loop &L, LoopInfo &LI,
-                                          DependenceInfo &D)
+                                          DependenceInfo &D, ScalarEvolution *SE = nullptr)
      : DependenceGraphInfo(Twine(L.getHeader()->getParent()->getName() + "." +
                                  L.getHeader()->getName())
                                .str(),
@@ -207,16 +210,35 @@
    LoopBlocksDFS DFS(&L);
    DFS.perform(&LI);
    BasicBlockListType BBList;
-  //  auto latch = L.getLoopLatch();
+   InstructionListType ReductionPHIList;
+
    for (BasicBlock *BB : make_range(DFS.beginRPO(), DFS.endRPO())){
-    //  if(BB != latch){
-    //   BBList.push_back(BB);
-    //   //  errs() << "This is correct" << "\n";
-    //  }
-    //  errs() << "BBBBBBBBBBB: " << BB->getName() << "\n";
      BBList.push_back(BB);
+    //  errs() << "BB: " << *BB << "\n";
+
+      for(auto &I : *BB){
+       if(auto *Phi = dyn_cast<PHINode>(&I)){
+         RecurrenceDescriptor RD;
+         InductionDescriptor ID;
+         errs() << "phi node: " << *Phi << "\n";
+        //  if(RecurrenceDescriptor::isReductionPHI(Phi, &L, RD)) {
+        //   errs() << "Reduction phi node: " << *Phi << "\n";
+        //   }
+         if(!InductionDescriptor::isInductionPHI(Phi, &L, SE, ID)){
+            errs() << "Not a Induction phi node: " << *Phi << "\n";
+            // ReductionPHIList.push_back(&I);
+            if(RecurrenceDescriptor::isReductionPHI(Phi, &L, RD)) {
+              errs() << "Reduction phi node: " << &I << "\n";
+              ReductionPHIList.push_back(&I);
+            } else {
+              errs() << "Neither Induction nor Reduction phi node: " << *Phi << "\n";
+            }
+          }
+          errs() << "aaaaaaaaaaaaaaaaa\n";
+       }
+      }
    }
-   DDGBuilder(*this, D, BBList).populate();
+   DDGBuilder(*this, D, BBList, ReductionPHIList).populate();
  }
  
  DataDependenceGraph::~DataDependenceGraph() {
@@ -244,9 +266,12 @@
    if (isa<RootDDGNode>(N))
      Root = &N;
  
-   if (Pi)
-     for (DDGNode *NI : Pi->getNodes())
+   if (Pi){
+     for (DDGNode *NI : Pi->getNodes()){
+       errs() << "Pi Block Node\n";
        PiBlockMap.insert(std::make_pair(NI, Pi));
+       errs() << "Pi-block Node: " << *NI << " : " << Pi << "\n";
+     }}
  
    return true;
  }
