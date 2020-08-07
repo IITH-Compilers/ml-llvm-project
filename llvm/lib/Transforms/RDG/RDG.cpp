@@ -57,7 +57,7 @@ void RDGWrapperPass::PrintDotFile_LAI(DataDependenceGraph &G, std::string Filena
 			std::string str = "";
 			int tmp = 0;
 			for(Instruction *II : IList){
-				tmp++;;
+				tmp++;
 				std::string s;
 				llvm::raw_string_ostream(s) << *II;
 				std::string s_new;

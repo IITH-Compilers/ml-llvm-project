@@ -65,9 +65,9 @@
     //  simplify();
     // createAndConnectRootNode(); 
      simplify_Inst();
-    //  createAndConnectRootNode();   
+     createAndConnectRootNode();   
     //  createPiBlocks();
-    // createMergedPiBlocks();
+    createMergedPiBlocks();
     //  sortNodesTopologically();
    }
  
