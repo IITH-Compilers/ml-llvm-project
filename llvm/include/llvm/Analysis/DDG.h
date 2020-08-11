@@ -50,6 +50,8 @@
      PiBlock,
      Root,
    };
+
+   std::string NodeLabel;
  
    DDGNode() = delete;
    DDGNode(const NodeKind K) : DDGNodeBase(), Kind(K) {}

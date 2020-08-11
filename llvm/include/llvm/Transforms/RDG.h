@@ -79,6 +79,8 @@ public:
 
   void BuildRDG_LAI(DataDependenceGraph &G, DependenceInfo &DI,
                     const LoopAccessInfo &LAI);
+
+  void SelectOnlyStoreNode(DataDependenceGraph &G);
 };
 
 } // namespace llvm

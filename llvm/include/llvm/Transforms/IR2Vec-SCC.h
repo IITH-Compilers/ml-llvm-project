@@ -51,7 +51,7 @@ private:
   InstructionListType ReductionPHIList;
 
   using NodeRef = DDGNode *;
-  using NodeToNumber = DenseMap<const DDGNode *, int>;
+  using NodeToNumber = DenseMap<const DDGNode *, std::string>;
   NodeToNumber NodeNumber;
 
 public:

@@ -120,60 +120,83 @@ void RDGWrapperPass::Print_IR2Vec_File(
     SmallDenseMap<const Instruction *, SmallVector<double, DIM>> instVecMap) {
   // Code to generate Input File with IR2Vec Embedding as a node to an RDG
   std::error_code EC;
-  raw_fd_ostream File(Filename.c_str(), EC, sys::fs::F_Text);
-  int x = 0;
-  int md = 0;
+	raw_fd_ostream File (Filename.c_str(), EC, sys::fs::F_Text);
+	// int x = 0;
+	int md = 0;
 
-  if (!EC) {
-    File << "{\"graph\" :\n";
-    for (auto *N : G) {
-      x++;
-      InstructionListType IList;
-      N->collectInstructions([](const Instruction *I) { return true; }, IList);
-      std::string str = "";
-      int tmp = 0;
+	if(!EC){
+		File << "digraph G {\n";
+		// Append all the nodes with labels into DOT File
+		for(auto *N : G){
+			// x++;
+			InstructionListType IList;
+			N->collectInstructions([] (const Instruction *I) {return true;}, IList);
+			std::string str = "";
+			int tmp = 0;
       SmallVector<double, DIM> NodeVec;
       std::string s;
-      File << "[\"nodeId\": " + std::to_string(x) + ",\n\"adjlists\": {";
-      for (auto &E : N->getEdges()) {
 
-        if ((*E).isMemoryDependence()) {
-          md++;
-          File << "{M: (" << NodeNumber.find(N)->second << ", "
-               << NodeNumber.find(&E->getTargetNode())->second << ", "
-               << (*E).getEdgeWeight() << ")}";
-        } else {
-          File << "{D: (" << NodeNumber.find(N)->second << ", "
-               << NodeNumber.find(&E->getTargetNode())->second << ")}";
+      if(N->NodeLabel != "") {
+        errs() << "label: " << N->NodeLabel << "\n";
+        for (Instruction *II : IList) {
+          tmp++;
+          if (tmp == 0) {
+            continue;
+          } else if (tmp == 1) {
+            NodeVec = instVecMap.find(II)->second;
+          } else {
+            auto vec = instVecMap.find(II)->second;
+            for (int i = 0; i < DIM; ++i) {
+              NodeVec[i] += vec[i];
+            }
+          }
         }
+
+        int count_dim = 0;
+        for (auto i = NodeVec.begin(), e = NodeVec.end(); i != e; ++i) {
+          count_dim++;
+          if(count_dim < DIM) {
+            s += std::to_string(*i) + ", ";
+          } else {
+            s += std::to_string(*i);
+          }
+          
+        }
+
+        File << N->NodeLabel << " [label=\"" << s << "\"];\n";
+        
+        NodeNumber.insert(std::make_pair(N, N->NodeLabel));
       }
-
-      File << "},\n\"NodeData\": {";
-
-      for (Instruction *II : IList) {
-        tmp++;
-        if (tmp == 0) {
-          continue;
-        } else if (tmp == 1) {
-          NodeVec = instVecMap.find(II)->second;
-        } else {
-          auto vec = instVecMap.find(II)->second;
-          for (int i = 0; i < DIM; ++i) {
-            NodeVec[i] += vec[i];
+		}
+			
+		NodeToNumber SourceDest;
+		NodeToNumber SourceEdgeWeight;
+		// Append all the edges into DOT File (including weights for Memory Dependence edges)
+		for(auto *N : G){
+      if(N->NodeLabel != "") {
+        errs() << "label: " << N->NodeLabel << "\n";
+        for (auto &E : N->getEdges()){
+          if((*E).isMemoryDependence()){
+            md++;
+            errs() << NodeNumber.find(N)->second << " -> " 
+              << NodeNumber.find(&E->getTargetNode())->second << " : "
+              << (*E).getKind() << " : " << (*E).getEdgeWeight() << "\n";
+            File << NodeNumber.find(N)->second << " -> " 
+              << NodeNumber.find(&E->getTargetNode())->second 
+              <<"[label=\"  " << (*E).getKind() << ": " << (*E).getEdgeWeight() << "\"];\n";
+          } else {
+            File << NodeNumber.find(N)->second << " -> " 
+              << NodeNumber.find(&E->getTargetNode())->second 
+              <<"[label=\"  " << (*E).getKind() << "\"];\n";
           }
         }
       }
-
-      for (auto i = NodeVec.begin(), e = NodeVec.end(); i != e; ++i) {
-        s += std::to_string(*i) + ", ";
-      }
-      File << s;
-      File << "}],\n";
-    }
-    File << "}\n";
-  } else {
-    errs() << "error opening file for writing! \n";
-  }
+		}
+		File << "}";
+	}
+	else{
+		errs() << "error opening file for writing! \n";
+	} 
 }
 
 // Append the Memory Dependence Edges with weights into Graph
@@ -305,7 +328,7 @@ bool RDGWrapperPass::runOnFunction(Function &F) {
   for (LoopInfo::iterator i = LI->begin(), e = LI->end(); i != e; ++i) {
     loopNum++;
     Loop *L = *i;
-    L->dump();
+    // L->dump();
     errs() << "===================================\n";
     for (auto il = df_begin(L), el = df_end(L); il != el; ++il) {
       if (il->getSubLoops().size() > 0) {
@@ -359,11 +382,11 @@ bool RDGWrapperPass::runOnFunction(Function &F) {
       errs() << "\n\n";
       RDGraph.PrintDotFile_LAI(SCCGraph, SCC_Filename);
 
-      // Print Input File
-      // std::string Input_Filename = "InputGraph_" + F.getName().str() +
-      // "_Loop" + std::to_string(loopNum) + ".dot"; errs() << "Writing " +
-      // Input_Filename + "\n"; Print_IR2Vec_File(G, Input_Filename,
-      // instVecMap);
+      // Print Input Fil  e
+      std::string Input_Filename = "InputGraph_" + F.getName().str() +
+      "_Loop" + std::to_string(loopNum) + ".dot"; errs() << "Writing " +
+      Input_Filename + "\n"; 
+      Print_IR2Vec_File(SCCGraph, Input_Filename, instVecMap);
     }
   }
   return false;
