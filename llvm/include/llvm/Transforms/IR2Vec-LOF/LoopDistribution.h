@@ -23,9 +23,11 @@ private:
   void modifyBranch(BasicBlock *preheader, Loop *newLoop);
   void removeInstFromPreHeader(BasicBlock *preHeader);
 
+  bool distributed;
+
 public:
   static char ID;
-  LoopDistribution() : FunctionPass(ID) {}
+  LoopDistribution() : FunctionPass(ID) { distributed = false; }
   bool runOnFunction(Function &F) override;
   void getAnalysisUsage(AnalysisUsage &AU) const;
 };

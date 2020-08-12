@@ -116,6 +116,7 @@ Loop *LoopDistribution::cloneLoop(Loop *L, LoopInfo *LI, DominatorTree *DT) {
   //     modifyCmp(hold, start_val, end_val, IntptrTy);
   //   }
   // }
+  distributed = true;
   return newLoop;
 }
 
@@ -156,11 +157,11 @@ bool LoopDistribution::runOnFunction(Function &F) {
 
       // errs() << "====================================";
       auto topoOrder = topologicalWalk(SCCGraph);
-      // if (topoOrder.size() == 0) {
-      //   errs() << "=================returning false\n";
-      //   return false;
-      // }
       errs() << "#nodes = " << topoOrder.size() << "\n";
+
+      if (topoOrder.size() == 0) {
+        continue;
+      }
 
       BasicBlock *curPreHeader = il->getLoopPreheader();
 
@@ -189,7 +190,7 @@ bool LoopDistribution::runOnFunction(Function &F) {
     }
   }
   errs() << "Returning here --------------------\n";
-  return true;
+  return distributed;
 }
 
 void LoopDistribution::getAnalysisUsage(AnalysisUsage &AU) const {
