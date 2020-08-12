@@ -1,5 +1,5 @@
-#include "llvm/Transforms/IR2Vec-SCC.h"
-#include "llvm/Transforms/RDG.h"
+#include "llvm/Transforms/IR2Vec-LOF/IR2Vec-SCC.h"
+#include "llvm/Transforms/IR2Vec-LOF/RDG.h"
 
 #include "./../../IR2Vec-Engine/include/IR2Vec-RD.h"
 
