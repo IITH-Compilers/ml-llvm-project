@@ -262,9 +262,7 @@
    LLVM_DEBUG(dbgs() << "==== Start of Creation of Pi-Blocks ===\n");
  
    SmallVector<NodeListType, 4> ListOfSCCs;
-   errs() << "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n";
    for (auto &SCC : make_range(scc_begin(&Graph), scc_end(&Graph))) {
-     errs() << "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\n";
      if (SCC.size() > 1)
        ListOfSCCs.emplace_back(SCC.begin(), SCC.end());
    }
@@ -292,7 +290,7 @@
           errs() << "same node \n"; // << *Source << " : " << *Target << "\n";
           continue;
         }
-        errs() << "Merging:" << *Source  << " With:" << *Target << "\n";
+        // errs() << "Merging:" << *Source  << " With:" << *Target << "\n";
         // NodeType *MergingNode = IMap.find(OP)->second;
         cast<SimpleDDGNode>(Source)->appendInstructionsStoreNode(*cast<SimpleDDGNode>(Target));
 
@@ -785,7 +783,7 @@ LLVM_DEBUG({
               if(MSL == N){
                 // errs() << "Same Node:";
                 MSL_flag = 1;
-                break;int MSL_flag = 0;
+                break;
               }
             }
             if(MSL_flag == 0) {
@@ -798,7 +796,6 @@ LLVM_DEBUG({
               }
               if(nt_flag == 0) {
                 if(e->getKind() == EdgeKind::Rooted){
-                  errs() << "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n";
                   createRootedEdge(*N, FinalNode);
                 } else {
                   createDefUseEdge(*N, FinalNode);
@@ -840,8 +837,8 @@ LLVM_DEBUG({
         DDGEdge &EdgeAlready = MergingNode->back();
         NodeType *tgtPhi = &EdgeAlready.getTargetNode();
         // if(tgtPhi != &PhiNode){
-          errs() << "Merging Node: " << PhiNode << "\n";
-          errs() << "Merging Node SI: " << *MergingNode << "\n";
+          // errs() << "Merging Node: " << PhiNode << "\n";
+          // errs() << "Merging Node SI: " << *MergingNode << "\n";
           // // Graph.connect(*MergingNode, PhiNode, EdgeAlready);
           // createDefUseEdge(*MergingNode, PhiNode);
         // }
@@ -1052,7 +1049,7 @@ LLVM_DEBUG({
         SI->collectInstructions([](const Instruction *I) { return true; }, InstList);
 
         for(Instruction *II : InstList){
-          errs() << "list of mergecall: " << *II << "\n"; 
+          // errs() << "list of mergecall: " << *II << "\n"; 
           NodeMergeRecursion(*SI, *II, NodeDeletionList);
         }
         // InstructionListType InstList_new;

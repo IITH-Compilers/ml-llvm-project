@@ -220,7 +220,7 @@
        if(auto *Phi = dyn_cast<PHINode>(&I)){
          RecurrenceDescriptor RD;
          InductionDescriptor ID;
-         errs() << "phi node: " << *Phi << "\n";
+        //  errs() << "phi node: " << *Phi << "\n";
         //  if(RecurrenceDescriptor::isReductionPHI(Phi, &L, RD)) {
         //   errs() << "Reduction phi node: " << *Phi << "\n";
         //   }

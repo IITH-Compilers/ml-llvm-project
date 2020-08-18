@@ -137,7 +137,7 @@ void RDGWrapperPass::Print_IR2Vec_File(
       std::string s;
 
       if(N->NodeLabel != "") {
-        errs() << "label: " << N->NodeLabel << "\n";
+        // errs() << "label: " << N->NodeLabel << "\n";
         for (Instruction *II : IList) {
           tmp++;
           if (tmp == 0) {
@@ -174,20 +174,29 @@ void RDGWrapperPass::Print_IR2Vec_File(
 		// Append all the edges into DOT File (including weights for Memory Dependence edges)
 		for(auto *N : G){
       if(N->NodeLabel != "") {
-        errs() << "label: " << N->NodeLabel << "\n";
+        // errs() << "label: " << N->NodeLabel << "\n";
+        // errs() << *N << "\n";
         for (auto &E : N->getEdges()){
-          if((*E).isMemoryDependence()){
-            md++;
-            errs() << NodeNumber.find(N)->second << " -> " 
-              << NodeNumber.find(&E->getTargetNode())->second << " : "
-              << (*E).getKind() << " : " << (*E).getEdgeWeight() << "\n";
-            File << NodeNumber.find(N)->second << " -> " 
-              << NodeNumber.find(&E->getTargetNode())->second 
-              <<"[label=\"  " << (*E).getKind() << ": " << (*E).getEdgeWeight() << "\"];\n";
-          } else {
-            File << NodeNumber.find(N)->second << " -> " 
-              << NodeNumber.find(&E->getTargetNode())->second 
-              <<"[label=\"  " << (*E).getKind() << "\"];\n";
+          NodeType *tgtNode = &E->getTargetNode();
+          // errs() << "tgtNode: " << *tgtNode << "\n";
+          // errs() << "tgtNode Label: " << tgtNode->NodeLabel << "\n";
+          if(tgtNode->NodeLabel != "") {
+            if((*E).isMemoryDependence()){
+              md++;
+              errs() << NodeNumber.find(N)->second << " -> " 
+                << NodeNumber.find(&E->getTargetNode())->second << " : "
+                << (*E).getKind() << " : " << (*E).getEdgeWeight() << "\n";
+                // errs() << "aaaaaaaaaaaaaaaaaa" << NodeNumber.find(&E->getTargetNode())->second   << "\n";
+              File << NodeNumber.find(N)->second << " -> " 
+                << NodeNumber.find(&E->getTargetNode())->second 
+                <<"[label=\"" << (*E).getKind() << ": " << (*E).getEdgeWeight() << "\"];\n";
+                // errs() << "bbbbbbbbbbbbbbbbbbbb\n";
+            } else {
+              File << NodeNumber.find(N)->second << " -> " 
+                << NodeNumber.find(&E->getTargetNode())->second 
+                <<"[label=\"" << (*E).getKind() << "\"];\n";
+                // errs() << "cccccccccccccccc \n";
+            }
           }
         }
       }
@@ -376,14 +385,30 @@ bool RDGWrapperPass::runOnFunction(Function &F) {
       // "\n"; PrintDotFile_LAI(G1, RDG_Filename);
 
       // Print SCC DOT File
-      std::string SCC_Filename = "SCC_" + F.getName().str() + "_Loop" +
+      // auto *Scope = cast<DIScope>(location->getScope());
+      // errs() << "FileName: " << Scope->getFilename() << "\n";
+      // SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
+      // F.getAllMetadata(MDs);
+      // for(auto &MD : MDs) {
+      //   if(MDNode *N = MD.second) {
+      //     if(auto *subprogram = dyn_cast<DISubprogram>(N)) {
+      //       errs() << "subproram: " << subprogram->getLine();
+      //     }
+      //   }
+      // }
+      
+      // errs() << "file: " << F.getParent()->getSourceFileName() << "\n";
+      // std::string file = sys::path::remove_leading_dotslash(F.getParent()->getSourceFileName());
+      // errs() << "file: " << file << "\n";
+      // errs() << sys::path::stem(F.getParent()->getSourceFileName()) << "\n";
+      std::string SCC_Filename = "SCC_" + sys::path::stem(F.getParent()->getSourceFileName()).str() + "_FUNCTION_" + F.getName().str() + "_LOOP" +
                                  std::to_string(loopNum) + ".dot";
       errs() << "Writing " + SCC_Filename + "\n";
       errs() << "\n\n";
       RDGraph.PrintDotFile_LAI(SCCGraph, SCC_Filename);
 
-      // Print Input Fil  e
-      std::string Input_Filename = "InputGraph_" + F.getName().str() +
+      // Print Input File
+      std::string Input_Filename = "InputGraph_" + sys::path::stem(F.getParent()->getSourceFileName()).str() + "_FUNCTION_" + F.getName().str() +
       "_Loop" + std::to_string(loopNum) + ".dot"; errs() << "Writing " +
       Input_Filename + "\n"; 
       Print_IR2Vec_File(SCCGraph, Input_Filename, instVecMap);

@@ -51,6 +51,8 @@ private:
   using InstructionListType = SmallVector<Instruction *, 2>;
   InstructionListType ReductionPHIList;
 
+  using NodeListType = SmallVector<NodeType *, 4>;
+  
   using NodeRef = DDGNode *;
   using NodeToNumber = DenseMap<const DDGNode *, int>;
   NodeToNumber NodeNumber;
@@ -79,6 +81,10 @@ public:
 
   void BuildRDG_LAI(DataDependenceGraph &G, DependenceInfo &DI,
                     const LoopAccessInfo &LAI);
+
+  void createMemoryEdgeMergedNode(DataDependenceGraph &G, DependenceInfo &DI, NodeType &FinalNode, NodeType &MergingNode, NodeListType &NodeDeletionList);
+  
+  void CreateSCC(DataDependenceGraph &G, DependenceInfo &DI);
 
   void SelectOnlyStoreNode(DataDependenceGraph &G);
 };
