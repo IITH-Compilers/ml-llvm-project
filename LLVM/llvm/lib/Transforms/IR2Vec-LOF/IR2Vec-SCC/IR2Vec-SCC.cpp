@@ -120,23 +120,23 @@ void RDGWrapperPass::Print_IR2Vec_File(
     SmallDenseMap<const Instruction *, SmallVector<double, DIM>> instVecMap) {
   // Code to generate Input File with IR2Vec Embedding as a node to an RDG
   std::error_code EC;
-	raw_fd_ostream File (Filename.c_str(), EC, sys::fs::F_Text);
-	// int x = 0;
-	int md = 0;
+  raw_fd_ostream File(Filename.c_str(), EC, sys::fs::F_Text);
+  // int x = 0;
+  int md = 0;
 
-	if(!EC){
-		File << "digraph G {\n";
-		// Append all the nodes with labels into DOT File
-		for(auto *N : G){
-			// x++;
-			InstructionListType IList;
-			N->collectInstructions([] (const Instruction *I) {return true;}, IList);
-			std::string str = "";
-			int tmp = 0;
+  if (!EC) {
+    File << "digraph G {\n";
+    // Append all the nodes with labels into DOT File
+    for (auto *N : G) {
+      // x++;
+      InstructionListType IList;
+      N->collectInstructions([](const Instruction *I) { return true; }, IList);
+      std::string str = "";
+      int tmp = 0;
       SmallVector<double, DIM> NodeVec;
       std::string s;
 
-      if(N->NodeLabel != "") {
+      if (N->NodeLabel != "") {
         // errs() << "label: " << N->NodeLabel << "\n";
         for (Instruction *II : IList) {
           tmp++;
@@ -155,57 +155,58 @@ void RDGWrapperPass::Print_IR2Vec_File(
         int count_dim = 0;
         for (auto i = NodeVec.begin(), e = NodeVec.end(); i != e; ++i) {
           count_dim++;
-          if(count_dim < DIM) {
+          if (count_dim < DIM) {
             s += std::to_string(*i) + ", ";
           } else {
             s += std::to_string(*i);
           }
-          
         }
 
         File << N->NodeLabel << " [label=\"" << s << "\"];\n";
-        
+
         NodeNumber.insert(std::make_pair(N, N->NodeLabel));
       }
-		}
-			
-		NodeToNumber SourceDest;
-		NodeToNumber SourceEdgeWeight;
-		// Append all the edges into DOT File (including weights for Memory Dependence edges)
-		for(auto *N : G){
-      if(N->NodeLabel != "") {
+    }
+
+    NodeToNumber SourceDest;
+    NodeToNumber SourceEdgeWeight;
+    // Append all the edges into DOT File (including weights for Memory
+    // Dependence edges)
+    for (auto *N : G) {
+      if (N->NodeLabel != "") {
         // errs() << "label: " << N->NodeLabel << "\n";
         // errs() << *N << "\n";
-        for (auto &E : N->getEdges()){
+        for (auto &E : N->getEdges()) {
           NodeType *tgtNode = &E->getTargetNode();
           // errs() << "tgtNode: " << *tgtNode << "\n";
           // errs() << "tgtNode Label: " << tgtNode->NodeLabel << "\n";
-          if(tgtNode->NodeLabel != "") {
-            if((*E).isMemoryDependence()){
+          if (tgtNode->NodeLabel != "") {
+            if ((*E).isMemoryDependence()) {
               md++;
-              errs() << NodeNumber.find(N)->second << " -> " 
-                << NodeNumber.find(&E->getTargetNode())->second << " : "
-                << (*E).getKind() << " : " << (*E).getEdgeWeight() << "\n";
-                // errs() << "aaaaaaaaaaaaaaaaaa" << NodeNumber.find(&E->getTargetNode())->second   << "\n";
-              File << NodeNumber.find(N)->second << " -> " 
-                << NodeNumber.find(&E->getTargetNode())->second 
-                <<"[label=\"" << (*E).getKind() << ": " << (*E).getEdgeWeight() << "\"];\n";
-                // errs() << "bbbbbbbbbbbbbbbbbbbb\n";
+              errs() << NodeNumber.find(N)->second << " -> "
+                     << NodeNumber.find(&E->getTargetNode())->second << " : "
+                     << (*E).getKind() << " : " << (*E).getEdgeWeight() << "\n";
+              // errs() << "aaaaaaaaaaaaaaaaaa" <<
+              // NodeNumber.find(&E->getTargetNode())->second   << "\n";
+              File << NodeNumber.find(N)->second << " -> "
+                   << NodeNumber.find(&E->getTargetNode())->second
+                   << "[label=\"" << (*E).getKind() << ": "
+                   << (*E).getEdgeWeight() << "\"];\n";
+              // errs() << "bbbbbbbbbbbbbbbbbbbb\n";
             } else {
-              File << NodeNumber.find(N)->second << " -> " 
-                << NodeNumber.find(&E->getTargetNode())->second 
-                <<"[label=\"" << (*E).getKind() << "\"];\n";
-                // errs() << "cccccccccccccccc \n";
+              File << NodeNumber.find(N)->second << " -> "
+                   << NodeNumber.find(&E->getTargetNode())->second
+                   << "[label=\"" << (*E).getKind() << "\"];\n";
+              // errs() << "cccccccccccccccc \n";
             }
           }
         }
       }
-		}
-		File << "}";
-	}
-	else{
-		errs() << "error opening file for writing! \n";
-	} 
+    }
+    File << "}";
+  } else {
+    errs() << "error opening file for writing! \n";
+  }
 }
 
 // Append the Memory Dependence Edges with weights into Graph
@@ -355,9 +356,9 @@ bool RDGWrapperPass::runOnFunction(Function &F) {
 
       // Append Memory Dependence Edges with weights into Graph
       auto *LAA = &getAnalysis<LoopAccessLegacyAnalysis>();
-      auto RDGraph = RDG(*AA, *SE, *LI, DI, *LAA);
+      const LoopAccessInfo &LAI = LAA->getInfo(*il);
+      auto RDGraph = RDG(*AA, *SE, *LI, DI, LAI);
       auto SCCGraph = RDGraph.computeRDGForInnerLoop(**il);
-      // const LoopAccessInfo &LAI = LAA->getInfo(*il);
       // BuildRDG_LAI(G1, DI, LAI);
       // G1.populate();
 
@@ -396,21 +397,27 @@ bool RDGWrapperPass::runOnFunction(Function &F) {
       //     }
       //   }
       // }
-      
+
       // errs() << "file: " << F.getParent()->getSourceFileName() << "\n";
-      // std::string file = sys::path::remove_leading_dotslash(F.getParent()->getSourceFileName());
+      // std::string file =
+      // sys::path::remove_leading_dotslash(F.getParent()->getSourceFileName());
       // errs() << "file: " << file << "\n";
       // errs() << sys::path::stem(F.getParent()->getSourceFileName()) << "\n";
-      std::string SCC_Filename = "SCC_" + sys::path::stem(F.getParent()->getSourceFileName()).str() + "_FUNCTION_" + F.getName().str() + "_LOOP" +
-                                 std::to_string(loopNum) + ".dot";
+      std::string SCC_Filename =
+          "SCC_" + sys::path::stem(F.getParent()->getSourceFileName()).str() +
+          "_FUNCTION_" + F.getName().str() + "_LOOP" + std::to_string(loopNum) +
+          ".dot";
       errs() << "Writing " + SCC_Filename + "\n";
       errs() << "\n\n";
       RDGraph.PrintDotFile_LAI(SCCGraph, SCC_Filename);
 
       // Print Input File
-      std::string Input_Filename = "InputGraph_" + sys::path::stem(F.getParent()->getSourceFileName()).str() + "_FUNCTION_" + F.getName().str() +
-      "_Loop" + std::to_string(loopNum) + ".dot"; errs() << "Writing " +
-      Input_Filename + "\n"; 
+      std::string Input_Filename =
+          "InputGraph_" +
+          sys::path::stem(F.getParent()->getSourceFileName()).str() +
+          "_FUNCTION_" + F.getName().str() + "_Loop" + std::to_string(loopNum) +
+          ".dot";
+      errs() << "Writing " + Input_Filename + "\n";
       Print_IR2Vec_File(SCCGraph, Input_Filename, instVecMap);
     }
   }

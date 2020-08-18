@@ -52,7 +52,7 @@ private:
   InstructionListType ReductionPHIList;
 
   using NodeListType = SmallVector<NodeType *, 4>;
-  
+
   using NodeRef = DDGNode *;
   using NodeToNumber = DenseMap<const DDGNode *, int>;
   NodeToNumber NodeNumber;
@@ -60,7 +60,8 @@ private:
   ScalarEvolution &SE;
   LoopInfo &LI;
   DependenceInfo &DI;
-  LoopAccessLegacyAnalysis &LAA;
+  // LoopAccessLegacyAnalysis &LAA;
+  const LoopAccessInfo &LAI;
 
 public:
   static char ID;
@@ -68,8 +69,8 @@ public:
   // LoopAccessAnalysis& LAA):AA(AA),SE(SE),LI(LI),DI(DI),LAA(LAA){
   // }
   RDG(AAResults &AA, ScalarEvolution &SE, LoopInfo &LI, DependenceInfo &DI,
-      LoopAccessLegacyAnalysis &LAA)
-      : AA(AA), SE(SE), LI(LI), DI(DI), LAA(LAA) {}
+      const LoopAccessInfo &LAI)
+      : AA(AA), SE(SE), LI(LI), DI(DI), LAI(LAI) {}
   DataDependenceGraph computeRDGForInnerLoop(Loop &L);
 
   // void getAnalysisUsage(AnalysisUsage &AU) const override;
@@ -82,8 +83,10 @@ public:
   void BuildRDG_LAI(DataDependenceGraph &G, DependenceInfo &DI,
                     const LoopAccessInfo &LAI);
 
-  void createMemoryEdgeMergedNode(DataDependenceGraph &G, DependenceInfo &DI, NodeType &FinalNode, NodeType &MergingNode, NodeListType &NodeDeletionList);
-  
+  void createMemoryEdgeMergedNode(DataDependenceGraph &G, DependenceInfo &DI,
+                                  NodeType &FinalNode, NodeType &MergingNode,
+                                  NodeListType &NodeDeletionList);
+
   void CreateSCC(DataDependenceGraph &G, DependenceInfo &DI);
 
   void SelectOnlyStoreNode(DataDependenceGraph &G);
