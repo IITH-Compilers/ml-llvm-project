@@ -20,7 +20,7 @@ class DistributeLoopEnv:
         self.hidden_size = 300
         self.n_steps = 10
         # self.num_nodes = 40 # this value to estimate
-        self.graphObj = None # Have the graph formed from adjency list using dependence edges only.
+        self.topology = None # Have the graph formed from adjency list using dependence edges only.
         self.cur_node = None
         
         self.startNode= None
@@ -96,7 +96,7 @@ class DistributeLoopEnv:
         print('DLOOP action_displacement & Merge | Dis: {} & {}'.format(action_displacement, action_pair))
         
         # add the node to the visited list
-        self.graphObj.UpdateVisitList(action_displacement)
+        self.topology.UpdateVisitList(action_displacement)
         # TODO add annotations to have visited node
         self.ggnn.mpAfterDisplacement(action_displacement)
        
@@ -115,12 +115,13 @@ class DistributeLoopEnv:
         reward = 0
         done = False
         # all the nodes re visted the calculate the rewards by calling distribution pass
-        if len(self.graphObj.findAllVertaxWithZeroWeights()) == 0 :
+        if len(self.topology.findAllVertaxWithZeroWeights()) == 0 :
             reward = self.getReward()
             done = True
         return self.next_obs, reward, done, self.distribution 
     
     # input graph : jsonnx
+    # return the state of the graph, all the possible starting nodes
     def reset_env(self, graph, path):
 
         self.path = path
@@ -133,27 +134,32 @@ class DistributeLoopEnv:
         #                           layer_timesteps=[self.n_steps]*self.num_nodes, residual_connections={}, nodelevel=False)
 
 
-        self.obs, self.graphObj, self.ggnn = constructGraph(self.graph)
+        self.hidden_state, self.topology, self.ggnn = constructGraph(self.graph)
         
         # print("state : {}".format(self.obs))
        
 
-        possibleStartNodes = self.graphObj.findAllVertaxWithZeroWeights()
+        possibleStartNodes = self.topology.findAllVertaxWithZeroWeights()
+        
+        # hs --> hidden state
+        possibleStartNodes_hs = self.hidden_state[possibleStartNodes]
+
         # TODO Do somwhting here, it is randon as of now
-        print("possible start nodes : {}".format(possibleStartNodes))
-        self.startNode = random.choice(possibleStartNodes)
-        print('start Node : {}'.format(self.startNode))
-        self.graphObj.UpdateVisitList(self.startNode)
-        
+        # print("possible start nodes : {}".format(possibleStartNodes))
+        # self.startNode = random.choice(possibleStartNodes)
+        # print('start Node : {}'.format(self.startNode))
+        # self.topology.UpdateVisitList(self.startNode)
+        # 
 
-        # TODO : Add the focus bit on the node to say it is the initial selected 
-        # [ir2vec:1], [ir2vec:0] pass the the annotation values [v:x]
-        self.ggnn.mpAfterDisplacement(self.startNode, startNode=True)
-        self.cur_node = self.startNode
-        
-        self.distribution = self.ggnn.idx_nid[self.cur_node]
+        # # TODO : Add the focus bit on the node to say it is the initial selected 
+        # # [ir2vec:1], [ir2vec:0] pass the the annotation values [v:x]
+        # self.ggnn.mpAfterDisplacement(self.startNode, startNode=True)
+        # self.cur_node = self.startNode
+        # 
+        # self.distribution = self.ggnn.idx_nid[self.cur_node]
 
-        return self.obs, self.graphObj
+        # return self.obs, self.topology
+        return possibleStartNodes_hs, possibleStartNodes, self.topology
 
 
 

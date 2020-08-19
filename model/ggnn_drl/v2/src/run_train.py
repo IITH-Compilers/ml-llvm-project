@@ -29,13 +29,15 @@ def run(agent):
         print('DLOOP New graph to the env. {} '.format(path))
         for episode in range(1):
 
-            state, topology = env.reset_env(graph, path)
+            # state, topology = env.reset_env(graph, path)
+            # Updated 
+            possibleStartNodes_hs, possibleStartNodes, topology = env.reset_env(graph, path)
             score = 0
             while(True):
 
                 # pass the state and  topology to get the action
                 # action is 
-                action = agent.act(state, topology, eps)
+                action = agent.act(possibleStartNodes_hs, possibleStartNodes, topology, eps)
                 print("action choosed : {}".format(action))
 
                 # Get the next the next state from the action
@@ -78,6 +80,6 @@ def run(agent):
 if __name__ == '__main__':
     
     # episodes = 100
-    dqn_agent = Agent(state_size=300, action_size=200, seed=0)
+    dqn_agent = Agent(state_size=300, action_size=1, seed=0)
     run(dqn_agent)
 
