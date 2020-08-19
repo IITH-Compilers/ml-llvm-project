@@ -26,7 +26,7 @@ class AdjacencyList:
 
 
 class GatedGraphNeuralNetwork(nn.Module):
-    def __init__(self, hidden_size, num_edge_types, layer_timesteps,
+    def __init__(self, hidden_size, annotation_size, num_edge_types, layer_timesteps,
                  residual_connections,
                  state_to_message_dropout=0.3,
                  rnn_dropout=0.3,
@@ -43,7 +43,9 @@ class GatedGraphNeuralNetwork(nn.Module):
         self.state_to_message_dropout = state_to_message_dropout
         self.rnn_dropout = rnn_dropout
         self.use_bias_for_message_linear = use_bias_for_message_linear
+        self.annotation_size = annotation_size 
 
+        self.hidden_layer = nn.Linear(self.hidden_size + self.annotation_size, self.hidden_size)
         # Prepare linear transformations from node states to messages, for each layer and each edge type
         # Prepare rnn cells for each layer
         self.state_to_message_linears = []
@@ -74,18 +76,27 @@ class GatedGraphNeuralNetwork(nn.Module):
         return self.rnn_cells[0].weight_hh.device
 
     def forward(self,
-                initial_node_representation: Variable,
+            initial_node_representation: Variable, annotations: Variable, 
                 adjacency_lists: List[AdjacencyList],
                 return_all_states=False) -> Variable:
-        return self.compute_node_representations(initial_node_representation, adjacency_lists,
+        return self.compute_node_representations(initial_node_representation, annotations ,adjacency_lists,
                                                  return_all_states=return_all_states)
 
     def compute_node_representations(self,
-                                     initial_node_representation: Variable,
+            initial_node_representation: Variable, annotations:Variable,
                                      adjacency_lists: List[AdjacencyList],
                                      return_all_states=False) -> Variable:
         # If the dimension of initial node embedding is smaller, then perform padding first
         # one entry per layer (final state of that layer), shape: number of nodes in batch v x D
+
+        
+        print('Annotaion shape {shape} and value {value} '.format(shape=annotations.shape, value=annotations))
+        # print(initial_node_representation.shape)
+        initial_node_representation = torch.cat([initial_node_representation, annotations], dim=1)
+        print('DLOOP H+A {}'.format(initial_node_representation.shape))
+        initial_node_representation = self.hidden_layer(initial_node_representation)
+
+
         init_node_repr_size = initial_node_representation.size(1)
         device = adjacency_lists[0].data.device
         if init_node_repr_size < self.hidden_size:
@@ -178,7 +189,9 @@ class GatedGraphNeuralNetwork(nn.Module):
         else:
             return torch.sum(node_states_per_layer[-1],dim=0)
 
-    def mpAfterDisplacement(self, v):
+    def mpAfterDisplacement(self, v, startNode=False):
+        if startNode:
+            self.annotations[v][1] = 1
         self.annotations[v][0] = 1
 
     def addPairEdge(self, node1, node2):
@@ -189,11 +202,12 @@ class GatedGraphNeuralNetwork(nn.Module):
     def propagate(self):
         adjacency_lists=[ AdjacencyList(node_num=self.num_nodes, adj_list=adjlist, device=self.device) for adjlist in self.unique_type_map.values()]
 
-        self.n_state = self.compute_node_representations(initial_node_representation=self.n_state, adjacency_lists=adjacency_lists, return_all_states=False)
+        self.n_state = self.compute_node_representations(initial_node_representation=self.n_state,  annotations=self.annotations, adjacency_lists=adjacency_lists, return_all_states=False)
         
         state = torch.sum(self.n_state, dim=0)
         state = state.cpu().detach().numpy()
         print('DLOOP  return from propagate | state : {}'.format(state.shape))
+        print('DLOOP pair edges while new propagate : {}'.format(self.unique_type_map['pair']))
         return state
   
    # input graph jsonnx
@@ -238,15 +252,15 @@ def constructGraph(graph):
     graphObj = Graph(all_edges,  num_nodes)
     print('All links : {}'.format(all_edges))
     print("num_nodes : {}".format(num_nodes) )
-    ggnn = GatedGraphNeuralNetwork(hidden_size=initial_node_representation.shape[1], num_edge_types= len(unique_type_map.keys()) + 1, layer_timesteps=[5]*num_nodes, residual_connections={}, nodelevel=True)
+    ggnn = GatedGraphNeuralNetwork(hidden_size=initial_node_representation.shape[1], annotation_size=2, num_edge_types= len(unique_type_map.keys()) + 1, layer_timesteps=[5]*num_nodes, residual_connections={}, nodelevel=True)
 
-    ggnn.annotations = [[0]*10]*num_nodes
+    ggnn.annotations = torch.FloatTensor([[0]*2]*num_nodes)
     ggnn.num_nodes = num_nodes
     adjacency_lists=[ AdjacencyList(node_num=num_nodes, adj_list=adjlist, device=ggnn.device) for adjlist in unique_type_map.values()]
     print("unique_type_map : {}".format(unique_type_map)) 
     ggnn.unique_type_map = unique_type_map
     # TODO maps values have same behvior as append
-    ggnn.n_state = ggnn.compute_node_representations(initial_node_representation=initial_node_representation, adjacency_lists=adjacency_lists, return_all_states=False)
+    ggnn.n_state = ggnn.compute_node_representations(initial_node_representation=initial_node_representation, annotations=ggnn.annotations, adjacency_lists=adjacency_lists, return_all_states=False)
     
     state = torch.sum(ggnn.n_state, dim=0)
     

@@ -1,10 +1,5 @@
 # Model for distribution
 
-
-V2 Plan to add Focus node, focus edge and Root node
-
-
-
 * basic version
 * GNN
 ** It will form the simulator/env. which will provide state for the DQN.

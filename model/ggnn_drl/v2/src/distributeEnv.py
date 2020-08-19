@@ -19,7 +19,7 @@ class DistributeLoopEnv:
         self.graph = None
         self.hidden_size = 300
         self.n_steps = 10
-        self.num_nodes = 40 # this value to estimate
+        # self.num_nodes = 40 # this value to estimate
         self.graphObj = None # Have the graph formed from adjency list using dependence edges only.
         self.cur_node = None
         
@@ -28,7 +28,7 @@ class DistributeLoopEnv:
         self.distribution = ""
         
     
-        self.O3_runtimes = utils.get_O3_runtimes('/home/venkat/IF-DV/data')
+        self.O3_runtimes = utils.get_O3_runtimes('../../../../data')
     
     def getReward(self):
        
@@ -73,11 +73,10 @@ class DistributeLoopEnv:
         Druntime = utils.get_runtime_of_file(dist_file_path_out, input_file_path)
 
         # Run the O3 file 5 times, O3avg
-        O3runtime = self.O3_runtimes[O3_file_path] 
-        
-        if O3runtime is None:
+        if O3_file_path not in self.O3_runtimes.keys():
             O3runtime = utils.get_runtime_of_file(O3_file_path, input_file_path)
-
+        else:
+            O3runtime = self.O3_runtimes[O3_file_path] 
 
         reward = (O3runtime - Druntime) / O3runtime
         
@@ -109,7 +108,7 @@ class DistributeLoopEnv:
             self.distribution = "{},{}".format(self.distribution,nxtloop)
 
         if action_pair == 1:
-            self.ggnn.addPairEdge(self.cur_node, action_pair)
+            self.ggnn.addPairEdge(self.cur_node, action_displacement)
         
         
         self.next_obs = self.ggnn.propagate()
@@ -120,6 +119,7 @@ class DistributeLoopEnv:
             reward = self.getReward()
             done = True
         return self.next_obs, reward, done, self.distribution 
+    
     # input graph : jsonnx
     def reset_env(self, graph, path):
 
@@ -148,7 +148,7 @@ class DistributeLoopEnv:
 
         # TODO : Add the focus bit on the node to say it is the initial selected 
         # [ir2vec:1], [ir2vec:0] pass the the annotation values [v:x]
-        self.ggnn.mpAfterDisplacement(self.startNode)
+        self.ggnn.mpAfterDisplacement(self.startNode, startNode=True)
         self.cur_node = self.startNode
         
         self.distribution = self.ggnn.idx_nid[self.cur_node]

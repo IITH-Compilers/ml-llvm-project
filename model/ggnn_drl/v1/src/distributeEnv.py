@@ -28,7 +28,7 @@ class DistributeLoopEnv:
         self.distribution = ""
         
     
-        self.O3_runtimes = utils.get_O3_runtimes('/home/venkat/IF-DV/data')
+        self.O3_runtimes = utils.get_O3_runtimes('../../../../data')
     
     def getReward(self):
        
@@ -73,11 +73,10 @@ class DistributeLoopEnv:
         Druntime = utils.get_runtime_of_file(dist_file_path_out, input_file_path)
 
         # Run the O3 file 5 times, O3avg
-        O3runtime = self.O3_runtimes[O3_file_path] 
-        
-        if O3runtime is None:
+        if O3_file_path not in self.O3_runtimes.keys():
             O3runtime = utils.get_runtime_of_file(O3_file_path, input_file_path)
-
+        else:
+            O3runtime = self.O3_runtimes[O3_file_path] 
 
         reward = (O3runtime - Druntime) / O3runtime
         

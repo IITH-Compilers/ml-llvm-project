@@ -23,7 +23,7 @@ def run(agent):
     #Load the envroinment
     env = DistributeLoopEnv()    
     
-    for path in glob.glob('/home/venkat/IF-DV/data/graphs/json/*.json'): # Number of the iterations
+    for path in glob.glob('/home/venkat/IF-DV/IR2Vec-LoopOptimizationFramework/data/graphs/json/*.json'): # Number of the iterations
         with open(path) as f:
             graph = json.load(f)
         print('DLOOP New graph to the env. {} '.format(path))
