@@ -5,6 +5,7 @@
 
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
@@ -19,11 +20,17 @@ class LoopDistribution : public FunctionPass {
 private:
   NodeList topologicalWalk(DataDependenceGraph &SCCGraph);
   void topologicalUtil();
-  Loop *cloneLoop(Loop *L, LoopInfo *LI, DominatorTree *DT);
-  void modifyBranch(BasicBlock *preheader, Loop *newLoop);
-  void removeInstFromPreHeader(BasicBlock *preHeader);
-
+  Loop *cloneLoop(Loop *L, LoopInfo *LI, DominatorTree *DT,
+                  ValueToValueMap &instVMap);
+  void modifyCondBranch(BasicBlock *preheader, Loop *newLoop);
+  void removeUnwantedSlices(SmallVector<Loop *, 5> clonedLoops,
+                            NodeList topoOrder,
+                            SmallDenseMap<Loop *, ValueToValueMap> loopInstVMap,
+                            SmallDenseMap<unsigned, Loop *> workingLoopID);
+  bool fail(StringRef RemarkName, StringRef Message, Loop *L);
+  bool doSanityChecks(Loop *L);
   bool distributed;
+  OptimizationRemarkEmitter *ORE;
 
 public:
   static char ID;

@@ -6,80 +6,51 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 
-#define DEBUG_TYPE "LD"
+#define LDIST_NAME "ir2vec-loop-distribution"
+#define DEBUG_TYPE LDIST_NAME
 
 using namespace llvm;
 
 NodeList LoopDistribution::topologicalWalk(DataDependenceGraph &Graph) {
-
-  //  if (!shouldCreatePiBlocks())
-  //      return;
-
   NodeList NodesInPO;
-  // using NodeKind = typename NodeType::NodeKind;
+
   for (DDGNode *N : post_order(&Graph)) {
-    // if (N->getKind() == NodeKind::PiBlock) {
-    //   // Put members of the pi-block right after the pi-block itself, for
-    //   // convenience.
-    //   const NodeListType &PiBlockMembers = getNodesInPiBlock(*N);
-    //   NodesInPO.insert(NodesInPO.end(), PiBlockMembers.begin(),
-    //                    PiBlockMembers.end());
-    // }
     NodesInPO.push_back(N);
   }
 
-  // size_t OldSize = Graph.Nodes.size();
-  // Graph.Nodes.clear();
-  // for (DDGNode *N : reverse(NodesInPO))
-  //   topoOrder.push_back(N);
   std::reverse(NodesInPO.begin(), NodesInPO.end());
   NodeList processedTopoOrder;
 
   for (DDGNode *N : NodesInPO) {
     SmallVector<Instruction *, 10> InstList;
     N->collectInstructions([](const Instruction *I) { return true; }, InstList);
-    errs() << "Node...............\n";
     for (Instruction *II : InstList) {
       if (isa<StoreInst>(II)) {
         processedTopoOrder.push_back(N);
         break;
       }
-      // errs() << "inst: " << *II << "\n";
     }
   }
-
   return processedTopoOrder;
-  // Graph.Nodes.push_back(N);
-  // if (Graph.Nodes.size() != OldSize)
-  //   assert(false &&
-  //          "Expected the number of nodes to stay the same after the sort");
 }
 
-void LoopDistribution::modifyBranch(BasicBlock *preheader, Loop *newLoop) {
-  assert(preheader);
+// Modifies the Loop condition to point appropriately
+void LoopDistribution::modifyCondBranch(BasicBlock *oldPreheader,
+                                        Loop *newLoop) {
+  assert(oldPreheader);
   BranchInst *replacement;
   SmallVector<BasicBlock *, 3> newLatches;
   newLoop->getLoopLatches(newLatches);
-  // assert(newLatch &&)
-  // assert(false);
-  // To-Do: instead of iterating over all blocks, only header can be iterated
   for (auto BB : newLatches) {
     BranchInst *curBranch = dyn_cast<BranchInst>(BB->getTerminator());
     if (curBranch && curBranch->isConditional()) {
-      replacement =
-          BranchInst::Create(dyn_cast<BasicBlock>(curBranch->getOperand(2)),
-                             preheader, curBranch->getCondition());
-      replacement->insertAfter(curBranch);
-      curBranch->replaceAllUsesWith(replacement);
-      curBranch->eraseFromParent();
+      curBranch->setOperand(1, oldPreheader);
     }
   }
-  // }
 }
 
-void LoopDistribution::removeInstFromPreHeader(BasicBlock *preHeader) {}
-
-Loop *LoopDistribution::cloneLoop(Loop *L, LoopInfo *LI, DominatorTree *DT) {
+Loop *LoopDistribution::cloneLoop(Loop *L, LoopInfo *LI, DominatorTree *DT,
+                                  ValueToValueMap &instVMap) {
   ValueToValueMapTy VMap;
   SmallVector<BasicBlock *, 8> newLoopBlocks;
   BasicBlock *oldPreheader = L->getLoopPreheader();
@@ -88,8 +59,6 @@ Loop *LoopDistribution::cloneLoop(Loop *L, LoopInfo *LI, DominatorTree *DT) {
   // block or the top part of the original preheader.
   BasicBlock *Pred = oldPreheader->getSinglePredecessor();
   assert(Pred && "Preheader does not have a single predecessor");
-  BasicBlock *ExitBlock = L->getExitBlock();
-  assert(ExitBlock && "No single exit block");
 
   // We're cloning the preheader along with the loop so we already made sure
   // it was empty.
@@ -99,25 +68,141 @@ Loop *LoopDistribution::cloneLoop(Loop *L, LoopInfo *LI, DominatorTree *DT) {
   Loop *newLoop =
       cloneLoopWithPreheader(L->getLoopPreheader(), L->getLoopPreheader(), L,
                              VMap, Twine("new-"), LI, DT, newLoopBlocks);
-  remapInstructionsInBlocks(newLoopBlocks, VMap);
-  // VMap[L->getLoopLatch()]->dump();
-  // assert(false);
-  // oldPreheader->replaceAllUsesWith(newLoop->getLoopPreheader());
 
-  // check this function
-  modifyBranch(oldPreheader, newLoop);
+  // VMap can contain mappings at instruction level or BB level
+  // The code below obtains VMap at instruction level from BB level
+  for (auto it : VMap) {
+    if (auto srcBB = dyn_cast<BasicBlock>(it.first)) {
+      auto destBB = dyn_cast<BasicBlock>(it.second);
+      SmallVector<Instruction *, 64> destInst;
+      for (auto &I : *destBB) {
+        destInst.push_back(&I);
+      }
+      unsigned i = 0;
+      for (auto &I : *srcBB) {
+        instVMap[&I] = destInst[i++];
+      }
+
+    } else if (auto I = dyn_cast<Instruction>(it.first)) {
+      instVMap[I] = dyn_cast<Instruction>(it->second);
+    } else {
+      llvm_unreachable(
+          "VMap at this point can contain only instructions or basic blocks");
+    }
+  }
+
+  remapInstructionsInBlocks(newLoopBlocks, VMap);
+  modifyCondBranch(oldPreheader, newLoop);
   Pred->getTerminator()->replaceUsesOfWith(oldPreheader,
                                            newLoop->getLoopPreheader());
-  // BasicBlock *Header = L->getHeader();
-  // for (Instruction &BBI : *Header) {
-  //   const char *opcodeName = BBI.getOpcodeName();
-  //   if (strcmp(opcodeName, "icmp") == 0) {
-  //     Instruction *hold = &BBI;
-  //     modifyCmp(hold, start_val, end_val, IntptrTy);
-  //   }
-  // }
   distributed = true;
+  // Report the success.
+  ORE->emit([&]() {
+    return OptimizationRemark(LDIST_NAME, "Distribute", L->getStartLoc(),
+                              L->getHeader())
+           << "distributed loop";
+  });
   return newLoop;
+}
+
+void LoopDistribution::removeUnwantedSlices(
+    SmallVector<Loop *, 5> clonedLoops, NodeList topoOrder,
+    SmallDenseMap<Loop *, ValueToValueMap> loopInstVMap,
+    SmallDenseMap<unsigned, Loop *> workingLoopID) {
+
+  // Find union of instructions from other nodes of SCC (excluding the
+  // current one)
+  errs() << "topoorder.size = " << topoOrder.size() << "\n";
+  for (unsigned i = 0; i < topoOrder.size(); i++) {
+    SmallVector<Instruction *, 64> instToRemove;
+
+    for (unsigned j = 0; j < topoOrder.size(); j++) {
+      if (i == j)
+        continue;
+      SmallVector<Instruction *, 10> InstList;
+      topoOrder[j]->collectInstructions(
+          [](const Instruction *I) { return true; }, InstList);
+      instToRemove.append(InstList.begin(), InstList.end());
+    }
+    SmallVector<Instruction *, 64> newInstToRemove;
+    auto instVMap = loopInstVMap[workingLoopID[i]];
+
+    if (instVMap.size() > 0) {
+      errs() << "Size of instvmap = " << instVMap.size() << "\n";
+      for (auto it = instToRemove.begin(); it != instToRemove.end(); it++) {
+        Instruction *I = *it;
+        errs() << "key: ";
+        I->dump();
+
+        // Transitively update inst of topo nodes
+        auto x = instVMap[I];
+        auto L = workingLoopID[i];
+        while (!L->contains(dyn_cast<Instruction>(x))) {
+          x = instVMap[x];
+        }
+        errs() << "value: ";
+        x->dump();
+        newInstToRemove.push_back(dyn_cast<Instruction>(x));
+      }
+    } else {
+      // Special case - original loop - will not have any vmap
+      // So, remove directly without referring to vmap
+      for (auto inst : instToRemove)
+        newInstToRemove.push_back(inst);
+    }
+    // Remove the populated instructions
+    for (auto I : newInstToRemove) {
+      I->eraseFromParent();
+    }
+  }
+}
+
+bool LoopDistribution::doSanityChecks(Loop *L) {
+  if (!L->isLoopSimplifyForm())
+    return fail("NotLoopSimplifyForm", "loop is not in loop-simplify form", L);
+
+  if (!L->isRotatedForm())
+    return fail("NotLoopRotateForm", "loop is not in loop-rotate form", L);
+
+  if (!L->getExitBlock())
+    return fail("MultipleExitBlocks", "multiple exit blocks", L);
+
+  if (!L->isSafeToClone())
+    return fail("NotSafeToClone", "loop is not safe to clone", L);
+
+  for (BasicBlock *BB : L->blocks()) {
+    for (Instruction &I : *BB) {
+      if (dyn_cast<CallInst>(&I))
+        return fail("FuncCallFound",
+                    "not safe to distribute with function calls", L);
+    }
+    if (dyn_cast<BranchInst>(BB->getTerminator())->isConditional() &&
+        BB != L->getLoopLatch())
+      return fail("MultipleConditions",
+                  "no support for distribution in case of conditionals inside "
+                  "loop body",
+                  L);
+  }
+  return true;
+}
+
+/// Provide diagnostics then \return with false.
+bool LoopDistribution::fail(StringRef RemarkName, StringRef Message, Loop *L) {
+  // With Rpass-missed report that distribution failed.
+  ORE->emit([&]() {
+    return OptimizationRemarkMissed(LDIST_NAME, "NotDistributed",
+                                    L->getStartLoc(), L->getHeader())
+           << "loop not distributed: use -Rpass-analysis=loop-distribute for "
+              "more "
+              "info";
+  });
+
+  // With Rpass-analysis report why.  This is on by default if distribution
+  // was requested explicitly.
+  ORE->emit(OptimizationRemarkAnalysis(LDIST_NAME, RemarkName, L->getStartLoc(),
+                                       L->getHeader())
+            << "loop not distributed: " << Message);
+  return false;
 }
 
 bool LoopDistribution::runOnFunction(Function &F) {
@@ -125,71 +210,75 @@ bool LoopDistribution::runOnFunction(Function &F) {
   ScalarEvolution *SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
   LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   DependenceInfo DI = DependenceInfo(&F, AA, SE, LI);
+  auto *ORE = &getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
   auto *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
 
   int loopNum = 0;
-  for (LoopInfo::iterator i = LI->begin(), e = LI->end(); i != e; ++i) {
-    loopNum++;
-    Loop *L = *i;
 
-    for (auto il = df_begin(L), el = df_end(L); il != el; ++il) {
-      if (il->getSubLoops().size() > 0) {
-        continue;
-      }
+  // Build up a worklist of inner-loops to vectorize. This is necessary as the
+  // act of distributing a loop creates new loops and can invalidate iterators
+  // across the loops.
 
-      auto *LAA = &getAnalysis<LoopAccessLegacyAnalysis>();
-      auto RDGraph = RDG(*AA, *SE, *LI, DI, *LAA);
-      auto SCCGraph = RDGraph.computeRDGForInnerLoop(**il);
-      RDGraph.PrintDotFile_LAI(
-          SCCGraph,
-          "SCC_" + il->getHeader()->getParent()->getName().str() + ".dot");
-      // SCCGraph.sortNodesTopologically();
+  SmallDenseMap<Loop *, LoopInfo *> Worklist;
 
-      // for (DDGNode *N : SCCGraph) {
-      //   SmallVector<Instruction *, 10> InstList;
-      //   N->collectInstructions([](const Instruction *I) { return true; },
-      //                          InstList);
-      //   errs() << "Node...............\n";
-      //   for (Instruction *II : InstList) {
-      //     errs() << "inst: " << *II << "\n";
-      //   }
-      // }
+  for (Loop *TopLevelLoop : *LI)
+    for (Loop *L : depth_first(TopLevelLoop))
+      // We only handle inner-most loops.
+      if (L->empty())
+        Worklist[L] = LI;
 
-      // errs() << "====================================";
-      auto topoOrder = topologicalWalk(SCCGraph);
-      errs() << "#nodes = " << topoOrder.size() << "\n";
-
-      if (topoOrder.size() == 0) {
-        continue;
-      }
-
-      BasicBlock *curPreHeader = il->getLoopPreheader();
-
-      auto L = *il;
-      for (unsigned i = 0; i < topoOrder.size() - 1; i++) {
-        // To keep things simple have an empty preheader before we version or
-        // clone
-        // the loop.  (Also split if this has no predecessor, i.e. entry,
-        // because we rely on PH having a predecessor.)
-        auto PH = L->getLoopPreheader();
-        if (!PH->getSinglePredecessor() || &*PH->begin() != PH->getTerminator())
-          SplitBlock(PH, PH->getTerminator(), DT, LI);
-        // F.viewCFG();
-        L = cloneLoop(L, LI, DT);
-      }
-
-      // for (DDGNode *N : topoOrder) {
-      //   SmallVector<Instruction *, 10> InstList;
-      //   N->collectInstructions([](const Instruction *I) { return true; },
-      //                          InstList);
-      //   errs() << "Nodessss...............\n";
-      //   for (Instruction *II : InstList) {
-      //     errs() << "inst: " << *II << "\n";
-      //   }
-      // }
+  // Now walk the identified inner loops.
+  for (auto it : Worklist) {
+    auto il = it.first;
+    if (!doSanityChecks(il)) {
+      continue;
     }
+    auto LI = it.second;
+    loopNum++;
+
+    auto *LAA = &getAnalysis<LoopAccessLegacyAnalysis>();
+    auto *LAI = &LAA->getInfo(il);
+
+    auto RDGraph = RDG(*AA, *SE, *LI, DI, *LAI);
+    auto SCCGraph = RDGraph.computeRDGForInnerLoop(*il);
+    RDGraph.PrintDotFile_LAI(
+        SCCGraph, "SCC_" + std::to_string(loopNum) +
+                      il->getHeader()->getParent()->getName().str() + ".dot");
+
+    auto topoOrder = topologicalWalk(SCCGraph);
+    errs() << "#nodes = " << topoOrder.size() << "\n";
+
+    if (topoOrder.size() == 0) {
+      continue;
+    }
+
+    BasicBlock *curPreHeader = il->getLoopPreheader();
+
+    auto L = il;
+    SmallVector<Loop *, 5> clonedLoops;
+    SmallDenseMap<unsigned, Loop *> workingLoopID;
+    unsigned id = topoOrder.size() - 1;
+    workingLoopID[id--] = L;
+    SmallDenseMap<Loop *, ValueToValueMap> loopInstVMap;
+    ValueToValueMap instVMap;
+
+    for (unsigned i = 0; i < topoOrder.size() - 1; i++) {
+      // To keep things simple have an empty preheader before we version or
+      // clone
+      // the loop.  (Also split if this has no predecessor, i.e. entry,
+      // because we rely on PH having a predecessor.)
+      auto PH = L->getLoopPreheader();
+      if (!PH->getSinglePredecessor() || &*PH->begin() != PH->getTerminator())
+        SplitBlock(PH, PH->getTerminator(), DT, LI);
+
+      L = cloneLoop(L, LI, DT, instVMap);
+      workingLoopID[id--] = L;
+      loopInstVMap[L] = instVMap;
+      clonedLoops.push_back(L);
+    }
+
+    removeUnwantedSlices(clonedLoops, topoOrder, loopInstVMap, workingLoopID);
   }
-  errs() << "Returning here --------------------\n";
   return distributed;
 }
 
@@ -199,6 +288,7 @@ void LoopDistribution::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<AAResultsWrapperPass>();
   AU.addRequired<LoopAccessLegacyAnalysis>();
   AU.addRequired<DominatorTreeWrapperPass>();
+  AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
 }
 
 // Registering the pass
