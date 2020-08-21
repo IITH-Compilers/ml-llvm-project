@@ -96,12 +96,7 @@ Loop *LoopDistribution::cloneLoop(Loop *L, LoopInfo *LI, DominatorTree *DT,
   Pred->getTerminator()->replaceUsesOfWith(oldPreheader,
                                            newLoop->getLoopPreheader());
   distributed = true;
-  // Report the success.
-  ORE->emit([&]() {
-    return OptimizationRemark(LDIST_NAME, "Distribute", L->getStartLoc(),
-                              L->getHeader())
-           << L->getHeader()->getParent()->getName() << " --> distributed loop";
-  });
+
   return newLoop;
 }
 
@@ -256,6 +251,11 @@ bool LoopDistribution::runOnFunction(Function &F) {
            il);
       continue;
     }
+    if (topoOrder.size() == 1) {
+      fail("OneNodeInTopoOrder",
+           "Nothing to distribute - Only one node in topo order", il);
+      continue;
+    }
 
     BasicBlock *curPreHeader = il->getLoopPreheader();
 
@@ -283,6 +283,13 @@ bool LoopDistribution::runOnFunction(Function &F) {
     }
 
     removeUnwantedSlices(clonedLoops, topoOrder, loopInstVMap, workingLoopID);
+    // Report the success.
+    ORE->emit([&]() {
+      return OptimizationRemark(LDIST_NAME, "Distribute", L->getStartLoc(),
+                                L->getHeader())
+             << L->getHeader()->getParent()->getName()
+             << " --> distributed loop";
+    });
   }
   return distributed;
 }
