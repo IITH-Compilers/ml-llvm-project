@@ -171,7 +171,7 @@ bool LoopDistribution::doSanityChecks(Loop *L) {
     return fail("NotSafeToClone", "loop is not safe to clone", L);
 
   for (BasicBlock *BB : L->blocks()) {
-    for (Instruction &I : *BB) {
+    for (Instruction &I : BB->instructionsWithoutDebug()) {
       if (dyn_cast<CallInst>(&I))
         return fail("FuncCallFound",
                     "not safe to distribute with function calls", L);
@@ -190,12 +190,13 @@ bool LoopDistribution::doSanityChecks(Loop *L) {
 /// Provide diagnostics then \return with false.
 bool LoopDistribution::fail(StringRef RemarkName, StringRef Message, Loop *L) {
   // With Rpass-missed report that distribution failed.
-  ORE->emit([&]() {
-    return OptimizationRemarkMissed(LDIST_NAME, "NotDistributed",
-                                    L->getStartLoc(), L->getHeader())
-           << "loop not distributed: use -Rpass-analysis=loop-distribute for "
-              "more info";
-  });
+  // ORE->emit([&]() {
+  //   return OptimizationRemarkMissed(LDIST_NAME, "NotDistributed",
+  //                                   L->getStartLoc(), L->getHeader())
+  //          << "loop not distributed: use -Rpass-analysis=loop-distribute for
+  //          "
+  //             "more info";
+  // });
 
   // With Rpass-analysis report why.  This is on by default if distribution
   // was requested explicitly.

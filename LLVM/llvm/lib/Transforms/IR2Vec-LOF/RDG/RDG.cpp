@@ -181,7 +181,8 @@ void RDG::BuildRDG_LAI(DataDependenceGraph &G, DependenceInfo &DI,
     // return false;
   }
 
-  errs() << "+++++++++++++++++++++++++++++ " << alldependences->size() << "\n";
+  LLVM_DEBUG(errs() << "+++++++++++++++++++++++++++++ "
+                    << alldependences->size() << "\n");
 
   int x = 1;
   // Check for all dependences
@@ -403,7 +404,8 @@ void RDG::CreateSCC(DataDependenceGraph &G, DependenceInfo &DI) {
   }
 
   for (NodeListType &NL : ListOfSCCs) {
-    dbgs() << "Creating pi-block node with " << NL.size() << " nodes in it.\n";
+    LLVM_DEBUG(dbgs() << "Creating pi-block node with " << NL.size()
+                      << " nodes in it.\n");
 
     // SCC iterator may put the nodes in an order that's different from the
     // program order. To preserve original program order, we sort the list of
