@@ -100,7 +100,7 @@ Loop *LoopDistribution::cloneLoop(Loop *L, LoopInfo *LI, DominatorTree *DT,
   ORE->emit([&]() {
     return OptimizationRemark(LDIST_NAME, "Distribute", L->getStartLoc(),
                               L->getHeader())
-           << "distributed loop";
+           << L->getHeader()->getParent()->getName() << " --> distributed loop";
   });
   return newLoop;
 }
@@ -128,11 +128,11 @@ void LoopDistribution::removeUnwantedSlices(
     auto instVMap = loopInstVMap[workingLoopID[i]];
 
     if (instVMap.size() > 0) {
-      LLVM_DEBUG(errs() << "Size of instvmap = " << instVMap.size() << "\n");
+      // LLVM_DEBUG(errs() << "Size of instvmap = " << instVMap.size() << "\n");
       for (auto it = instToRemove.begin(); it != instToRemove.end(); it++) {
         Instruction *I = *it;
-        LLVM_DEBUG(errs() << "key: ");
-        LLVM_DEBUG(I->dump());
+        // LLVM_DEBUG(errs() << "key: ");
+        // LLVM_DEBUG(I->dump());
 
         // Transitively update inst of topo nodes
         auto x = instVMap[I];
@@ -140,8 +140,8 @@ void LoopDistribution::removeUnwantedSlices(
         while (!L->contains(dyn_cast<Instruction>(x))) {
           x = instVMap[x];
         }
-        LLVM_DEBUG(errs() << "value: ");
-        LLVM_DEBUG(x->dump());
+        // LLVM_DEBUG(errs() << "value: ");
+        // LLVM_DEBUG(x->dump());
         newInstToRemove.push_back(dyn_cast<Instruction>(x));
       }
     } else {
@@ -202,7 +202,8 @@ bool LoopDistribution::fail(StringRef RemarkName, StringRef Message, Loop *L) {
   // was requested explicitly.
   ORE->emit(OptimizationRemarkAnalysis(LDIST_NAME, RemarkName, L->getStartLoc(),
                                        L->getHeader())
-            << "loop not distributed: " << Message);
+            << L->getHeader()->getParent()->getName()
+            << "--> loop not distributed: " << Message);
   return false;
 }
 
@@ -251,6 +252,8 @@ bool LoopDistribution::runOnFunction(Function &F) {
     LLVM_DEBUG(errs() << "#nodes = " << topoOrder.size() << "\n");
 
     if (topoOrder.size() == 0) {
+      fail("NoNodesInTopoOrder", "No nodes present in topological sorted order",
+           il);
       continue;
     }
 

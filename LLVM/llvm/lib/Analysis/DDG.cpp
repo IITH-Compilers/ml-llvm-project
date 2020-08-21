@@ -232,8 +232,8 @@ DataDependenceGraph::DataDependenceGraph(Loop &L, LoopInfo &LI,
             LLVM_DEBUG(errs() << "Reduction phi node: " << &I << "\n");
             ReductionPHIList.push_back(&I);
           } else {
-            llvm_unreachable(
-                "Neither induction nor reduction phi node -- no support");
+            // llvm_unreachable(
+            //     "Neither induction nor reduction phi node -- no support");
             LLVM_DEBUG(errs() << "Neither Induction nor Reduction phi node: "
                               << *Phi << "\n");
           }
