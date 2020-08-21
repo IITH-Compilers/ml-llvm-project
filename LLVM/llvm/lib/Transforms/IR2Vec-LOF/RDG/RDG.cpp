@@ -15,9 +15,8 @@
 #include "llvm/Support/GraphWriter.h"
 #include <algorithm>
 #include <string>
-// #include "llvm/Support/Debug.h"
 
-#define DEBUG_Type "RDG"
+#define DEBUG_TYPE "RDG"
 
 using namespace llvm;
 
@@ -73,9 +72,10 @@ void RDG::PrintDotFile_LAI(DataDependenceGraph &G, std::string Filename) {
       for (auto &E : N->getEdges()) {
         if ((*E).isMemoryDependence()) {
           md++;
-          errs() << NodeNumber.find(N)->second << " -> "
-                 << NodeNumber.find(&E->getTargetNode())->second << " : "
-                 << (*E).getKind() << " : " << (*E).getEdgeWeight() << "\n";
+          LLVM_DEBUG(errs() << NodeNumber.find(N)->second << " -> "
+                            << NodeNumber.find(&E->getTargetNode())->second
+                            << " : " << (*E).getKind() << " : "
+                            << (*E).getEdgeWeight() << "\n");
           File << NodeNumber.find(N)->second << " -> "
                << NodeNumber.find(&E->getTargetNode())->second << "[label=\"  "
                << (*E).getKind() << ": " << (*E).getEdgeWeight() << "\"];\n";

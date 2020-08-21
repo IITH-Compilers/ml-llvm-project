@@ -112,7 +112,7 @@ void LoopDistribution::removeUnwantedSlices(
 
   // Find union of instructions from other nodes of SCC (excluding the
   // current one)
-  errs() << "topoorder.size = " << topoOrder.size() << "\n";
+  LLVM_DEBUG(errs() << "topoorder.size = " << topoOrder.size() << "\n");
   for (unsigned i = 0; i < topoOrder.size(); i++) {
     SmallVector<Instruction *, 64> instToRemove;
 
@@ -128,11 +128,11 @@ void LoopDistribution::removeUnwantedSlices(
     auto instVMap = loopInstVMap[workingLoopID[i]];
 
     if (instVMap.size() > 0) {
-      errs() << "Size of instvmap = " << instVMap.size() << "\n";
+      LLVM_DEBUG(errs() << "Size of instvmap = " << instVMap.size() << "\n");
       for (auto it = instToRemove.begin(); it != instToRemove.end(); it++) {
         Instruction *I = *it;
-        errs() << "key: ";
-        I->dump();
+        LLVM_DEBUG(errs() << "key: ");
+        LLVM_DEBUG(I->dump());
 
         // Transitively update inst of topo nodes
         auto x = instVMap[I];
@@ -140,8 +140,8 @@ void LoopDistribution::removeUnwantedSlices(
         while (!L->contains(dyn_cast<Instruction>(x))) {
           x = instVMap[x];
         }
-        errs() << "value: ";
-        x->dump();
+        LLVM_DEBUG(errs() << "value: ");
+        LLVM_DEBUG(x->dump());
         newInstToRemove.push_back(dyn_cast<Instruction>(x));
       }
     } else {
@@ -176,8 +176,9 @@ bool LoopDistribution::doSanityChecks(Loop *L) {
         return fail("FuncCallFound",
                     "not safe to distribute with function calls", L);
     }
-    if (dyn_cast<BranchInst>(BB->getTerminator())->isConditional() &&
-        BB != L->getLoopLatch())
+    auto br = dyn_cast<BranchInst>(BB->getTerminator());
+
+    if (br && br->isConditional() && BB != L->getLoopLatch())
       return fail("MultipleConditions",
                   "no support for distribution in case of conditionals inside "
                   "loop body",
@@ -193,8 +194,7 @@ bool LoopDistribution::fail(StringRef RemarkName, StringRef Message, Loop *L) {
     return OptimizationRemarkMissed(LDIST_NAME, "NotDistributed",
                                     L->getStartLoc(), L->getHeader())
            << "loop not distributed: use -Rpass-analysis=loop-distribute for "
-              "more "
-              "info";
+              "more info";
   });
 
   // With Rpass-analysis report why.  This is on by default if distribution
@@ -210,9 +210,8 @@ bool LoopDistribution::runOnFunction(Function &F) {
   ScalarEvolution *SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
   LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   DependenceInfo DI = DependenceInfo(&F, AA, SE, LI);
-  auto *ORE = &getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
+  ORE = &getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
   auto *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-
   int loopNum = 0;
 
   // Build up a worklist of inner-loops to vectorize. This is necessary as the
@@ -230,6 +229,8 @@ bool LoopDistribution::runOnFunction(Function &F) {
   // Now walk the identified inner loops.
   for (auto it : Worklist) {
     auto il = it.first;
+    LLVM_DEBUG(errs() << "Processing "
+                      << il->getHeader()->getParent()->getName() << "\n");
     if (!doSanityChecks(il)) {
       continue;
     }
@@ -246,7 +247,7 @@ bool LoopDistribution::runOnFunction(Function &F) {
                       il->getHeader()->getParent()->getName().str() + ".dot");
 
     auto topoOrder = topologicalWalk(SCCGraph);
-    errs() << "#nodes = " << topoOrder.size() << "\n";
+    LLVM_DEBUG(errs() << "#nodes = " << topoOrder.size() << "\n");
 
     if (topoOrder.size() == 0) {
       continue;
