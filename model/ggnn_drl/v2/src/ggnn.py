@@ -204,7 +204,12 @@ class GatedGraphNeuralNetwork(nn.Module):
 
         self.n_state = self.compute_node_representations(initial_node_representation=self.n_state,  annotations=self.annotations, adjacency_lists=adjacency_lists, return_all_states=False)
         
-        state = torch.sum(self.n_state, dim=0)
+        
+        if not self.nodelevel:
+            state = torch.sum(self.n_state, dim=0)
+        else:
+            state = self.n_state
+        
         state = state.cpu().detach().numpy()
         print('DLOOP  return from propagate | state : {}'.format(state.shape))
         print('DLOOP pair edges while new propagate : {}'.format(self.unique_type_map['pair']))
@@ -271,7 +276,7 @@ def constructGraph(graph):
 
 
     # TODO detach the obj from the 
-    state = state.cpu().detach().numpy()
+    state = ggnn.n_state.cpu().detach().numpy()
     return  state, graphObj, ggnn
 
 

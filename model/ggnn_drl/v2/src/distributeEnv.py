@@ -85,40 +85,51 @@ class DistributeLoopEnv:
 
 
 
-    def step(self, action):
+    def step(self, nodeChoosen, merge_distribute):
         if self.ggnn is None:
             raise Exception()
-
-
         
-        action_displacement = action // 2
-        action_pair = action % 2
-        print('DLOOP action_displacement & Merge | Dis: {} & {}'.format(action_displacement, action_pair))
+        action_pair = merge_distribute
+        print('DLOOP nodeChoosen & Merge | Dis: {} & {}'.format(nodeChoosen, action_pair))
         
         # add the node to the visited list
-        self.topology.UpdateVisitList(action_displacement)
+        self.topology.UpdateVisitList(nodeChoosen)
         # TODO add annotations to have visited node
-        self.ggnn.mpAfterDisplacement(action_displacement)
        
         
-        nxtloop =  self.ggnn.idx_nid[action_displacement]
-        if action_pair == 1:
-            self.distribution = "{}{}".format(self.distribution, nxtloop)
+        node_id =  self.ggnn.idx_nid[nodeChoosen]
+        
+        if action_pair is not None:
+            self.ggnn.mpAfterDisplacement(nodeChoosen)
+            
+            if action_pair == 1:
+                self.distribution = "{}{}".format(self.distribution, node_id)
+                self.ggnn.addPairEdge(self.cur_node, nodeChoosen)
+            else:
+                self.distribution = "{},{}".format(self.distribution,node_id)
         else:
-            self.distribution = "{},{}".format(self.distribution,nxtloop)
+           self.ggnn.mpAfterDisplacement(nodeChoosen, True)
+           self.distribution = node_id
+           
 
-        if action_pair == 1:
-            self.ggnn.addPairEdge(self.cur_node, action_displacement)
         
-        
-        self.next_obs = self.ggnn.propagate()
+        self.next_hidden_state = self.ggnn.propagate()
         reward = 0
         done = False
         # all the nodes re visted the calculate the rewards by calling distribution pass
-        if len(self.topology.findAllVertaxWithZeroWeights()) == 0 :
+        possibleStartNodes = self.topology.findAllVertaxWithZeroWeights()
+        if len(possibleStartNodes) == 0 :
             reward = self.getReward()
             done = True
-        return self.next_obs, reward, done, self.distribution 
+            self.next_obs = self.next_hidden_state[nodeChoosen]
+        else:
+        
+            # hs --> hidden state
+            self.next_obs = self.hidden_state[possibleStartNodes]
+
+        self.cur_node = nodeChoosen
+
+        return self.next_obs, possibleStartNodes, reward, done, self.distribution 
     
     # input graph : jsonnx
     # return the state of the graph, all the possible starting nodes
@@ -129,10 +140,6 @@ class DistributeLoopEnv:
         self.graph = graph
         self.num_nodes = len(self.graph['nodes'])
         
-
-        # self.ggnn = GatedGraphNeuralNetwork(hidden_size=self.hidden_size, num_edge_types=1,
-        #                           layer_timesteps=[self.n_steps]*self.num_nodes, residual_connections={}, nodelevel=False)
-
 
         self.hidden_state, self.topology, self.ggnn = constructGraph(self.graph)
         

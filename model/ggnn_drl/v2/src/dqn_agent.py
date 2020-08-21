@@ -55,7 +55,7 @@ class Agent():
                 experiences = self.memory.sample()
                 self.learn(experiences, GAMMA)
 
-    def act(self, state, index_hs, topology, eps=0.):
+    def act(self, state, indices_possible_hs, topology, eps=0., isStart=False):
         """Returns actions for given state as per current policy.
         
         Params
@@ -65,17 +65,17 @@ class Agent():
         """
         next_loops = topology.findAllVertaxWithZeroWeights()
         
-        # n transition As per the SCC * 2 decscsion  
-        def generate_actions(next_loops):
-            mask = []
-            for a in next_loops:
-                mask.append(a*2)
-                mask.append(a*2+1)
-            return mask
+        # # n transition As per the SCC * 2 decscsion  
+        # def generate_actions(next_loops):
+        #     mask = []
+        #     for a in next_loops:
+        #         mask.append(a*2)
+        #         mask.append(a*2+1)
+        #     return mask
 
-        masked_action = generate_actions(next_loops)
+        # masked_action = generate_actions(next_loops)
         
-        print("valid action space for the state : {}".format(masked_action))
+        # print("valid action space for the state : {}".format(masked_action))
 
         print("DLOOP state type : {}, {}".format(type(state), state.shape))
         state = torch.from_numpy(state).float() # .unsqueeze(0)
@@ -85,19 +85,21 @@ class Agent():
         with torch.no_grad():
             
 
-            action_values = self.qnetwork_local(state)
-            masked_action_space = action_values[masked_action]
-            action_values = masked_action_space
+            action_value, indexchoosen, merge_distribute = self.qnetwork_local(state, isStart)
+            # masked_action_space = action_values[masked_action]
+            # action_values = masked_action_space
 
-            print('action_values : {}'.format(action_values))
+            print('action_value : {}'.format(action_value))
             # TODO Mask for each state via SCC
         self.qnetwork_local.train()
 
         # Epsilon-greedy action selection
         if random.random() > eps:
-            return masked_action[np.argmax(action_values.cpu().data.numpy())]
+            return indexchoosen, merge_distribute
+            #return masked_action[np.argmax(action_values.cpu().data.numpy())]
         else:
-            return random.choice(masked_action)
+            return random.choice(np.arange(state.shape[0])), random.choice([0,1])
+            #return random.choice(masked_action)
 
             # return random.choice(np.arange(self.action_size))
 

@@ -27,37 +27,43 @@ def run(agent):
         with open(path) as f:
             graph = json.load(f)
         print('DLOOP New graph to the env. {} '.format(path))
-        for episode in range(1):
+        for episode in range(2):
 
             # state, topology = env.reset_env(graph, path)
             # Updated 
-            possibleStartNodes_hs, possibleStartNodes, topology = env.reset_env(graph, path)
+            possibleNodes_hs, possibleNodes, topology = env.reset_env(graph, path)
+            isStart = True
             score = 0
             while(True):
 
                 # pass the state and  topology to get the action
                 # action is 
-                action = agent.act(possibleStartNodes_hs, possibleStartNodes, topology, eps)
-                print("action choosed : {}".format(action))
-
+                nextNodeIndex, merge_distribute = agent.act(possibleNodes_hs, possibleNodes, topology, eps, isStart)
+                
+                if isStart:
+                    merge_distribute = None
+                    isStart = False
+                print("action choosed : {} {} {}".format(nextNodeIndex, possibleNodes[nextNodeIndex],merge_distribute))
                 # Get the next the next state from the action
                 # reward is 0 till we reach the end node
                 # reward will be -negative, maximize  the reward
                 #
-                next_state, reward, done, distribute = env.step(action)
+                next_state, next_possibleNodes, reward, done, distribute = env.step(possibleNodes[nextNodeIndex], merge_distribute)
                 
+
                 # put the state transitionin memory buffer
-                agent.step(state, action, reward, next_state, done)
+                agent.step(possibleNodes_hs, (nextNodeIndex, merge_distribute), reward, next_state, done)
                 
 
                 # print('state : {}'.format(state))
-                print('action : {}'.format(action))
+                print('stored in memoey action tuple: {}'.format((nextNodeIndex, merge_distribute)))
                 print('reward : {}'.format(reward))
                 # print('next_state : {}'.format(next_state))
                 print('done : {}'.format(done))
                 print('Distribution till now : {}'.format(distribute))
                 
-                state = next_state
+                possibleNodes_hs = next_state
+                possibleNodes = next_possibleNodes
                 score += reward
                 if done:
                     break
