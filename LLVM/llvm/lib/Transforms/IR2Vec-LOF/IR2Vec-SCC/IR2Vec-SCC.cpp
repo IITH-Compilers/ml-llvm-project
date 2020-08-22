@@ -359,6 +359,8 @@ bool RDGWrapperPass::runOnFunction(Function &F) {
       const LoopAccessInfo &LAI = LAA->getInfo(*il);
       auto RDGraph = RDG(*AA, *SE, *LI, DI, LAI);
       auto SCCGraph = RDGraph.computeRDGForInnerLoop(**il);
+      SCCGraph.CreateLoopId(loopNum);
+      errs() << "Loop ID: " << SCCGraph.GetLoopId() << "\n";
       // BuildRDG_LAI(G1, DI, LAI);
       // G1.populate();
 

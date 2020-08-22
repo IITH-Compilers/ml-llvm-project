@@ -349,6 +349,15 @@
    /// If node \p N belongs to a pi-block return a pointer to the pi-block,
    /// otherwise return null.
    const PiBlockDDGNode *getPiBlock(const NodeType &N) const;
+
+   // Assign Loop Id to Loop
+   void CreateLoopId(int id) {
+     LoopId = id;
+   }
+
+   int GetLoopId() {
+     return LoopId;
+   }
  
  protected:
    /// Add node \p N to the graph, if it's not added yet, and keep track of the
@@ -362,6 +371,7 @@
    /// Mapping from graph nodes to their containing pi-blocks. If a node is not
    /// part of a pi-block, it will not appear in this map.
    PiBlockMapType PiBlockMap;
+   int LoopId;
  };
  
  /// Concrete implementation of a pure data dependence graph builder. This class
