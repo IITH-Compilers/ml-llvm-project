@@ -22,6 +22,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/IR/Mangler.h"
 #include <algorithm>
 #include <string>
 // #include "llvm/Support/Debug.h"
@@ -359,8 +360,11 @@ bool RDGWrapperPass::runOnFunction(Function &F) {
       const LoopAccessInfo &LAI = LAA->getInfo(*il);
       auto RDGraph = RDG(*AA, *SE, *LI, DI, LAI);
       auto SCCGraph = RDGraph.computeRDGForInnerLoop(**il);
+      
+      SCCGraph.InsertFunctionName(F.getName());
+      // errs() << "Mangled Name: " << SCCGraph.GetFunctionName() << "\n";
       SCCGraph.CreateLoopId(loopNum);
-      errs() << "Loop ID: " << SCCGraph.GetLoopId() << "\n";
+      // errs() << "Loop ID: " << SCCGraph.GetLoopId() << "\n";
       // BuildRDG_LAI(G1, DI, LAI);
       // G1.populate();
 

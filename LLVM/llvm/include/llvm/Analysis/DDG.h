@@ -350,11 +350,22 @@
    /// otherwise return null.
    const PiBlockDDGNode *getPiBlock(const NodeType &N) const;
 
+   // Insert Function Name for which loop belongs to
+   void InsertFunctionName(std::string name) {
+     FunctionName = name;
+   }
+
+   // Get FunctionName
+   std::string GetFunctionName() {
+     return FunctionName;
+   }
+
    // Assign Loop Id to Loop
    void CreateLoopId(int id) {
      LoopId = id;
    }
 
+   // Get LoopId
    int GetLoopId() {
      return LoopId;
    }
@@ -371,6 +382,7 @@
    /// Mapping from graph nodes to their containing pi-blocks. If a node is not
    /// part of a pi-block, it will not appear in this map.
    PiBlockMapType PiBlockMap;
+   std::string FunctionName;
    int LoopId;
  };
  
