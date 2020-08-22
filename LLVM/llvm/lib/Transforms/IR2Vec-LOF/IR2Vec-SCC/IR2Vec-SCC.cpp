@@ -337,7 +337,7 @@ bool RDGWrapperPass::runOnFunction(Function &F) {
 
   int loopNum = 0;
   for (LoopInfo::iterator i = LI->begin(), e = LI->end(); i != e; ++i) {
-    loopNum++;
+    // loopNum++;
     Loop *L = *i;
     // L->dump();
     errs() << "===================================\n";
@@ -356,6 +356,7 @@ bool RDGWrapperPass::runOnFunction(Function &F) {
       // DataDependenceGraph G2 = DataDependenceGraph(**il, LI, DI, &SE);
 
       // Append Memory Dependence Edges with weights into Graph
+      loopNum++;
       auto *LAA = &getAnalysis<LoopAccessLegacyAnalysis>();
       const LoopAccessInfo &LAI = LAA->getInfo(*il);
       auto RDGraph = RDG(*AA, *SE, *LI, DI, LAI);
@@ -409,22 +410,33 @@ bool RDGWrapperPass::runOnFunction(Function &F) {
       // sys::path::remove_leading_dotslash(F.getParent()->getSourceFileName());
       // errs() << "file: " << file << "\n";
       // errs() << sys::path::stem(F.getParent()->getSourceFileName()) << "\n";
+      // std::string SCC_Filename =
+      //     "SCC_" + sys::path::stem(F.getParent()->getSourceFileName()).str() +
+      //     "_FUNCTION_" + F.getName().str() + "_LOOP" + std::to_string(loopNum) +
+      //     ".dot";
+
+      std::string s1 = F.getParent()->getName().str();
+      std::string s2(s1.substr(s1.rfind('/')+1));
       std::string SCC_Filename =
-          "SCC_" + sys::path::stem(F.getParent()->getSourceFileName()).str() +
-          "_FUNCTION_" + F.getName().str() + "_LOOP" + std::to_string(loopNum) +
+          "SCC_" + s2 +
+          "_FUNCTION_" + SCCGraph.GetFunctionName() + 
+          "_LOOP" + std::to_string(loopNum) +
           ".dot";
+      
+      // errs() << F.getParent()->getName() << " : " << s2 << "\n";
+      // errs() << SCCGraph.GetFunctionName() << "\n";
       errs() << "Writing " + SCC_Filename + "\n";
-      errs() << "\n\n";
       RDGraph.PrintDotFile_LAI(SCCGraph, SCC_Filename);
 
       // Print Input File
       std::string Input_Filename =
-          "InputGraph_" +
-          sys::path::stem(F.getParent()->getSourceFileName()).str() +
-          "_FUNCTION_" + F.getName().str() + "_Loop" + std::to_string(loopNum) +
+          "InputGraph_" + s2 +
+          "_FUNCTION_" + SCCGraph.GetFunctionName() + 
+          "_Loop" + std::to_string(loopNum) +
           ".dot";
       errs() << "Writing " + Input_Filename + "\n";
       Print_IR2Vec_File(SCCGraph, Input_Filename, instVecMap);
+      errs() << "\n";
     }
   }
   return false;
