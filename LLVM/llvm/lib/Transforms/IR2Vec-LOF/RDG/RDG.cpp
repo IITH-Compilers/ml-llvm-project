@@ -168,7 +168,7 @@ void RDG::PrintDotFile_LAI(DataDependenceGraph &G, std::string Filename) {
 // }
 
 // Append the Memory Dependence Edges with weights into Graph
-void RDG::BuildRDG_LAI(DataDependenceGraph &G, DependenceInfo &DI,
+bool RDG::BuildRDG_LAI(DataDependenceGraph &G, DependenceInfo &DI,
                        const LoopAccessInfo &LAI) {
   const auto alldependences =
       LAI.getDepChecker().getDependences(); // List of dependences
@@ -176,9 +176,9 @@ void RDG::BuildRDG_LAI(DataDependenceGraph &G, DependenceInfo &DI,
       LAI.getDepChecker().getDDist(); // List of dependence distances
 
   if (alldependences == nullptr) {
-    errs() << "######################\n";
-    // DEBUG(dbgs() << "LAI dependences is a nullptr.\n");
-    // return false;
+    // errs() << "######################aaaaaaaaaaaaaa\n";
+    LLVM_DEBUG(errs() << "LAI dependences is a nullptr.\n");
+    return false;
   }
 
   LLVM_DEBUG(errs() << "+++++++++++++++++++++++++++++ "

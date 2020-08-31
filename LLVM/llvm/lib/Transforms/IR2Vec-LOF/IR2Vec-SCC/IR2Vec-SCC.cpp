@@ -425,7 +425,7 @@ bool RDGWrapperPass::runOnFunction(Function &F) {
       
       // errs() << F.getParent()->getName() << " : " << s2 << "\n";
       // errs() << SCCGraph.GetFunctionName() << "\n";
-      errs() << "Writing " + SCC_Filename + "\n";
+      // errs() << "Writing " + SCC_Filename + "\n";
       RDGraph.PrintDotFile_LAI(SCCGraph, SCC_Filename);
 
       // Print Input File
@@ -434,9 +434,9 @@ bool RDGWrapperPass::runOnFunction(Function &F) {
           "_FUNCTION_" + SCCGraph.GetFunctionName() + 
           "_Loop" + std::to_string(loopNum) +
           ".dot";
-      errs() << "Writing " + Input_Filename + "\n";
+      // errs() << "Writing " + Input_Filename + "\n";
       Print_IR2Vec_File(SCCGraph, Input_Filename, instVecMap);
-      errs() << "\n";
+      // errs() << "\n";
     }
   }
   return false;

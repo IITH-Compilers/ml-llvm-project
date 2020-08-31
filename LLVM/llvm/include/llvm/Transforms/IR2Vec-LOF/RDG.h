@@ -80,7 +80,7 @@ public:
   // void Print_IR2Vec_File(DataDependenceGraph &G, std::string Filename,
   // SmallDenseMap<const Instruction *, SmallVector<double, DIM>> instVecMap);
 
-  void BuildRDG_LAI(DataDependenceGraph &G, DependenceInfo &DI,
+  bool BuildRDG_LAI(DataDependenceGraph &G, DependenceInfo &DI,
                     const LoopAccessInfo &LAI);
 
   void createMemoryEdgeMergedNode(DataDependenceGraph &G, DependenceInfo &DI,
