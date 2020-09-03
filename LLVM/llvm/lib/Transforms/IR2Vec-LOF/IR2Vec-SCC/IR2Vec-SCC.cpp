@@ -16,13 +16,13 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/Mangler.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/IR/Mangler.h"
 #include <algorithm>
 #include <string>
 // #include "llvm/Support/Debug.h"
@@ -361,7 +361,7 @@ bool RDGWrapperPass::runOnFunction(Function &F) {
       const LoopAccessInfo &LAI = LAA->getInfo(*il);
       auto RDGraph = RDG(*AA, *SE, *LI, DI, LAI);
       auto SCCGraph = RDGraph.computeRDGForInnerLoop(**il);
-      
+
       SCCGraph.InsertFunctionName(F.getName());
       // errs() << "Mangled Name: " << SCCGraph.GetFunctionName() << "\n";
       SCCGraph.CreateLoopId(loopNum);
@@ -411,29 +411,27 @@ bool RDGWrapperPass::runOnFunction(Function &F) {
       // errs() << "file: " << file << "\n";
       // errs() << sys::path::stem(F.getParent()->getSourceFileName()) << "\n";
       // std::string SCC_Filename =
-      //     "SCC_" + sys::path::stem(F.getParent()->getSourceFileName()).str() +
-      //     "_FUNCTION_" + F.getName().str() + "_LOOP" + std::to_string(loopNum) +
+      //     "SCC_" + sys::path::stem(F.getParent()->getSourceFileName()).str()
+      //     +
+      //     "_FUNCTION_" + F.getName().str() + "_LOOP" +
+      //     std::to_string(loopNum) +
       //     ".dot";
 
       std::string s1 = F.getParent()->getName().str();
-      std::string s2(s1.substr(s1.rfind('/')+1));
-      std::string SCC_Filename =
-          "SCC_" + s2 +
-          "_FUNCTION_" + SCCGraph.GetFunctionName() + 
-          "_LOOP" + std::to_string(loopNum) +
-          ".dot";
-      
+      std::string s2(s1.substr(s1.rfind('/') + 1));
+      std::string SCC_Filename = "SCC_" + s2 + "_FUNCTION_" +
+                                 SCCGraph.GetFunctionName() + "_LOOP" +
+                                 std::to_string(loopNum) + ".dot";
+
       // errs() << F.getParent()->getName() << " : " << s2 << "\n";
       // errs() << SCCGraph.GetFunctionName() << "\n";
       // errs() << "Writing " + SCC_Filename + "\n";
       RDGraph.PrintDotFile_LAI(SCCGraph, SCC_Filename);
 
       // Print Input File
-      std::string Input_Filename =
-          "InputGraph_" + s2 +
-          "_FUNCTION_" + SCCGraph.GetFunctionName() + 
-          "_Loop" + std::to_string(loopNum) +
-          ".dot";
+      std::string Input_Filename = "InputGraph_" + s2 + "_FUNCTION_" +
+                                   SCCGraph.GetFunctionName() + "_Loop" +
+                                   std::to_string(loopNum) + ".dot";
       // errs() << "Writing " + Input_Filename + "\n";
       Print_IR2Vec_File(SCCGraph, Input_Filename, instVecMap);
       // errs() << "\n";
