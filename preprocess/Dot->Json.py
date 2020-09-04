@@ -4,6 +4,9 @@ import pydot
 import sys
 import json
 import glob
+import os
+GRAPH_DIR=sys.argv[1]
+
 
 def dot_to_json(file_in):
     graph_netx = networkx.drawing.nx_pydot.read_dot(file_in)
@@ -14,7 +17,7 @@ def dot_to_json(file_in):
     return graph_json 
 
 
-allfiles =  glob.glob('/home/venkat/IF-DV/data/graphs/dot/*.dot')
+allfiles =  glob.glob(os.path.join(GRAPH_DIR, 'dot/*.dot'))
 # allfiles = ['/home/venkat/IF-DV/IR2Vec-LoopOptimizationFramework/build_release/InputGraph_fun_Loop1.dot']
 
 for dotPath in  allfiles:
@@ -27,13 +30,6 @@ for dotPath in  allfiles:
     if len(graph['nodes']) < 2:
         print('File not included for json : {}'.format(dotPath))
         continue
-    with open('/home/venkat/IF-DV/data/graphs/json/{}.json'.format(name), 'w') as f:
+    with open(os.path.join(GRAPH_DIR, 'json/{}.json'.format(name)), 'w') as f:
         json.dump(graph,  f)
-
-
-
-# In[ ]:
-
-
-
 

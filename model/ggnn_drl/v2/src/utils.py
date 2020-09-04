@@ -4,7 +4,7 @@ from os import path
 import glob
 import subprocess
 import time
-
+import sys
 os.environ['LLVM']="/home/venkat/IF-DV/IR2Vec-LoopOptimizationFramework/build_release"
 os.environ['OPT']=os.environ['LLVM']+"/bin/opt"
 os.environ['CLANG']=os.environ['LLVM']+"/bin/clang"
@@ -23,7 +23,7 @@ def load_O3_runtimes(filepath):
         return None
 
 
-def get_O3_runtimes(rundir):
+def get_O3_runtimes(rundir, isInputRequired):
     '''get all runetimes for O3 (baseline).'''
     try:
         print('Checking if local O3_runtimes.pkl file exists to avoid waste of compilation.') 
@@ -42,25 +42,27 @@ def get_O3_runtimes(rundir):
 
     input_folder = os.path.join(rundir, 'inputd')
 
-    input_files = glob.glob(os.path.join(input_folder , '*.inputd'))
+    if isInputRequired:
+        input_files = glob.glob(os.path.join(input_folder , '*.inputd'))
    
-    # print(input_files)
+        assert len(input_files) == len(llfiles), ' Count of source and input should be same'  
 
-    # print(llfiles)
-    assert len(input_files) == len(llfiles), ' Count of source and input should be same'  
+        pack = zip(llfiles, input_files)
+        
+        for filename, inputd in pack:
+            runtime = get_runtime_of_file(filename, inputd)
+            O3_runtimes[filename]=runtime
+    else:
+        for filename in llfiles:
+            runtime = get_runtime_of_file(filename)
+            O3_runtimes[filename]=runtime
 
-    pack = zip(llfiles, input_files)
-    
-    for filename, inputd in pack:
-        runtime = get_runtime_of_file(filename, inputd)
-        O3_runtimes[filename]=runtime
-    
     with open(os.path.join(rundir,'O3_runtimes.pkl'), 'wb') as output:
         pk.dump(O3_runtimes, output)
     
     return O3_runtimes
 
-def get_runtime_of_file(filename, inputd, file_format='ll'):
+def get_runtime_of_file(filename, inputd=None, file_format='ll'):
     print('DLOOP filename to get runtime {}'.format(filename)) 
     try:
         if file_format == 'll':
@@ -74,12 +76,16 @@ def get_runtime_of_file(filename, inputd, file_format='ll'):
                 os.system(cmd1)
         else:
             out_file=filename
-    
-        cmd2 = "{out_file}<{inputd}>/dev/null ".format(out_file=out_file,inputd=inputd)  
+        if inputd is not None: 
+            cmd2 = "{out_file}<{inputd}>/dev/null ".format(out_file=out_file,inputd=inputd)
+        else:
+            cmd2="{out_file}>/dev/null".format(out_file=out_file)
+
         print(cmd2)
         runtime = executeNtimes(cmd2, N=10)
     except:
         runtime = None #None if fails
+        print(sys.exc_info())
         print('Some error occured .. for {filename} so runtime=None '.format(filename=filename))
 
    

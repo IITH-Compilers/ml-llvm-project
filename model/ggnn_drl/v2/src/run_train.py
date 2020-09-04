@@ -7,6 +7,7 @@ import glob
 import json
 import torch
 from collections import deque
+import os
 def run(agent):
     # with open('graphs.json') as file:
     #     graphs = json.load(file)
@@ -19,11 +20,11 @@ def run(agent):
     scores = []                        # list containing scores from each episode
     scores_window = deque(maxlen=100)  # last 100 scores
     eps = eps_start
-    
+    dataset='/home/venkat/IF-DV/Rohit/IR2Vec-LoopOptimizationFramework/data/imagick_ds' 
     #Load the envroinment
-    env = DistributeLoopEnv()    
+    env = DistributeLoopEnv(dataset)    
     
-    for path in glob.glob('/home/venkat/IF-DV/IR2Vec-LoopOptimizationFramework/data/graphs/json/*.json'): # Number of the iterations
+    for path in glob.glob(os.path.join(dataset, 'graphs/json/*.json')): # Number of the iterations
         with open(path) as f:
             graph = json.load(f)
         print('DLOOP New graph to the env. {} '.format(path))
