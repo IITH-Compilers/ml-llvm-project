@@ -17,8 +17,6 @@ using NodeList = SmallVector<DDGNode *, 64>;
 using InstList = SmallVector<Instruction *, 64>;
 using Container = StringMap<InstList>;
 
-// <std::string, InstList>;
-
 static cl::opt<std::string> funcName("function", cl::Hidden, cl::Required,
                                      cl::desc("Name of the function"));
 
@@ -39,7 +37,6 @@ private:
                   ValueToValueMap &instVMap);
   void modifyCondBranch(BasicBlock *preheader, Loop *newLoop);
   void removeUnwantedSlices(SmallVector<Loop *, 5> clonedLoops,
-                            // NodeList topoOrder,
                             SmallDenseMap<Loop *, ValueToValueMap> loopInstVMap,
                             SmallDenseMap<unsigned, Loop *> workingLoopID);
   bool fail(StringRef RemarkName, StringRef Message, Loop *L);
@@ -57,11 +54,7 @@ private:
 
 public:
   static char ID;
-  LoopDistribution() : FunctionPass(ID) {
-    distributed = false;
-    InstList tmp(0);
-    // container["test"] = tmp;
-  }
+  LoopDistribution() : FunctionPass(ID) { distributed = false; }
   bool runOnFunction(Function &F) override;
   void getAnalysisUsage(AnalysisUsage &AU) const;
 };
