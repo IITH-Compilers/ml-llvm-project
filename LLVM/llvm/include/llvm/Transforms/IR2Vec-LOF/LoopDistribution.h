@@ -14,23 +14,43 @@
 
 using namespace llvm;
 using NodeList = SmallVector<DDGNode *, 64>;
+using InstList = SmallVector<Instruction *, 64>;
+using Container = StringMap<InstList>;
+
+static cl::opt<std::string> funcName("function", cl::Hidden, cl::Required,
+                                     cl::desc("Name of the function"));
+
+static cl::opt<unsigned int> loopID("lID", cl::Hidden, cl::Required,
+                                    cl::desc("ID of the loop set by RDG pass"));
+
+static cl::opt<std::string>
+    partitionPattern("partition", cl::Hidden, cl::Required,
+                     cl::desc("partition for loop distribution"));
 
 class LoopDistribution : public FunctionPass {
 
 private:
   NodeList topologicalWalk(DataDependenceGraph &SCCGraph);
-  void topologicalUtil();
+  void populatePartitions(DataDependenceGraph &SCCGraph, Loop *il,
+                          DependenceInfo DI, std::string partition);
   Loop *cloneLoop(Loop *L, LoopInfo *LI, DominatorTree *DT,
                   ValueToValueMap &instVMap);
   void modifyCondBranch(BasicBlock *preheader, Loop *newLoop);
   void removeUnwantedSlices(SmallVector<Loop *, 5> clonedLoops,
-                            NodeList topoOrder,
                             SmallDenseMap<Loop *, ValueToValueMap> loopInstVMap,
                             SmallDenseMap<unsigned, Loop *> workingLoopID);
   bool fail(StringRef RemarkName, StringRef Message, Loop *L);
   bool doSanityChecks(Loop *L);
+  MDNode *getLoopID(Loop *L) const;
+  void removeLoopID(Loop *L);
+
   bool distributed;
   OptimizationRemarkEmitter *ORE;
+
+  void createContainer(DataDependenceGraph &ddg);
+  void addNodeToContainer(DDGNode *node, const std::string id);
+  void mergePartitionsOfContainer(std::string srcID, std::string destID);
+  Container container;
 
 public:
   static char ID;

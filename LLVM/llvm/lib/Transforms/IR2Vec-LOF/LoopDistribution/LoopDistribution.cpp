@@ -11,6 +11,7 @@
 
 using namespace llvm;
 
+// For max distribution
 NodeList LoopDistribution::topologicalWalk(DataDependenceGraph &Graph) {
   NodeList NodesInPO;
 
@@ -34,11 +35,112 @@ NodeList LoopDistribution::topologicalWalk(DataDependenceGraph &Graph) {
   return processedTopoOrder;
 }
 
+MDNode *LoopDistribution::getLoopID(Loop *L) const {
+  MDNode *LoopID = nullptr;
+
+  // Go through the latch blocks and check the terminator for the metadata.
+  SmallVector<BasicBlock *, 4> LatchesBlocks;
+  L->getLoopLatches(LatchesBlocks);
+  for (BasicBlock *BB : LatchesBlocks) {
+    Instruction *TI = BB->getTerminator();
+    MDNode *MD = TI->getMetadata("IR2Vec-SCC-LoopID");
+
+    if (!MD)
+      return nullptr;
+
+    if (!LoopID)
+      LoopID = MD;
+    else if (MD != LoopID)
+      return nullptr;
+  }
+  if (!LoopID || LoopID->getNumOperands() == 0)
+    return nullptr;
+
+  return LoopID;
+}
+
+void LoopDistribution::removeLoopID(Loop *L) {
+  SmallVector<BasicBlock *, 4> LoopLatches;
+  L->getLoopLatches(LoopLatches);
+  for (BasicBlock *BB : LoopLatches)
+    BB->getTerminator()->setMetadata("IR2Vec-SCC-LoopID", NULL);
+}
+
+void LoopDistribution::createContainer(DataDependenceGraph &SCCGraph) {
+  for (DDGNode *N : SCCGraph) {
+    auto label = N->NodeLabel;
+    if (label != "")
+      addNodeToContainer(N, label);
+  }
+}
+
+void LoopDistribution::addNodeToContainer(DDGNode *node, const std::string ID) {
+  assert(node && "Node should not be nullptr");
+  assert(container.find(ID) == container.end() && "Cannot add duplicates");
+  InstList instList;
+  node->collectInstructions([](const Instruction *I) { return true; },
+                            instList);
+  container.try_emplace(ID, instList);
+}
+
+void LoopDistribution::mergePartitionsOfContainer(std::string srcID,
+                                                  std::string destID) {
+  assert(container.find(srcID) != container.end() &&
+         "SrcID should be present in container");
+  assert(container.find(destID) != container.end() &&
+         "destID should be present in container");
+  auto destPartition = container[destID];
+  container[srcID].append(destPartition.begin(), destPartition.end());
+  container.erase(destID);
+}
+
+void LoopDistribution::populatePartitions(DataDependenceGraph &SCCGraph,
+                                          Loop *il, DependenceInfo DI,
+                                          std::string partitionPattern) {
+  // Parse partitions from string
+  // Eg: S1|S2,S3 ==> S1 S2,S3 ==> S1 S2 S3
+  std::string s = partitionPattern;
+  std::string delimiter = "|";
+  size_t pos = 0;
+  SmallVector<std::string, 5> tokens;
+  while ((pos = s.find(delimiter)) != std::string::npos) {
+    tokens.push_back(s.substr(0, pos));
+    s.erase(0, pos + delimiter.length());
+  }
+  tokens.push_back(s);
+
+  // Second level of parsing
+  // S1 S2,S3 ==> S1 S2 S3
+  delimiter = ",";
+  for (auto token : tokens) {
+    std::string s = token;
+    size_t pos = 0;
+    SmallVector<std::string, 5> subtokens;
+    while ((pos = s.find(delimiter)) != std::string::npos) {
+      auto str = s.substr(0, pos);
+      if (str.length() != 0) {
+        errs() << str << "\n";
+        assert(container.find(str) != container.end() &&
+               "No such node ID in graph");
+        subtokens.push_back(str);
+      }
+      s.erase(0, pos + delimiter.length());
+    }
+    assert(container.find(s) != container.end() && "No such node ID in graph");
+    subtokens.push_back(s);
+
+    auto srcPartitionID = subtokens[0];
+
+    // Based on the partitions, merge the nodes of the container
+    for (unsigned i = 1; i < subtokens.size(); i++)
+      mergePartitionsOfContainer(srcPartitionID, subtokens[i]);
+  }
+}
+
 // Modifies the Loop condition to point appropriately
 void LoopDistribution::modifyCondBranch(BasicBlock *oldPreheader,
                                         Loop *newLoop) {
   assert(oldPreheader);
-  BranchInst *replacement;
   SmallVector<BasicBlock *, 3> newLatches;
   newLoop->getLoopLatches(newLatches);
   for (auto BB : newLatches) {
@@ -101,26 +203,24 @@ Loop *LoopDistribution::cloneLoop(Loop *L, LoopInfo *LI, DominatorTree *DT,
 }
 
 void LoopDistribution::removeUnwantedSlices(
-    SmallVector<Loop *, 5> clonedLoops, NodeList topoOrder,
+    SmallVector<Loop *, 5> clonedLoops,
+    // NodeList topoOrder,
     SmallDenseMap<Loop *, ValueToValueMap> loopInstVMap,
     SmallDenseMap<unsigned, Loop *> workingLoopID) {
 
   // Find union of instructions from other nodes of SCC (excluding the
   // current one)
-  LLVM_DEBUG(errs() << "topoorder.size = " << topoOrder.size() << "\n");
-  for (unsigned i = 0; i < topoOrder.size(); i++) {
+  LLVM_DEBUG(errs() << "container.size = " << container.size() << "\n");
+  unsigned id = 0;
+  for (auto i : container.keys()) {
     SmallVector<Instruction *, 64> instToRemove;
-
-    for (unsigned j = 0; j < topoOrder.size(); j++) {
+    for (auto j : container.keys()) {
       if (i == j)
         continue;
-      SmallVector<Instruction *, 10> InstList;
-      topoOrder[j]->collectInstructions(
-          [](const Instruction *I) { return true; }, InstList);
-      instToRemove.append(InstList.begin(), InstList.end());
+      instToRemove.append(container[j].begin(), container[j].end());
     }
     SmallVector<Instruction *, 64> newInstToRemove;
-    auto instVMap = loopInstVMap[workingLoopID[i]];
+    auto instVMap = loopInstVMap[workingLoopID[id]];
 
     if (instVMap.size() > 0) {
       // LLVM_DEBUG(errs() << "Size of instvmap = " << instVMap.size() << "\n");
@@ -131,7 +231,7 @@ void LoopDistribution::removeUnwantedSlices(
 
         // Transitively update inst of topo nodes
         auto x = instVMap[I];
-        auto L = workingLoopID[i];
+        auto L = workingLoopID[id];
         while (!L->contains(dyn_cast<Instruction>(x))) {
           x = instVMap[x];
         }
@@ -149,6 +249,7 @@ void LoopDistribution::removeUnwantedSlices(
     for (auto I : newInstToRemove) {
       I->eraseFromParent();
     }
+    id++;
   }
 }
 
@@ -184,17 +285,7 @@ bool LoopDistribution::doSanityChecks(Loop *L) {
 
 /// Provide diagnostics then \return with false.
 bool LoopDistribution::fail(StringRef RemarkName, StringRef Message, Loop *L) {
-  // With Rpass-missed report that distribution failed.
-  // ORE->emit([&]() {
-  //   return OptimizationRemarkMissed(LDIST_NAME, "NotDistributed",
-  //                                   L->getStartLoc(), L->getHeader())
-  //          << "loop not distributed: use -Rpass-analysis=loop-distribute for
-  //          "
-  //             "more info";
-  // });
-
-  // With Rpass-analysis report why.  This is on by default if distribution
-  // was requested explicitly.
+  // Report failure
   ORE->emit(OptimizationRemarkAnalysis(LDIST_NAME, RemarkName, L->getStartLoc(),
                                        L->getHeader())
             << L->getHeader()->getParent()->getName()
@@ -203,6 +294,9 @@ bool LoopDistribution::fail(StringRef RemarkName, StringRef Message, Loop *L) {
 }
 
 bool LoopDistribution::runOnFunction(Function &F) {
+  if (F.getName() != funcName)
+    return false;
+
   AAResults *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
   ScalarEvolution *SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
   LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
@@ -215,82 +309,94 @@ bool LoopDistribution::runOnFunction(Function &F) {
   // act of distributing a loop creates new loops and can invalidate iterators
   // across the loops.
 
-  SmallDenseMap<Loop *, LoopInfo *> Worklist;
+  Loop *il;
+  bool loopFound = false;
 
-  for (Loop *TopLevelLoop : *LI)
-    for (Loop *L : depth_first(TopLevelLoop))
+  for (Loop *TopLevelLoop : *LI) {
+    for (Loop *L : depth_first(TopLevelLoop)) {
       // We only handle inner-most loops.
-      if (L->empty())
-        Worklist[L] = LI;
+      if (L->empty()) {
+        auto MD = getLoopID(L);
+        if (!MD)
+          continue;
+        auto constVal =
+            dyn_cast<ConstantAsMetadata>(MD->getOperand(0))->getValue();
+        if (loopID == dyn_cast<ConstantInt>(constVal)->getZExtValue()) {
+          il = L;
+          loopFound = true;
+          removeLoopID(il);
+          break;
+        }
+      }
+    }
+    if (loopFound)
+      break;
+  }
+
+  assert(loopFound && il && "Loop ID not found");
 
   // Now walk the identified inner loops.
-  for (auto it : Worklist) {
-    auto il = it.first;
-    LLVM_DEBUG(errs() << "Processing "
-                      << il->getHeader()->getParent()->getName() << "\n");
-    if (!doSanityChecks(il)) {
-      continue;
-    }
-    auto LI = it.second;
-    loopNum++;
-
-    auto *LAA = &getAnalysis<LoopAccessLegacyAnalysis>();
-    auto *LAI = &LAA->getInfo(il);
-
-    auto RDGraph = RDG(*AA, *SE, *LI, DI, *LAI);
-    auto SCCGraph = RDGraph.computeRDGForInnerLoop(*il);
-    RDGraph.PrintDotFile_LAI(
-        SCCGraph, "SCC_" + std::to_string(loopNum) +
-                      il->getHeader()->getParent()->getName().str() + ".dot");
-
-    auto topoOrder = topologicalWalk(SCCGraph);
-    LLVM_DEBUG(errs() << "#nodes = " << topoOrder.size() << "\n");
-
-    if (topoOrder.size() == 0) {
-      fail("NoNodesInTopoOrder", "No nodes present in topological sorted order",
-           il);
-      continue;
-    }
-    if (topoOrder.size() == 1) {
-      fail("OneNodeInTopoOrder",
-           "Nothing to distribute - Only one node in topo order", il);
-      continue;
-    }
-
-    BasicBlock *curPreHeader = il->getLoopPreheader();
-
-    auto L = il;
-    SmallVector<Loop *, 5> clonedLoops;
-    SmallDenseMap<unsigned, Loop *> workingLoopID;
-    unsigned id = topoOrder.size() - 1;
-    workingLoopID[id--] = L;
-    SmallDenseMap<Loop *, ValueToValueMap> loopInstVMap;
-    ValueToValueMap instVMap;
-
-    for (unsigned i = 0; i < topoOrder.size() - 1; i++) {
-      // To keep things simple have an empty preheader before we version or
-      // clone
-      // the loop.  (Also split if this has no predecessor, i.e. entry,
-      // because we rely on PH having a predecessor.)
-      auto PH = L->getLoopPreheader();
-      if (!PH->getSinglePredecessor() || &*PH->begin() != PH->getTerminator())
-        SplitBlock(PH, PH->getTerminator(), DT, LI);
-
-      L = cloneLoop(L, LI, DT, instVMap);
-      workingLoopID[id--] = L;
-      loopInstVMap[L] = instVMap;
-      clonedLoops.push_back(L);
-    }
-
-    removeUnwantedSlices(clonedLoops, topoOrder, loopInstVMap, workingLoopID);
-    // Report the success.
-    ORE->emit([&]() {
-      return OptimizationRemark(LDIST_NAME, "Distribute", L->getStartLoc(),
-                                L->getHeader())
-             << L->getHeader()->getParent()->getName()
-             << " --> distributed loop";
-    });
+  LLVM_DEBUG(errs() << "Processing " << il->getHeader()->getParent()->getName()
+                    << "\n");
+  if (!doSanityChecks(il)) {
+    return false;
   }
+  loopNum++;
+
+  auto *LAA = &getAnalysis<LoopAccessLegacyAnalysis>();
+  auto *LAI = &LAA->getInfo(il);
+
+  auto RDGraph = RDG(*AA, *SE, *LI, DI, *LAI);
+  auto SCCGraph = RDGraph.computeRDGForInnerLoop(*il);
+
+  createContainer(SCCGraph);
+  populatePartitions(SCCGraph, il, DI, partitionPattern);
+
+  RDGraph.PrintDotFile_LAI(
+      SCCGraph, "SCC_" + std::to_string(loopNum) +
+                    il->getHeader()->getParent()->getName().str() + ".dot");
+
+  LLVM_DEBUG(errs() << "#nodes - container = " << container.size() << "\n");
+
+  if (container.size() == 0) {
+    return fail("NoNodesIncontainer", "No nodes present in container ", il);
+  }
+  if (container.size() == 1) {
+    return fail("OneNodeIncontainer",
+                "Nothing to distribute - Only one node in container", il);
+  }
+
+  auto L = il;
+  SmallVector<Loop *, 5> clonedLoops;
+  SmallDenseMap<unsigned, Loop *> workingLoopID;
+  unsigned id = container.size() - 1;
+  workingLoopID[id--] = L;
+  SmallDenseMap<Loop *, ValueToValueMap> loopInstVMap;
+  ValueToValueMap instVMap;
+
+  for (unsigned i = 0; i < container.size() - 1; i++) {
+    // To keep things simple have an empty preheader before we version or
+    // clone the loop.  (Also split if this has no predecessor, i.e. entry,
+    // because we rely on PH having a predecessor.)
+    auto PH = L->getLoopPreheader();
+    if (!PH->getSinglePredecessor() || &*PH->begin() != PH->getTerminator())
+      SplitBlock(PH, PH->getTerminator(), DT, LI);
+
+    L = cloneLoop(L, LI, DT, instVMap);
+    workingLoopID[id--] = L;
+    loopInstVMap[L] = instVMap;
+    clonedLoops.push_back(L);
+  }
+
+  removeUnwantedSlices(clonedLoops, loopInstVMap, workingLoopID);
+  // Report the success.
+  ORE->emit([&]() {
+    return OptimizationRemark(LDIST_NAME, "Distribute", L->getStartLoc(),
+                              L->getHeader())
+           << L->getHeader()->getParent()->getName()
+           << " --> distributed loop ";
+  });
+
   return distributed;
 }
 

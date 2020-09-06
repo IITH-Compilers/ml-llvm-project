@@ -319,6 +319,16 @@ void RDGWrapperPass::Print_IR2Vec_File(
 // 	}
 // }
 
+void RDGWrapperPass::setLoopID(Loop *L, MDNode *LoopID) const {
+  assert((!LoopID || LoopID->getNumOperands() > 0) &&
+         "Loop ID needs at least one operand");
+
+  SmallVector<BasicBlock *, 4> LoopLatches;
+  L->getLoopLatches(LoopLatches);
+  for (BasicBlock *BB : LoopLatches)
+    BB->getTerminator()->setMetadata("IR2Vec-SCC-LoopID", LoopID);
+}
+
 bool RDGWrapperPass::runOnFunction(Function &F) {
   raw_ostream &operator<<(raw_ostream &OS, const DataDependenceGraph &G);
 
@@ -364,7 +374,14 @@ bool RDGWrapperPass::runOnFunction(Function &F) {
 
       SCCGraph.InsertFunctionName(F.getName());
       // errs() << "Mangled Name: " << SCCGraph.GetFunctionName() << "\n";
-      SCCGraph.CreateLoopId(loopNum);
+      LLVMContext &Context = il->getHeader()->getContext();
+
+      MDNode *LoopID =
+          MDNode::get(Context, ConstantAsMetadata::get(ConstantInt::get(
+                                   Context, llvm::APInt(64, loopNum, false))));
+      setLoopID(*il, LoopID);
+
+      // SCCGraph.CreateLoopId(loopNum);
       // errs() << "Loop ID: " << SCCGraph.GetLoopId() << "\n";
       // BuildRDG_LAI(G1, DI, LAI);
       // G1.populate();

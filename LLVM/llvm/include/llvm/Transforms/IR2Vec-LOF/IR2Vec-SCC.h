@@ -54,6 +54,8 @@ private:
   using NodeToNumber = DenseMap<const DDGNode *, std::string>;
   NodeToNumber NodeNumber;
 
+  void setLoopID(Loop *L, MDNode *LoopID) const;
+
 public:
   static char ID;
   RDGWrapperPass();
