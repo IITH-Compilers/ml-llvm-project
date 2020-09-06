@@ -9,7 +9,7 @@ import os
 
 class DistributeLoopEnv:
 
-    def __init__(self):
+    def __init__(self, dataset):
         self.action_space = None
         self.obs = None
         self.cur_action_space = None
@@ -27,8 +27,8 @@ class DistributeLoopEnv:
         self.discovered = []
         self.distribution = ""
         
-    
-        self.O3_runtimes = utils.get_O3_runtimes('../../../../data')
+        self.isInputRequired = True
+        self.O3_runtimes = utils.get_O3_runtimes(dataset, self.isInputRequired)
     
     def getReward(self):
        
@@ -53,16 +53,19 @@ class DistributeLoopEnv:
 
 
 
-        ll_file_name = "{}.ll".format(file_name)
+        # ll_file_name = "{}.ll".format(file_name)
+        ll_file_name = "{}".format(file_name)
 
         ssa_dir = os.path.join(file_dir, 'llfiles/ssa')
         ssa_file_path = os.path.join(ssa_dir, ll_file_name)
         
         O3_dir = os.path.join(file_dir, 'llfiles/level-O3')
         O3_file_path = os.path.join(O3_dir, ll_file_name)
-
-        input_dir = os.path.join(file_dir, 'inputd')
-        input_file_path = os.path.join(input_dir, "{}.inputd".format(file_name))
+        
+        input_file_path=None
+        if self.isInputRequired:
+            input_dir = os.path.join(file_dir, 'inputd')
+            input_file_path = os.path.join(input_dir, "{}.inputd".format(file_name))
 
         
         # call the Pass 
@@ -70,11 +73,11 @@ class DistributeLoopEnv:
 
         # Run the File 5 times on input. Davg
         
-        Druntime = utils.get_runtime_of_file(dist_file_path_out, input_file_path)
+        Druntime = utils.get_runtime_of_file(dist_file_path_out,inputd= input_file_path)
 
         # Run the O3 file 5 times, O3avg
         if O3_file_path not in self.O3_runtimes.keys():
-            O3runtime = utils.get_runtime_of_file(O3_file_path, input_file_path)
+            O3runtime = utils.get_runtime_of_file(O3_file_path, inputd=input_file_path)
         else:
             O3runtime = self.O3_runtimes[O3_file_path] 
 
@@ -110,7 +113,8 @@ class DistributeLoopEnv:
         if action_pair == 1:
             self.ggnn.addPairEdge(self.cur_node, action_displacement)
         
-        
+       
+        self.cur_node = action_displacement
         self.next_obs = self.ggnn.propagate()
         reward = 0
         done = False
