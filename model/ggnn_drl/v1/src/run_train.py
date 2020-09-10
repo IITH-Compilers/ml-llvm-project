@@ -12,7 +12,7 @@ def run(agent):
     # with open('graphs.json') as file:
     #     graphs = json.load(file)
     
-    n_episodes=50
+    n_episodes=1
     max_t=1000
     eps_start=1.0
     eps_end=0.01
@@ -20,15 +20,19 @@ def run(agent):
     scores = []                        # list containing scores from each episode
     scores_window = deque(maxlen=100)  # last 100 scores
     eps = eps_start
-    dataset='/home/venkat/IF-DV/Rohit/IR2Vec-LoopOptimizationFramework/data'    
+    dataset='/home/venkat/IF-DV/Rohit/IR2Vec-LoopOptimizationFramework/data/spec_ds_filter'    
     #Load the envroinment
     env = DistributeLoopEnv(dataset)    
-    
+    count=0 
     for path in glob.glob(os.path.join(dataset, 'graphs/json/*.json')): # Number of the iterations
         with open(path) as f:
             graph = json.load(f)
         print('DLOOP New graph to the env. {} '.format(path))
-        for episode in range(5):
+        count=count+1
+        if count < 1:
+            continue
+        print('================================================================================================ ',count)
+        for episode in range(n_episodes):
 
             state, topology = env.reset_env(graph, path)
             score = 0

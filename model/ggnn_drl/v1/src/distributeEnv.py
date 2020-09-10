@@ -27,7 +27,7 @@ class DistributeLoopEnv:
         self.discovered = []
         self.distribution = ""
         
-        self.isInputRequired = True
+        self.isInputRequired = False
         self.O3_runtimes = utils.get_O3_runtimes(dataset, self.isInputRequired)
     
     def getReward(self):
@@ -56,8 +56,8 @@ class DistributeLoopEnv:
         # ll_file_name = "{}.ll".format(file_name)
         ll_file_name = "{}".format(file_name)
 
-        ssa_dir = os.path.join(file_dir, 'llfiles/ssa')
-        ssa_file_path = os.path.join(ssa_dir, ll_file_name)
+        meta_ssa_dir = os.path.join(file_dir, 'llfiles/meta_ssa')
+        meta_ssa_file_path = os.path.join(meta_ssa_dir, ll_file_name)
         
         O3_dir = os.path.join(file_dir, 'llfiles/level-O3')
         O3_file_path = os.path.join(O3_dir, ll_file_name)
@@ -69,7 +69,7 @@ class DistributeLoopEnv:
 
         
         # call the Pass 
-        dist_file_path_out = utils.call_distributionPass( ssa_file_path, self.distribution, method_name, loop_id)
+        dist_file_path_out = utils.call_distributionPass( meta_ssa_file_path, self.distribution, method_name, loop_id)
 
         # Run the File 5 times on input. Davg
         
@@ -106,9 +106,9 @@ class DistributeLoopEnv:
         
         nxtloop =  self.ggnn.idx_nid[action_displacement]
         if action_pair == 1:
-            self.distribution = "{}{}".format(self.distribution, nxtloop)
+            self.distribution = "{},{}".format(self.distribution, nxtloop)
         else:
-            self.distribution = "{},{}".format(self.distribution,nxtloop)
+            self.distribution = "{}|{}".format(self.distribution,nxtloop)
 
         if action_pair == 1:
             self.ggnn.addPairEdge(self.cur_node, action_displacement)

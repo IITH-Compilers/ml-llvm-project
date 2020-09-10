@@ -27,8 +27,8 @@ class TransitionNetwork(nn.Module):
         x = F.relu(self.fc1(state))
         x = F.relu(self.fc2(x))
         x = self.fc3(x)
-        
-        return torch.max(x), torch.argmax(x)
+        return x 
+        # return torch.max(x), torch.argmax(x)
 
 
 class DistributeNetwork(nn.Module):
@@ -57,7 +57,8 @@ class DistributeNetwork(nn.Module):
         x = F.relu(self.fc2(x))
         x = self.fc3(x)
         
-        return torch.max(x), torch.argmax(x) 
+        return x
+        # return torch.max(x), torch.argmax(x) 
 
 
 class QNetwork(nn.Module):
@@ -85,15 +86,23 @@ class QNetwork(nn.Module):
 
     def forward(self, state,isStart=False):
         """Build a network that maps state -> action values."""
-        
-        Trans_Qvalue, indexchoose = self.transitionNet(state)
+         out = self.transitionNet(state)
+         indexchoose = torch.argmax(out)
+         Trans_Qvalue = torch.max(out)
         
         if not isStart:
-            Distribute_Qvalue, merge_distribute_choose = self.distributeNet(state[indexchoose])
-            
+            out2 = self.distributeNet(state[indexchoose])
+            Distribute_Qvalue, merge_distribute_choose = torch.max(out2), torch.argmax(out2)         
             return Trans_Qvalue + Distribute_Qvalue, indexchoose, merge_distribute_choose
         else:
             return Trans_Qvalue, indexchoose, None
+       
+#         Trans_Qvalue, indexchoose = self.transitionNet(state)
+#         
+#         if not isStart:
+#             Distribute_Qvalue, merge_distribute_choose = self.distributeNet(state[indexchoose])
+#             
+#             return Trans_Qvalue + Distribute_Qvalue, indexchoose, merge_distribute_choose
+#         else:
+#             return Trans_Qvalue, indexchoose, None
 
-        
-        return self.fc3(x)

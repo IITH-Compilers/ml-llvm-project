@@ -111,15 +111,26 @@ class Agent():
             experiences (Tuple[torch.Tensor]): tuple of (s, a, r, s', done) tuples 
             gamma (float): discount factor
         """
-        states, actions, rewards, next_states, dones = experiences
+        states, start, actions1, actions2, rewards, next_states, dones = experiences
 
         # Get max predicted Q values (for next states) from target model
-        Q_targets_next = self.qnetwork_target(next_states).detach().max(1)[0].unsqueeze(1)
-        # Compute Q targets for current states 
+        # Q_targets_next = self.qnetwork_target(next_states, start).detach().max(1)[0].unsqueeze(1)
+        Q_targets_next = self.qnetwork_target(next_states, start)[0].detach().unsqueeze(1)
+       # Compute Q targets for current states 
         Q_targets = rewards + (gamma * Q_targets_next * (1 - dones))
 
         # Get expected Q values from local model
-        Q_expected = self.qnetwork_local(states).gather(1, actions)
+        # Q_expected = self.qnetwork_local(states, start).gather(1, actions)
+        Trans_Qvalue,_ = self.qnetwork_local.transitionNet(states)
+        Qvalue1 = Trans_Qvalue.gather(1, actions1)
+        
+        Distribute_Qvalue,_ = self.distributeNet(states[actions1])
+        # This might cause issue in None
+        Qvalue2 = Distribute_Qvalue.gather(1, actions2)
+
+        Q_expected = torch.sum(torch.cat((Qvalue1, Qvalue2),dim=1),dim=1)
+
+
 
         # Compute loss
         loss = F.mse_loss(Q_expected, Q_targets)
@@ -173,13 +184,15 @@ class ReplayBuffer:
         """Randomly sample a batch of experiences from memory."""
         experiences = random.sample(self.memory, k=self.batch_size)
 
-        states = torch.from_numpy(np.vstack([e.state for e in experiences if e is not None])).float().to(device)
-        actions = torch.from_numpy(np.vstack([e.action for e in experiences if e is not None])).long().to(device)
-        rewards = torch.from_numpy(np.vstack([e.reward for e in experiences if e is not None])).float().to(device)
+        states = torch.from_numpy(np.vstack([e.state[0] for e in experiences if e is not None])).float().to(device)
+        start = torch.from_numpy(np.vstack([e.state[1] for e in experiences if e is not None])).float().to(device)
+       actions1 = torch.from_numpy(np.vstack([e.action[0] for e in experiences if e is not None])).long().to(device)
+        actions2 = torch.from_numpy(np.vstack([e.action[1] for e in experiences if e is not None])).long().to(device)
+       rewards = torch.from_numpy(np.vstack([e.reward for e in experiences if e is not None])).float().to(device)
         next_states = torch.from_numpy(np.vstack([e.next_state for e in experiences if e is not None])).float().to(device)
         dones = torch.from_numpy(np.vstack([e.done for e in experiences if e is not None]).astype(np.uint8)).float().to(device)
   
-        return (states, actions, rewards, next_states, dones)
+        return (states,start, actions1, actions2 rewards, next_states, dones)
 
     def __len__(self):
         """Return the current size of internal memory."""

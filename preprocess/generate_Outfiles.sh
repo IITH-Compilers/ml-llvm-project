@@ -6,7 +6,7 @@ SEED_FILE="/home/venkat/IF-DV/IR2Vec-LoopOptimizationFramework/LLVM/IR2Vec-Engin
 
 
 # Create basic O0 ll files
-WD=`pwd`/../data/imagick_ds
+WD=`pwd`/../data/spec_ds
 
 OUT_WD=${WD}/outfiles
 
@@ -52,3 +52,15 @@ wait # ${pids[@]}
 
 echo "Loop Optimization passes files created in ssa folder"
 
+LL_META_SSA=${LL_WD}/meta_ssa
+OUT_META_SSA=${OUT_WD}/meta_ssa
+mkdir -p ${OUT_META_SSA}
+for d in ${LL_META_SSA}/*.ll; do 
+        name=`basename ${d}` && oname=${name%.*} && ${LLVM_BUILD}/bin/clang ${d} -o ${OUT_META_SSA}/${oname}.out &   
+done
+
+wait # ${pids[@]}
+
+echo "Loop Optimization passes files created in meta_ssa folder"
+
+mkdir -p ${OUT_WD}/training

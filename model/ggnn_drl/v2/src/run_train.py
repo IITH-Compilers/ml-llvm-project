@@ -43,7 +43,6 @@ def run(agent):
                 
                 if isStart:
                     merge_distribute = None
-                    isStart = False
                 print("action choosed : {} {} {}".format(nextNodeIndex, possibleNodes[nextNodeIndex],merge_distribute))
                 # Get the next the next state from the action
                 # reward is 0 till we reach the end node
@@ -53,7 +52,7 @@ def run(agent):
                 
 
                 # put the state transitionin memory buffer
-                agent.step(possibleNodes_hs, (nextNodeIndex, merge_distribute), reward, next_state, done)
+                agent.step((possibleNodes_hs, isStart), (nextNodeIndex, merge_distribute), reward, next_state, done)
                 
 
                 # print('state : {}'.format(state))
@@ -65,6 +64,7 @@ def run(agent):
                 
                 possibleNodes_hs = next_state
                 possibleNodes = next_possibleNodes
+                isStart = False
                 score += reward
                 if done:
                     break
