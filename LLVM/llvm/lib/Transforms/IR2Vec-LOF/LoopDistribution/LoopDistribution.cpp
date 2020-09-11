@@ -119,7 +119,6 @@ void LoopDistribution::populatePartitions(DataDependenceGraph &SCCGraph,
     while ((pos = s.find(delimiter)) != std::string::npos) {
       auto str = s.substr(0, pos);
       if (str.length() != 0) {
-        errs() << str << "\n";
         assert(container.find(str) != container.end() &&
                "No such node ID in graph");
         subtokens.push_back(str);
@@ -246,7 +245,11 @@ void LoopDistribution::removeUnwantedSlices(
         newInstToRemove.push_back(inst);
     }
     // Remove the populated instructions
-    for (auto I : newInstToRemove) {
+    // Delete the instructions backwards, as it has a reduced likelihood of
+    // having to update as many def-use and use-def chains.
+    for (auto I : reverse(newInstToRemove)) {
+      if (!I->use_empty())
+        I->replaceAllUsesWith(UndefValue::get(I->getType()));
       I->eraseFromParent();
     }
     id++;
