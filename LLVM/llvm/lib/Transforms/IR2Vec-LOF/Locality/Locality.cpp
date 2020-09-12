@@ -79,16 +79,47 @@ bool LocalityPass::runOnFunction(Function &F) {
       // raw_ostream &OS;
       // if (auto CC = CacheCost::getCacheCost(*L, AR, DI))
       // OS << *CC;
-      auto AM = LoopAnalysisManager{};
+      // auto AM = LoopAnalysisManager{};
       // auto U = LPMUpdater::addSiblingLoops;
       // LoopCachePrinterPass::run(*L, AM, AR, U);
 
       // errs() << "Cache Cost: ";
       // OS << *CC;
       // CacheCost::populateReferenceGroups(RefGroups);
+
+      int loopNum = 0;
+      for (LoopInfo::iterator i = LI->begin(), e = LI->end(); i != e; ++i) {
+        Loop *L = *i;
+        for (auto il = df_begin(L), el = df_end(L); il != el; ++il) {
+          if (il->getSubLoops().size() > 0) {
+            continue;
+          }
+          loopNum++;
+          auto *LAA = &getAnalysis<LoopAccessLegacyAnalysis>();
+          const LoopAccessInfo &LAI = LAA->getInfo(*il);
+          auto RDGraph = RDG(*AA, *SE, *LI, DI, LAI);
+          auto SCCGraph = RDGraph.computeRDGForInnerLoop(**il);
+
+          std::string s1 = F.getParent()->getName().str();
+          std::string s2(s1.substr(s1.rfind('/') + 1));
+          std::string RD_Filename = "RD_locality.txt";
+          std::string SCC_Filename = "SCC_" + s2 + "_FUNCTION_" +
+                                     SCCGraph.GetFunctionName() + "_LOOP" +
+                                     std::to_string(loopNum) + ".dot";
+          std::error_code EC;
+          raw_fd_ostream File(RD_Filename.c_str(), EC, sys::fs::F_Append);
+          if (!EC) {
+            File << SCC_Filename << " : " << SCCGraph.dependenceSize << " : "
+                 << CC->getLoopCost(*L) << "\n";
+            CC->getLoopCosts();
+            // errs() << "Loop costs: " <<
+          } else {
+            errs() << "error opening file for writing! \n";
+          }
+        }
+      }
     }
   }
-  errs() << "Function: " << &F << "\n";
   return false;
 }
 
@@ -100,19 +131,11 @@ void LocalityPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<ScalarEvolutionWrapperPass>();
   AU.addRequired<AAResultsWrapperPass>();
   AU.addRequired<TargetLibraryInfoWrapperPass>();
-  //   AU.addRequired<LoopAccessLegacyAnalysis>();
-  //   AU.addRequired<IR2Vec_RD>();
+  AU.addRequired<LoopAccessLegacyAnalysis>();
+  // AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
 }
 
 char LocalityPass::ID = 0;
-
-// INITIALIZE_PASS_BEGIN(LocalityPass, "locality", "Calculate Reuse Distance",
-//                       false, false)
-// INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
-// INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-// INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
-// INITIALIZE_PASS_END(LocalityPass, "locality", "Calculate Reuse Distance",
-// false,
-//                     false)
-
 static RegisterPass<LocalityPass> X("locality", "Calculate cache cost");
+
+#undef DEBUG_TYPE

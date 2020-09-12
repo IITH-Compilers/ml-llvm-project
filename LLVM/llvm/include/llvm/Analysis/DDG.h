@@ -152,10 +152,34 @@ public:
   // added to support Store Node
   //////////////////////////////////////////////////////////////////////////
   void appendInstructionsStoreNode(const InstructionListType &Input) {
-    InstList.insert(InstList.end(), Input.begin(), Input.end());
+    using InstructionListType = SmallVector<Instruction *, 2>;
+    InstructionListType newInputList;
+    bool alreadyExist = 0;
+    for (auto *i : Input) {
+      for (auto *I : InstList) {
+        if (I == i) {
+          alreadyExist = 1;
+          break;
+        }
+      }
+      if (alreadyExist == 0)
+        newInputList.push_back(i);
+    }
+
+    // for (auto *I : InstList) {
+    //   errs() << "this node: " << *I << "\n";
+    // }
+    // for (auto *I : newInputList) {
+    //   errs() << "Input node: " << *I << "\n";
+    // }
+    InstList.insert(InstList.end(), newInputList.begin(), newInputList.end());
   }
 
   void appendInstructionsStoreNode(const SimpleDDGNode &Input) {
+    // for (auto *I : InstList) {
+    //   errs() << "this node: " << *I << "\n";
+    // }
+    // errs() << "this\n";
     appendInstructionsStoreNode(Input.getInstructions());
   }
   ///////////////////////////////////////////////////////////////////////////////
@@ -362,6 +386,10 @@ public:
 
   // Get LoopId
   int GetLoopId() { return LoopId; }
+
+  // Total Number of SCC Store Nodes
+  int totalSCCNodes;
+  int dependenceSize;
 
 protected:
   /// Add node \p N to the graph, if it's not added yet, and keep track of the

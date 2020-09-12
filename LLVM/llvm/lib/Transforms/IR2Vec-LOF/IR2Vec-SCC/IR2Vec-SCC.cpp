@@ -116,7 +116,7 @@ static RegisterPass<RDGWrapperPass> X("RDG", "Build ReducedDependenceGraph",
 // 	}
 // }
 
-void RDGWrapperPass::Print_IR2Vec_File(
+bool RDGWrapperPass::Print_IR2Vec_File(
     DataDependenceGraph &G, std::string Filename,
     SmallDenseMap<const Instruction *, SmallVector<double, DIM>> instVecMap) {
   // Code to generate Input File with IR2Vec Embedding as a node to an RDG
@@ -205,8 +205,19 @@ void RDGWrapperPass::Print_IR2Vec_File(
       }
     }
     File << "}";
+
+    std::string totalSCC_Filename = "totalSCCGraphs.txt";
+    std::error_code EC1;
+
+    raw_fd_ostream File(totalSCC_Filename.c_str(), EC1, sys::fs::F_Append);
+    if (!EC1)
+      File << Filename << " : " << G.totalSCCNodes << "\n";
+    else
+      errs() << "error opening file\n";
+    return true;
   } else {
     errs() << "error opening file for writing! \n";
+    return false;
   }
 }
 
@@ -450,7 +461,20 @@ bool RDGWrapperPass::runOnFunction(Function &F) {
                                    SCCGraph.GetFunctionName() + "_Loop" +
                                    std::to_string(loopNum) + ".dot";
       // errs() << "Writing " + Input_Filename + "\n";
-      Print_IR2Vec_File(SCCGraph, Input_Filename, instVecMap);
+      bool File_exist = Print_IR2Vec_File(SCCGraph, Input_Filename, instVecMap);
+      errs() << "---------------------->>  " << SCCGraph.totalSCCNodes << "\n";
+      std::string totalSCC_Filename = "totalSCC.txt";
+      std::error_code EC;
+      raw_fd_ostream File(totalSCC_Filename.c_str(), EC, sys::fs::F_Append);
+
+      if (!EC) {
+        if (File_exist) {
+          File << Input_Filename << " : " << SCCGraph.totalSCCNodes << "\n";
+          errs() << "FileExist: " << File_exist << "\n";
+        }
+      } else {
+        errs() << "error opening file for writing! \n";
+      }
       // errs() << "\n";
     }
   }

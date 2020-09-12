@@ -183,6 +183,9 @@ bool RDG::BuildRDG_LAI(DataDependenceGraph &G, DependenceInfo &DI,
 
   LLVM_DEBUG(errs() << "+++++++++++++++++++++++++++++ "
                     << alldependences->size() << "\n");
+  errs() << "+++++++++++++++++++++++++++++ " << alldependences->size() << "\n";
+
+  G.dependenceSize = alldependences->size();
 
   int x = 1;
   // Check for all dependences
@@ -413,12 +416,12 @@ void RDG::CreateSCC(DataDependenceGraph &G, DependenceInfo &DI) {
     //  llvm::sort(NL, [&](NodeType *LHS, NodeType *RHS) {
     //    return getOrdinal(*LHS) < getOrdinal(*RHS);
     //  });
-
+    errs() << "SCC Node: " << &NL << "\n";
     for (NodeType *Source : NL) {
       //  for(EdgeType *e : *Source) {
       // 	 errs() << "edge weight: " << e->getEdgeWeight() << "\n";
       //  }
-      //   errs() << "Source: " << *Source << "\n";
+      errs() << "Source: " << *Source << "\n";
       for (NodeType *Target : NL) {
         // errs() << "Target: "   << *Target << "\n";
         if (Source == Target) {
@@ -497,6 +500,7 @@ void RDG::SelectOnlyStoreNode(DataDependenceGraph &G) {
       }
     }
   }
+  G.totalSCCNodes = label;
 }
 
 DataDependenceGraph RDG::computeRDGForInnerLoop(Loop &IL) {

@@ -75,20 +75,27 @@ static Loop *getInnerMostLoop(const LoopVectorTy &Loops) {
 static bool isOneDimensionalArray(const SCEV &AccessFn, const SCEV &ElemSize,
                                   const Loop &L, ScalarEvolution &SE) {
   const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(&AccessFn);
-  if (!AR || !AR->isAffine())
+  if (!AR || !AR->isAffine()) {
+    errs() << "!AR || !AR->isAffine()\n";
     return false;
+  }
 
   assert(AR->getLoop() && "AR should have a loop");
 
   // Check that start and increment are not add recurrences.
   const SCEV *Start = AR->getStart();
   const SCEV *Step = AR->getStepRecurrence(SE);
-  if (isa<SCEVAddRecExpr>(Start) || isa<SCEVAddRecExpr>(Step))
+  if (isa<SCEVAddRecExpr>(Start) || isa<SCEVAddRecExpr>(Step)) {
+    errs() << "isa<SCEVAddRecExpr>(Start) || isa<SCEVAddRecExpr>(Step)\n";
     return false;
+  }
 
   // Check that start and increment are both invariant in the loop.
-  if (!SE.isLoopInvariant(Start, &L) || !SE.isLoopInvariant(Step, &L))
+  if (!SE.isLoopInvariant(Start, &L) || !SE.isLoopInvariant(Step, &L)) {
+    errs()
+        << "!SE.isLoopInvariant(Start, &L) || !SE.isLoopInvariant(Step, &L)\n";
     return false;
+  }
 
   return AR->getStepRecurrence(SE) == &ElemSize;
 }
@@ -134,8 +141,8 @@ IndexedReference::IndexedReference(Instruction &StoreOrLoadInst,
 
   IsValid = delinearize(LI);
   if (IsValid)
-    LLVM_DEBUG(dbgs().indent(2) << "Succesfully delinearized: " << *this
-                                << "\n");
+    LLVM_DEBUG(dbgs().indent(2)
+               << "Succesfully delinearized: " << *this << "\n");
 }
 
 Optional<bool> IndexedReference::hasSpacialReuse(const IndexedReference &Other,
@@ -146,6 +153,7 @@ Optional<bool> IndexedReference::hasSpacialReuse(const IndexedReference &Other,
   if (BasePointer != Other.getBasePointer() && !isAliased(Other, AA)) {
     LLVM_DEBUG(dbgs().indent(2)
                << "No spacial reuse: different base pointers\n");
+    errs() << "No spacial reuse: different base pointers\n";
     return false;
   }
 
@@ -153,6 +161,7 @@ Optional<bool> IndexedReference::hasSpacialReuse(const IndexedReference &Other,
   if (NumSubscripts != Other.getNumSubscripts()) {
     LLVM_DEBUG(dbgs().indent(2)
                << "No spacial reuse: different number of subscripts\n");
+    errs() << "No spacial reuse: different number of subscripts\n";
     return false;
   }
 
@@ -162,6 +171,9 @@ Optional<bool> IndexedReference::hasSpacialReuse(const IndexedReference &Other,
       LLVM_DEBUG(dbgs().indent(2) << "No spacial reuse, different subscripts: "
                                   << "\n\t" << *getSubscript(SubNum) << "\n\t"
                                   << *Other.getSubscript(SubNum) << "\n");
+      errs() << "No spacial reuse, different subscripts: "
+             << "\n\t" << *getSubscript(SubNum) << "\n\t"
+             << *Other.getSubscript(SubNum) << "\n";
       return false;
     }
   }
@@ -203,6 +215,7 @@ Optional<bool> IndexedReference::hasTemporalReuse(const IndexedReference &Other,
   if (BasePointer != Other.getBasePointer() && !isAliased(Other, AA)) {
     LLVM_DEBUG(dbgs().indent(2)
                << "No temporal reuse: different base pointer\n");
+    errs() << "No temporal reuse: different base pointer\n";
     return false;
   }
 
@@ -211,6 +224,7 @@ Optional<bool> IndexedReference::hasTemporalReuse(const IndexedReference &Other,
 
   if (D == nullptr) {
     LLVM_DEBUG(dbgs().indent(2) << "No temporal reuse: no dependence\n");
+    errs() << "No temporal reuse: no dependence\n";
     return false;
   }
 
@@ -238,12 +252,17 @@ Optional<bool> IndexedReference::hasTemporalReuse(const IndexedReference &Other,
       LLVM_DEBUG(dbgs().indent(2)
                  << "No temporal reuse: distance is not zero at depth=" << Level
                  << "\n");
+      errs() << "No temporal reuse: distance is not zero at depth=" << Level
+             << "\n";
       return false;
     } else if (Level == LoopDepth && CI.getSExtValue() > MaxDistance) {
       LLVM_DEBUG(
           dbgs().indent(2)
           << "No temporal reuse: distance is greater than MaxDistance at depth="
           << Level << "\n");
+      errs()
+          << "No temporal reuse: distance is greater than MaxDistance at depth="
+          << Level << "\n";
       return false;
     }
   }
@@ -317,15 +336,19 @@ bool IndexedReference::delinearize(const LoopInfo &LI) {
   const SCEV *ElemSize = SE.getElementSize(&StoreOrLoadInst);
   const BasicBlock *BB = StoreOrLoadInst.getParent();
 
+  errs() << "ddddddddddddddddddddddddd\n";
   if (Loop *L = LI.getLoopFor(BB)) {
     const SCEV *AccessFn =
         SE.getSCEVAtScope(getPointerOperand(&StoreOrLoadInst), L);
-
+    errs() << "In Loop '" << L->getName() << "', AccessFn: " << *AccessFn
+           << "\n";
     BasePointer = dyn_cast<SCEVUnknown>(SE.getPointerBase(AccessFn));
     if (BasePointer == nullptr) {
       LLVM_DEBUG(
           dbgs().indent(2)
           << "ERROR: failed to delinearize, can't identify base pointer\n");
+      errs() << "ERROR: failed to delinearize, can't identify base "
+                "pointer\n";
       return false;
     }
 
@@ -333,12 +356,15 @@ bool IndexedReference::delinearize(const LoopInfo &LI) {
 
     LLVM_DEBUG(dbgs().indent(2) << "In Loop '" << L->getName()
                                 << "', AccessFn: " << *AccessFn << "\n");
+    errs() << "In Loop '" << L->getName() << "', AccessFn: " << *AccessFn
+           << "\n";
 
     SE.delinearize(AccessFn, Subscripts, Sizes,
                    SE.getElementSize(&StoreOrLoadInst));
 
     if (Subscripts.empty() || Sizes.empty() ||
         Subscripts.size() != Sizes.size()) {
+      errs() << "dddddddddddddddddddd\n";
       // Attempt to determine whether we have a single dimensional array access.
       // before giving up.
       if (!isOneDimensionalArray(*AccessFn, *ElemSize, *L, SE)) {
@@ -346,6 +372,7 @@ bool IndexedReference::delinearize(const LoopInfo &LI) {
                    << "ERROR: failed to delinearize reference\n");
         Subscripts.clear();
         Sizes.clear();
+        errs() << "ERROR: failed to delinearize reference\n";
         return false;
       }
 
@@ -358,7 +385,7 @@ bool IndexedReference::delinearize(const LoopInfo &LI) {
       return isSimpleAddRecurrence(*Subscript, *L);
     });
   }
-
+  errs() << "final return\n";
   return false;
 }
 
@@ -386,8 +413,10 @@ bool IndexedReference::isConsecutive(const Loop &L, unsigned CLS) const {
   for (const SCEV *Subscript : Subscripts) {
     if (Subscript == LastSubscript)
       continue;
-    if (!isCoeffForLoopZeroOrInvariant(*Subscript, L))
+    if (!isCoeffForLoopZeroOrInvariant(*Subscript, L)) {
+      errs() << "!isCoeffForLoopZeroOrInvariant(*Subscript, L)\n";
       return false;
+    }
   }
 
   // ...and the access stride is less than the cache line size.
@@ -416,20 +445,27 @@ bool IndexedReference::isCoeffForLoopZeroOrInvariant(const SCEV &Subscript,
 
 bool IndexedReference::isSimpleAddRecurrence(const SCEV &Subscript,
                                              const Loop &L) const {
-  if (!isa<SCEVAddRecExpr>(Subscript))
+  if (!isa<SCEVAddRecExpr>(Subscript)) {
+    errs() << "!isa<SCEVAddRecExpr>(Subscript)\n";
     return false;
+  }
 
   const SCEVAddRecExpr *AR = cast<SCEVAddRecExpr>(&Subscript);
   assert(AR->getLoop() && "AR should have a loop");
 
-  if (!AR->isAffine())
+  if (!AR->isAffine()) {
+    errs() << "!AR->isAffine()\n";
     return false;
+  }
 
   const SCEV *Start = AR->getStart();
   const SCEV *Step = AR->getStepRecurrence(SE);
 
-  if (!SE.isLoopInvariant(Start, &L) || !SE.isLoopInvariant(Step, &L))
+  if (!SE.isLoopInvariant(Start, &L) || !SE.isLoopInvariant(Step, &L)) {
+    errs()
+        << "!SE.isLoopInvariant(Start, &L) || !SE.isLoopInvariant(Step, &L)\n";
     return false;
+  }
 
   return true;
 }
@@ -463,6 +499,8 @@ CacheCost::CacheCost(const LoopVectorTy &Loops, const LoopInfo &LI,
 
   for (const Loop *L : Loops) {
     unsigned TripCount = SE.getSmallConstantTripCount(L);
+    errs() << "TripCount: " << TripCount
+           << ", Default TripCount: " << DefaultTripCount << "\n";
     TripCount = (TripCount == 0) ? DefaultTripCount : TripCount;
     TripCounts.push_back({L, TripCount});
   }
@@ -471,24 +509,28 @@ CacheCost::CacheCost(const LoopVectorTy &Loops, const LoopInfo &LI,
 }
 
 std::unique_ptr<CacheCost>
-CacheCost::getCacheCost(Loop &Root, LoopStandardAnalysisResults &AR,
-                        DependenceInfo &DI, Optional<unsigned> TRT) {
+CacheCost ::getCacheCost(Loop &Root, LoopStandardAnalysisResults &AR,
+                         DependenceInfo &DI, Optional<unsigned> TRT) {
   if (Root.getParentLoop()) {
     LLVM_DEBUG(dbgs() << "Expecting the outermost loop in a loop nest\n");
     return nullptr;
   }
 
   LoopVectorTy Loops;
-  for (Loop *L : breadth_first(&Root))
+  for (Loop *L : breadth_first(&Root)) {
+    errs() << "Loop: " << *L << "\n";
     Loops.push_back(L);
+  }
 
   if (!getInnerMostLoop(Loops)) {
     LLVM_DEBUG(dbgs() << "Cannot compute cache cost of loop nest with more "
                          "than one innermost loop\n");
+    errs() << "aaaaaaaaaa\n";
     return nullptr;
   }
 
-  return std::make_unique<CacheCost>(Loops, AR.LI, AR.SE, AR.TTI, AR.AA, DI, TRT);
+  return std::make_unique<CacheCost>(Loops, AR.LI, AR.SE, AR.TTI, AR.AA, DI,
+                                     TRT);
 }
 
 void CacheCost::calculateCacheFootprint() {
@@ -518,8 +560,10 @@ bool CacheCost::populateReferenceGroups(ReferenceGroupsTy &RefGroups) const {
   unsigned CLS = TTI.getCacheLineSize();
   Loop *InnerMostLoop = getInnerMostLoop(Loops);
   assert(InnerMostLoop != nullptr && "Expecting a valid innermost loop");
+  errs() << "ccccccccccccc\n";
 
   for (BasicBlock *BB : InnerMostLoop->getBlocks()) {
+    errs() << "aaaaaaaaaaaa\n";
     for (Instruction &I : *BB) {
       if (!isa<StoreInst>(I) && !isa<LoadInst>(I))
         continue;
@@ -558,8 +602,10 @@ bool CacheCost::populateReferenceGroups(ReferenceGroupsTy &RefGroups) const {
     }
   }
 
-  if (RefGroups.empty())
+  if (RefGroups.empty()) {
+    errs() << "RefGroups.empty()\n";
     return false;
+  }
 
   LLVM_DEBUG({
     dbgs() << "\nIDENTIFIED REFERENCE GROUPS:\n";
@@ -599,8 +645,8 @@ CacheCost::computeLoopCacheCost(const Loop &L,
     LoopCost += RefGroupCost * TripCountsProduct;
   }
 
-  LLVM_DEBUG(dbgs().indent(2) << "Loop '" << L.getName()
-                              << "' has cost=" << LoopCost << "\n");
+  LLVM_DEBUG(dbgs().indent(2)
+             << "Loop '" << L.getName() << "' has cost=" << LoopCost << "\n");
 
   return LoopCost;
 }

@@ -200,7 +200,9 @@ public:
     auto IT = std::find_if(
         LoopCosts.begin(), LoopCosts.end(),
         [&L](const LoopCacheCostTy &LCC) { return LCC.first == &L; });
+    errs() << "aaaaaaaaaa: " << (*IT).second << "\n";
     return (IT != LoopCosts.end()) ? (*IT).second : -1;
+    // return (*IT).second;
   }
 
   /// Return the estimated ordered loop costs.
