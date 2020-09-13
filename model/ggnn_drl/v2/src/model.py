@@ -86,9 +86,9 @@ class QNetwork(nn.Module):
 
     def forward(self, state,isStart=False):
         """Build a network that maps state -> action values."""
-         out = self.transitionNet(state)
-         indexchoose = torch.argmax(out)
-         Trans_Qvalue = torch.max(out)
+        out = self.transitionNet(state)
+        indexchoose = torch.argmax(out)
+        Trans_Qvalue = torch.max(out)
         
         if not isStart:
             out2 = self.distributeNet(state[indexchoose])

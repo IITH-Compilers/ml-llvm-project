@@ -95,7 +95,7 @@ class Agent():
 
         # Epsilon-greedy action selection
         if random.random() > eps:
-            return indexchoosen, merge_distribute
+            return indexchoosen.cpu().data.numpy(), merge_distribute.cpu().data.numpy()
             #return masked_action[np.argmax(action_values.cpu().data.numpy())]
         else:
             return random.choice(np.arange(state.shape[0])), random.choice([0,1])
@@ -186,13 +186,15 @@ class ReplayBuffer:
 
         states = torch.from_numpy(np.vstack([e.state[0] for e in experiences if e is not None])).float().to(device)
         start = torch.from_numpy(np.vstack([e.state[1] for e in experiences if e is not None])).float().to(device)
-       actions1 = torch.from_numpy(np.vstack([e.action[0] for e in experiences if e is not None])).long().to(device)
+        print([e.action[0] for e in experiences if e is not None]) 
+        actions1 = torch.from_numpy(np.vstack([e.action[0] for e in experiences if e is not None])).long().to(device)
+        print([e.action[1] for e in experiences if e is not None]) 
         actions2 = torch.from_numpy(np.vstack([e.action[1] for e in experiences if e is not None])).long().to(device)
-       rewards = torch.from_numpy(np.vstack([e.reward for e in experiences if e is not None])).float().to(device)
+        rewards = torch.from_numpy(np.vstack([e.reward for e in experiences if e is not None])).float().to(device)
         next_states = torch.from_numpy(np.vstack([e.next_state for e in experiences if e is not None])).float().to(device)
         dones = torch.from_numpy(np.vstack([e.done for e in experiences if e is not None]).astype(np.uint8)).float().to(device)
   
-        return (states,start, actions1, actions2 rewards, next_states, dones)
+        return (states,start, actions1, actions2, rewards, next_states, dones)
 
     def __len__(self):
         """Return the current size of internal memory."""

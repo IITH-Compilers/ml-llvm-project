@@ -12,7 +12,7 @@ def run(agent):
     # with open('graphs.json') as file:
     #     graphs = json.load(file)
     
-    n_episodes=2000
+    n_episodes=20
     max_t=1000
     eps_start=1.0
     eps_end=0.01
@@ -20,7 +20,7 @@ def run(agent):
     scores = []                        # list containing scores from each episode
     scores_window = deque(maxlen=100)  # last 100 scores
     eps = eps_start
-    dataset='/home/venkat/IF-DV/Rohit/IR2Vec-LoopOptimizationFramework/data/imagick_ds' 
+    dataset='/home/venkat/IF-DV/Rohit/IR2Vec-LoopOptimizationFramework/data/spec_ds_filter' 
     #Load the envroinment
     env = DistributeLoopEnv(dataset)    
     
@@ -28,10 +28,12 @@ def run(agent):
         with open(path) as f:
             graph = json.load(f)
         print('DLOOP New graph to the env. {} '.format(path))
-        for episode in range(2):
+        
+        
+        
+        
+        for episode in range(n_episodes):
 
-            # state, topology = env.reset_env(graph, path)
-            # Updated 
             possibleNodes_hs, possibleNodes, topology = env.reset_env(graph, path)
             isStart = True
             score = 0
@@ -49,8 +51,16 @@ def run(agent):
                 # reward will be -negative, maximize  the reward
                 #
                 next_state, next_possibleNodes, reward, done, distribute = env.step(possibleNodes[nextNodeIndex], merge_distribute)
-                
+                print('type of possibleNodes_hs : ', possibleNodes_hs)
+                print('type of isStart : ', isStart)
+                print('type of nextNodeIndex : ', nextNodeIndex)
+                print('type of merge_distribute : ',merge_distribute)
+               
 
+                print('type of possibleNodes_hs : ', type(possibleNodes_hs))
+                print('type of isStart : ', type(isStart))
+                print('type of nextNodeIndex : ', type(nextNodeIndex))
+                print('type of merge_distribute : ', type(merge_distribute))
                 # put the state transitionin memory buffer
                 agent.step((possibleNodes_hs, isStart), (nextNodeIndex, merge_distribute), reward, next_state, done)
                 

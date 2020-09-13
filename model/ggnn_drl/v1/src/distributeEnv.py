@@ -20,7 +20,7 @@ class DistributeLoopEnv:
         self.hidden_size = 300
         self.n_steps = 10
         # self.num_nodes = 40 # this value to estimate
-        self.graphObj = None # Have the graph formed from adjency list using dependence edges only.
+        self.topology = None # Have the graph formed from adjency list using dependence edges only.
         self.cur_node = None
         
         self.startNode= None
@@ -34,8 +34,10 @@ class DistributeLoopEnv:
        
         # code to from the distribtuted ll file by caling distibrution pass
          
-        parts = self.path.split('/graphs/json/')
+        parts = self.path.split('/graphs/')
         file_dir = parts[0]
+        
+        parts=parts[1].split('/')
         file_name_parts = (parts[1].split('InputGraph_'))[1].split('.json')[0]
         
         full_file_name = file_name_parts 
@@ -50,7 +52,6 @@ class DistributeLoopEnv:
 
         method_name = file_name_parts[0]
         loop_id = file_name_parts[1]
-
 
 
         # ll_file_name = "{}.ll".format(file_name)
@@ -73,7 +74,7 @@ class DistributeLoopEnv:
 
         # Run the File 5 times on input. Davg
         
-        Druntime = utils.get_runtime_of_file(dist_file_path_out,inputd= input_file_path)
+        Druntime = utils.get_runtime_of_file(dist_file_path_out, inputd=input_file_path)
 
         # Run the O3 file 5 times, O3avg
         if O3_file_path not in self.O3_runtimes.keys():
@@ -91,35 +92,30 @@ class DistributeLoopEnv:
     def step(self, action):
         if self.ggnn is None:
             raise Exception()
-
-
         
-        action_displacement = action // 2
-        action_pair = action % 2
-        print('DLOOP action_displacement & Merge | Dis: {} & {}'.format(action_displacement, action_pair))
+        nodeChoosen = action // 2
+        merge_distribute = action % 2
+        print('DLOOP nodeChoosen & Merge | Dis: {} & {}'.format(nodeChoosen, merge_distribute))
         
         # add the node to the visited list
-        self.graphObj.UpdateVisitList(action_displacement)
-        # TODO add annotations to have visited node
-        self.ggnn.mpAfterDisplacement(action_displacement)
+        self.topology.UpdateVisitList(nodeChoosen)
+        self.ggnn.mpAfterDisplacement(nodeChoosen)
        
         
-        nxtloop =  self.ggnn.idx_nid[action_displacement]
-        if action_pair == 1:
+        nxtloop =  self.ggnn.idx_nid[nodeChoosen]
+        
+        if merge_distribute == 1:
             self.distribution = "{},{}".format(self.distribution, nxtloop)
+            self.ggnn.addPairEdge(self.cur_node, nodeChoosen)
         else:
             self.distribution = "{}|{}".format(self.distribution,nxtloop)
-
-        if action_pair == 1:
-            self.ggnn.addPairEdge(self.cur_node, action_displacement)
-        
        
-        self.cur_node = action_displacement
+        self.cur_node = nodeChoosen
         self.next_obs = self.ggnn.propagate()
         reward = 0
         done = False
         # all the nodes re visted the calculate the rewards by calling distribution pass
-        if len(self.graphObj.findAllVertaxWithZeroWeights()) == 0 :
+        if len(self.topology.findAllVertaxWithZeroWeights()) == 0 :
             reward = self.getReward()
             done = True
         return self.next_obs, reward, done, self.distribution 
@@ -137,17 +133,17 @@ class DistributeLoopEnv:
         #                           layer_timesteps=[self.n_steps]*self.num_nodes, residual_connections={}, nodelevel=False)
 
 
-        self.obs, self.graphObj, self.ggnn = constructGraph(self.graph)
+        self.obs, self.topology, self.ggnn = constructGraph(self.graph)
         
         # print("state : {}".format(self.obs))
        
 
-        possibleStartNodes = self.graphObj.findAllVertaxWithZeroWeights()
+        possibleStartNodes = self.topology.findAllVertaxWithZeroWeights()
         # TODO Do somwhting here, it is randon as of now
         print("possible start nodes : {}".format(possibleStartNodes))
         self.startNode = random.choice(possibleStartNodes)
         print('start Node : {}'.format(self.startNode))
-        self.graphObj.UpdateVisitList(self.startNode)
+        self.topology.UpdateVisitList(self.startNode)
         
 
         # TODO : Add the focus bit on the node to say it is the initial selected 
@@ -157,7 +153,7 @@ class DistributeLoopEnv:
         
         self.distribution = self.ggnn.idx_nid[self.cur_node]
 
-        return self.obs, self.graphObj
+        return self.obs, self.topology
 
 
 

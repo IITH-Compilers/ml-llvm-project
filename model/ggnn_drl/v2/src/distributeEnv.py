@@ -27,7 +27,7 @@ class DistributeLoopEnv:
         self.discovered = []
         self.distribution = ""
         
-        self.isInputRequired=False 
+        self.isInputRequired = False
         self.O3_runtimes = utils.get_O3_runtimes(dataset, self.isInputRequired)
     
     def getReward(self):
@@ -52,13 +52,11 @@ class DistributeLoopEnv:
         loop_id = file_name_parts[1]
 
 
-        
-
-        ll_file_name = "{}".format(file_name)
         # ll_file_name = "{}.ll".format(file_name)
-        
-        ssa_dir = os.path.join(file_dir, 'llfiles/ssa')
-        ssa_file_path = os.path.join(ssa_dir, ll_file_name)
+        ll_file_name = "{}".format(file_name)
+
+        meta_ssa_dir = os.path.join(file_dir, 'llfiles/meta_ssa')
+        meta_ssa_file_path = os.path.join(meta_ssa_dir, ll_file_name)
         
         O3_dir = os.path.join(file_dir, 'llfiles/level-O3')
         O3_file_path = os.path.join(O3_dir, ll_file_name)
@@ -70,7 +68,7 @@ class DistributeLoopEnv:
 
         
         # call the Pass 
-        dist_file_path_out = utils.call_distributionPass( ssa_file_path, self.distribution, method_name, loop_id)
+        dist_file_path_out = utils.call_distributionPass( meta_ssa_file_path, self.distribution, method_name, loop_id)
 
         # Run the File 5 times on input. Davg
         
@@ -93,30 +91,28 @@ class DistributeLoopEnv:
         if self.ggnn is None:
             raise Exception()
         
-        action_pair = merge_distribute
-        print('DLOOP nodeChoosen & Merge | Dis: {} & {}'.format(nodeChoosen, action_pair))
+        
+        merge_distribute = merge_distribute
+        print('DLOOP nodeChoosen & Merge | Dis: {} & {}'.format(nodeChoosen, merge_distribute))
         
         # add the node to the visited list
         self.topology.UpdateVisitList(nodeChoosen)
-        # TODO add annotations to have visited node
        
         
         node_id =  self.ggnn.idx_nid[nodeChoosen]
         
-        if action_pair is not None:
+        if merge_distribute is not None:
             self.ggnn.mpAfterDisplacement(nodeChoosen)
             
-            if action_pair == 1:
-                self.distribution = "{}{}".format(self.distribution, node_id)
+            if merge_distribute == 1:
+                self.distribution = "{},{}".format(self.distribution, node_id)
                 self.ggnn.addPairEdge(self.cur_node, nodeChoosen)
             else:
-                self.distribution = "{},{}".format(self.distribution,node_id)
+                self.distribution = "{}|{}".format(self.distribution,node_id)
         else:
-           self.ggnn.mpAfterDisplacement(nodeChoosen, True)
-           self.distribution = node_id
+            self.ggnn.mpAfterDisplacement(nodeChoosen, True)
+            self.distribution = node_id
            
-
-        
         self.next_hidden_state = self.ggnn.propagate()
         reward = 0
         done = False

@@ -127,12 +127,12 @@ def get_runtime_of_file(filename, inputd=None, file_format='ll'):
                     runtimes=list(executor.map(execute, [cmd2]*5))
         runtime=np.mean(runtimes)
     except Exception as inst :
-        runtime = 10000000 #None if fails
+        runtime = 100000000 #None if fails
         print(sys.exc_info())
         print('Exception ocurred : ', inst)
         print('Some error occured .. for {filename} so runtime=None '.format(filename=filename))
     except :
-        runtime = 1000000 #None if fails
+        runtime = 100000000 #None if fails
         print(sys.exc_info())
         print('Other Unknown Some error occured .. for {filename} so runtime=None '.format(filename=filename))
 
@@ -157,7 +157,6 @@ def call_distributionPass(filename, distributeSeq, method_name, loop_id):
         if response != 0:
             os.system('mv {path}/*{filename}.ll* {distribute_error}'.format(path=os.path.join(parts[0],'../../graphs/json/'), filename=parts[1][:-3], distribute_error=os.path.join(parts[0],'../../graphs/distribute_error/')))
             raise Exception('Distribution Pass error')
-        # print('Testing the integration with LLVM PASS............. TODO') 
     except Exception as err:
         out_file=None
         print(sys.exc_info())
@@ -173,7 +172,6 @@ def call_distributionPass(filename, distributeSeq, method_name, loop_id):
 def executeNtimes(cmd, N=5):
     runtime=0
     for i in range(N):
-        # print('Run {i}'.format(i=i))
         rt=execute(cmd)
         runtime+=rt
     return runtime/N

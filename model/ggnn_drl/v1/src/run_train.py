@@ -23,15 +23,15 @@ def run(agent):
     dataset='/home/venkat/IF-DV/Rohit/IR2Vec-LoopOptimizationFramework/data/spec_ds_filter'    
     #Load the envroinment
     env = DistributeLoopEnv(dataset)    
-    count=0 
+    # count=0 
     for path in glob.glob(os.path.join(dataset, 'graphs/json/*.json')): # Number of the iterations
         with open(path) as f:
             graph = json.load(f)
         print('DLOOP New graph to the env. {} '.format(path))
-        count=count+1
-        if count < 1:
-            continue
-        print('================================================================================================ ',count)
+        # count=count+1
+        # if count < 1:
+        #     continue
+        # print('================================================================================================ ',count)
         for episode in range(n_episodes):
 
             state, topology = env.reset_env(graph, path)
@@ -71,10 +71,6 @@ def run(agent):
             print('\rEpisode {}\tAverage Score: {:.2f}'.format(episode, np.mean(scores_window)), end="")
             if episode % 50 == 0:
                 print('\rEpisode {}\tAverage Score: {:.2f}'.format(episode, np.mean(scores_window)))
-            # if np.mean(scores_window)>=200.0:
-            #     print('\nEnvironment solved in {:d} episodes!\tAverage Score: {:.2f}'.format(episode-100, np.mean(scores_window)))
-            #     torch.save(agent.qnetwork_local.state_dict(), 'checkpoint.pth')
-            #     break    
 
             print('\n------------------------------------------------------------------------------------------------')
         
