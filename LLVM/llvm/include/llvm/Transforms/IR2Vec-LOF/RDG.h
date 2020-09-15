@@ -75,10 +75,14 @@ public:
 
   // void getAnalysisUsage(AnalysisUsage &AU) const override;
 
-  void PrintDotFile_LAI(DataDependenceGraph &G, std::string Filename);
+  void PrintDotFile_LAI(DataDependenceGraph &G, std::string Filename,
+                        std::string ll_name);
+
+  // void CheckRDGExist(DataDependenceGraph &G, std::string Filename);
 
   // void Print_IR2Vec_File(DataDependenceGraph &G, std::string Filename,
-  // SmallDenseMap<const Instruction *, SmallVector<double, DIM>> instVecMap);
+  // SmallDenseMap<const Instruction *, SmallVector<double, DIM>>
+  // instVecMap);
 
   bool BuildRDG_LAI(DataDependenceGraph &G, DependenceInfo &DI,
                     const LoopAccessInfo &LAI);

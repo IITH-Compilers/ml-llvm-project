@@ -66,8 +66,8 @@ public:
 
   // void PrintDotFile_LAI(DataDependenceGraph &G, std::string Filename);
 
-  bool Print_IR2Vec_File(
-      DataDependenceGraph &G, std::string Filename,
+  void Print_IR2Vec_File(
+      DataDependenceGraph &G, std::string Filename, std::string ll_name,
       SmallDenseMap<const Instruction *, SmallVector<double, DIM>> instVecMap);
 
   // void BuildRDG_LAI(DataDependenceGraph &G, DependenceInfo &DI, const

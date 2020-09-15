@@ -1,3 +1,4 @@
+#include "llvm/Analysis/DDG.h"
 #include "llvm/Analysis/LoopCacheAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/PassManager.h"
@@ -19,6 +20,9 @@ public:
   static char ID;
 
   LocalityPass() : FunctionPass(ID) {}
+
+  bool Print_Locality_File(DataDependenceGraph &G, std::string Filename,
+                           CacheCostTy CC);
 
   bool runOnFunction(Function &F);
 

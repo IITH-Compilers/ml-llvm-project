@@ -55,17 +55,30 @@ bool LocalityPass::runOnFunction(Function &F) {
 
   DependenceInfo DI = DependenceInfo(&F, AA, SE, LI);
 
+  int loopNum = 0;
   for (LoopInfo::iterator i = LI->begin(), e = LI->end(); i != e; ++i) {
     Loop *L = *i;
     for (auto il = df_begin(L), el = df_end(L); il != el; ++il) {
       if (il->getSubLoops().size() > 0) {
         continue;
       }
-      errs() << "loop: " << *L << "\n";
+      loopNum++;
+      auto *LAA = &getAnalysis<LoopAccessLegacyAnalysis>();
+      const LoopAccessInfo &LAI = LAA->getInfo(*il);
+      auto RDGraph = RDG(*AA, *SE, *LI, DI, LAI);
+      auto SCCGraph = RDGraph.computeRDGForInnerLoop(**il);
+
+      // std::string Graph_Filename = "Graph.txt";
+      // RDGraph.PrintDotFile_LAI(SCCGraph, Graph_Filename, "ss");
+
+      std::string s1 = F.getParent()->getName().str();
+      std::string s2(s1.substr(s1.rfind('/') + 1));
+      std::string RD_Filename = "RD_locality.txt";
+      std::string SCC_Filename =
+          "SCC_" + s2 + "L" + std::to_string(loopNum) + ".dot";
+
       //   ReferenceGroupsTy RefGroups;
-
       auto CC = CacheCost::getCacheCost(*L, AR, DI);
-
       errs() << "CacheCost: " << CC->getLoopCost(*L) << "\n";
 
       // for (auto i = CC->getLoopCosts(), e = CC->getLoopCosts(); i != e;) {
@@ -87,36 +100,38 @@ bool LocalityPass::runOnFunction(Function &F) {
       // OS << *CC;
       // CacheCost::populateReferenceGroups(RefGroups);
 
-      int loopNum = 0;
-      for (LoopInfo::iterator i = LI->begin(), e = LI->end(); i != e; ++i) {
-        Loop *L = *i;
-        for (auto il = df_begin(L), el = df_end(L); il != el; ++il) {
-          if (il->getSubLoops().size() > 0) {
-            continue;
-          }
-          loopNum++;
-          auto *LAA = &getAnalysis<LoopAccessLegacyAnalysis>();
-          const LoopAccessInfo &LAI = LAA->getInfo(*il);
-          auto RDGraph = RDG(*AA, *SE, *LI, DI, LAI);
-          auto SCCGraph = RDGraph.computeRDGForInnerLoop(**il);
+      // int loopNum = 0;
+      // for (LoopInfo::iterator i = LI->begin(), e = LI->end(); i != e; ++i)
+      // {
+      //   Loop *L = *i;
+      // for (auto il = df_begin(L), el = df_end(L); il != el; ++il) {
+      //   if (il->getSubLoops().size() > 0) {
+      //     continue;
+      //   }
+      //   loopNum++;
+      //   auto *LAA = &getAnalysis<LoopAccessLegacyAnalysis>();
+      //   const LoopAccessInfo &LAI = LAA->getInfo(*il);
+      //   auto RDGraph = RDG(*AA, *SE, *LI, DI, LAI);
+      //   auto SCCGraph = RDGraph.computeRDGForInnerLoop(**il);
 
-          std::string s1 = F.getParent()->getName().str();
-          std::string s2(s1.substr(s1.rfind('/') + 1));
-          std::string RD_Filename = "RD_locality.txt";
-          std::string SCC_Filename = "SCC_" + s2 + "_FUNCTION_" +
-                                     SCCGraph.GetFunctionName() + "_LOOP" +
-                                     std::to_string(loopNum) + ".dot";
-          std::error_code EC;
-          raw_fd_ostream File(RD_Filename.c_str(), EC, sys::fs::F_Append);
-          if (!EC) {
-            File << SCC_Filename << " : " << SCCGraph.dependenceSize << " : "
-                 << CC->getLoopCost(*L) << "\n";
-            CC->getLoopCosts();
-            // errs() << "Loop costs: " <<
-          } else {
-            errs() << "error opening file for writing! \n";
-          }
-        }
+      //   std::string s1 = F.getParent()->getName().str();
+      //   std::string s2(s1.substr(s1.rfind('/') + 1));
+      //   std::string RD_Filename = "RD_locality.txt";
+      //   std::string SCC_Filename = "SCC_" + s2 + "_FUNCTION_" +
+      //                              SCCGraph.GetFunctionName() + "_LOOP" +
+      //                              std::to_string(loopNum) + ".dot";
+      std::error_code EC;
+      raw_fd_ostream File(RD_Filename.c_str(), EC, sys::fs::F_Append);
+      if (!EC) {
+        // if (SCCGraph.SCCExist) {
+        // File << SCC_Filename << " : " << SCCGraph.totalSCCNodes << "\n";
+        File << SCC_Filename << " : " << SCCGraph.dependenceSize << " : "
+             << CC->getLoopCost(*L) << "\n";
+        // }
+        // CC->getLoopCosts();
+        // errs() << "Loop costs: " <<
+      } else {
+        errs() << "error opening file for writing! \n";
       }
     }
   }

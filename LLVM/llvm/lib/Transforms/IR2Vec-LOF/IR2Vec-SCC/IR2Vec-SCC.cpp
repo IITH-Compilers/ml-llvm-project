@@ -116,16 +116,20 @@ static RegisterPass<RDGWrapperPass> X("RDG", "Build ReducedDependenceGraph",
 // 	}
 // }
 
-bool RDGWrapperPass::Print_IR2Vec_File(
-    DataDependenceGraph &G, std::string Filename,
+void RDGWrapperPass::Print_IR2Vec_File(
+    DataDependenceGraph &G, std::string Filename, std::string ll_name,
     SmallDenseMap<const Instruction *, SmallVector<double, DIM>> instVecMap) {
   // Code to generate Input File with IR2Vec Embedding as a node to an RDG
   std::error_code EC;
+  // Filename = "temp123";
   raw_fd_ostream File(Filename.c_str(), EC, sys::fs::F_Text);
-  // int x = 0;
   int md = 0;
 
+  std::string FunctionName = G.GetFunctionName();
+
   if (!EC) {
+    File << "FileName: " << ll_name << "\n\n";
+    File << "Function: " << FunctionName << "\n\n";
     File << "digraph G {\n";
     // Append all the nodes with labels into DOT File
     for (auto *N : G) {
@@ -205,19 +209,9 @@ bool RDGWrapperPass::Print_IR2Vec_File(
       }
     }
     File << "}";
-
-    std::string totalSCC_Filename = "totalSCCGraphs.txt";
-    std::error_code EC1;
-
-    raw_fd_ostream File(totalSCC_Filename.c_str(), EC1, sys::fs::F_Append);
-    if (!EC1)
-      File << Filename << " : " << G.totalSCCNodes << "\n";
-    else
-      errs() << "error opening file\n";
-    return true;
   } else {
-    errs() << "error opening file for writing! \n";
-    return false;
+    errs() << "error opening file for writing!"
+           << "\n";
   }
 }
 
@@ -447,30 +441,36 @@ bool RDGWrapperPass::runOnFunction(Function &F) {
 
       std::string s1 = F.getParent()->getName().str();
       std::string s2(s1.substr(s1.rfind('/') + 1));
-      std::string SCC_Filename = "SCC_" + s2 + "_FUNCTION_" +
-                                 SCCGraph.GetFunctionName() + "_LOOP" +
-                                 std::to_string(loopNum) + ".dot";
+      std::string SCC_Filename =
+          "SCC_" + s2 + "L" + std::to_string(loopNum) + ".dot";
+      // std::string SCC_Filename = "SCC_" + s2 + "_FUNCTION_" +
+      //                            SCCGraph.GetFunctionName() + "_LOOP"
+      //                            + std::to_string(loopNum) + ".dot";
 
-      // errs() << F.getParent()->getName() << " : " << s2 << "\n";
-      // errs() << SCCGraph.GetFunctionName() << "\n";
-      // errs() << "Writing " + SCC_Filename + "\n";
-      RDGraph.PrintDotFile_LAI(SCCGraph, SCC_Filename);
+      errs() << "Writing " + SCC_Filename + "\n";
+      RDGraph.PrintDotFile_LAI(SCCGraph, SCC_Filename, s2);
 
       // Print Input File
-      std::string Input_Filename = "InputGraph_" + s2 + "_FUNCTION_" +
-                                   SCCGraph.GetFunctionName() + "_Loop" +
-                                   std::to_string(loopNum) + ".dot";
-      // errs() << "Writing " + Input_Filename + "\n";
-      bool File_exist = Print_IR2Vec_File(SCCGraph, Input_Filename, instVecMap);
-      errs() << "---------------------->>  " << SCCGraph.totalSCCNodes << "\n";
+      std::string Input_Filename =
+          "InputGraph_" + s2 + "L" + std::to_string(loopNum) + ".dot";
+      // std::string Input_Filename = "InputGraph_" + s2 + "_FUNCTION_"
+      // +
+      //                              SCCGraph.GetFunctionName() +
+      //                              "_Loop" + std::to_string(loopNum)
+      //                              + ".dot";
+      errs() << "Writing " + Input_Filename + "\n";
+      // if (SCCGraph.SCCExist) {
+      Print_IR2Vec_File(SCCGraph, Input_Filename, s2, instVecMap);
+      // }
+
       std::string totalSCC_Filename = "totalSCC.txt";
       std::error_code EC;
       raw_fd_ostream File(totalSCC_Filename.c_str(), EC, sys::fs::F_Append);
 
       if (!EC) {
-        if (File_exist) {
-          File << Input_Filename << " : " << SCCGraph.totalSCCNodes << "\n";
-          errs() << "FileExist: " << File_exist << "\n";
+        if (SCCGraph.SCCExist) {
+          File << SCC_Filename << " : " << SCCGraph.totalSCCNodes << "\n";
+          // errs() << "FileExist: " << File_exist << "\n";
         }
       } else {
         errs() << "error opening file for writing! \n";

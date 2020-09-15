@@ -390,6 +390,7 @@ public:
   // Total Number of SCC Store Nodes
   int totalSCCNodes;
   int dependenceSize;
+  bool SCCExist = 0;
 
 protected:
   /// Add node \p N to the graph, if it's not added yet, and keep track of the

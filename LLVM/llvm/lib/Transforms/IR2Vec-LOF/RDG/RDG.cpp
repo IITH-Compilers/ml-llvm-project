@@ -28,13 +28,18 @@ using namespace llvm;
 // INITIALIZE_PASS_END(RDG, "RDG", "Build ReducedDependenceGraph", true, true)
 
 // Code to generate DOT File to store RDG
-void RDG::PrintDotFile_LAI(DataDependenceGraph &G, std::string Filename) {
+void RDG::PrintDotFile_LAI(DataDependenceGraph &G, std::string Filename,
+                           std::string ll_name) {
   std::error_code EC;
   raw_fd_ostream File(Filename.c_str(), EC, sys::fs::F_Text);
   int x = 0;
   int md = 0;
 
+  std::string FunctionName = G.GetFunctionName();
+
   if (!EC) {
+    File << "FileName: " << ll_name << "\n\n";
+    File << "Function: " << FunctionName << "\n\n";
     File << "digraph G {\n";
     // Append all the nodes with labels into DOT File
     for (auto *N : G) {
@@ -87,10 +92,27 @@ void RDG::PrintDotFile_LAI(DataDependenceGraph &G, std::string Filename) {
       }
     }
     File << "}";
+    G.SCCExist = true;
   } else {
     errs() << "error opening file for writing! \n";
+    G.SCCExist = false;
   }
 }
+
+// Code to check if RDG/SCC Exist
+// void RDG::CheckRDGExist(DataDependenceGraph &G, std::string Filename) {
+//   std::error_code EC;
+//   raw_fd_ostream File(Filename.c_str(), EC, sys::fs::F_Text);
+//   int x = 0;
+//   int md = 0;
+
+//   if (!EC) {
+//     G.SCCExist = true;
+//   } else {
+//     G.SCCExist = false;
+//     errs() << "error opening file for writing! \n";
+//   }
+// }
 
 // void RDG::Print_IR2Vec_File(DataDependenceGraph &G, std::string Filename,
 // 					SmallDenseMap<const Instruction *,
