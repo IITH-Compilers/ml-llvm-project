@@ -113,28 +113,38 @@ def get_runtime_of_file(filename, inputd=None, file_format='ll'):
                     raise Exception("Out file not generated")
         else:
             out_file=filename
+        
+        if path.exists(out_file):
+            if inputd is not None: 
+                cmd2 = "{out_file}<{inputd}>/dev/null ".format(out_file=out_file,inputd=inputd)
+            else:
+                cmd2="{out_file}".format(out_file=out_file)
 
-        if inputd is not None: 
-            cmd2 = "{out_file}<{inputd}>/dev/null ".format(out_file=out_file,inputd=inputd)
+            print('Runtime command\n', cmd2)
+            #runtime = executeNtimes(cmd2, N=5)
+            import concurrent.futures 
+
+            with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+                        runtimes=[]
+                        for runtime in executor.map(execute, [cmd2]*5):
+                            try:
+                                runtimes.append(runtime)
+                            except:
+                                raise Exception('Exception during running {}'.format(cmd2))
+            
+            
+            runtime=np.mean(runtimes)
         else:
-            cmd2="{out_file}>/dev/null".format(out_file=out_file)
-
-        print(cmd2)
-        #runtime = executeNtimes(cmd2, N=5)
-        import concurrent.futures 
-
-        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-                    runtimes=list(executor.map(execute, [cmd2]*5))
-        runtime=np.mean(runtimes)
+            raise Exception('Outfile not present!!!!!!')
     except Exception as inst :
         runtime = 100000000 #None if fails
         print(sys.exc_info())
-        print('Exception ocurred : ', inst)
-        print('Some error occured .. for {filename} so runtime=None '.format(filename=filename))
+        print('Runtime: Exception ocurred : ', inst)
+        print('Runtime: Some error occured .. for {filename} so runtime=None '.format(filename=filename))
     except :
         runtime = 100000000 #None if fails
         print(sys.exc_info())
-        print('Other Unknown Some error occured .. for {filename} so runtime=None '.format(filename=filename))
+        print('Runtime: Other Unknown Some error occured .. for {filename} so runtime=None '.format(filename=filename))
 
    
     return runtime
@@ -151,7 +161,7 @@ def call_distributionPass(filename, distributeSeq, method_name, loop_id):
         cmd = "{opt} -load {LLVM}/lib/LoopDistribution.so -LoopDistribution -lID={loop_id} -function {method_name} --partition=\"{dseq}\" {input_file} -o {out_file}".format(opt=os.environ['OPT'], LLVM=os.environ['LLVM'], dseq=distributeSeq ,input_file=filename, out_file=out_file, method_name=method_name, loop_id=loop_id)
         # cmd = "{opt} {input_file} -o {out_file}".format(opt=os.environ['OPT'] ,input_file=filename, out_file=out_file)
 
-        # print(cmd)
+        print('Call to LoopDistribute pass thru command line \n: ', cmd)
 
         response=os.system(cmd)
         if response != 0:
@@ -160,11 +170,11 @@ def call_distributionPass(filename, distributeSeq, method_name, loop_id):
     except Exception as err:
         out_file=None
         print(sys.exc_info())
-        print('Exception ocurred : ', err)
-
+        print('CallLoopDistribute: Exception ocurred : ', err)
+        # raise
     except:
         out_file = None #None if fails
-        print('Some error occured while calling the distribution pass for {filename}. '.format(filename=filename))
+        print('CallLoopDistribute: Some error occured while calling the distribution pass for {filename}. '.format(filename=filename))
         raise 
     return out_file
    

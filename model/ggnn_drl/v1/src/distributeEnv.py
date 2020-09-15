@@ -1,4 +1,4 @@
-import gym
+# import gym
 # import GGNN
 from ggnn import constructGraph
 from topologicalSort import Graph
