@@ -144,8 +144,16 @@ void LoopDistribution::modifyCondBranch(BasicBlock *oldPreheader,
   newLoop->getLoopLatches(newLatches);
   for (auto BB : newLatches) {
     BranchInst *curBranch = dyn_cast<BranchInst>(BB->getTerminator());
-    if (curBranch && curBranch->isConditional()) {
+    if (curBranch && curBranch->isConditional() &&
+        dyn_cast<BasicBlock>(curBranch->getOperand(1)) ==
+            newLoop->getExitBlock()) {
       curBranch->setOperand(1, oldPreheader);
+    } else if (curBranch && curBranch->isConditional() &&
+               dyn_cast<BasicBlock>(curBranch->getOperand(2)) ==
+                   newLoop->getExitBlock()) {
+      curBranch->setOperand(2, oldPreheader);
+    } else {
+      llvm_unreachable("Latch with Conditional branch expected");
     }
   }
 }
@@ -155,6 +163,8 @@ Loop *LoopDistribution::cloneLoop(Loop *L, LoopInfo *LI, DominatorTree *DT,
   ValueToValueMapTy VMap;
   SmallVector<BasicBlock *, 8> newLoopBlocks;
   BasicBlock *oldPreheader = L->getLoopPreheader();
+  BasicBlock *ExitBlock = L->getExitBlock();
+  assert(ExitBlock && "No single exit block");
 
   // At this point the predecessor of the preheader is either the memcheck
   // block or the top part of the original preheader.
