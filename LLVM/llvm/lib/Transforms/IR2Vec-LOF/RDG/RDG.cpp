@@ -38,9 +38,9 @@ void RDG::PrintDotFile_LAI(DataDependenceGraph &G, std::string Filename,
   std::string FunctionName = G.GetFunctionName();
 
   if (!EC) {
-    File << "FileName: " << ll_name << "\n\n";
-    File << "Function: " << FunctionName << "\n\n";
     File << "digraph G {\n";
+    File << "FileName=" << ll_name << ";\n";
+    File << "Function=" << FunctionName << ";\n";
     // Append all the nodes with labels into DOT File
     for (auto *N : G) {
       x++;
@@ -293,6 +293,7 @@ bool RDG::BuildRDG_LAI(DataDependenceGraph &G, DependenceInfo &DI,
     }
     x++;
   }
+  return true;
 }
 
 void RDG::createMemoryEdgeMergedNode(DataDependenceGraph &G, DependenceInfo &DI,
