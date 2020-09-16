@@ -365,10 +365,6 @@ bool LoopDistribution::runOnFunction(Function &F) {
   createContainer(SCCGraph);
   populatePartitions(SCCGraph, il, DI, partitionPattern);
 
-  RDGraph.PrintDotFile_LAI(
-      SCCGraph, "SCC_" + std::to_string(loopNum) +
-                    il->getHeader()->getParent()->getName().str() + ".dot");
-
   LLVM_DEBUG(errs() << "#nodes - container = " << container.size() << "\n");
 
   if (container.size() == 0) {
