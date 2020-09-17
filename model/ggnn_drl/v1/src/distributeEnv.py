@@ -77,13 +77,15 @@ class DistributeLoopEnv:
         Druntime = utils.get_runtime_of_file(dist_file_path_out, inputd=input_file_path)
 
         # Run the O3 file 5 times, O3avg
-        if O3_file_path not in self.O3_runtimes.keys():
+        if ll_file_name not in self.O3_runtimes.keys():
+            print('Warning!!!!!!!!!!!!!!!!!! O3 not prioily calculated.....')
             O3runtime = utils.get_runtime_of_file(O3_file_path, inputd=input_file_path)
         else:
-            O3runtime = self.O3_runtimes[O3_file_path] 
+            O3runtime = self.O3_runtimes[ll_file_name] 
 
         reward = (O3runtime - Druntime) / O3runtime
         
+        print('O3runtime={}ms , Druntime={}ms  '.format(O3runtime, Druntime))
         return reward
 
 

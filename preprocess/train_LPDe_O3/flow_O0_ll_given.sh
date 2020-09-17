@@ -1,9 +1,9 @@
  
-source ../config.sh
+source config.sh
 
 
 # Create basic O0 ll files
-WD=${HOME}/data/spec_ds
+WD=${HOME}/data/SPEC/processed
 
 LL_WD=${WD}/llfiles
 
@@ -49,7 +49,7 @@ a=0
 # Store the dots file
 for d in ${SSA}/*.ll; do 
         # let "a++";
-        echo "==================== Generating dot file for $d file =============" && name=`basename ${d}` && oname=${name%.*} && cd ${DOT} && ${LLVM_BUILD}/bin/opt -S  -load ${IR2Vec_SO} -load ${LLVM_BUILD}/lib/RDG.so  -file ${SEED_FILE} -level p -of temp.txt -bpi 0 -RDG  ${d} -o ${META_SSA}/${oname}.ll    &
+        echo "==================== Generating dot file for $d file =============" && name=`basename ${d}` && oname=${name%.*} && cd ${DOT} && timeout --kill-after=5m 5m ${LLVM_BUILD}/bin/opt -S  -load ${IR2Vec_SO} -load ${LLVM_BUILD}/lib/RDG.so  -file ${SEED_FILE} -level p -of temp.txt -bpi 0 -RDG  ${d} -o ${META_SSA}/${oname}.ll    &
 done 
  
 wait

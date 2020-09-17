@@ -25,7 +25,7 @@ for dotPath in  allfiles:
     # js = json.dumps(dot_to_json(dotPath))
     #print(js)
     name = (dotPath.split('/')[-1]).split('.dot')[0]
-    print(name)
+    # print(name)
     graph = dot_to_json(dotPath)
     if len(graph['nodes']) < 2:
         print('File not included for json : {}'.format(dotPath))

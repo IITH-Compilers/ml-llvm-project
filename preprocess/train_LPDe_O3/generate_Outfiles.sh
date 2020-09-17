@@ -1,12 +1,10 @@
  
 
-LLVM_BUILD="/home/venkat/IF-DV/IR2Vec-LoopOptimizationFramework/build_release"
-SEED_FILE="/home/venkat/IF-DV/IR2Vec-LoopOptimizationFramework/LLVM/IR2Vec-Engine/vocabulary/seedEmbeddingVocab-300-llvm10.txt"
-
+source config.sh
 
 
 # Create basic O0 ll files
-WD=`pwd`/../data/spec_ds
+WD=${HOME}/data/SPEC/processed
 
 OUT_WD=${WD}/outfiles
 

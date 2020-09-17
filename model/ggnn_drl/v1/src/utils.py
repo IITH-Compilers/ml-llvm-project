@@ -6,7 +6,7 @@ import subprocess
 import time
 import sys
 import numpy as np
-os.environ['LLVM']="/home/venkat/IF-DV/IR2Vec-LoopOptimizationFramework/build_release"
+os.environ['LLVM']="/home/venkat/IF-DV/Rohit/IR2Vec-LoopOptimizationFramework/build"
 os.environ['OPT']=os.environ['LLVM']+"/bin/opt"
 os.environ['CLANG']=os.environ['LLVM']+"/bin/clang"
 
@@ -23,7 +23,7 @@ SSA_DIR='ssa'
 META_SSA_DIR='meta_ssa'
 
 
-POST_DIST_PASSES='-branch-prob -block-freq -scalar-evolution -basicaa -aa -loop-accesses -demanded-bits -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -loop-vectorize -loop-simplify -scalar-evolution -aa -loop-accesses -lazy-branch-prob -lazy-block-freq -loop-load-elim -basicaa -aa -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -instcombine -simplifycfg -domtree -loops -scalar-evolution -basicaa -aa -demanded-bits -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -slp-vectorizer -opt-remark-emitter -instcombine -loop-simplify -lcssa-verification -lcssa -scalar-evolution -loop-unroll -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -instcombine -memoryssa -loop-simplify -lcssa-verification -lcssa -scalar-evolution -licm -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -transform-warning -alignment-from-assumptions -strip-dead-prototypes -globaldce -constmerge -domtree -loops -branch-prob -block-freq -loop-simplify -lcssa-verification -lcssa -basicaa -aa -scalar-evolution -block-freq -loop-sink -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -instsimplify -div-rem-pairs -simplifycfg -verify'
+POST_DIST_PASSES="" #'-branch-prob -block-freq -scalar-evolution -basicaa -aa -loop-accesses -demanded-bits -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -loop-vectorize -loop-simplify -scalar-evolution -aa -loop-accesses -lazy-branch-prob -lazy-block-freq -loop-load-elim -basicaa -aa -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -instcombine -simplifycfg -domtree -loops -scalar-evolution -basicaa -aa -demanded-bits -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -slp-vectorizer -opt-remark-emitter -instcombine -loop-simplify -lcssa-verification -lcssa -scalar-evolution -loop-unroll -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -instcombine -memoryssa -loop-simplify -lcssa-verification -lcssa -scalar-evolution -licm -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -transform-warning -alignment-from-assumptions -strip-dead-prototypes -globaldce -constmerge -domtree -loops -branch-prob -block-freq -loop-simplify -lcssa-verification -lcssa -basicaa -aa -scalar-evolution -block-freq -loop-sink -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -instsimplify -div-rem-pairs -simplifycfg -verify'
 
 def load_O3_runtimes(filepath):
     if path.exists(filepath):
@@ -89,7 +89,8 @@ def get_O3_runtimes(rundir, isInputRequired):
     else:
         for filename in llfiles:
             runtime = get_runtime_of_file(filename)
-            O3_runtimes[filename]=runtime
+            filename_key = filename.split('/')[-1]
+            O3_runtimes[filename_key]=runtime
             if runtime is None:
                 None_count = None_count+1
     
@@ -167,7 +168,7 @@ def call_distributionPass(filename, distributeSeq, method_name, loop_id):
 
         response=os.system(cmd)
         if response != 0:
-            os.system('mv {path}/*{filename}.ll* {distribute_error}'.format(path=os.path.join(parts[0],'../../graphs/json/'), filename=parts[1][:-3], distribute_error=os.path.join(parts[0],'../../graphs/distribute_error/')))
+            # os.system('mv {path}/*{filename}.ll* {distribute_error}'.format(path=os.path.join(parts[0],'../../graphs/train/'), filename=parts[1][:-3], distribute_error=os.path.join(parts[0],'../../graphs/distribute_error/')))
             raise Exception('Distribution Pass error')
     except Exception as err:
         out_file=None
