@@ -23,7 +23,12 @@ SSA_DIR='ssa'
 META_SSA_DIR='meta_ssa'
 
 
-POST_DIST_PASSES="" #'-branch-prob -block-freq -scalar-evolution -basicaa -aa -loop-accesses -demanded-bits -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -loop-vectorize -loop-simplify -scalar-evolution -aa -loop-accesses -lazy-branch-prob -lazy-block-freq -loop-load-elim -basicaa -aa -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -instcombine -simplifycfg -domtree -loops -scalar-evolution -basicaa -aa -demanded-bits -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -slp-vectorizer -opt-remark-emitter -instcombine -loop-simplify -lcssa-verification -lcssa -scalar-evolution -loop-unroll -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -instcombine -memoryssa -loop-simplify -lcssa-verification -lcssa -scalar-evolution -licm -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -transform-warning -alignment-from-assumptions -strip-dead-prototypes -globaldce -constmerge -domtree -loops -branch-prob -block-freq -loop-simplify -lcssa-verification -lcssa -basicaa -aa -scalar-evolution -block-freq -loop-sink -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -instsimplify -div-rem-pairs -simplifycfg -verify'
+## Use for replicate the O3
+POST_DIST_PASSES='-branch-prob -block-freq -scalar-evolution -basicaa -aa -loop-accesses -demanded-bits -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -loop-vectorize -loop-simplify -scalar-evolution -aa -loop-accesses -lazy-branch-prob -lazy-block-freq -loop-load-elim -basicaa -aa -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -instcombine -simplifycfg -domtree -loops -scalar-evolution -basicaa -aa -demanded-bits -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -slp-vectorizer -opt-remark-emitter -instcombine -loop-simplify -lcssa-verification -lcssa -scalar-evolution -loop-unroll -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -instcombine -memoryssa -loop-simplify -lcssa-verification -lcssa -scalar-evolution -licm -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -transform-warning -alignment-from-assumptions -strip-dead-prototypes -globaldce -constmerge -domtree -loops -branch-prob -block-freq -loop-simplify -lcssa-verification -lcssa -basicaa -aa -scalar-evolution -block-freq -loop-sink -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -instsimplify -div-rem-pairs -simplifycfg -verify'
+
+
+def eprint(*args, **kwargs):
+    print(*args,file=sys.stderr)
 
 def load_O3_runtimes(filepath):
     if path.exists(filepath):
@@ -33,6 +38,37 @@ def load_O3_runtimes(filepath):
     else:
         return None
 
+'''Old parition split logic'''
+# def getllfileName(jsonfile):
+# 
+#     parts = jsonfile.split('/graphs/json/')
+#     file_dir = parts[0]
+#     file_name_parts = (parts[1].split('InputGraph_'))[1].split('.json')[0]
+#     
+#     file_name_parts =file_name_parts.split('_FUNCTION_')
+#     file_name = file_name_parts[0]
+#     
+#     # print('file name : {}'.format(file_name))
+#     return os.path.join(O3_folder, file_name)
+
+def getllFileAttributes(file):
+    record = {}
+    parts = file.split('/graphs/')
+    home_dir = parts[0]
+    parts=parts[1].split('/')
+    file_name_parts = (parts[1].split('InputGraph_'))[1].split('.json')[0]
+    
+    file_name_parts =file_name_parts.split('.llL')
+    record['HOME_DIR'] = home_dir
+    record['FILE_NAME'] =file_name_parts[0]
+    record['LOOP_ID'] = file_name_parts[1]
+    return record
+
+def getllfileNameFromJSON(jsonfile):
+    file_name = getllFileAttributes(jsonfile)['FILE_NAME']
+    file_name = "{}.ll".format(file_name)
+    
+    return file_name
 
 def get_O3_runtimes(rundir, isInputRequired):
     '''get all runetimes for O3 (baseline).'''
@@ -50,20 +86,9 @@ def get_O3_runtimes(rundir, isInputRequired):
     O3_folder  = os.path.join(rundir, 'llfiles/level-O3')
     graphs_folder = os.path.join(rundir, 'graphs/json')
     jsons = glob.glob(os.path.join(graphs_folder, '*.json'))
-    def getllfileName(jsonfile):
-
-        parts = jsonfile.split('/graphs/json/')
-        file_dir = parts[0]
-        file_name_parts = (parts[1].split('InputGraph_'))[1].split('.json')[0]
-        
-        file_name_parts =file_name_parts.split('_FUNCTION_')
-        file_name = file_name_parts[0]
-        
-        # print('file name : {}'.format(file_name))
-        return os.path.join(O3_folder, file_name)
     
 
-    llfiles_validjson = list(map(getllfileName, jsons))
+    llfiles_validjson = [ os.path.join(O3_folder, getllfileNameFromJSON(json)) for json in jsons]
     
     #print(llfiles_validjson)
     
@@ -141,23 +166,30 @@ def get_runtime_of_file(filename, inputd=None, file_format='ll'):
             raise Exception('Outfile not present!!!!!!')
     except Exception as inst :
         runtime = 100000000 #None if fails
-        print(sys.exc_info())
-        print('Runtime: Exception ocurred : ', inst)
-        print('Runtime: Some error occured .. for {filename} so runtime=None '.format(filename=filename))
+        eprint(sys.exc_info())
+        eprint('Runtime: Exception ocurred : {}'.format (inst))
+        eprint('Runtime: Some error occured .. for {filename} so runtime={runtime} '.format(filename=filename, runtime=runtime))
     except :
         runtime = 100000000 #None if fails
-        print(sys.exc_info())
-        print('Runtime: Other Unknown Some error occured .. for {filename} so runtime=None '.format(filename=filename))
+        eprint(sys.exc_info())
+        eprint('Runtime: Other Unknown Some error occured .. for {filename} so runtime={runtime} '.format(filename=filename, runtime=runtime))
 
    
     return runtime
+
+def distribute_and_getRuntime(filename, distributeSeq, method_name, loop_id, input_file_path=None):
+    distributed_llfile = call_distributionPass(filename, distributeSeq, method_name, loop_id)
+    Druntime = get_runtime_of_file(distributed_llfile, inputd=input_file_path)
+    if Druntime == 100000000:
+        eprint('Distributed file Runtime Error occured!!!!!!!!!!!!! for file={}, distributeSeq={}, method={}, loop={}'.format(filename, distributeSeq, method_name, loop_id))
+    return Druntime
 
 def call_distributionPass(filename, distributeSeq, method_name, loop_id):
     
 
     try:
         parts = os.path.split(filename)
-        out_file = "Distribute_{filename}_FUNCTION_{method_name}_Loop{loop_id}.ll".format(filename=parts[1][:-3], method_name=method_name, loop_id=loop_id)
+        out_file = "Distribute_{filename}_FUNCTION_{method_name}_Loop{loop_id}.ll".format(filename=parts[1], method_name=method_name, loop_id=loop_id)
         out_file = os.path.join(parts[0], '../training/{}'.format(out_file))
         # print(out_file) 
         print('--------------------------',distributeSeq) 
@@ -172,12 +204,12 @@ def call_distributionPass(filename, distributeSeq, method_name, loop_id):
             raise Exception('Distribution Pass error')
     except Exception as err:
         out_file=None
-        print(sys.exc_info())
-        print('CallLoopDistribute: Exception ocurred : ', err)
+        eprint(sys.exc_info())
+        eprint('CallLoopDistribute: Exception ocurred : ', err)
         # raise
     except:
         out_file = None #None if fails
-        print('CallLoopDistribute: Some error occured while calling the distribution pass for {filename}. '.format(filename=filename))
+        eprint('CallLoopDistribute: Some error occured while calling the distribution pass for {filename}. '.format(filename=filename))
         raise 
     return out_file
    
@@ -185,6 +217,7 @@ def call_distributionPass(filename, distributeSeq, method_name, loop_id):
 def executeNtimes(cmd, N=5):
     runtime=0
     for i in range(N):
+        # print('Run {i}'.format(i=i))
         rt=execute(cmd)
         runtime+=rt
     return runtime/N
