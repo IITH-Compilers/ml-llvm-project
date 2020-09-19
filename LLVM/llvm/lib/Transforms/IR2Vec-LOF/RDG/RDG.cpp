@@ -39,8 +39,8 @@ void RDG::PrintDotFile_LAI(DataDependenceGraph &G, std::string Filename,
 
   if (!EC) {
     File << "digraph G {\n";
-    File << "FileName=" << ll_name << ";\n";
-    File << "Function=" << FunctionName << ";\n";
+    // File << "FileName=" << ll_name << ";\n";
+    // File << "Function=" << FunctionName << ";\n";
     // Append all the nodes with labels into DOT File
     for (auto *N : G) {
       x++;
@@ -196,6 +196,11 @@ bool RDG::BuildRDG_LAI(DataDependenceGraph &G, DependenceInfo &DI,
       LAI.getDepChecker().getDependences(); // List of dependences
   const SmallVector<int64_t, 8> DependenceDistances =
       LAI.getDepChecker().getDDist(); // List of dependence distances
+
+  errs() << "Dependence Safe: " << LAI.getDepChecker().isSafeForVectorization()
+         << "\n";
+  errs() << "Dependence Bytes: " << LAI.getMaxSafeDepDistBytes() << "\n";
+  errs() << "canVectorizeMemory: " << LAI.canVectorizeMemory() << "\n ";
 
   if (alldependences == nullptr) {
     // errs() << "######################aaaaaaaaaaaaaa\n";
@@ -508,9 +513,40 @@ void RDG::CreateSCC(DataDependenceGraph &G, DependenceInfo &DI) {
 
 void RDG::SelectOnlyStoreNode(DataDependenceGraph &G) {
   int label = 0;
+  // SmallPtrSet<Value *, 32> PhiNodeValue;
+  // for (auto *N : G) {
+  //   InstructionListType InstList;
+  //   N->collectInstructions([](const Instruction *I) { return true; },
+  //   InstList); for (Instruction *I : InstList) {
+  //     if (auto *Phi = dyn_cast<PHINode>(I)) {
+  //       errs() << "getNumIncomingValues: " << Phi->getNumIncomingValues()
+  //              << "\n";
+  //       for (int i = 0; i < Phi->getNumIncomingValues(); ++i) {
+  //         errs() << "values: " << *(Phi->getIncomingValue(i)) << "\n";
+  //         PhiNodeValue.insert(Phi->getIncomingValue(i));
+  //       }
+  //     }
+  //   }
+  // }
   for (auto *N : G) {
     InstructionListType InstList;
     N->collectInstructions([](const Instruction *I) { return true; }, InstList);
+
+    // for (Instruction *I : InstList) {
+    //   if (I->getOpcode() == Instruction::Store) {
+    //     for (auto i = I->op_begin(), e = I->op_end(); i != e; ++i) {
+    //       errs() << "op: " << *i << "\n";
+    //       for (auto ii = PhiNodeValue.begin(), ee = PhiNodeValue.end();
+    //            ii != ee; ++ii) {
+    //         // errs() << *ii << "\n";
+    //         if (*ii == *i) {
+    //           errs() << "Matched: " << *ii << " : " << **i << "\n";
+    //         }
+    //       }
+    //     }
+    //   }
+    // }
+    // errs() << "\n";
 
     for (Instruction *I : InstList) {
       if (I->getOpcode() == Instruction::Store) {
@@ -526,7 +562,7 @@ void RDG::SelectOnlyStoreNode(DataDependenceGraph &G) {
   G.totalSCCNodes = label;
 }
 
-DataDependenceGraph RDG::computeRDGForInnerLoop(Loop &IL) {
+DataDependenceGraph *RDG::computeRDGForInnerLoop(Loop &IL) {
   raw_ostream &operator<<(raw_ostream &OS, const DataDependenceGraph &G);
 
   // // Collect IR2Vec encoding vector for each instruction in instVecMap
@@ -552,12 +588,15 @@ DataDependenceGraph RDG::computeRDGForInnerLoop(Loop &IL) {
   // errs() << "Loop: " << **il << "\n";
   // auto p = il->getLoopLatch();
   // errs() << "Loop Latch: " << *p << "\n";
+  if (LAI.getMaxSafeDepDistBytes() == -1ULL && !LAI.canVectorizeMemory()) {
+    return nullptr;
+  }
 
   // Use of DependenceGraphBuilder
   // Make Data Dependence Graph for IR instructions with def-use edges
   // Merge nodes based on source code instructions
   // DataDependenceGraph G1 = DataDependenceGraph(**il, LI, DI);
-  DataDependenceGraph G2 = DataDependenceGraph(IL, LI, DI, &SE);
+  DataDependenceGraph *G2 = new DataDependenceGraph(IL, LI, DI, &SE);
 
   // Append Memory Dependence Edges with weights into Graph
   // auto *LAA = &getAnalysis<LoopAccessLegacyAnalysis>();
@@ -565,11 +604,11 @@ DataDependenceGraph RDG::computeRDGForInnerLoop(Loop &IL) {
   // BuildRDG_LAI(G1, DI, LAI);
   // G1.populate();
 
-  BuildRDG_LAI(G2, DI, LAI);
+  BuildRDG_LAI(*G2, DI, LAI);
 
-  CreateSCC(G2, DI);
+  CreateSCC(*G2, DI);
 
-  SelectOnlyStoreNode(G2);
+  SelectOnlyStoreNode(*G2);
 
   // for(NodeType *N : G){
   // 	InstructionListType InstList;

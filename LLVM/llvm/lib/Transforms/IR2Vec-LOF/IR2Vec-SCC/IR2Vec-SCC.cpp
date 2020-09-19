@@ -362,7 +362,6 @@ bool RDGWrapperPass::runOnFunction(Function &F) {
       }
       // errs() << "Loop: " << **il << "\n";
       // auto p = il->getLoopLatch();
-      // errs() << "Loop Latch: " << *p << "\n";
 
       // Use of DependenceGraphBuilder
       // Make Data Dependence Graph for IR instructions with def-use edges
@@ -375,7 +374,12 @@ bool RDGWrapperPass::runOnFunction(Function &F) {
       auto *LAA = &getAnalysis<LoopAccessLegacyAnalysis>();
       const LoopAccessInfo &LAI = LAA->getInfo(*il);
       auto RDGraph = RDG(*AA, *SE, *LI, DI, LAI);
-      auto SCCGraph = RDGraph.computeRDGForInnerLoop(**il);
+      auto SCC_Graph = RDGraph.computeRDGForInnerLoop(**il);
+
+      if (SCC_Graph == nullptr) {
+        continue;
+      }
+      DataDependenceGraph &SCCGraph = *SCC_Graph;
 
       SCCGraph.InsertFunctionName(F.getName());
       // errs() << "Mangled Name: " << SCCGraph.GetFunctionName() << "\n";
@@ -411,7 +415,8 @@ bool RDGWrapperPass::runOnFunction(Function &F) {
 
       // Print RDG DOT File
       // std::string RDG_Filename = "RDG_" + F.getName().str() + "_Loop" +
-      // std::to_string(loopNum) + ".dot"; errs() << "Writing " + RDG_Filename +
+      // std::to_string(loopNum) + ".dot"; errs() << "Writing " + RDG_Filename
+      // +
       // "\n"; PrintDotFile_LAI(G1, RDG_Filename);
 
       // Print SCC DOT File
@@ -431,9 +436,10 @@ bool RDGWrapperPass::runOnFunction(Function &F) {
       // std::string file =
       // sys::path::remove_leading_dotslash(F.getParent()->getSourceFileName());
       // errs() << "file: " << file << "\n";
-      // errs() << sys::path::stem(F.getParent()->getSourceFileName()) << "\n";
-      // std::string SCC_Filename =
-      //     "SCC_" + sys::path::stem(F.getParent()->getSourceFileName()).str()
+      // errs() << sys::path::stem(F.getParent()->getSourceFileName()) <<
+      // "\n"; std::string SCC_Filename =
+      //     "SCC_" +
+      //     sys::path::stem(F.getParent()->getSourceFileName()).str()
       //     +
       //     "_FUNCTION_" + F.getName().str() + "_LOOP" +
       //     std::to_string(loopNum) +

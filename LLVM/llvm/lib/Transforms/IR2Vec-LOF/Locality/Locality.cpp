@@ -66,7 +66,11 @@ bool LocalityPass::runOnFunction(Function &F) {
       auto *LAA = &getAnalysis<LoopAccessLegacyAnalysis>();
       const LoopAccessInfo &LAI = LAA->getInfo(*il);
       auto RDGraph = RDG(*AA, *SE, *LI, DI, LAI);
-      auto SCCGraph = RDGraph.computeRDGForInnerLoop(**il);
+      auto SCC_Graph = RDGraph.computeRDGForInnerLoop(**il);
+      if (SCC_Graph == nullptr) {
+        continue;
+      }
+      DataDependenceGraph &SCCGraph = *SCC_Graph;
 
       // std::string Graph_Filename = "Graph.txt";
       // RDGraph.PrintDotFile_LAI(SCCGraph, Graph_Filename, "ss");
