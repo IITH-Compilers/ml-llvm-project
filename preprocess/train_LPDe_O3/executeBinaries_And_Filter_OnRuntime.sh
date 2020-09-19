@@ -1,6 +1,8 @@
 # Create basic O0 ll files
 
-WD=`pwd`/../data/spec_ds
+source config.sh
+
+WD=${HOME}/data/SPEC/processed
 
 OUT_WD=${WD}/outfiles
 

@@ -1,8 +1,5 @@
-# import gym
-# import GGNN
 from ggnn import constructGraph
 from topologicalSort import Graph
-# from topologicalSort import findAllVertaxWithZeroWeights
 import random
 import utils
 import os
@@ -34,56 +31,53 @@ class DistributeLoopEnv:
        
         # code to from the distribtuted ll file by caling distibrution pass
          
-        parts = self.path.split('/graphs/')
-        file_dir = parts[0]
+        # parts = self.path.split('/graphs/')
+        # file_dir = parts[0]
+        # 
+        # parts=parts[1].split('/')
+        # file_name_parts = (parts[1].split('InputGraph_'))[1].split('.json')[0]
+        # 
+        # file_name_parts =file_name_parts.split('_FUNCTION_')
+        # file_name = file_name_parts[0]
+        # 
+        # print('file name : {}'.format(file_name))
+
+        # file_name_parts = file_name_parts[1].split('_Loop')
         
-        parts=parts[1].split('/')
-        file_name_parts = (parts[1].split('InputGraph_'))[1].split('.json')[0]
-        
-        full_file_name = file_name_parts 
-        
-        print('Full file with method and loop id {}'.format(full_file_name))
-        file_name_parts =file_name_parts.split('_FUNCTION_')
-        file_name = file_name_parts[0]
-        
-        print('file name : {}'.format(file_name))
+        home_dir = self.home_dir
+        method_name = self.functionName
+        loop_id = self.loopId
+        ll_file_name = self.fileName
 
-        file_name_parts = file_name_parts[1].split('_Loop')
-
-        method_name = file_name_parts[0]
-        loop_id = file_name_parts[1]
-
-
-        # ll_file_name = "{}.ll".format(file_name)
-        ll_file_name = "{}".format(file_name)
-
-        meta_ssa_dir = os.path.join(file_dir, 'llfiles/meta_ssa')
+        meta_ssa_dir = os.path.join(home_dir, 'llfiles/meta_ssa')
         meta_ssa_file_path = os.path.join(meta_ssa_dir, ll_file_name)
         
-        O3_dir = os.path.join(file_dir, 'llfiles/level-O3')
+        O3_dir = os.path.join(home_dir, 'llfiles/level-O3')
         O3_file_path = os.path.join(O3_dir, ll_file_name)
         
         input_file_path=None
         if self.isInputRequired:
-            input_dir = os.path.join(file_dir, 'inputd')
+            input_dir = os.path.join(home_dir, 'inputd')
             input_file_path = os.path.join(input_dir, "{}.inputd".format(file_name))
 
         
         # call the Pass 
-        dist_file_path_out = utils.call_distributionPass( meta_ssa_file_path, self.distribution, method_name, loop_id)
+        # dist_file_path_out = utils.call_distributionPass( meta_ssa_file_path, self.distribution, method_name, loop_id)
 
         # Run the File 5 times on input. Davg
         
-        Druntime = utils.get_runtime_of_file(dist_file_path_out, inputd=input_file_path)
-
+        # Druntime = utils.get_runtime_of_file(dist_file_path_out, inputd=input_file_path)
+        Druntime = utils.distribute_and_getRuntime( meta_ssa_file_path, self.distribution, method_name, loop_id,input_file_path=input_file_path )
         # Run the O3 file 5 times, O3avg
-        if O3_file_path not in self.O3_runtimes.keys():
+        if ll_file_name not in self.O3_runtimes.keys():
+            print('Warning!!!!!!!!!!!!!!!!!! O3 not prioily calculated.....')
             O3runtime = utils.get_runtime_of_file(O3_file_path, inputd=input_file_path)
         else:
-            O3runtime = self.O3_runtimes[O3_file_path] 
+            O3runtime = self.O3_runtimes[ll_file_name] 
 
         reward = (O3runtime - Druntime) / O3runtime
         
+        print('filename={}, O3runtime={}s , Druntime={}s  '.format(ll_file_name, O3runtime, Druntime))
         return reward
 
 
@@ -122,15 +116,16 @@ class DistributeLoopEnv:
     
     # input graph : jsonnx
     def reset_env(self, graph, path):
-
+        attr = utils.getllFileAttributes(path)
         self.path = path
         self.distribution = ""
         self.graph = graph
+        self.fileName = graph['graph'][1][1]['FileName'] 
+        self.functionName = graph['graph'][1][1]['Function']
+        self.loopId = attr['LOOP_ID']
+        self.home_dir = attr['HOME_DIR']
         self.num_nodes = len(self.graph['nodes'])
         
-
-        # self.ggnn = GatedGraphNeuralNetwork(hidden_size=self.hidden_size, num_edge_types=1,
-        #                           layer_timesteps=[self.n_steps]*self.num_nodes, residual_connections={}, nodelevel=False)
 
 
         self.obs, self.topology, self.ggnn = constructGraph(self.graph)
@@ -142,12 +137,11 @@ class DistributeLoopEnv:
         # TODO Do somwhting here, it is randon as of now
         print("possible start nodes : {}".format(possibleStartNodes))
         self.startNode = random.choice(possibleStartNodes)
+        
         print('start Node : {}'.format(self.startNode))
         self.topology.UpdateVisitList(self.startNode)
         
 
-        # TODO : Add the focus bit on the node to say it is the initial selected 
-        # [ir2vec:1], [ir2vec:0] pass the the annotation values [v:x]
         self.ggnn.mpAfterDisplacement(self.startNode, startNode=True)
         self.cur_node = self.startNode
         

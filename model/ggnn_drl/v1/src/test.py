@@ -17,7 +17,7 @@ def run(agent):
     #Load the envroinment
     env = DistributeLoopEnv(dataset)    
     # count=0 
-    for path in glob.glob(os.path.join(dataset, 'graphs/distribute_error/*.json')): # Number of the iterations
+    for path in glob.glob(os.path.join(dataset, 'graphs/test/*.json')): # Number of the iterations
         with open(path) as f:
             graph = json.load(f)
         print('DLOOP New graph to the env. {} '.format(path))
@@ -63,6 +63,6 @@ if __name__ == '__main__':
     
     # episodes = 100
     dqn_agent = Agent(state_size=300, action_size=200, seed=0)
-    dqn_agent.qnetwork_local.load_state_dict(torch.load('checkpoint.pth'))
+    dqn_agent.qnetwork_local.load_state_dict(torch.load('checkpoint-spec_ds_filter.pth'))
     run(dqn_agent)
 
