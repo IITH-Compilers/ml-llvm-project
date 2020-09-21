@@ -17,6 +17,13 @@ UPDATE_EVERY = 4        # how often to update the network
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
+def generate_actions(next_loops):
+    mask = []
+    for a in next_loops:
+        mask.append(a*2)
+        mask.append(a*2+1)
+    return mask
+
 class Agent():
     """Interacts with and learns from the environment."""
 
@@ -43,17 +50,18 @@ class Agent():
         # Initialize time step (for updating every UPDATE_EVERY steps)
         self.t_step = 0
     
-    def step(self, state, action, reward, next_state, done):
+    def step(self, state, action, reward, next_state, done, action_mask=None, next_action_mask=None):
         # Save experience in replay memory
-        self.memory.add(state, action, reward, next_state, done)
+        self.memory.add(state, action, reward, next_state, done, action_mask=action_mask, next_action_mask=next_action_mask)
         
+        action_mask_flag = self.memory.action_mask_flag
         # Learn every UPDATE_EVERY time steps.
         self.t_step = (self.t_step + 1) % UPDATE_EVERY
         if self.t_step == 0:
             # If enough samples are available in memory, get random subset and learn
             if len(self.memory) > BATCH_SIZE:
                 experiences = self.memory.sample()
-                self.learn(experiences, GAMMA)
+                self.learn(experiences, GAMMA, action_mask_flag=action_mask_flag)
 
     def act(self, state, topology, eps=0.):
         """Returns actions for given state as per current policy.
@@ -66,12 +74,6 @@ class Agent():
         next_loops = topology.findAllVertaxWithZeroWeights()
         
         # n transition As per the SCC * 2 decscsion  
-        def generate_actions(next_loops):
-            mask = []
-            for a in next_loops:
-                mask.append(a*2)
-                mask.append(a*2+1)
-            return mask
 
         masked_action = generate_actions(next_loops)
         
@@ -101,7 +103,7 @@ class Agent():
 
             # return random.choice(np.arange(self.action_size))
 
-    def learn(self, experiences, gamma):
+    def learn_bk(self, experiences, gamma):
         """Update value parameters using given batch of experience tuples.
 
         Params
@@ -115,6 +117,47 @@ class Agent():
         Q_targets_next = self.qnetwork_target(next_states).detach().max(1)[0].unsqueeze(1)
         # Compute Q targets for current states 
         Q_targets = rewards + (gamma * Q_targets_next * (1 - dones))
+
+        # Get expected Q values from local model
+        Q_expected = self.qnetwork_local(states).gather(1, actions)
+
+        # Compute loss
+        loss = F.mse_loss(Q_expected, Q_targets)
+        # Minimize the loss
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
+
+        # ------------------- update target network ------------------- #
+        self.soft_update(self.qnetwork_local, self.qnetwork_target, TAU)                     
+
+    def learn(self, experiences, gamma, action_mask_flag):
+        """Update value parameters using given batch of experience tuples.
+
+        Params
+        ======
+            experiences (Tuple[torch.Tensor]): tuple of (s, a, r, s', done) tuples 
+            gamma (float): discount factor
+        """
+
+        if action_mask_flag:
+            states, action_mask, actions, rewards, next_states, next_action_mask, dones = experiences
+            # Get max predicted Q values (for next states) from target model
+            print('dqn_agent:learn():  nezt_action_mask:', next_action_mask)
+            # next_action_mask = generate_actions(next_action_mask) 
+
+            Q_targets_next = self.qnetwork_target(next_states).detach()
+            
+            print('!!!!!!!!!!!!!!!!!!!! Q_targets_next ', Q_targets_next.shape, Q_targets_next[0])
+            # Q_targets_next = torch.from_numpy(np.vstack([Q_targets_next[mask].max(1)[0] if len(mask) > 0 else 0 for mask in next_action_mask])).float().to(device).unsqueeze(1)* (1 - dones)
+            Q_targets_next = torch.stack([Q_targets_next[i][mask].max(0)[0] if len(mask) > 0 else Q_targets_next[i].max(0)[0]*0 for i, mask in enumerate(next_action_mask)], dim=0).unsqueeze(1)* (1 - dones)
+        else:
+            states, actions, rewards, next_states, dones = experiences
+            # Get max predicted Q values (for next states) from target model
+            Q_targets_next = self.qnetwork_target(next_states).detach().max(1)[0].unsqueeze(1)* (1 - dones)
+
+        # Compute Q targets for current states 
+        Q_targets = rewards + (gamma * Q_targets_next )
 
         # Get expected Q values from local model
         Q_expected = self.qnetwork_local(states).gather(1, actions)
@@ -161,23 +204,42 @@ class ReplayBuffer:
         self.batch_size = batch_size
         self.experience = namedtuple("Experience", field_names=["state", "action", "reward", "next_state", "done"])
         self.seed = random.seed(seed)
+        self.action_mask_flag = False
     
-    def add(self, state, action, reward, next_state, done):
+    def add(self, state, action, reward, next_state, done, action_mask=None, next_action_mask=None):
         """Add a new experience to memory."""
-        e = self.experience(state, action, reward, next_state, done)
+
+        if action_mask is not None:
+            e = self.experience((state,action_mask), action, reward, (next_state,next_action_mask), done)
+            self.action_mask_flag=True
+        else:
+            e = self.experience(state, action, reward, next_state, done)
         self.memory.append(e)
     
     def sample(self):
         """Randomly sample a batch of experiences from memory."""
         experiences = random.sample(self.memory, k=self.batch_size)
+        
+        if self.action_mask_flag:
+            states = torch.from_numpy(np.vstack([e.state[0] for e in experiences if e is not None])).float().to(device)
+            action_mask = [generate_actions(e.state[1]) for e in experiences if e is not None]
 
-        states = torch.from_numpy(np.vstack([e.state for e in experiences if e is not None])).float().to(device)
-        actions = torch.from_numpy(np.vstack([e.action for e in experiences if e is not None])).long().to(device)
-        rewards = torch.from_numpy(np.vstack([e.reward for e in experiences if e is not None])).float().to(device)
-        next_states = torch.from_numpy(np.vstack([e.next_state for e in experiences if e is not None])).float().to(device)
-        dones = torch.from_numpy(np.vstack([e.done for e in experiences if e is not None]).astype(np.uint8)).float().to(device)
-  
-        return (states, actions, rewards, next_states, dones)
+            next_states = torch.from_numpy(np.vstack([e.next_state[0] for e in experiences if e is not None])).float().to(device)
+            next_action_mask = [generate_actions(e.next_state[1]) for e in experiences  if e is not None] 
+            
+            actions = torch.from_numpy(np.vstack([e.action for e in experiences if e is not None])).long().to(device)
+            rewards = torch.from_numpy(np.vstack([e.reward for e in experiences if e is not None])).float().to(device)
+            dones = torch.from_numpy(np.vstack([e.done for e in experiences if e is not None]).astype(np.uint8)).float().to(device)
+            
+            return (states, action_mask, actions,  rewards, next_states, next_action_mask, dones)
+
+        else:
+            states = torch.from_numpy(np.vstack([e.state for e in experiences if e is not None])).float().to(device)
+            next_states = torch.from_numpy(np.vstack([e.next_state for e in experiences if e is not None])).float().to(device)
+            actions = torch.from_numpy(np.vstack([e.action for e in experiences if e is not None])).long().to(device)
+            rewards = torch.from_numpy(np.vstack([e.reward for e in experiences if e is not None])).float().to(device)
+            dones = torch.from_numpy(np.vstack([e.done for e in experiences if e is not None]).astype(np.uint8)).float().to(device)
+            return (states, actions, rewards, next_states, dones)
 
     def __len__(self):
         """Return the current size of internal memory."""

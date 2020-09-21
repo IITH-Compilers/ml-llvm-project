@@ -11,7 +11,8 @@ import os
 def run(agent):
     # with open('graphs.json') as file:
     #     graphs = json.load(file)
-    
+    action_mask_flag=True
+
     n_episodes=15
     max_t=1000
     eps_start=1.0
@@ -60,10 +61,18 @@ def run(agent):
                 # reward is 0 till we reach the end node
                 # reward will be -negative, maximize  the reward
                 #
+                action_mask = topology.findAllVertaxWithZeroWeights()
                 next_state, reward, done, distribute = env.step(action)
+                next_action_mask = topology.findAllVertaxWithZeroWeights()
                 
                 # put the state transitionin memory buffer
-                agent.step(state, action, reward, next_state, done)
+                print('train.py:  action_mask:', action_mask)
+                 
+                print('train.py:  nezt_action_mask:', next_action_mask)
+                if action_mask_flag:
+                    agent.step(state, action, reward, next_state, done, action_mask, next_action_mask)
+                else:
+                    agent.step(state, action, reward, next_state, done)
                 
 
                 # print('state : {}'.format(state))

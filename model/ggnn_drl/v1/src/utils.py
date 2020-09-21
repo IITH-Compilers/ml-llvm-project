@@ -144,9 +144,9 @@ def get_runtime_of_file(filename, inputd=None, file_format='ll'):
         
         if path.exists(out_file):
             if inputd is not None: 
-                cmd2 = "{out_file}<{inputd}>/dev/null ".format(out_file=out_file,inputd=inputd)
+                cmd2 = "timeout --kill-after=5m 5m {out_file}<{inputd}>/dev/null ".format(out_file=out_file,inputd=inputd)
             else:
-                cmd2="{out_file}".format(out_file=out_file)
+                cmd2="timeout --kill-after=5m 5m {out_file}".format(out_file=out_file)
 
             print('Runtime command\n', cmd2)
             #runtime = executeNtimes(cmd2, N=5)
@@ -189,7 +189,7 @@ def call_distributionPass(filename, distributeSeq, method_name, loop_id):
 
     try:
         parts = os.path.split(filename)
-        out_file = "Distribute_{filename}_FUNCTION_{method_name}_Loop{loop_id}.ll".format(filename=parts[1], method_name=method_name, loop_id=loop_id)
+        out_file = "Distribute_{filename}L{loop_id}.ll".format(filename=parts[1], method_name=method_name, loop_id=loop_id)
         out_file = os.path.join(parts[0], '../training/{}'.format(out_file))
         # print(out_file) 
         print('--------------------------',distributeSeq) 

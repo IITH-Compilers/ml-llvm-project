@@ -77,7 +77,7 @@ class DistributeLoopEnv:
 
         reward = (O3runtime - Druntime) / O3runtime
         
-        print('filename={}, O3runtime={}s , Druntime={}s  '.format(ll_file_name, O3runtime, Druntime))
+        print('filename={},O3runtime={},Druntime={}'.format(ll_file_name, O3runtime, Druntime))
         return reward
 
 
