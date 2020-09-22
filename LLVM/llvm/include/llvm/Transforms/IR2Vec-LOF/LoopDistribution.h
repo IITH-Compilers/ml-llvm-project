@@ -16,6 +16,7 @@ using namespace llvm;
 using NodeList = SmallVector<DDGNode *, 64>;
 using InstList = SmallVector<Instruction *, 64>;
 using Container = StringMap<InstList>;
+using Ordering = SmallVector<std::string, 10>;
 
 static cl::opt<std::string> funcName("function", cl::Hidden, cl::Required,
                                      cl::desc("Name of the function"));
@@ -31,14 +32,15 @@ class LoopDistribution : public FunctionPass {
 
 private:
   NodeList topologicalWalk(DataDependenceGraph &SCCGraph);
-  void populatePartitions(DataDependenceGraph &SCCGraph, Loop *il,
-                          DependenceInfo DI, std::string partition);
+  Ordering populatePartitions(DataDependenceGraph &SCCGraph, Loop *il,
+                              DependenceInfo DI, std::string partition);
   Loop *cloneLoop(Loop *L, LoopInfo *LI, DominatorTree *DT,
                   ValueToValueMap &instVMap);
   void modifyCondBranch(BasicBlock *preheader, Loop *newLoop);
   void removeUnwantedSlices(SmallVector<Loop *, 5> clonedLoops,
                             SmallDenseMap<Loop *, ValueToValueMap> loopInstVMap,
-                            SmallDenseMap<unsigned, Loop *> workingLoopID);
+                            SmallDenseMap<unsigned, Loop *> workingLoopID,
+                            Ordering paritionOrder);
   bool fail(StringRef RemarkName, StringRef Message, Loop *L);
   bool doSanityChecks(Loop *L);
   MDNode *getLoopID(Loop *L) const;

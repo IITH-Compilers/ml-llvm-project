@@ -94,9 +94,16 @@ void LoopDistribution::mergePartitionsOfContainer(std::string srcID,
   container.erase(destID);
 }
 
-void LoopDistribution::populatePartitions(DataDependenceGraph &SCCGraph,
-                                          Loop *il, DependenceInfo DI,
-                                          std::string partitionPattern) {
+// This method parses the distribution order from the user and merges the
+// corresponding SCC components from the partitions with its leader.
+// After this the only the components corresponding to the leaders persist.
+// Returns the ordering of components corresponding to leaders.
+// Eg: S1,S2|S3,S5|S4 ==> S1,S3,S4 will remain after merging S2 with S1 and S5
+// with S3.
+Ordering LoopDistribution::populatePartitions(DataDependenceGraph &SCCGraph,
+                                              Loop *il, DependenceInfo DI,
+                                              std::string partitionPattern) {
+  Ordering order;
   // Parse partitions from string
   // Eg: S1|S2,S3 ==> S1 S2,S3 ==> S1 S2 S3
   std::string s = partitionPattern;
@@ -129,11 +136,17 @@ void LoopDistribution::populatePartitions(DataDependenceGraph &SCCGraph,
     subtokens.push_back(s);
 
     auto srcPartitionID = subtokens[0];
-
+    order.push_back(srcPartitionID);
+    LLVM_DEBUG(errs() << "pushed -- " << srcPartitionID << "\n");
     // Based on the partitions, merge the nodes of the container
-    for (unsigned i = 1; i < subtokens.size(); i++)
+    for (unsigned i = 1; i < subtokens.size(); i++) {
+      LLVM_DEBUG(errs() << "Merging partition --> " << subtokens[i] << "with "
+                        << subtokens[0] << "\n");
       mergePartitionsOfContainer(srcPartitionID, subtokens[i]);
+    }
   }
+
+  return order;
 }
 
 // Modifies the Loop condition to point appropriately
@@ -215,15 +228,16 @@ void LoopDistribution::removeUnwantedSlices(
     SmallVector<Loop *, 5> clonedLoops,
     // NodeList topoOrder,
     SmallDenseMap<Loop *, ValueToValueMap> loopInstVMap,
-    SmallDenseMap<unsigned, Loop *> workingLoopID) {
+    SmallDenseMap<unsigned, Loop *> workingLoopID, Ordering partitionOrder) {
 
   // Find union of instructions from other nodes of SCC (excluding the
   // current one)
   LLVM_DEBUG(errs() << "container.size = " << container.size() << "\n");
   unsigned id = 0;
-  for (auto i : container.keys()) {
+  for (auto i : partitionOrder) {
+    LLVM_DEBUG(errs() << "removing slices of container --> " << i << "\n");
     SmallVector<Instruction *, 64> instToRemove;
-    for (auto j : container.keys()) {
+    for (auto j : partitionOrder) {
       if (i == j)
         continue;
       instToRemove.append(container[j].begin(), container[j].end());
@@ -362,8 +376,21 @@ bool LoopDistribution::runOnFunction(Function &F) {
   auto RDGraph = RDG(*AA, *SE, *LI, DI, *LAI);
   auto SCCGraph = RDGraph.computeRDGForInnerLoop(*il);
 
-  createContainer(SCCGraph);
-  populatePartitions(SCCGraph, il, DI, partitionPattern);
+  if (!SCCGraph)
+    return fail("EmptySCCGraph", "SCC Graph not generated", il);
+
+  LLVM_DEBUG(errs() << "writing RDG --> "
+                    << "SCC_" + std::to_string(loopNum) +
+                           il->getHeader()->getParent()->getName().str() +
+                           ".dot\n");
+  LLVM_DEBUG(RDGraph.PrintDotFile_LAI(
+      *SCCGraph,
+      "SCC_" + std::to_string(loopNum) +
+          il->getHeader()->getParent()->getName().str() + ".dot",
+      ""));
+
+  createContainer(*SCCGraph);
+  Ordering order = populatePartitions(*SCCGraph, il, DI, partitionPattern);
 
   LLVM_DEBUG(errs() << "#nodes - container = " << container.size() << "\n");
 
@@ -397,7 +424,7 @@ bool LoopDistribution::runOnFunction(Function &F) {
     clonedLoops.push_back(L);
   }
 
-  removeUnwantedSlices(clonedLoops, loopInstVMap, workingLoopID);
+  removeUnwantedSlices(clonedLoops, loopInstVMap, workingLoopID, order);
   // Report the success.
   ORE->emit([&]() {
     return OptimizationRemark(LDIST_NAME, "Distribute", L->getStartLoc(),
