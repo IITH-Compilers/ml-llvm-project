@@ -113,7 +113,7 @@ public:
   void simplify();
 
   void simplify_Inst();
-  void PhiNodeMerge(NodeType &SI, Instruction &II,
+  void PhiNodeMerge(NodeType &SI, NodeType &PhiNode, Instruction &II,
                     NodeListType &NodeDeletionList);
   void NodeMergeRecursion(NodeType &SI, Instruction &II,
                           NodeListType &NodeDeletionList);

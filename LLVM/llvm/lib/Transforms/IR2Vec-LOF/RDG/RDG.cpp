@@ -585,11 +585,28 @@ DataDependenceGraph *RDG::computeRDGForInnerLoop(Loop &IL) {
   // 		if(il->getSubLoops().size() > 0){
   // 			continue;
   // 		}
-  // errs() << "Loop: " << **il << "\n";
-  // auto p = il->getLoopLatch();
-  // errs() << "Loop Latch: " << *p << "\n";
+
   if (LAI.getMaxSafeDepDistBytes() == -1ULL && !LAI.canVectorizeMemory()) {
     return nullptr;
+    LLVM_DEBUG(errs() << "No need to make RDG\n");
+  }
+
+  for (BasicBlock *BB : IL.blocks()) {
+    for (Instruction &I : BB->instructionsWithoutDebug()) {
+      if (dyn_cast<CallInst>(&I)) {
+        LLVM_DEBUG(
+            errs()
+            << "FuncCallFound: no need to make RDG with function calls\n");
+        return nullptr;
+      }
+    }
+    auto br = dyn_cast<BranchInst>(BB->getTerminator());
+
+    if (br && br->isConditional() && BB != IL.getLoopLatch()) {
+      LLVM_DEBUG(errs() << "Conditions Present: no need to make RDG in case of "
+                           "conditionals inside loop body\n");
+      return nullptr;
+    }
   }
 
   // Use of DependenceGraphBuilder
@@ -604,11 +621,11 @@ DataDependenceGraph *RDG::computeRDGForInnerLoop(Loop &IL) {
   // BuildRDG_LAI(G1, DI, LAI);
   // G1.populate();
 
-  BuildRDG_LAI(*G2, DI, LAI);
+  // BuildRDG_LAI(*G2, DI, LAI);
 
-  CreateSCC(*G2, DI);
+  // CreateSCC(*G2, DI);
 
-  SelectOnlyStoreNode(*G2);
+  // SelectOnlyStoreNode(*G2);
 
   // for(NodeType *N : G){
   // 	InstructionListType InstList;

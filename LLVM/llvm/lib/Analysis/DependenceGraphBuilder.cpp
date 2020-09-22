@@ -820,41 +820,82 @@ void AbstractDependenceGraphBuilder<G>::createDefUseEdgeMergedNode(
 
 template <class G>
 void AbstractDependenceGraphBuilder<G>::PhiNodeMerge(
-    NodeType &PhiNode, Instruction &II, NodeListType &NodeDeletionList) {
-  // using NodeKind = typename NodeType::NodeKind;
-  // using EdgeKind = typename EdgeType::EdgeKind;
-
-  // List of edges present in graph
-  // SmallVector<EdgeType *, 10> EL;
-  // for(NodeType *N : Graph){
-  //   for(EdgeType *e : *N){
-  //     EL.push_back(e);
-  //   }
-  // }
-
-  // errs() << "Phi Node: " << PhiNode << "\n";
-
+    NodeType &SI, NodeType &PhiNode, Instruction &II,
+    NodeListType &NodeDeletionList) {
   for (auto i = II.op_begin(), e = II.op_end(); i != e; ++i) {
     // errs() << "Merging:" << II << "\nand:" << **i << "\n";
     if (dyn_cast<Instruction>(&(**i))) {
       Instruction *OP = dyn_cast<Instruction>(&(**i));
-      // errs() << "OP: "   << *OP << "\n";
+      // errs() << "OP: " << *OP << "\n";
 
       if (IMap.find(OP) != IMap.end()) {
-        // InstructionListType InstList;
-        // SI.collectInstructions([](const Instruction *I) { return true; },
-        // InstList);
-
         NodeType *MergingNode = IMap.find(OP)->second;
         // errs() << "PHI Merging Node: " << *MergingNode << "\n";
         DDGEdge &EdgeAlready = MergingNode->back();
         NodeType *tgtPhi = &EdgeAlready.getTargetNode();
-        // if(tgtPhi != &PhiNode){
-        // errs() << "Merging Node: " << PhiNode << "\n";
-        // errs() << "Merging Node SI: " << *MergingNode << "\n";
-        // // Graph.connect(*MergingNode, PhiNode, EdgeAlready);
-        // createDefUseEdge(*MergingNode, PhiNode);
-        // }
+
+        /////////////////////////////////////////////
+        ///////////////////////////////////////////////
+        InstructionListType InstList;
+        SI.collectInstructions([](const Instruction *I) { return true; },
+                               InstList);
+
+        // Check if already present in STORE Node and append if not present
+        bool temp = 0;
+        for (Instruction *inst : InstList) {
+          if (inst == OP) {
+            temp = 1;
+            break;
+          }
+        }
+
+        if (temp == 0) {
+          // Append instructions of MergingNode into SI Node
+          NodeType *MergingNode = IMap.find(OP)->second;
+          cast<SimpleDDGNode>(SI).appendInstructionsStoreNode(
+              *cast<SimpleDDGNode>(MergingNode));
+
+          // Update NodeDeletionList
+          bool ni = 0;
+          for (NodeType *nd : NodeDeletionList) {
+            if (nd == MergingNode) {
+              ni = 1;
+              break;
+            }
+          }
+          if (ni == 0) {
+            NodeDeletionList.push_back(MergingNode);
+            // errs() << "nodeList: " << *MergingNode << "\n";
+          }
+        }
+        ////////////////////////////////////////
+        //////////////////////////////////////////
+
+        errs() << "yyyyyyyyyyyy: " << *OP << "\n";
+        // errs() << "SI Node: " << SI << "\n";
+        NodeMergeRecursion(SI, *OP, NodeDeletionList);
+        /* auto *Phi = dyn_cast<Instruction>(OP);
+        errs() << "xxxxxxxxxxxxx: " << *Phi << "\n";
+
+        if (auto *Phi = dyn_cast<Instruction>(OP)) {
+          errs() << "xxxxxxxxxxxxx: " << *Phi << "\n";
+          if (Phi->getNumIncomingValues() == 2) {
+            errs() << "aaaaaaaaaaaaa: " << *Phi << "\n";
+            errs() << "bbbbbbbbbbbbb: " << *Phi->getIncomingValue(0) << "\n";
+            errs() << "cccccccccccc: " << *Phi->getIncomingValue(1) << "\n";
+
+            // for (auto i = II.op_begin(), e = II.op_end(); i != e; ++i) {
+            //   errs() << "iiiiiiiiiiiii: " << *i << " : " << **i << "\n";
+            // }
+            Instruction *Phi_OP1 =
+                dyn_cast<Instruction>(Phi->getIncomingValue(0));
+            Instruction *Phi_OP2 =
+                dyn_cast<Instruction>(Phi->getIncomingValue(1));
+            errs() << "ddddddddddddddddd: " << *Phi_OP2 << "\n";
+            // NodeMergeRecursion(SI,   *Phi_OP1, NodeDeletionList);
+            NodeMergeRecursion(SI, *Phi_OP2, NodeDeletionList);
+          }
+        } */
       }
 
       // Should not be PHI Node
@@ -917,8 +958,6 @@ void AbstractDependenceGraphBuilder<G>::PhiNodeMerge(
 template <class G>
 void AbstractDependenceGraphBuilder<G>::NodeMergeRecursion(
     NodeType &SI, Instruction &II, NodeListType &NodeDeletionList) {
-  // using NodeKind = typename NodeType::NodeKind;
-  // using EdgeKind = typename EdgeType::EdgeKind;
 
   // List of edges present in graph
   // SmallVector<EdgeType *, 10> EL;
@@ -929,10 +968,10 @@ void AbstractDependenceGraphBuilder<G>::NodeMergeRecursion(
   // }
 
   for (auto i = II.op_begin(), e = II.op_end(); i != e; ++i) {
-    // errs() << "Merging:" << II << "\nand:" << **i << "\n";
+    errs() << "Merging:" << II << "\nand:" << **i << "\n";
     if (dyn_cast<Instruction>(&(**i))) {
       Instruction *OP = dyn_cast<Instruction>(&(**i));
-      // errs() << "OP: " << *OP << "\n";
+      errs() << "OP: " << *OP << "\n";
       // Should not be PHI Node
       if (!(OP->getOpcode() == Instruction::PHI)) {
         // errs() << "bbbbbbbbb\n";
@@ -963,8 +1002,6 @@ void AbstractDependenceGraphBuilder<G>::NodeMergeRecursion(
             cast<SimpleDDGNode>(SI).appendInstructionsStoreNode(
                 *cast<SimpleDDGNode>(MergingNode));
 
-            // errs() << "Merging Node: " << *MergingNode << "\n";
-
             // Create new edges after node merging
             createDefUseEdgeMergedNode(SI, *MergingNode, NodeDeletionList);
 
@@ -986,30 +1023,54 @@ void AbstractDependenceGraphBuilder<G>::NodeMergeRecursion(
       } else {
         // errs() << "OP-PHI: " << *OP << "\n";
         if (IMap.find(OP) != IMap.end()) {
-          //   // InstructionListType InstList;
-          //   // SI.collectInstructions([](const Instruction *I) { return true;
-          //   }, InstList);
 
-          NodeType *PhiNode = IMap.find(OP)->second;
-          // errs() << "PHI Merging Node: " << *PhiNode << "\n";
-          PhiNodeMerge(*PhiNode, *OP, NodeDeletionList);
-          //   DDGEdge &EdgeAlready = MergingNode->back();
-          //   NodeType *tgtPhi = &EdgeAlready.getTargetNode();
-          //   if(tgtPhi != &SI){
-          //     // errs() << "Merging Node: " << SI << "\n";
-          //     // errs() << "Merging Node SI: " << *MergingNode << "\n";
-          //     Graph.connect(*MergingNode, SI, EdgeAlready);
-          //     // createDefUseEdge(*MergingNode, SI);
-          //   }
-          //   // for(EdgeType *oldEdge : *MergingNode){
-          //   //   NodeType *tgtPhi = &oldEdge->getTargetNode();
-          //   //   if(*tgtPhi == SI) {
-          //   //     errs() << "Merging Nodde: " << *MergingNode << "\n";
-          //   //     errs() << "SI: " << SI << "\n";
-          //   //     createDefUseEdge(*MergingNode, SI);
-          //   //   }
-          //   // }
-        }
+          InstructionListType InstList;
+          SI.collectInstructions([](const Instruction *I) { return true; },
+                                 InstList);
+
+          // Check if already present in STORE Node and append if not present
+          bool temp = 0;
+          for (Instruction *inst : InstList) {
+            // errs() << "ddddddddddd: " << *inst << "\n";
+            // errs() << getOrdinal(*inst) << " ::::::::::: " << getOrdinal(*OP)
+            // << "\n";
+            if (inst == OP) {
+              temp = 1;
+              break;
+            }
+          }
+
+          if (temp == 0) {
+            // Append instructions of MergingNode into SI Node
+            NodeType *MergingNode = IMap.find(OP)->second;
+            cast<SimpleDDGNode>(SI).appendInstructionsStoreNode(
+                *cast<SimpleDDGNode>(MergingNode));
+
+            // Update NodeDeletionList
+            bool ni = 0;
+            for (NodeType *nd : NodeDeletionList) {
+              if (nd == MergingNode) {
+                ni = 1;
+                break;
+              }
+            }
+            if (ni == 0) {
+              NodeDeletionList.push_back(MergingNode);
+              // errs() << "nodeList: " << *MergingNode << "\n";
+            }
+            // }
+            //////////////////////////////////////////////
+            ///////////////////////////////////////
+
+            NodeType *PhiNode = IMap.find(OP)->second;
+            // errs() << "PHI Merging Node: " << *PhiNode << "\n";
+            PhiNodeMerge(SI, *PhiNode, *OP, NodeDeletionList);
+
+            // }
+
+          } /////////////////////
+        }   ///////////////////////////
+        // NodeMergeRecursion(SI, *OP, NodeDeletionList);
       }
     }
   }
