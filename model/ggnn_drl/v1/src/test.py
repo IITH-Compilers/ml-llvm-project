@@ -13,7 +13,8 @@ def run(agent):
     scores = []                        # list containing scores from each episode
     scores_window = deque(maxlen=100)  # last 100 scores
     eps = 0 
-    dataset='/home/venkat/IF-DV/Rohit/IR2Vec-LoopOptimizationFramework/data/spec_ds_filter'    
+
+    dataset='/home/venkat/IF-DV/Rohit/IR2Vec-LoopOptimizationFramework/data/SPEC/processed_filter2'    
     #Load the envroinment
     env = DistributeLoopEnv(dataset)    
     # count=0 
@@ -63,6 +64,8 @@ if __name__ == '__main__':
     
     # episodes = 100
     dqn_agent = Agent(state_size=300, action_size=200, seed=0)
-    dqn_agent.qnetwork_local.load_state_dict(torch.load('checkpoint-spec_ds_filter.pth'))
+    PWD=os.getcwd()
+    trained_model = os.path.join(PWD, '../trained_model')
+    dqn_agent.qnetwork_local.load_state_dict(torch.load(os.path.join(trained_model, 'final-model.pth')))
     run(dqn_agent)
 
