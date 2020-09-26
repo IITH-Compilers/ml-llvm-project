@@ -243,11 +243,8 @@ template <class G> void AbstractDependenceGraphBuilder<G>::createPiBlocks() {
 
 template <class G>
 void AbstractDependenceGraphBuilder<G>::createMergedPiBlocks() {
-  //  if (!shouldCreatePiBlocks())
-  //    return;
+  LLVM_DEBUG(dbgs() << "==== Start of Creation of Pi-Blocks ===\n");
 
-  // using NodeKind = typename NodeType::NodeKind;
-  // using EdgeKind = typename EdgeType::EdgeKind;
   NodeListType NodeDeletionList;
 
   // List of edges present in graph
@@ -258,19 +255,11 @@ void AbstractDependenceGraphBuilder<G>::createMergedPiBlocks() {
     }
   }
 
-  LLVM_DEBUG(errs() << "==== Start of Creation of Pi-Blocks ===\n");
-
-  LLVM_DEBUG(dbgs() << "==== Start of Creation of Pi-Blocks ===\n");
-
   SmallVector<NodeListType, 4> ListOfSCCs;
   for (auto &SCC : make_range(scc_begin(&Graph), scc_end(&Graph))) {
     if (SCC.size() > 1)
       ListOfSCCs.emplace_back(SCC.begin(), SCC.end());
   }
-
-  //  for (NodeListType &NL : ListOfSCCs) {
-  //    errs() << "SCC: \n";
-  //  }
 
   for (NodeListType &NL : ListOfSCCs) {
     LLVM_DEBUG(dbgs() << "Creating pi-block node with " << NL.size()
@@ -284,17 +273,12 @@ void AbstractDependenceGraphBuilder<G>::createMergedPiBlocks() {
     });
 
     for (NodeType *Source : NL) {
-      // errs() << "Source: " << *Source << "\n";
       for (NodeType *Target : NL) {
-        // errs() << "Target: "   << *Target << "\n";
         if (Source == Target) {
-          LLVM_DEBUG(
-              errs()
-              << "same node \n"); // << *Source << " : " << *Target << "\n";
+          LLVM_DEBUG(errs() << "same node \n");
           continue;
         }
-        // errs() << "Merging:" << *Source  << " With:" << *Target << "\n";
-        // NodeType *MergingNode = IMap.find(OP)->second;
+
         cast<SimpleDDGNode>(Source)->appendInstructionsStoreNode(
             *cast<SimpleDDGNode>(Target));
 
@@ -303,42 +287,6 @@ void AbstractDependenceGraphBuilder<G>::createMergedPiBlocks() {
                                     InstList);
 
         createDefUseEdgeMergedNode(*Source, *Target, NodeDeletionList);
-
-        // for(EdgeType *oldEdge : *Target){
-        //       NodeType *tgt = &oldEdge->getTargetNode();
-        //       // errs() << "back edge: " << *oldEdge << "\n";
-        //       // DDGEdge &EdgeDel = Target->back();
-        //       // errs() << "tgt: " << *tgt << "\n";
-        //         if(tgt == Source){
-        //           errs() << "store node: Do not connect" << "\n";
-        //           errs() << "back edge: " << *oldEdge << "\n";
-        //         } else {
-        //           errs() << "connected\n";
-        //           Graph.connect(*Source, *tgt, *oldEdge);
-        //           // errs() << "Source: " << *Source << "\n";
-        //           // errs() << "Target: " << *Target << "\n";
-        //           // errs() << "back edge: " << *oldEdge << "\n";
-        //         }
-
-        //       // Target->removeEdge(*oldEdge);
-        //       // destroyEdge(*oldEdge);
-        // }
-
-        // for(EdgeType *oldEdge : *Source){
-        //   NodeType *tgt = &oldEdge->getTargetNode();
-        //   if(tgt != Target) {
-        //     for(NodeType *n : NodeDeletionList){
-        //       if(n == tgt){
-        //         for(EdgeType *e : *tgt) {
-        //           NodeType *mergedtgt = &e->getTargetNode();
-        //    `                 // errs() << "ssssstgt: " << *Source << " : " <<
-        //    *mergedtgt << "\n";
-        //           createDefUseEdge(*Source, *mergedtgt);
-        //         }
-        //       }
-        //     }
-        //   }
-        // }
 
         bool ni = 0;
         for (NodeType *nd : NodeDeletionList) {
@@ -349,21 +297,15 @@ void AbstractDependenceGraphBuilder<G>::createMergedPiBlocks() {
         }
         if (ni == 0) {
           NodeDeletionList.push_back(Target);
-          // errs() << "nodeList: " << *MergingNode << "\n";
         }
       }
-      //  LLVM_DEBUG(dbgs() << "Merging:" << Src << "\nWith:" << Tgt << "\n");
-      //  errs() << "Merging:" << Src << "\nWith:" << Tgt << "\n";
-
       break;
     }
 
-    //    NodeType &PiNode = createPiBlock(NL);
     ++TotalPiBlockNodes;
   }
 
   for (NodeType *nn : NodeDeletionList) {
-    // errs() << "NodeDeletionList: " << *nn << "\n";
     Graph.removeNode(*nn);
     destroyNode(*nn);
   }
@@ -733,11 +675,12 @@ template <class G>
 void AbstractDependenceGraphBuilder<G>::createDefUseEdgeMergedNode(
     NodeType &FinalNode, NodeType &MergingNode,
     NodeListType &NodeDeletionList) {
-  // using NodeKind = typename NodeType::NodeKind;
+
   using EdgeKind = typename EdgeType::EdgeKind;
 
   // Merging Node Outgoing edges => Final Node Outgoing edges
   // Connect target of Merging Node as a target of Final Node
+  // errs() << "Merging Node: " << MergingNode << "\n";
   for (EdgeType *oldEdge : MergingNode) {
     NodeType *tgt = &oldEdge->getTargetNode();
     DDGEdge &EdgeDel = MergingNode.back();
@@ -768,7 +711,29 @@ void AbstractDependenceGraphBuilder<G>::createDefUseEdgeMergedNode(
             }
           }
           if (nt_flag == 0) {
-            createDefUseEdge(FinalNode, *tgt);
+            bool store_flag = 0;
+            // errs() << "FinalNode: " << FinalNode << "\ntgt: " << *tgt <<
+            // "\n";
+            InstructionListType InstList_MergingNode;
+            MergingNode.collectInstructions(
+                [](const Instruction *I) { return true; },
+                InstList_MergingNode);
+            InstructionListType InstList_tgtNode;
+            tgt->collectInstructions([](const Instruction *I) { return true; },
+                                     InstList_tgtNode);
+            for (Instruction *inst : InstList_MergingNode) {
+              for (Instruction *i : InstList_tgtNode) {
+                if (inst == i) {
+                  // errs() << "*********************\n";
+                  store_flag = 1;
+                }
+              }
+            }
+            if (store_flag == 0) {
+              // errs() << "FinalNode: " << FinalNode << "\ntgt: " << *tgt <<
+              // "\n";
+              createDefUseEdge(FinalNode, *tgt);
+            }
           }
         }
       }
@@ -781,6 +746,7 @@ void AbstractDependenceGraphBuilder<G>::createDefUseEdgeMergedNode(
 
   // Merging Node Incoming edges => Final Node Incoming edges
   // Connect incoming edges of Merging Node as incoming edges of Final Node
+  // errs() << "Merging Node: " << MergingNode << "\n";
   for (NodeType *N : Graph) {
     int MSL_flag = 0;
     if (*N != FinalNode) {
@@ -808,7 +774,36 @@ void AbstractDependenceGraphBuilder<G>::createDefUseEdgeMergedNode(
               if (e->getKind() == EdgeKind::Rooted) {
                 createRootedEdge(*N, FinalNode);
               } else {
-                createDefUseEdge(*N, FinalNode);
+                bool store_flag = 0;
+                // errs() << "N: " << FinalNode << "\nFinal Node: " << *N <<
+                // "\n";
+                InstructionListType InstList_MergingNode;
+                MergingNode.collectInstructions(
+                    [](const Instruction *I) { return true; },
+                    InstList_MergingNode);
+                InstructionListType InstList_FinalNode;
+                FinalNode.collectInstructions(
+                    [](const Instruction *I) { return true; },
+                    InstList_FinalNode);
+
+                for (Instruction *inst : InstList_MergingNode) {
+                  for (auto i = inst->op_begin(), e = inst->op_end(); i != e;
+                       ++i) {
+                    if (dyn_cast<Instruction>(&(**i))) {
+                      Instruction *OP = dyn_cast<Instruction>(&(**i));
+                      // errs() << "OP: " << *OP << "\n";
+                      for (Instruction *i : InstList_FinalNode) {
+                        if (inst == i) {
+                          // errs() << "*****************\n";
+                          store_flag = 1;
+                          break;
+                        }
+                      }
+                    }
+                  }
+                }
+                if (store_flag == 0)
+                  createDefUseEdge(*N, FinalNode);
               }
             }
           }
@@ -834,8 +829,6 @@ void AbstractDependenceGraphBuilder<G>::PhiNodeMerge(
         DDGEdge &EdgeAlready = MergingNode->back();
         NodeType *tgtPhi = &EdgeAlready.getTargetNode();
 
-        /////////////////////////////////////////////
-        ///////////////////////////////////////////////
         InstructionListType InstList;
         SI.collectInstructions([](const Instruction *I) { return true; },
                                InstList);
@@ -865,92 +858,11 @@ void AbstractDependenceGraphBuilder<G>::PhiNodeMerge(
           }
           if (ni == 0) {
             NodeDeletionList.push_back(MergingNode);
-            // errs() << "nodeList: " << *MergingNode << "\n";
           }
         }
-        ////////////////////////////////////////
-        //////////////////////////////////////////
-
-        errs() << "yyyyyyyyyyyy: " << *OP << "\n";
-        // errs() << "SI Node: " << SI << "\n";
+        errs() << "SI: " << SI << "\nOP: " << *OP << "\n";
         NodeMergeRecursion(SI, *OP, NodeDeletionList);
-        /* auto *Phi = dyn_cast<Instruction>(OP);
-        errs() << "xxxxxxxxxxxxx: " << *Phi << "\n";
-
-        if (auto *Phi = dyn_cast<Instruction>(OP)) {
-          errs() << "xxxxxxxxxxxxx: " << *Phi << "\n";
-          if (Phi->getNumIncomingValues() == 2) {
-            errs() << "aaaaaaaaaaaaa: " << *Phi << "\n";
-            errs() << "bbbbbbbbbbbbb: " << *Phi->getIncomingValue(0) << "\n";
-            errs() << "cccccccccccc: " << *Phi->getIncomingValue(1) << "\n";
-
-            // for (auto i = II.op_begin(), e = II.op_end(); i != e; ++i) {
-            //   errs() << "iiiiiiiiiiiii: " << *i << " : " << **i << "\n";
-            // }
-            Instruction *Phi_OP1 =
-                dyn_cast<Instruction>(Phi->getIncomingValue(0));
-            Instruction *Phi_OP2 =
-                dyn_cast<Instruction>(Phi->getIncomingValue(1));
-            errs() << "ddddddddddddddddd: " << *Phi_OP2 << "\n";
-            // NodeMergeRecursion(SI,   *Phi_OP1, NodeDeletionList);
-            NodeMergeRecursion(SI, *Phi_OP2, NodeDeletionList);
-          }
-        } */
       }
-
-      // Should not be PHI Node
-      // if(!(OP->getOpcode() == Instruction::PHI)){
-      //   // errs() << "bbbbbbbbb\n";
-      //   if(IMap.find(OP) != IMap.end()){
-      //     // errs() << "ccccccccccccccc\n";
-      //     InstructionListType InstList;
-      //     SI.collectInstructions([](const Instruction *I) { return true; },
-      //     InstList);
-
-      //     if(temp == 0){
-      //       // Append instructions of MergingNode into SI Node
-      //       NodeType *MergingNode = IMap.find(OP)->second;
-      //       cast<SimpleDDGNode>(SI).appendInstructionsStoreNode(*cast<SimpleDDGNode>(MergingNode));
-
-      //       // errs() << "Merging Node: " << *MergingNode << "\n";
-
-      //       // Create new edges after node merging
-      //       createDefUseEdgeMergedNode(SI, *MergingNode, NodeDeletionList);
-
-      //       // Update NodeDeletionList
-      //       bool ni = 0;
-      //       for(NodeType *nd : NodeDeletionList){
-      //         if(nd == MergingNode){
-      //           ni = 1;
-      //           break;
-      //         }
-      //       }
-      //       if(ni == 0){
-      //         NodeDeletionList.push_back(MergingNode);
-      //         // errs() << "nodeList: " << *MergingNode << "\n";
-      //       }
-      //     }
-      //   }
-      //   NodeMergeRecursion(SI, *OP, NodeDeletionList);
-      // } else {
-      //   errs() << "OP-PHI: " << *OP << "\n";
-      // if(IMap.find(OP) != IMap.end()){
-      //   // InstructionListType InstList;
-      //   // SI.collectInstructions([](const Instruction *I) { return true; },
-      //   InstList);
-
-      //   NodeType *MergingNode = IMap.find(OP)->second;
-      //   errs() << "PHI Merging Node: " << *MergingNode << "\n";
-      //   DDGEdge &EdgeAlready = MergingNode->back();
-      //   NodeType *tgtPhi = &EdgeAlready.getTargetNode();
-      //   if(tgtPhi != &SI){
-      //     // errs() << "Merging Node: " << SI << "\n";
-      //     // errs() << "Merging Node SI: " << *MergingNode << "\n";
-      //     Graph.connect(*MergingNode, SI, EdgeAlready);
-      //     // createDefUseEdge(*MergingNode, SI);
-      //   }
-      //   }
-      // }
     }
   }
 }
@@ -968,10 +880,10 @@ void AbstractDependenceGraphBuilder<G>::NodeMergeRecursion(
   // }
 
   for (auto i = II.op_begin(), e = II.op_end(); i != e; ++i) {
-    errs() << "Merging:" << II << "\nand:" << **i << "\n";
+    // errs() << "Merging:" << II << "\nand:" << **i << "\n";
     if (dyn_cast<Instruction>(&(**i))) {
       Instruction *OP = dyn_cast<Instruction>(&(**i));
-      errs() << "OP: " << *OP << "\n";
+      // errs() << "OP: " << *OP << "\n";
       // Should not be PHI Node
       if (!(OP->getOpcode() == Instruction::PHI)) {
         // errs() << "bbbbbbbbb\n";
@@ -981,11 +893,13 @@ void AbstractDependenceGraphBuilder<G>::NodeMergeRecursion(
           SI.collectInstructions([](const Instruction *I) { return true; },
                                  InstList);
 
-          // Check if already present in STORE Node and append if not present
+          // Check if already present in STORE Node and append if not
+          // present
           bool temp = 0;
           for (Instruction *inst : InstList) {
             // errs() << "ddddddddddd: " << *inst << "\n";
-            // errs() << getOrdinal(*inst) << " ::::::::::: " << getOrdinal(*OP)
+            // errs() << getOrdinal(*inst) << " ::::::::::: " <<
+            // getOrdinal(*OP)
             // << "\n";
             if (inst == OP) {
               temp = 1;
@@ -1003,7 +917,7 @@ void AbstractDependenceGraphBuilder<G>::NodeMergeRecursion(
                 *cast<SimpleDDGNode>(MergingNode));
 
             // Create new edges after node merging
-            createDefUseEdgeMergedNode(SI, *MergingNode, NodeDeletionList);
+            // createDefUseEdgeMergedNode(SI, *MergingNode, NodeDeletionList);
 
             // Update NodeDeletionList
             bool ni = 0;
@@ -1028,11 +942,13 @@ void AbstractDependenceGraphBuilder<G>::NodeMergeRecursion(
           SI.collectInstructions([](const Instruction *I) { return true; },
                                  InstList);
 
-          // Check if already present in STORE Node and append if not present
+          // Check if already present in STORE Node and append if not
+          // present
           bool temp = 0;
           for (Instruction *inst : InstList) {
             // errs() << "ddddddddddd: " << *inst << "\n";
-            // errs() << getOrdinal(*inst) << " ::::::::::: " << getOrdinal(*OP)
+            // errs() << getOrdinal(*inst) << " ::::::::::: " <<
+            // getOrdinal(*OP)
             // << "\n";
             if (inst == OP) {
               temp = 1;
@@ -1065,21 +981,11 @@ void AbstractDependenceGraphBuilder<G>::NodeMergeRecursion(
             NodeType *PhiNode = IMap.find(OP)->second;
             // errs() << "PHI Merging Node: " << *PhiNode << "\n";
             PhiNodeMerge(SI, *PhiNode, *OP, NodeDeletionList);
-
-            // }
-
-          } /////////////////////
-        }   ///////////////////////////
-        // NodeMergeRecursion(SI, *OP, NodeDeletionList);
+          }
+        }
       }
     }
   }
-  // errs() << "zzzzzzzzzzzzzzzzzzzzzzzzzz\n";
-  // for(NodeType *nn : NodeDeletionList){
-  //   // errs() << "NodeDeletionList: " << *nn << "\n";
-  //   Graph.removeNode(*nn);
-  //   destroyNode(*nn);
-  // }
 }
 
 template <class G> void AbstractDependenceGraphBuilder<G>::simplify_Inst() {
@@ -1134,14 +1040,33 @@ template <class G> void AbstractDependenceGraphBuilder<G>::simplify_Inst() {
     }
     // InstructionListType InstList_new;
     // SI->collectInstructions([](const Instruction *I) { return true; },
-    // InstList_new); std::reverse(InstList_new.begin(), InstList_new.end());
+    // InstList_new); std::reverse(InstList_new.begin(),
+    // InstList_new.end());
+  }
+
+  for (auto *N : Graph) {
+    InstructionListType InstList;
+    N->collectInstructions([](const Instruction *I) { return true; }, InstList);
+
+    for (Instruction *II : InstList) {
+      if (II->getOpcode() == Instruction::Store) {
+        // errs() << "N: " << *N;
+        for (Instruction *ii : InstList) {
+          NodeType *MergingNode = IMap.find(ii)->second;
+          if (*N != *MergingNode) {
+            // errs() << "\nMerging Node: " << *MergingNode << "\n";
+            createDefUseEdgeMergedNode(*N, *MergingNode, NodeDeletionList);
+          }
+        }
+      }
+    }
   }
 
   // for(NodeType *SI : StoreInstList) {
   //   InstructionListType InstList;
   //   SI->collectInstructions([](const Instruction *I) { return true; },
-  //   InstList); std::reverse(InstList.begin(), InstList.end()); for(auto *II :
-  //   InstList){
+  //   InstList); std::reverse(InstList.begin(), InstList.end()); for(auto
+  //   *II : InstList){
   //     errs() << *II << "\n";
   //   }
   //   errs() << "node........\n";

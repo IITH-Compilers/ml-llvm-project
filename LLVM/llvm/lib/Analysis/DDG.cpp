@@ -226,6 +226,7 @@ DataDependenceGraph::DataDependenceGraph(Loop &L, LoopInfo &LI,
         //  if(RecurrenceDescriptor::isReductionPHI(Phi, &L, RD)) {
         //   errs() << "Reduction phi node: " << *Phi << "\n";
         //   }
+        errs() << "Phi Node Value: " << Phi->getNumIncomingValues() << "\n";
         if (Phi->getNumIncomingValues() == 2) {
           if (!InductionDescriptor::isInductionPHI(Phi, &L, SE, ID)) {
             LLVM_DEBUG(errs() << "Not a Induction phi node: " << *Phi << "\n");
@@ -233,26 +234,21 @@ DataDependenceGraph::DataDependenceGraph(Loop &L, LoopInfo &LI,
             // ReductionPHIList.push_back(&I);
             if (RecurrenceDescriptor::isReductionPHI(Phi, &L, RD)) {
               LLVM_DEBUG(errs() << "Reduction phi node: " << &I << "\n");
-              // errs() << "Reduction phi node: " << &I << "\n\n\n";
+              errs() << "Reduction phi node: " << &I << "\n\n\n";
               ReductionPHIList.push_back(&I);
             } else {
               // llvm_unreachable(
               //     "Neither induction nor reduction phi node -- no support");
               LLVM_DEBUG(errs() << "Neither Induction nor Reduction phi node: "
                                 << *Phi << "\n");
-              // errs() << "Neither Induction nor Reduction phi node: " << *Phi
-              // << "\n";
+              errs() << "Neither Induction nor Reduction phi node: " << *Phi
+                     << "\n";
             }
           }
         }
-
-        LLVM_DEBUG(errs() << "aaaaaaaaaaaaaaaaa\n");
       }
-      // errs() << "aaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
     }
-    // errs() << "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\n";
   }
-  // errs() << "ccccccccccccccccccccccccccccccccccccccc\n";
   DDGBuilder(*this, D, BBList, ReductionPHIList).populate();
 }
 

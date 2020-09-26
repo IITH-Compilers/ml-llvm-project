@@ -25,7 +25,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <string>
-// #include "llvm/Support/Debug.h"
 
 #define DEBUG_Type "RDG"
 
@@ -38,90 +37,13 @@ RDGWrapperPass::RDGWrapperPass() : FunctionPass(ID) {
 char RDGWrapperPass::ID = 0;
 static RegisterPass<RDGWrapperPass> X("RDG", "Build ReducedDependenceGraph",
                                       true, true);
-// INITIALIZE_PASS_BEGIN(RDGWrapperPass, "RDG", "Build ReducedDependenceGraph",
-// true, true)
-// INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
-// INITIALIZE_PASS_END(RDGWrapperPass, "RDG", "Build ReducedDependenceGraph",
-// true, true)
-
-// Code to generate DOT File to store RDG
-// void RDGWrapperPass::PrintDotFile_LAI(DataDependenceGraph &G, std::string
-// Filename){ 	std::error_code EC; 	raw_fd_ostream File (Filename.c_str(),
-// EC, sys::fs::F_Text); 	int x = 0; 	int md = 0;
-
-// 	if(!EC){
-// 		File << "digraph G {\n";
-// 		// Append all the nodes with labels into DOT File
-// 		for(auto *N : G){
-// 			x++;
-// 			InstructionListType IList;
-// 			N->collectInstructions([] (const Instruction *I) {return
-// true;}, IList); 			std::string str = ""; int tmp = 0;
-// for(Instruction *II : IList){ 				tmp++;;
-// std::string s; llvm::raw_string_ostream(s) << *II;
-// std::string s_new;
-// 				// int s_len = s.size();
-// 				// errs() << "string size: " << s_len << " : ";
-
-// 				std::replace(s.begin(), s.end(), '"', '\'');
-// 				if(tmp>1){
-// 					str = str + "\n";
-// 				}
-// 				str = str + s;
-// 			}
-
-// 			File << x << " [label=\"" << str << "\"];\n";
-
-// 			NodeNumber.insert(std::make_pair(N, x));
-// 		}
-
-// 		NodeToNumber SourceDest;
-// 		NodeToNumber SourceEdgeWeight;
-// 		// Appwnd all the edges into DOT File (including weights for
-// Memory
-// Dependence edges) 		for(auto *N : G){ 			for
-// (auto &E : N->getEdges()){ if((*E).isMemoryDependence()){ md++;
-// errs() << NodeNumber.find(N)->second << " ->
-// "
-// 						<<
-// NodeNumber.find(&E->getTargetNode())->second
-// << " : "
-// 						<< (*E).getKind() << " : " <<
-// (*E).getEdgeWeight() << "\n"; 					File <<
-// NodeNumber.find(N)->second << " -> "
-// 						<<
-// NodeNumber.find(&E->getTargetNode())->second
-// 						<<"[label=\"  " <<
-// (*E).getKind()
-// <<
-// ":
-// "
-// <<
-// (*E).getEdgeWeight() << "\"];\n"; 				} else {
-// File << NodeNumber.find(N)->second
-// << " -> "
-// 						<<
-// NodeNumber.find(&E->getTargetNode())->second
-// 						<<"[label=\"  " <<
-// (*E).getKind()
-// <<
-// "\"];\n";
-// 				}
-// 			}
-// 		}
-// 		File << "}";
-// 	}
-// 	else{
-// 		errs() << "error opening file for writing! \n";
-// 	}
-// }
 
 void RDGWrapperPass::Print_IR2Vec_File(
     DataDependenceGraph &G, std::string Filename, std::string ll_name,
     SmallDenseMap<const Instruction *, SmallVector<double, DIM>> instVecMap) {
+
   // Code to generate Input File with IR2Vec Embedding as a node to an RDG
   std::error_code EC;
-  // Filename = "temp123";
   raw_fd_ostream File(Filename.c_str(), EC, sys::fs::F_Text);
   int md = 0;
 
@@ -133,7 +55,6 @@ void RDGWrapperPass::Print_IR2Vec_File(
     File << "Function=" << FunctionName << ";\n";
     // Append all the nodes with labels into DOT File
     for (auto *N : G) {
-      // x++;
       InstructionListType IList;
       N->collectInstructions([](const Instruction *I) { return true; }, IList);
       std::string str = "";
@@ -142,7 +63,6 @@ void RDGWrapperPass::Print_IR2Vec_File(
       std::string s;
 
       if (N->NodeLabel != "") {
-        // errs() << "label: " << N->NodeLabel << "\n";
         for (Instruction *II : IList) {
           tmp++;
           if (tmp == 0) {
@@ -179,30 +99,23 @@ void RDGWrapperPass::Print_IR2Vec_File(
     // Dependence edges)
     for (auto *N : G) {
       if (N->NodeLabel != "") {
-        // errs() << "label: " << N->NodeLabel << "\n";
-        // errs() << *N << "\n";
         for (auto &E : N->getEdges()) {
           NodeType *tgtNode = &E->getTargetNode();
-          // errs() << "tgtNode: " << *tgtNode << "\n";
-          // errs() << "tgtNode Label: " << tgtNode->NodeLabel << "\n";
           if (tgtNode->NodeLabel != "") {
             if ((*E).isMemoryDependence()) {
               md++;
               errs() << NodeNumber.find(N)->second << " -> "
                      << NodeNumber.find(&E->getTargetNode())->second << " : "
                      << (*E).getKind() << " : " << (*E).getEdgeWeight() << "\n";
-              // errs() << "aaaaaaaaaaaaaaaaaa" <<
-              // NodeNumber.find(&E->getTargetNode())->second   << "\n";
+
               File << NodeNumber.find(N)->second << " -> "
                    << NodeNumber.find(&E->getTargetNode())->second
                    << "[label=\"" << (*E).getKind() << ": "
                    << (*E).getEdgeWeight() << "\"];\n";
-              // errs() << "bbbbbbbbbbbbbbbbbbbb\n";
             } else {
               File << NodeNumber.find(N)->second << " -> "
                    << NodeNumber.find(&E->getTargetNode())->second
                    << "[label=\"" << (*E).getKind() << "\"];\n";
-              // errs() << "cccccccccccccccc \n";
             }
           }
         }
@@ -214,115 +127,6 @@ void RDGWrapperPass::Print_IR2Vec_File(
            << "\n";
   }
 }
-
-// Append the Memory Dependence Edges with weights into Graph
-// void RDGWrapperPass::BuildRDG_LAI(DataDependenceGraph &G, DependenceInfo &DI,
-// const LoopAccessInfo &LAI){ 	const auto alldependences =
-// LAI.getDepChecker().getDependences();	// List of dependences 	const
-// SmallVector<int64_t, 8> DependenceDistances = LAI.getDepChecker().getDDist();
-// // List of dependence distances
-
-// 	if(alldependences == nullptr){
-// 		errs() << "######################\n";
-// 		// DEBUG(dbgs() << "LAI dependences is a nullptr.\n");
-// 		// return false;
-// 	}
-
-// 	errs() << "+++++++++++++++++++++++++++++ " << alldependences->size() <<
-// "\n";
-
-// 	int x = 1;
-// 	// Check for all dependences
-// 	for(auto dep : *alldependences){
-// 		// Collect Source and Destination instuction of an Memory
-// dependence 		Instruction *Src, *Dst; 		if(dep.Type ==
-// MemoryDepChecker::Dependence::DepType::Forward || 			dep.Type
-// == MemoryDepChecker::Dependence::DepType::ForwardButPreventsForwarding){
-// Src = dep.getSource(LAI); 				Dst =
-// dep.getDestination(LAI);
-// 		}
-
-// 		if(dep.Type == MemoryDepChecker::Dependence::DepType::Backward
-// || 			dep.Type ==
-// MemoryDepChecker::Dependence::DepType::BackwardVectorizable ||
-// dep.Type ==
-// MemoryDepChecker::Dependence::DepType::BackwardVectorizableButPreventsForwarding){
-// 				Dst = dep.getSource(LAI);
-// 				Src = dep.getDestination(LAI);
-// 		}
-
-// 		if(dep.Type == MemoryDepChecker::Dependence::DepType::Unknown){
-// 			Src = dep.getSource(LAI);
-// 			Dst = dep.getDestination(LAI);
-// 		}
-
-// 		if(Src->getParent() != Dst->getParent()){
-// 			// DEBUG(dbgs() << "Ignoring a dependence from
-// LLVM.\n"); 			continue;
-// 		}
-
-// 		// errs() << "Src: " << *Src << "    " << "Dst: " << *Dst <<
-// "\n";
-
-// 		// Make List of source and destination nodes to connect by an
-// edge
-// 		// by checking the presence of instruction inside Node
-// 		SmallPtrSet<NodeType *, 4> SrcNodeList;
-// 		SmallPtrSet<NodeType *, 4> DstNodeList;
-// 		// NodeType *SrcNode, *DstNode;
-// 		for(NodeType *N : G){
-// 			InstructionListType InstList;
-// 			N->collectInstructions([](const Instruction *I) { return
-// true;
-// }, InstList); 			for(Instruction *II : InstList){
-// if(Src == II){
-// 					// SrcNode = N;
-// 					SrcNodeList.insert(N);
-// 				}
-// 				if(Dst == II){
-// 					// DstNode = N;
-// 					DstNodeList.insert(N);
-// 				}
-// 			}
-// 		}
-// 		// Create Memory dependence edge by connecting Source and
-// Destination node
-// 		// from SrcNodeList and DstNodeList respectively
-// 		// Take weight from DependenceDistances
-// 		int tmp = 1;
-// 		for(auto i : DependenceDistances){
-// 			if(x == tmp){
-// 				// errs() << "#######Distance: " << i << "\n";
-// 				for(NodeType *SrcIt : SrcNodeList){
-// 					for(NodeType *DstIt : DstNodeList){
-// 						bool ew = 0;
-// 						for(EdgeType *e : *SrcIt){
-// 							// errs() << "srcIt: "
-// << *e
-// <<
-// "\n";
-// 							// errs() << "DstIt: "
-// <<
-// &e->getTargetNode() << "\n";
-// if(&e->getTargetNode() == DstIt) {
-// if(e->getEdgeWeight() == i){
-// ew = 1;
-// // set 1 for removing redundant edges (same weight) between two nodes
-// 								}
-// 							}
-// 						}
-// 						if(ew == 0){
-// 							DDGBuilder(G, DI,
-// BBList, ReductionPHIList).createMemoryWeightedEdge(*SrcIt, *DstIt, i);
-// 						}
-// 					}
-// 				}
-// 			}
-// 			tmp++;
-// 		}
-// 		x++;
-// 	}
-// }
 
 void RDGWrapperPass::setLoopID(Loop *L, MDNode *LoopID) const {
   assert((!LoopID || LoopID->getNumOperands() > 0) &&
@@ -352,22 +156,12 @@ bool RDGWrapperPass::runOnFunction(Function &F) {
 
   int loopNum = 0;
   for (LoopInfo::iterator i = LI->begin(), e = LI->end(); i != e; ++i) {
-    // loopNum++;
     Loop *L = *i;
-    // L->dump();
     errs() << "===================================\n";
     for (auto il = df_begin(L), el = df_end(L); il != el; ++il) {
       if (il->getSubLoops().size() > 0) {
         continue;
       }
-      // errs() << "Loop: " << **il << "\n";
-      // auto p = il->getLoopLatch();
-
-      // Use of DependenceGraphBuilder
-      // Make Data Dependence Graph for IR instructions with def-use edges
-      // Merge nodes based on source code instructions
-      // DataDependenceGraph G1 = DataDependenceGraph(**il, LI, DI);
-      // DataDependenceGraph G2 = DataDependenceGraph(**il, LI, DI, &SE);
 
       // Append Memory Dependence Edges with weights into Graph
       loopNum++;
@@ -382,7 +176,6 @@ bool RDGWrapperPass::runOnFunction(Function &F) {
       DataDependenceGraph &SCCGraph = *SCC_Graph;
 
       SCCGraph.InsertFunctionName(F.getName());
-      // errs() << "Mangled Name: " << SCCGraph.GetFunctionName() << "\n";
       LLVMContext &Context = il->getHeader()->getContext();
 
       MDNode *LoopID =
@@ -390,68 +183,10 @@ bool RDGWrapperPass::runOnFunction(Function &F) {
                                    Context, llvm::APInt(64, loopNum, false))));
       setLoopID(*il, LoopID);
 
-      // SCCGraph.CreateLoopId(loopNum);
-      // errs() << "Loop ID: " << SCCGraph.GetLoopId() << "\n";
-      // BuildRDG_LAI(G1, DI, LAI);
-      // G1.populate();
-
-      // BuildRDG_LAI(G2, DI, LAI);
-
-      // for(NodeType *N : G){
-      // 	InstructionListType InstList;
-      // 	N->collectInstructions([](const Instruction *I) { return true;
-      // }, InstList); 	errs() << "Node...............\n";
-      // 	// for(Instruction *II : InstList){
-      // 	// 	errs() << "inst: " << *II << "\n";
-      // 	// }
-      // }
-
-      // for(NodeType *N : G){
-      // 	errs() << "Node...............\n" << *N << "\nEdge : ";
-      // 	for (auto &E : N->getEdges()){
-      // 		errs() << E->getTargetNode() << "\n";
-      // 	}
-      // }
-
-      // Print RDG DOT File
-      // std::string RDG_Filename = "RDG_" + F.getName().str() + "_Loop" +
-      // std::to_string(loopNum) + ".dot"; errs() << "Writing " + RDG_Filename
-      // +
-      // "\n"; PrintDotFile_LAI(G1, RDG_Filename);
-
-      // Print SCC DOT File
-      // auto *Scope = cast<DIScope>(location->getScope());
-      // errs() << "FileName: " << Scope->getFilename() << "\n";
-      // SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
-      // F.getAllMetadata(MDs);
-      // for(auto &MD : MDs) {
-      //   if(MDNode *N = MD.second) {
-      //     if(auto *subprogram = dyn_cast<DISubprogram>(N)) {
-      //       errs() << "subproram: " << subprogram->getLine();
-      //     }
-      //   }
-      // }
-
-      // errs() << "file: " << F.getParent()->getSourceFileName() << "\n";
-      // std::string file =
-      // sys::path::remove_leading_dotslash(F.getParent()->getSourceFileName());
-      // errs() << "file: " << file << "\n";
-      // errs() << sys::path::stem(F.getParent()->getSourceFileName()) <<
-      // "\n"; std::string SCC_Filename =
-      //     "SCC_" +
-      //     sys::path::stem(F.getParent()->getSourceFileName()).str()
-      //     +
-      //     "_FUNCTION_" + F.getName().str() + "_LOOP" +
-      //     std::to_string(loopNum) +
-      //     ".dot";
-
       std::string s1 = F.getParent()->getName().str();
       std::string s2(s1.substr(s1.rfind('/') + 1));
       std::string SCC_Filename =
           "SCC_" + s2 + "L" + std::to_string(loopNum) + ".dot";
-      // std::string SCC_Filename = "SCC_" + s2 + "_FUNCTION_" +
-      //                            SCCGraph.GetFunctionName() + "_LOOP"
-      //                            + std::to_string(loopNum) + ".dot";
 
       errs() << "Writing " + SCC_Filename + "\n";
       RDGraph.PrintDotFile_LAI(SCCGraph, SCC_Filename, s2);
@@ -459,15 +194,9 @@ bool RDGWrapperPass::runOnFunction(Function &F) {
       // Print Input File
       std::string Input_Filename =
           "InputGraph_" + s2 + "L" + std::to_string(loopNum) + ".dot";
-      // std::string Input_Filename = "InputGraph_" + s2 + "_FUNCTION_"
-      // +
-      //                              SCCGraph.GetFunctionName() +
-      //                              "_Loop" + std::to_string(loopNum)
-      //                              + ".dot";
+
       errs() << "Writing " + Input_Filename + "\n";
-      // if (SCCGraph.SCCExist) {
       Print_IR2Vec_File(SCCGraph, Input_Filename, s2, instVecMap);
-      // }
 
       std::string totalSCC_Filename = "totalSCC.txt";
       std::error_code EC;
@@ -476,12 +205,10 @@ bool RDGWrapperPass::runOnFunction(Function &F) {
       if (!EC) {
         if (SCCGraph.SCCExist) {
           File << SCC_Filename << " : " << SCCGraph.totalSCCNodes << "\n";
-          // errs() << "FileExist: " << File_exist << "\n";
         }
       } else {
         errs() << "error opening file for writing! \n";
       }
-      // errs() << "\n";
     }
   }
   return false;

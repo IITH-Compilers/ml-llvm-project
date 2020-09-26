@@ -1,9 +1,8 @@
+#include "llvm/Analysis/DDG.h"
 #include "llvm/Analysis/DependenceGraphBuilder.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
-// #include "llvm/ADT/DenseMap.h"
-#include "llvm/Analysis/DDG.h"
 #include "llvm/Support/CommandLine.h"
 
 #define DIM 300
@@ -64,14 +63,9 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
-  // void PrintDotFile_LAI(DataDependenceGraph &G, std::string Filename);
-
   void Print_IR2Vec_File(
       DataDependenceGraph &G, std::string Filename, std::string ll_name,
       SmallDenseMap<const Instruction *, SmallVector<double, DIM>> instVecMap);
-
-  // void BuildRDG_LAI(DataDependenceGraph &G, DependenceInfo &DI, const
-  // LoopAccessInfo &LAI);
 };
 
 } // namespace llvm
