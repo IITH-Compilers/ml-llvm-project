@@ -860,7 +860,6 @@ void AbstractDependenceGraphBuilder<G>::PhiNodeMerge(
             NodeDeletionList.push_back(MergingNode);
           }
         }
-        errs() << "SI: " << SI << "\nOP: " << *OP << "\n";
         NodeMergeRecursion(SI, *OP, NodeDeletionList);
       }
     }

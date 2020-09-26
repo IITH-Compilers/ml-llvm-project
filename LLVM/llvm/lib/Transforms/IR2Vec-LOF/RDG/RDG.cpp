@@ -108,9 +108,9 @@ bool RDG::BuildRDG_LAI(DataDependenceGraph &G, DependenceInfo &DI,
   errs() << "+++++++++++++++++++++++++++++ " << alldependences->size() << "\n";
 
   G.dependenceSize = alldependences->size();
-  for (auto di : DependenceDistances) {
-    errs() << "dep: " << di << "\n";
-  }
+  // for (auto di : DependenceDistances) {
+  //   errs() << "dep: " << di << "\n";
+  // }
 
   int x = 1;
   // Check for all dependences
@@ -143,7 +143,7 @@ bool RDG::BuildRDG_LAI(DataDependenceGraph &G, DependenceInfo &DI,
       continue;
     }
 
-    errs() << "Src: " << *Src << "\nDst: " << *Dst << "\n";
+    // errs() << "Src: " << *Src << "\nDst: " << *Dst << "\n";
 
     // Make List of source and destination nodes to connect by an edge
     // by checking the presence of instruction inside Node
