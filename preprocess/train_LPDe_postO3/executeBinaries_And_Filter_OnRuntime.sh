@@ -22,7 +22,7 @@ GRAPHS=${WD}/graphs
 
 DOT=${GRAPHS}/dot
 JSON_DIR=${GRAPHS}/json
-
+SCC=${GRAPHS}/scc
 
 
 # FWD=${WD}_filter
@@ -44,16 +44,16 @@ FGRAPHS=${FWD}/graphs
 
 FDOT=${FGRAPHS}/dot
 FJSON_DIR=${FGRAPHS}/json
-
-mkdir -p ${FOUT_O0_LEVEL} ${FOUT_O3_LEVEL} ${FOUT_SSA} ${FOUT_META_SSA} ${FLL_O3_LEVEL} ${FLL_META_SSA} ${FLL_O0_LEVEL} ${FLL_SSA} ${FDOT} ${FJSON_DIR}
+FSCC=${FGRAPHS}/scc
+mkdir -p ${FOUT_O0_LEVEL} ${FOUT_O3_LEVEL} ${FOUT_SSA} ${FOUT_META_SSA} ${FLL_O3_LEVEL} ${FLL_META_SSA} ${FLL_O0_LEVEL} ${FLL_SSA} ${FDOT} ${FJSON_DIR} ${FSCC}
 
 inc=0
 count=0
 start=0
-echo "${FOUT_O3_LEVEL}"
-for d in ${OUT_O3_LEVEL}/*.out; do 
+# echo "${FOUT_O3_LEVEL}"
+for d in ${JSON_DIR}/*llL1.json; do 
         # echo ${d}
-        name=`basename ${d}` && oname=${name%.*} && if [ $count -ge $start ]; then timeout --kill-after=2m 2m ${d} && res=$? && if [ $res == 0 ]; then cp ${d} ${FOUT_O3_LEVEL}/; cp ${OUT_O0_LEVEL}/${oname}.out ${FOUT_O0_LEVEL}/; cp ${OUT_SSA}/${oname}.out ${FOUT_SSA}/; cp ${OUT_META_SSA}/${oname}.out ${FOUT_META_SSA}/; cp ${LL_O0_LEVEL}/${oname}.ll ${FLL_O0_LEVEL}/; cp ${LL_O3_LEVEL}/${oname}.ll ${FLL_O3_LEVEL}/; cp ${LL_SSA}/${oname}.ll ${FLL_SSA}/; cp ${LL_META_SSA}/${oname}.ll ${FLL_META_SSA}/; cp ${DOT}/*${oname}.ll* ${FDOT}/; cp ${JSON_DIR}/*${oname}.ll* ${FJSON_DIR}/; fi fi &
+        name=`basename ${d}` && oname=`basename ${name} .llL1.json` && oname=${oname#InputGraph_} && if [ $count -ge $start ]; then ${TIME_OUT} ${OUT_O3_LEVEL}/${oname}.out > /dev/null && res=$? && if [ $res == 0 ]; then cp ${OUT_O3_LEVEL}/${oname}.out ${FOUT_O3_LEVEL}/; cp ${OUT_O0_LEVEL}/${oname}.out ${FOUT_O0_LEVEL}/; cp ${OUT_SSA}/${oname}.out ${FOUT_SSA}/; cp ${OUT_META_SSA}/${oname}.out ${FOUT_META_SSA}/; cp ${LL_O0_LEVEL}/${oname}.ll ${FLL_O0_LEVEL}/; cp ${LL_O3_LEVEL}/${oname}.ll ${FLL_O3_LEVEL}/; cp ${LL_SSA}/${oname}.ll ${FLL_SSA}/; cp ${LL_META_SSA}/${oname}.ll ${FLL_META_SSA}/; cp ${DOT}/InputGraph_*${oname}.ll* ${FDOT}/; cp ${d} ${FJSON_DIR}/; cp ${SCC}/SCC_${oname}.ll* ${FSCC}/; fi fi &
         let "inc++"
         # echo "increment $inc"
         if [ $inc == 100 ]

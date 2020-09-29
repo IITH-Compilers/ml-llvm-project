@@ -90,7 +90,7 @@ class GatedGraphNeuralNetwork(nn.Module):
         # one entry per layer (final state of that layer), shape: number of nodes in batch v x D
 
         
-        # print('Annotaion shape {shape} and value {value} '.format(shape=annotations.shape, value=annotations))
+        print('Annotaion shape {shape} and value {value} '.format(shape=annotations.shape, value=annotations))
         # print(initial_node_representation.shape)
         initial_node_representation = torch.cat([initial_node_representation, annotations], dim=1)
         print('DLOOP H+A {}'.format(initial_node_representation.shape))
@@ -204,16 +204,11 @@ class GatedGraphNeuralNetwork(nn.Module):
 
         self.n_state = self.compute_node_representations(initial_node_representation=self.n_state,  annotations=self.annotations, adjacency_lists=adjacency_lists, return_all_states=False)
         
-        
-        if not self.nodelevel:
-            state = torch.sum(self.n_state, dim=0)
-        else:
-            state = self.n_state
-        
+        state = torch.sum(self.n_state, dim=0)
         state = state.cpu().detach().numpy()
         print('DLOOP  return from propagate | state : {}'.format(state.shape))
         print('DLOOP pair edges while new propagate : {}'.format(self.unique_type_map['pair']))
-        return state.copy()
+        return state
   
    # input graph jsonnx
 
@@ -267,16 +262,14 @@ def constructGraph(graph):
     # TODO maps values have same behvior as append
     ggnn.n_state = ggnn.compute_node_representations(initial_node_representation=initial_node_representation, annotations=ggnn.annotations, adjacency_lists=adjacency_lists, return_all_states=False)
     
-    
-    
-    # state = torch.sum(ggnn.n_state, dim=0)
+    state = torch.sum(ggnn.n_state, dim=0)
     
     ggnn.nid_idx = nid_idx
     ggnn.idx_nid = idx_nid
 
 
     # TODO detach the obj from the 
-    state = ggnn.n_state.cpu().detach().numpy()
+    state = state.cpu().detach().numpy()
     return  state, graphObj, ggnn
 
 

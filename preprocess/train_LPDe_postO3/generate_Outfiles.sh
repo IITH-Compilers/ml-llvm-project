@@ -19,7 +19,7 @@ LL_O0_LEVEL=${LL_WD}/level-O0
 mkdir -p ${OUT_O0_LEVEL}
 # echo "sdsdsdfd"
 for d in ${LL_O0_LEVEL}/*.ll; do 
-name=`basename ${d}` && oname=${name%.*} && ${LLVM_BUILD}/bin/clang   ${d} -o ${OUT_O0_LEVEL}/${oname}.out &   
+name=`basename ${d}` && oname=${name%.*} && ${TIME_OUT} ${LLVM_BUILD}/bin/clang   ${d} -o ${OUT_O0_LEVEL}/${oname}.out &   
 done
 wait # ${pids[@]}
 
@@ -31,7 +31,7 @@ mkdir -p ${OUT_O3_LEVEL}
 
 
 for d in ${LL_O3_LEVEL}/*.ll; do 
-        name=`basename ${d}` && oname=${name%.*} && ${LLVM_BUILD}/bin/clang  ${d} -o ${OUT_O3_LEVEL}/${oname}.out &   
+        name=`basename ${d}` && oname=${name%.*} && ${TIME_OUT} ${LLVM_BUILD}/bin/clang  ${d} -o ${OUT_O3_LEVEL}/${oname}.out &   
 done
 
 wait # ${pids[@]}
@@ -43,7 +43,7 @@ OUT_SSA=${OUT_WD}/ssa
 mkdir -p ${OUT_SSA}
 
 for d in ${LL_SSA}/*.ll; do 
-        name=`basename ${d}` && oname=${name%.*} && ${LLVM_BUILD}/bin/clang ${d} -o ${OUT_SSA}/${oname}.out &   
+        name=`basename ${d}` && oname=${name%.*} && ${TIME_OUT} ${LLVM_BUILD}/bin/clang ${d} -o ${OUT_SSA}/${oname}.out &   
 done
 
 wait # ${pids[@]}
@@ -54,7 +54,7 @@ LL_META_SSA=${LL_WD}/meta_ssa
 OUT_META_SSA=${OUT_WD}/meta_ssa
 mkdir -p ${OUT_META_SSA}
 for d in ${LL_META_SSA}/*.ll; do 
-        name=`basename ${d}` && oname=${name%.*} && ${LLVM_BUILD}/bin/clang ${d} -o ${OUT_META_SSA}/${oname}.out &   
+        name=`basename ${d}` && oname=${name%.*} && ${TIME_OUT} ${LLVM_BUILD}/bin/clang ${d} -o ${OUT_META_SSA}/${oname}.out &   
 done
 
 wait # ${pids[@]}

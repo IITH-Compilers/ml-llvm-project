@@ -2,11 +2,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-
 class TransitionNetwork(nn.Module):
     """Actor (Policy) Model."""
 
-    def __init__(self, state_size,   seed,fc1_units=64, fc2_units=64):
+    def __init__(self, state_size, seed,fc1_units=64, fc2_units=64):
         """Initialize parameters and build model.
         Params
         ======
@@ -83,20 +82,33 @@ class QNetwork(nn.Module):
         self.distributeNet = DistributeNetwork(state_size, seed)
 
 
-
     def forward(self, state,isStart=False):
         """Build a network that maps state -> action values."""
+        # print('MODEL: forward : ', state.shape, type(state) , state)
         out = self.transitionNet(state)
-        indexchoose = torch.argmax(out)
-        Trans_Qvalue = torch.max(out)
+        # indexchoose = torch.argmax(out)
+        # Trans_Qvalue = torch.max(out)
         
+        out2=None
         if not isStart:
-            out2 = self.distributeNet(state[indexchoose])
-            Distribute_Qvalue, merge_distribute_choose = torch.max(out2), torch.argmax(out2)         
-            return Trans_Qvalue + Distribute_Qvalue, indexchoose, merge_distribute_choose
-        else:
-            return Trans_Qvalue, indexchoose, None
-       
+            out2 = self.distributeNet(state)
+            # Distribute_Qvalue, merge_distribute_choose = torch.max(out2), torch.argmax(out2)         
+        return (out, out2)
+
+#     def forward(self, state,isStart=False):
+#         """Build a network that maps state -> action values."""
+#         out = self.transitionNet(state)
+#         indexchoose = torch.argmax(out)
+#         Trans_Qvalue = torch.max(out)
+#         
+#         if not isStart:
+#             out2 = self.distributeNet(state[indexchoose])
+#             Distribute_Qvalue, merge_distribute_choose = torch.max(out2), torch.argmax(out2)         
+#             return (Trans_Qvalue + Distribute_Qvalue, indexchoose, merge_distribute_choose)
+#         else:
+#             return (Trans_Qvalue, indexchoose, None)
+# -------------------------------------------------------------
+
 #         Trans_Qvalue, indexchoose = self.transitionNet(state)
 #         
 #         if not isStart:

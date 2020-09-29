@@ -10,6 +10,7 @@ from collections import deque
 import os
 import argparse
 
+os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 
 def run(agent, config):
     
@@ -56,41 +57,52 @@ def run(agent, config):
         for episode in range(n_episodes):
 
             state, topology, focusNode = env.reset_env(graph, path)
+            isStart = True
             score = 0
             while(True):
+                possibleNodes_emb, possibleNodes = state
 
                 # pass the state and  topology to get the action
-                # action is 
-                action, action_mask = agent.act(state, topology, focusNode, eps)
-                print("action choosed : {}".format(action))
-
+                # action is
+                # TODO Some change is done Here
+                nextNodeIndex, merge_distribute = agent.act(state, topology, focusNode, eps)
+                print("action choosed : relative={} graphNode={} MDD={}".format(nextNodeIndex, possibleNodes[nextNodeIndex],merge_distribute))
+                
+                # if isStart:
+                #     merge_distribute = None
                 # Get the next the next state from the action
                 # reward is 0 till we reach the end node
                 # reward will be -negative, maximize  the reward
-                
+                action=(possibleNodes[nextNodeIndex], merge_distribute) 
                 next_state, reward, done, distribute, focusNode = env.step(action)
-                
-                next_action_mask = topology.findAllVertaxWithZeroWeights()
-                
+                next_possibleNodes_emb, next_possibleNodes = next_state
+                # next_action_mask = topology.findAllVertaxWithZeroWeights()
+
+                print('possibleNodes_emb : ', type(possibleNodes_emb)  , possibleNodes_emb.shape)
+                # print('type of isStart : ', isStart)
+                print('nextNodeIndex : ', type(nextNodeIndex), nextNodeIndex)
+                print('merge_distribute : ', type(merge_distribute), merge_distribute)
+               
+                # print('type of possibleNodes_emb : ', type(possibleNodes_emb))
+                # print('type of isStart : ', type(isStart))
+                # print('type of nextNodeIndex : ', type(nextNodeIndex))
+                # print('type of merge_distribute : ', type(merge_distribute))
                 # put the state transitionin memory buffer
-                print('train.py:  action_mask:', action_mask)
-                 
-                print('train.py:  next_action_mask:', next_action_mask)
                 
-                if action_mask_flag:
-                    agent.step(state, action, reward, next_state, done, action_mask, (env.cur_node, next_action_mask))
-                else:
-                    agent.step(state, action, reward, next_state, done)
+                # changes of AMF latter toe addedd
+                agent.step((possibleNodes_emb, focusNode), (nextNodeIndex, merge_distribute), reward, next_possibleNodes_emb, done)
                 
 
                 # print('state : {}'.format(state))
-                print('action : {}'.format(action))
+                print('stored in memoey action tuple: {}'.format((nextNodeIndex, merge_distribute)))
                 print('reward : {}'.format(reward))
                 # print('next_state : {}'.format(next_state))
                 print('done : {}'.format(done))
                 print('Distribution till now : {}'.format(distribute))
                 
-                state = next_state
+                state = (next_possibleNodes_emb, next_possibleNodes)
+
+                # isStart = False
                 score += reward
                 if done:
                     break
@@ -101,7 +113,7 @@ def run(agent, config):
             print('\rEpisode {}\tAverage Score: {:.2f}'.format(episode, np.mean(scores_window)), end="")
             if episode % 50 == 0:
                 print('\rEpisode {}\tAverage Score: {:.2f}'.format(episode, np.mean(scores_window)))
-        
+
             print('\n------------------------------------------------------------------------------------------------')
         if count % 50 == 0:
             torch.save(agent.qnetwork_local.state_dict(), os.path.join(trained_model, 'checkpoint-graphs-{count}.pth'.format(count=count)))
@@ -132,4 +144,4 @@ if __name__ == '__main__':
     # print('config : enable_lexographical_constraint : ', config.enable_lexographical_constraint)
     run(dqn_agent, config)
     
-    print('Training process finished..')
+    print('Training process finished..') 

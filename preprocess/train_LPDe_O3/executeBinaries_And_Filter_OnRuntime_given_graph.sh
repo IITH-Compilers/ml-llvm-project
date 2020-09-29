@@ -48,22 +48,18 @@ FJSON_DIR=${FGRAPHS}/json
 mkdir -p ${FOUT_O0_LEVEL} ${FOUT_O3_LEVEL} ${FOUT_SSA} ${FOUT_META_SSA} ${FLL_O3_LEVEL} ${FLL_META_SSA} ${FLL_O0_LEVEL} ${FLL_SSA} ${FDOT} ${FJSON_DIR}
 
 inc=0
-count=0
-start=0
 echo "${FOUT_O3_LEVEL}"
 for d in ${OUT_O3_LEVEL}/*.out; do 
         # echo ${d}
-        name=`basename ${d}` && oname=${name%.*} && if [ $count -ge $start ]; then timeout --kill-after=2m 2m ${d} && res=$? && if [ $res == 0 ]; then cp ${d} ${FOUT_O3_LEVEL}/; cp ${OUT_O0_LEVEL}/${oname}.out ${FOUT_O0_LEVEL}/; cp ${OUT_SSA}/${oname}.out ${FOUT_SSA}/; cp ${OUT_META_SSA}/${oname}.out ${FOUT_META_SSA}/; cp ${LL_O0_LEVEL}/${oname}.ll ${FLL_O0_LEVEL}/; cp ${LL_O3_LEVEL}/${oname}.ll ${FLL_O3_LEVEL}/; cp ${LL_SSA}/${oname}.ll ${FLL_SSA}/; cp ${LL_META_SSA}/${oname}.ll ${FLL_META_SSA}/; cp ${DOT}/*${oname}.ll* ${FDOT}/; cp ${JSON_DIR}/*${oname}.ll* ${FJSON_DIR}/; fi fi &
+        name=`basename ${d}` && oname=${name%.*} && timeout --kill-after=5m 5m ${d} && res=$? && if [ $res == 0 ]; then cp ${d} ${FOUT_O3_LEVEL}/; cp ${OUT_O0_LEVEL}/${oname}.out ${FOUT_O0_LEVEL}/; cp ${OUT_SSA}/${oname}.out ${FOUT_SSA}/; cp ${OUT_META_SSA}/${oname}.out ${FOUT_META_SSA}/; cp ${LL_O0_LEVEL}/${oname}.ll ${FLL_O0_LEVEL}/; cp ${LL_O3_LEVEL}/${oname}.ll ${FLL_O3_LEVEL}/; cp ${LL_SSA}/${oname}.ll ${FLL_SSA}/; cp ${LL_META_SSA}/${oname}.ll ${FLL_META_SSA}/; cp ${DOT}/*${oname}.ll* ${FDOT}/; cp ${JSON_DIR}/*${oname}.ll* ${FJSON_DIR}/; fi &
         let "inc++"
         # echo "increment $inc"
-        if [ $inc == 100 ]
+        if [ $inc == 60 ]
         then
            wait
-           let "count=count+inc"
-           echo "files processed till now $count"
+           # echo "sssssssssss"
            inc=0
         fi
 done
 
-wait
 mkdir -p ${FWD}/inputd ${FLL_WD}/training ${FOUT_WD}/training

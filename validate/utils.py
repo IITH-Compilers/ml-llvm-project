@@ -127,6 +127,46 @@ def get_O3_runtimes(rundir, isInputRequired):
         
     return O3_runtimes
 
+def get_output(filename, config, inputd=None, file_format='ll'):
+    # print('DLOOP filename to get runtime {}'.format(filename)) 
+    try:
+        if file_format == 'll':
+
+            parts = filename.split('llfiles')
+            out_file="{part1}outfiles{part2}".format(part1=parts[0], part2=parts[1][:-3]+'.out')
+
+            #if not path.exists(out_file):
+            cmd1 = "timeout --kill-after=2m 2m {clang} {input_file} -o {out_file}".format(clang=os.environ['CLANG'], input_file=filename, out_file=out_file)
+            # print(cmd1)
+            response = os.system(cmd1)
+            if response != 0:
+                raise Exception("Out file not generated")
+        else:
+            out_file=filename
+        
+        if path.exists(out_file):
+            if inputd is not None: 
+                cmd2 = "timeout --kill-after=2m 2m {out_file}<{inputd}".format(out_file=out_file,inputd=inputd)
+            else:
+                cmd2="timeout --kill-after=2m 2m {out_file}".format(out_file=out_file)
+
+            print('Runtime command\n', cmd2)
+            output = subprocess.Popen(cmd, executable='/bin/bash', shell=True, stdout=subprocess.PIPE).stdout.read() 
+        else:
+            raise Exception('Outfile not present!!!!!!')
+    except Exception as inst :
+        output = inst # None if fails
+        eprint(sys.exc_info())
+        eprint('Runtime: Exception ocurred : {}'.format (inst))
+        eprint('Runtime: Some error occured .. for {filename} so output={output} '.format(filename=filename, output=output))
+    except :
+        output = sys.exc_info() #None if fails
+        eprint(sys.exc_info())
+        eprint('Runtime: Other Unknown Some error occured .. for {filename} so output={output} '.format(filename=filename, output=output))
+
+   
+    return output
+
 def get_runtime_of_file(filename, inputd=None, file_format='ll'):
     # print('DLOOP filename to get runtime {}'.format(filename)) 
     try:
@@ -181,20 +221,25 @@ def get_runtime_of_file(filename, inputd=None, file_format='ll'):
    
     return runtime
 
-def distribute_and_getRuntime(filename, distributeSeq, method_name, loop_id, input_file_path=None):
-    distributed_llfile = call_distributionPass(filename, distributeSeq, method_name, loop_id)
-    Druntime = get_runtime_of_file(distributed_llfile, inputd=input_file_path)
+def distribute_and_getRuntime(filename, distributeSeq, method_name, loop_id, config, input_file_path=None):
+    distributed_llfile = call_distributionPass(filename, distributeSeq, method_name, loop_id, config)
+    Druntime = get_runtime_of_file(distributed_llfile, config, inputd=input_file_path)
     if Druntime == 100000000:
         eprint('Distributed file Runtime Error occured!!!!!!!!!!!!! for file={}, distributeSeq={}, method={}, loop={}'.format(filename, distributeSeq, method_name, loop_id))
     return Druntime
 
-def call_distributionPass(filename, distributeSeq, method_name, loop_id):
+def distribute_and_getOutput(filename, distributeSeq, method_name, loop_id, config, input_file_path=None):
+    distributed_llfile = call_distributionPass(filename, distributeSeq, method_name, loop_id, config)
+    output = get_output(distributed_llfile, config, inputd=input_file_path)
+    return output
+
+def call_distributionPass(filename, distributeSeq, method_name, loop_id, config):
     
 
     try:
         parts = os.path.split(filename)
-        out_file = "Distribute_{filename}L{loop_id}.ll".format(filename=parts[1], method_name=method_name, loop_id=loop_id)
-        out_file = os.path.join(parts[0], '../training/{}'.format(out_file))
+        out_file = "Distribute_{distributeSeq}_{filename}L{loop_id}.ll".format(distributeSeq=distributeSeq.strip(',').replace('|','D'), filename=parts[1], method_name=method_name, loop_id=loop_id)
+        out_file = os.path.join(config.distributed, 'llfiles/val/{}'.format(out_file))
         # print(out_file) 
         print('--------------------------',distributeSeq) 
         cmd = "{opt} -load {LLVM}/lib/LoopDistribution.so -LoopDistribution -lID={loop_id} -function {method_name} --partition=\"{dseq}\" {post_distribution_passes} -S {input_file} -o {out_file}".format(opt=os.environ['OPT'], LLVM=os.environ['LLVM'], dseq=distributeSeq ,input_file=filename, out_file=out_file, method_name=method_name, loop_id=loop_id, post_distribution_passes=POST_DIST_PASSES)

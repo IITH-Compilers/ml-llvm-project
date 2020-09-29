@@ -2,7 +2,7 @@
 
 source config.sh
 #How many random files to be pulled
-random_file_size=90
+random_file_size=200
 
 DATA_SET=${FWD}
 GRAPHS=${DATA_SET}/graphs
