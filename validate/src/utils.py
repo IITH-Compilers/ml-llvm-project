@@ -239,7 +239,7 @@ def call_distributionPass(filename, distributeSeq, method_name, loop_id, config)
     try:
         parts = os.path.split(filename)
         out_file = "Distribute_{distributeSeq}_{filename}L{loop_id}.ll".format(distributeSeq=distributeSeq.strip(',').replace('|','D'), filename=parts[1], method_name=method_name, loop_id=loop_id)
-        out_file = os.path.join(config.distributed, 'llfiles/val/{}'.format(out_file))
+        out_file = os.path.join(config.distributed, 'val/llfiles/{}'.format(out_file))
         # print(out_file) 
         print('--------------------------',distributeSeq) 
         cmd = "{opt} -load {LLVM}/lib/LoopDistribution.so -LoopDistribution -lID={loop_id} -function {method_name} --partition=\"{dseq}\" {post_distribution_passes} -S {input_file} -o {out_file}".format(opt=os.environ['OPT'], LLVM=os.environ['LLVM'], dseq=distributeSeq ,input_file=filename, out_file=out_file, method_name=method_name, loop_id=loop_id, post_distribution_passes=POST_DIST_PASSES)

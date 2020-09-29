@@ -1,17 +1,59 @@
 import pandas as pd
 import numpy as np
 import json
-from distributeEnv import DistributeLoopEnv
-from dqn_agent import Agent
 import glob
 import json
 import torch
 from collections import deque
 import os
 import argparse
-from ggnn import constructGraph
 from topologicalSort import findAllDistributions
 import utils
+
+from typing import List, Tuple, Dict, Sequence, Any
+from topologicalSort import Graph
+
+
+
+def constructGraph(graph):
+    nodes = graph['nodes']
+    adjlist = graph['adjacency']
+
+    num_nodes = len(nodes)
+    
+    initial_node_representation = []
+    
+    idx_nid = {}
+    nid_idx = {}
+    unique_type_map = {'pair' : []}
+    all_edges = []
+    for idx, node in enumerate(nodes):
+        
+        nodeId = node['id']
+        nodeVec = list(map(float, node['label'].strip("\"").split(', ')))
+        
+        initial_node_representation.append(nodeVec)
+        nid_idx[nodeId] = idx
+        idx_nid[idx] = nodeId
+        
+    for i, adj in enumerate(adjlist):
+
+        for nlink in adj:
+            label = nlink['label'].strip("\" ")
+            neighId = nid_idx[nlink['id']]
+            if label in unique_type_map.keys():
+                unique_type_map[label].append((i, neighId))
+            else:
+                unique_type_map[label] = [(i, neighId)]
+            if i != neighId:
+                all_edges.append((i, neighId))
+
+    # Create aGraph obj for getting the Zero incoming egdes nodes
+    graphObj = Graph(all_edges,  num_nodes)
+    print('All links : {}'.format(all_edges))
+    print("num_nodes : {}".format(num_nodes) )
+    
+    return  graphObj, idx_nid
 
 def run(config):
     
@@ -25,8 +67,7 @@ def run(config):
         print('DLOOP New graph to the env. {} '.format(path))
         count=count+1
         
-        _, topology, ggnn = constructGraph(graph)
-        nodeMap = ggnn.idx_nid
+        topology, nodeMap = constructGraph(graph)
         N = topology.num_nodes
         discovered = [False] * N
 
@@ -68,4 +109,4 @@ if __name__ == '__main__':
     # print('config : enable_lexographical_constraint : ', config.enable_lexographical_constraint)
     run(config)
     
-    print('Training process finished..')
+    print('Process finished..')
