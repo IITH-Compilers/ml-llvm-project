@@ -3,36 +3,13 @@
 DATA_SET='/home/venkat/IF-DV/Rohit/IR2Vec-LoopOptimizationFramework/data/SPEC_N/processed_filter3'
 DATA_SET_NAME=`echo ${DATA_SET} | rev | cut -d '/' -f 1,2  | rev`
 
-# Action mask flag
-SET_AMF="False"
-AMF=
-if [ ${SET_AMF} = "True" ]
-then
-        AMF='--action_mask_flag True'
-fi
-
-# Lexograhical constraint 
-SET_ELC="False"
-ELC=
-if [ ${SET_ELC} = "True" ]
-then
-   ELC='--lexographical_constraint True'
-fi
-
-
-TRAINED_MODEL=/home/venkat/IF-DV/Rohit/IR2Vec-LoopOptimizationFramework/model/ggnn_drl/v2/trained_model/${DATA_SET_NAME}/ELC_${SET_ELC}_AMF_${SET_AMF}
-
-LOG=${TRAINED_MODEL}/log
-
-mkdir -p ${LOG}
-
 # Input from the user for the mode
 MODE=$1
 
 if [ -z ${MODE} ]
 then 
-echo "Please enter the mode- train or test"
-exit
+    echo "Please enter the mode- train or test"
+    exit
 fi
 
 if [ $MODE = "train" ]
@@ -64,11 +41,35 @@ else
         exit
 fi
 
+# Action mask flag
+SET_AMF="False"
+AMF=
+if [ ${SET_AMF} = "True" ]
+then
+        AMF='--action_mask_flag True'
+fi
+
+# Lexograhical constraint 
+SET_ELC="False"
+ELC=
+if [ ${SET_ELC} = "True" ]
+then
+   ELC='--lexographical_constraint True'
+fi
+
+
+TRAINED_MODEL=/home/venkat/IF-DV/Rohit/IR2Vec-LoopOptimizationFramework/model/ggnn_drl/v2/trained_model/${DATA_SET_NAME}/ELC_${SET_ELC}_AMF_${SET_AMF}/${MODE}
+
+LOG=${TRAINED_MODEL}/log
+
+mkdir -p ${LOG}
+
+
 
 echo "Location of the trained model: ${TRAINED_MODEL}"
 echo "Logs files: ${LOG}"
 ## Call the py script 
-python ${MODE}.py --dataset=${DATA_SET} ${AMF} ${ELC}  --trained_model=${TRAINED_MODEL} > ${LOG}/${MODE}.log 2> ${LOG}/${MODE}-error.log
+python ${MODE}.py --dataset=${DATA_SET} ${AMF} ${ELC}  --trained_model=${TRAINED_MODEL} > ${LOG}/${MODE}.log 2> ${LOG}/error.log
 
 echo "Completed the process........."
 

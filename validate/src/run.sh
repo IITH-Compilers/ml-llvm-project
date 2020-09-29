@@ -15,7 +15,7 @@ MODE=val
 echo "Location of the generated llfiles and oufiles : ${DIST_DATA}"
 echo "Logs files: ${LOG}"
 ## Call the py script 
-python valSementic.py --dataset=${DATA_SET}  --distributed=${DIST_DATA} > ${LOG}/${MODE}.log 2> ${LOG}/${MODE}-error.log
+python valSemantic.py --dataset=${DATA_SET}  --distributed=${DIST_DATA} > ${LOG}/${MODE}.log 2> ${LOG}/${MODE}-error.log
 
 echo "Completed the process........."
 
