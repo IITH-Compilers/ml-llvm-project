@@ -257,7 +257,7 @@ def constructGraph(graph):
     graphObj = Graph(all_edges,  num_nodes)
     print('All links : {}'.format(all_edges))
     print("num_nodes : {}".format(num_nodes) )
-    ggnn = GatedGraphNeuralNetwork(hidden_size=initial_node_representation.shape[1], annotation_size=2, num_edge_types= len(unique_type_map.keys()) + 1, layer_timesteps=[5]*num_nodes, residual_connections={}, nodelevel=True)
+    ggnn = GatedGraphNeuralNetwork(hidden_size=initial_node_representation.shape[1], annotation_size=2, num_edge_types= len(unique_type_map.keys()) + 1, layer_timesteps=[5], residual_connections={}, nodelevel=True)
 
     ggnn.annotations = torch.FloatTensor([[0]*2]*num_nodes)
     ggnn.num_nodes = num_nodes

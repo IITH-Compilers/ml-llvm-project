@@ -13,6 +13,7 @@ def run(agent, config):
     action_mask_flag=config.action_mask_flag
     enable_lexographical_constraint = config.enable_lexographical_constraint
 
+    eps=0
     max_t=1000
     scores = []                        # list containing scores from each episode
     scores_window = deque(maxlen=100)  # last 100 scores
@@ -55,7 +56,7 @@ def run(agent, config):
             print('DLOOP Goto to Next.................')
             scores_window.append(score)       # save most recent score
             scores.append(score)              # save most recent score
-            print('\rEpisode {}\tAverage Score: {:.2f}'.format(episode, np.mean(scores_window)), end="")
+            # print('\rEpisode {}\tAverage Score: {:.2f}'.format(episode, np.mean(scores_window)), end="")
 
             print('\n------------------------------------------------------------------------------------------------')
         
@@ -72,6 +73,7 @@ if __name__ == '__main__':
     parser.add_argument('--action_space', dest='action_space', required=False, type=int, help='Size of the actiion space.', default=200)
     
     parser.add_argument('--trained_model', dest='trained_model', required=True,  help=' location ')
+    parser.add_argument('--distributed_data', dest='distributed_data', required=True,  help=' location of the distributed llfiles and outfiles.', default=None)
 
     config = parser.parse_args()
     
@@ -89,5 +91,5 @@ if __name__ == '__main__':
     dqn_agent.qnetwork_local.load_state_dict(torch.load(trained_model))
     run(dqn_agent, config)
 
-    print('Testing Completed..... See the results in the log file via grep')
+    print('Testing Completed..... ')
     

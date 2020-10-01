@@ -12,17 +12,18 @@ os.environ['LLVM']="/home/venkat/IF-DV/Rohit/IR2Vec-LoopOptimizationFramework/bu
 os.environ['OPT']=os.environ['LLVM']+"/bin/opt"
 os.environ['CLANG']=os.environ['LLVM']+"/bin/clang"
 
-FUNCTION_SEP='_FUNCTION_'
-LOOP_SEP='Loop'
 
-LL_DIR='llfiles'
-OUT_DIR='outfiles'
-INP_DIR='inputd'
+LL_DIR_CONST='llfiles'
+OUT_DIR_CONST='outfiles'
+INP_DIR_CONST='inputd'
+GRAPH_DIR_CONST='graphs'
+JSON_DIR_CONST='{}/json'.format(GRAPH_DIR_CONST)
 
-O3_DIR='level-O3'
-O0_DIR='level-O0'
-SSA_DIR='ssa'
-META_SSA_DIR='meta_ssa'
+O3_LL_DIR_CONST='{}/level-O3'.format(LL_DIR_CONST)
+O0_LL_DIR_CONST='{}/level-O0'.format(LL_DIR_CONST)
+SSA_LL_DIR_CONST='{}/ssa'.format(LL_DIR_CONST)
+META_SSA_LL_DIR_CONST='{}/meta_ssa'.format(LL_DIR_CONST)
+
 
 
 ## Use for replicate the O3
@@ -55,7 +56,7 @@ def load_O3_runtimes(filepath):
 
 def getllFileAttributes(file):
     record = {}
-    parts = file.split('/graphs/')
+    parts = file.split('/{graphs}/'.format(graphs=GRAPH_DIR_CONST))
     home_dir = parts[0]
     parts=parts[1].split('/')
     file_name_parts = (parts[1].split('InputGraph_'))[1].split('.json')[0]
@@ -72,11 +73,11 @@ def getllfileNameFromJSON(jsonfile):
     
     return file_name
 
-def get_O3_runtimes(rundir, isInputRequired):
+def get_O3_runtimes(dataset, isInputRequired):
     '''get all runetimes for O3 (baseline).'''
     try:
         print('Checking if local O3_runtimes.pkl file exists to avoid waste of compilation.') 
-        with open(os.path.join(rundir,'O3_runtimes.pkl'), 'rb') as f:
+        with open(os.path.join(dataset,'O3_runtimes.pkl'), 'rb') as f:
             print('returning preprocess O3 runtimes')
             return pk.load(f)
     except:
@@ -85,9 +86,8 @@ def get_O3_runtimes(rundir, isInputRequired):
     
     O3_runtimes={}
    
-    O3_folder  = os.path.join(rundir, 'llfiles/level-O3')
-    graphs_folder = os.path.join(rundir, 'graphs/json')
-    jsons = glob.glob(os.path.join(graphs_folder, '*.json'))
+    O3_folder  = os.path.join(dataset, O3_LL_DIR_CONST)
+    jsons = glob.glob(os.path.join(os.path.join(dataset, JSON_DIR_CONST), '*.json'))
     
 
     llfiles_validjson = [ os.path.join(O3_folder, getllfileNameFromJSON(json)) for json in jsons]
@@ -98,7 +98,7 @@ def get_O3_runtimes(rundir, isInputRequired):
     llfiles=list(set(llfiles).intersection(llfiles_validjson))
     ### Add c check for the intersection
     # print(llfiles)
-    input_folder = os.path.join(rundir, 'inputd')
+    input_folder = os.path.join(dataset, INP_DIR_CONST)
     
     None_count=0
     if isInputRequired:
@@ -122,7 +122,7 @@ def get_O3_runtimes(rundir, isInputRequired):
                 None_count = None_count+1
     
     print('Number of data points with None runtime : ', None_count)
-    with open(os.path.join(rundir,'O3_runtimes.pkl'), 'wb') as output:
+    with open(os.path.join(dataset,'O3_runtimes.pkl'), 'wb') as output:
         pk.dump(O3_runtimes, output)
         
     return O3_runtimes
@@ -132,15 +132,20 @@ def get_runtime_of_file(filename, inputd=None, file_format='ll'):
     try:
         if file_format == 'll':
 
-            parts = filename.split('llfiles')
-            out_file="{part1}outfiles{part2}".format(part1=parts[0], part2=parts[1][:-3]+'.out')
-
+            parts = filename.split(LL_DIR_CONST+'/')
+            out_dir = os.path.join(parts[0], OUT_DIR_CONST)
+            if not os.path.exists(out_dir):
+                os.makedirs(out_dir)
+            # print('before  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1', parts[1])
+            out_file=os.path.join(out_dir, "{file_name}.out".format(file_name=parts[1][:-3]))
+            
+            # print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1',out_file)
             #if not path.exists(out_file):
             cmd1 = "timeout --kill-after=2m 2m {clang} {input_file} -o {out_file}".format(clang=os.environ['CLANG'], input_file=filename, out_file=out_file)
             # print(cmd1)
             response = os.system(cmd1)
             if response != 0:
-                raise Exception("Out file not generated")
+                raise Exception(" Compilation error: Out file not generated")
         else:
             out_file=filename
         
@@ -181,24 +186,32 @@ def get_runtime_of_file(filename, inputd=None, file_format='ll'):
    
     return runtime
 
-def distribute_and_getRuntime(filename, distributeSeq, method_name, loop_id, input_file_path=None):
-    distributed_llfile = call_distributionPass(filename, distributeSeq, method_name, loop_id)
-    Druntime = get_runtime_of_file(distributed_llfile, inputd=input_file_path)
+def distribute_and_getRuntime(filename, distributeSeq, method_name, loop_id, distributed_data, input_file_path=None):
+    distributed_llfile = call_distributionPass(filename, distributeSeq, method_name, loop_id, distributed_data)
+
+    if distributed_llfile is not None:
+        Druntime = get_runtime_of_file(distributed_llfile, inputd=input_file_path)
+    else:
+        Druntime = 100000000
+        eprint('Distributed ll file is not created.')
+
     if Druntime == 100000000:
         eprint('Distributed file Runtime Error occured!!!!!!!!!!!!! for file={}, distributeSeq={}, method={}, loop={}'.format(filename, distributeSeq, method_name, loop_id))
     return Druntime
 
-def call_distributionPass(filename, distributeSeq, method_name, loop_id):
+def call_distributionPass(filename, distributeSeq, method_name, loop_id, distributed_data):
     
 
     try:
         parts = os.path.split(filename)
-        out_file = "Distribute_{filename}L{loop_id}.ll".format(filename=parts[1], method_name=method_name, loop_id=loop_id)
-        out_file = os.path.join(parts[0], '../training/{}'.format(out_file))
-        # print(out_file) 
-        print('--------------------------',distributeSeq) 
-        cmd = "{opt} -load {LLVM}/lib/LoopDistribution.so -LoopDistribution -lID={loop_id} -function {method_name} --partition=\"{dseq}\" {post_distribution_passes} -S {input_file} -o {out_file}".format(opt=os.environ['OPT'], LLVM=os.environ['LLVM'], dseq=distributeSeq ,input_file=filename, out_file=out_file, method_name=method_name, loop_id=loop_id, post_distribution_passes=POST_DIST_PASSES)
-        # cmd = "{opt} {input_file} -o {out_file}".format(opt=os.environ['OPT'] ,input_file=filename, out_file=out_file)
+        dist_llfile = "Distribute_{filename}L{loop_id}.ll".format(filename=parts[1], method_name=method_name, loop_id=loop_id)
+        dist_ll_dir=os.path.join(distributed_data, LL_DIR_CONST)
+        if not os.path.exists(dist_ll_dir):
+            os.makedirs(dist_ll_dir)
+        dist_llfile = os.path.join(dist_ll_dir, dist_llfile)
+        # print(dist_llfile) 
+        print('-------------------------->',distributeSeq) 
+        cmd = "{opt} -load {LLVM}/lib/LoopDistribution.so -LoopDistribution -lID={loop_id} -function {method_name} --partition=\"{dseq}\" {post_distribution_passes} -S {input_file} -o {dist_llfile}".format(opt=os.environ['OPT'], LLVM=os.environ['LLVM'], dseq=distributeSeq ,input_file=filename, dist_llfile=dist_llfile, method_name=method_name, loop_id=loop_id, post_distribution_passes=POST_DIST_PASSES)
 
         print('Call to LoopDistribute pass thru command line \n: ', cmd)
 
@@ -207,15 +220,15 @@ def call_distributionPass(filename, distributeSeq, method_name, loop_id):
             # os.system('mv {path}/*{filename}.ll* {distribute_error}'.format(path=os.path.join(parts[0],'../../graphs/train/'), filename=parts[1][:-3], distribute_error=os.path.join(parts[0],'../../graphs/distribute_error/')))
             raise Exception('Distribution Pass error')
     except Exception as err:
-        out_file=None
+        dist_llfile=None
         eprint(sys.exc_info())
         eprint('CallLoopDistribute: Exception ocurred : ', err)
         # raise
     except:
-        out_file = None #None if fails
+        dist_llfile = None #None if fails
         eprint('CallLoopDistribute: Some error occured while calling the distribution pass for {filename}. '.format(filename=filename))
         raise 
-    return out_file
+    return dist_llfile
    
 
 def executeNtimes(cmd, N=5):

@@ -37,16 +37,13 @@ def run(agent, config):
 
     #Load the envroinment
     env = DistributeLoopEnv(config)    
-    count=0 
-    for path in glob.glob(os.path.join(dataset, 'graphs/train/*.json')): # Number of the iterations
-        with open(path) as f:
-            graph = json.load(f)
-        print('DLOOP New graph to the env. {} '.format(path))
-        count=count+1
-        # if count < 1:
-        #     continue
-        # print('== ',count)
-        for episode in range(n_episodes):
+    for episode in range(n_episodes):
+        count=0 
+        for path in glob.glob(os.path.join(dataset, 'graphs/train/*.json')): # Number of the iterations
+            with open(path) as f:
+                graph = json.load(f)
+            print('DLOOP New graph to the env. {} '.format(path))
+            count=count+1
 
             state, topology, focusNode = env.reset_env(graph, path)
             score = 0
@@ -96,13 +93,10 @@ def run(agent, config):
             scores_window.append(score)       # save most recent score
             scores.append(score)              # save most recent score
             eps = max(eps_end, eps_decay*eps) # decrease epsilon
-            print('\rEpisode {}\tAverage Score: {:.2f}'.format(episode, np.mean(scores_window)), end="")
-            if episode % 50 == 0:
-                print('\rEpisode {}\tAverage Score: {:.2f}'.format(episode, np.mean(scores_window)))
+            print('\rEpisode {}  Count {} \tAverage Score: {:.2f}'.format(episode, count, np.mean(scores_window)), end="")
 
             print('\n------------------------------------------------------------------------------------------------')
-        if count % 50 == 0:
-            torch.save(agent.qnetwork_local.state_dict(), os.path.join(trained_model, 'checkpoint-graphs-{count}.pth'.format(count=count)))
+        torch.save(agent.qnetwork_local.state_dict(), os.path.join(trained_model, 'checkpoint-graphs-{episode}.pth'.format(episode=episode)))
     torch.save(agent.qnetwork_local.state_dict(), os.path.join(trained_model, 'final-model.pth'))
 
 if __name__ == '__main__':

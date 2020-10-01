@@ -26,6 +26,7 @@ class DistributeLoopEnv:
         
         self.isInputRequired = config.isInputRequired
         self.O3_runtimes = utils.get_O3_runtimes(config.dataset, self.isInputRequired)
+        self.distributed_data = config.distributed_data
     
     def getReward(self):
        
@@ -68,7 +69,7 @@ class DistributeLoopEnv:
         # Run the File 5 times on input. Davg
         
         # Druntime = utils.get_runtime_of_file(dist_file_path_out, inputd=input_file_path)
-        Druntime = utils.distribute_and_getRuntime( meta_ssa_file_path, self.distribution, method_name, loop_id,input_file_path=input_file_path )
+        Druntime = utils.distribute_and_getRuntime( meta_ssa_file_path, self.distribution, method_name, loop_id, self.distributed_data, input_file_path=input_file_path )
         # Run the O3 file 5 times, O3avg
         if ll_file_name not in self.O3_runtimes.keys():
             print('Warning!!!!!!!!!!!!!!!!!! O3 not prioily calculated.....')
