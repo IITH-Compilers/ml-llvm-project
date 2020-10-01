@@ -5,9 +5,9 @@ LLVM_BUILD="${HOME}/build"
 SEED_FILE="${HOME}/LLVM/IR2Vec-Engine/vocabulary/seedEmbeddingVocab-300-llvm10.txt"
 IR2Vec_SO="${HOME}/LLVM/IR2Vec-Engine/IR2Vec-Binaries/libIR2Vec-RD.so"
 
-WD=${HOME}/data/SPEC_N/processed
+WD=${HOME}/data/SPEC_N/processed_rdgdis
 
-FWD=${WD}_filter3
+FWD=${WD}_filter
 
 TIME_OUT="timeout --kill-after=2m 2m "
 

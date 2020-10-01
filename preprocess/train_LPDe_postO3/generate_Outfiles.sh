@@ -61,4 +61,4 @@ wait # ${pids[@]}
 
 echo "Loop Optimization passes files created in meta_ssa folder"
 
-mkdir -p ${OUT_WD}/training
+# mkdir -p ${OUT_WD}/training

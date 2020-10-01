@@ -24,17 +24,21 @@ a=0
 # wait 
 
 # create the ll files in ssa form
-echo "Loop Optimization passes for ssa form started.."
-
+#  echo "Loop Optimization passes for ssa form started.."
+#  
 SSA=${LL_WD}/ssa
-mkdir -p ${SSA}
-a=0
-for d in ${O0_LEVEL}/*.ll; do 
-        # let "a++"
-        if [ -z ${SSA_PASSES_SEQ} ]; then cp ${d} ${SSA}/; else name=`basename ${d}` && oname=${name%.*} && ${TIME_OUT} ${LLVM_BUILD}/bin/opt ${SSA_PASSES_SEQ} -S   ${d} -o ${SSA}/${oname}.ll; fi &   
-done
-
-wait 
+  
+#  if [ -z ${SSA_PASSES_SEQ} ] 
+#  then 
+#          rm -rf ${SSA}
+#          cp -r  ${O0_LEVEL} ${SSA} 
+#  else
+#          mkdir -p ${SSA}
+#          for d in ${O0_LEVEL}/*.ll; do 
+#           name=`basename ${d}` && oname=${name%.*} && ${TIME_OUT} ${LLVM_BUILD}/bin/opt ${SSA_PASSES_SEQ} -S   ${d} -o ${SSA}/${oname}.ll &   
+#          done
+#  fi
+#  wait 
 
 echo "Loop Optimization passes files created in ssa folder"
 
@@ -59,7 +63,7 @@ rm ${DOT}/*temp.txt
 mv ${DOT}/SCC_* ${SCC}/
 mv *SCC.txt ${SCC}/
 
-mkdir -p ${WD}/inputd ${LL_WD}/training
+# mkdir -p ${WD}/inputd ${LL_WD}/training
 
 python  Dot-\>Json.py ${GRAPHS}
 

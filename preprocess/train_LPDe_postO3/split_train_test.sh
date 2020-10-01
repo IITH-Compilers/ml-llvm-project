@@ -1,16 +1,18 @@
 #!/bin/bash
 
 source config.sh
-#How many random files to be pulled
-random_file_size=200
 
 DATA_SET=${FWD}
 GRAPHS=${DATA_SET}/graphs
 
 FULL_DATA=${GRAPHS}/json
 
-TRAIN_DATA=${GRAPHS}/train
+TTL_JSON=`ls ${FULL_DATA}/*.json | wc -l`
 
+test_ratio=0.2
+num_test=$( echo "$test_ratio * $TTL_JSON / 1" | bc  )
+
+TRAIN_DATA=${GRAPHS}/train
 
 mkdir -p ${TRAIN_DATA}
 
@@ -35,9 +37,14 @@ mkdir -p ${TEST_DATA}
 rm ${TEST_DATA}/*
 
 i=0
-while [ ${i} -lt ${random_file_size} ]
+while [ ${i} -lt ${num_test} ]
 do
             mv ${graphs[RANDOM % ${#graphs[@]}]} ${TEST_DATA}
               i=`ls ${TEST_DATA}/*.json | wc -l`  
 done
+
+echo "Splitting of the dataset done-"
+echo "n(test)=${num_test}"
+echo "n(train)=$(( TTL_JSON - num_test))"
+echo "n(U)=${TTL_JSON}"
 

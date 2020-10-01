@@ -66,4 +66,4 @@ for d in ${JSON_DIR}/*llL1.json; do
 done
 
 wait
-mkdir -p ${FWD}/inputd ${FLL_WD}/training ${FOUT_WD}/training
+# mkdir -p ${FWD}/inputd ${FLL_WD}/training ${FOUT_WD}/training
