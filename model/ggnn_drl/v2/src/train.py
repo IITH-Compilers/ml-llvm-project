@@ -9,7 +9,7 @@ import torch
 from collections import deque
 import os
 import argparse
-
+import utils
 os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 
 def run(agent, config):
@@ -22,6 +22,7 @@ def run(agent, config):
     eps_start=1.0
     eps_end=0.01
     eps_decay=0.995
+    score_per_episode = []
     scores = []                        # list containing scores from each episode
     scores_window = deque(maxlen=100)  # last 100 scores
     eps = eps_start
@@ -38,6 +39,7 @@ def run(agent, config):
     #Load the envroinment
     env = DistributeLoopEnv(config)    
     count=0 
+    score = 0
     for path in glob.glob(os.path.join(dataset, 'graphs/train/*.json')): # Number of the iterations
         with open(path) as f:
             graph = json.load(f)
@@ -49,7 +51,6 @@ def run(agent, config):
         for episode in range(n_episodes):
 
             state, topology, focusNode = env.reset_env(graph, path)
-            score = 0
             while(True):
                 possibleNodes_emb, possibleNodes = state
 
@@ -104,7 +105,9 @@ def run(agent, config):
         if count % 50 == 0:
             torch.save(agent.qnetwork_local.state_dict(), os.path.join(trained_model, 'checkpoint-graphs-{count}.pth'.format(count=count)))
     torch.save(agent.qnetwork_local.state_dict(), os.path.join(trained_model, 'final-model.pth'))
-
+    utils.plot(range(1, len(scores)+1), scores, 'Total Rewards per time instant',location=config.distributed_data)
+    utils.plot(range(1, len(scores_window)+1), scores_window, 'Last 100 rewards',location=config.distributed_data)
+    
 if __name__ == '__main__':
 
 

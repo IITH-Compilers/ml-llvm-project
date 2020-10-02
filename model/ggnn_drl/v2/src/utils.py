@@ -7,6 +7,7 @@ import time
 import sys
 import numpy as np
 import subprocess
+from matplotlib import pyplot as plt
 
 os.environ['LLVM']="/home/venkat/IF-DV/Rohit/IR2Vec-LoopOptimizationFramework/build"
 os.environ['OPT']=os.environ['LLVM']+"/bin/opt"
@@ -255,4 +256,21 @@ def execute(cmd):
     if response != 0:
         raise Exception("Runtime Error occurs.")
     return end-start
+
+def plot(x,y,title, **args):
+    try:
+        plt.plot(x, y)
+        plt.title(title)
+        plt.show()
+        if 'location' in args.keys():
+            plots_loc = os.path.join(args['location'], 'plots')
+            if not os.path.exists(plots_loc):
+                os.makedirs(plots_loc)
+            plt.savefig(os.path.join(plots_loc, '{}.png'.format(title)))
+        else:
+            pass
+        plt.close()
+    except Exception as ex:
+        print('Error while plotting the graph for {}'.format(title))
+        print(ex)
 

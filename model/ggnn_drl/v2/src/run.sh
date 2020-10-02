@@ -3,35 +3,6 @@
 DATA_SET='/home/venkat/IF-DV/Rohit/IR2Vec-LoopOptimizationFramework/data/SPEC_N/processed_rdgdis_filter'
 DATA_SET_NAME=`echo ${DATA_SET} | rev | cut -d '/' -f 1,2  | rev`
 
-# Input from the user for the mode
-MODE=$1
-
-if [ -z ${MODE} ]
-then 
-    echo "Please enter the mode- train , trainInv or test"
-    exit
-fi
-
-PY_SPT=
-if [ $MODE = "train" ]
-then
-    PY_SPT=train.py
-    echo "Running the training using ${PY_SPT}..................."
-elif [ $MODE = "trainInv" ]
-then
-        PY_SPT=trainInv.py
-        echo "Running the training using ${PY_SPT}..................."
-
-elif [ $MODE = "test" ]
-then
-        echo "Run the testing........."
-        PY_SPT=test.py
-
-else
-        echo "Invalid  MODE:${MODE} [ train , trainInv or test]"
-        exit
-fi
-
 # Action mask flag
 SET_AMF="False"
 AMF=
@@ -48,10 +19,56 @@ then
    ELC='--lexographical_constraint True'
 fi
 
+# Input from the user for the mode
+MODE=$1
 
-TRAINED_MODEL=/home/venkat/IF-DV/Rohit/IR2Vec-LoopOptimizationFramework/model/ggnn_drl/v2/trained_model/${DATA_SET_NAME}/ELC_${SET_ELC}_AMF_${SET_AMF}
-DIST_GEN_DATA=${TRAINED_MODEL}/${MODE}
+if [ -z ${MODE} ]
+then 
+    echo "Please enter the mode- train , trainInv or test"
+    exit
+fi
 
+PY_SPT=
+if [ $MODE = "train" ]
+then
+    PY_SPT=train.py
+    TMODE=$MODE
+    echo "Running the training using ${PY_SPT}..................."
+elif [ $MODE = "trainInv" ]
+then
+        PY_SPT=trainInv.py
+         TMODE=$MODE
+         echo "Running the training using ${PY_SPT}..................."
+
+elif [ $MODE = "test" ]
+then
+        echo "Run the testing........."
+        PY_SPT=test.py
+        TMODE=$2
+        if [ -z ${TMODE} ] ||  [ $TMODE != "train" -a $TMODE != "trainInv" ];
+        then 
+            echo "Please enter the model type to train on also - train or trainInv"
+            exit
+        fi
+
+
+
+else
+        echo "Invalid  MODE:${MODE} [ train , trainInv or test]"
+        exit
+fi
+
+
+
+PARENT_LOC=/home/venkat/IF-DV/Rohit/IR2Vec-LoopOptimizationFramework/model/ggnn_drl/v2/trained_model/${DATA_SET_NAME}/ELC_${SET_ELC}_AMF_${SET_AMF}
+
+TRAINED_MODEL=${PARENT_LOC}/${TMODE}
+DIST_GEN_DATA=${PARENT_LOC}/${MODE}
+
+if [ ${MODE} = "test" ]
+then
+        DIST_GEN_DATA=${PARENT_LOC}/${MODE}/${TMODE}
+fi
 
 if [ -d ${DIST_GEN_DATA} ]
 then 

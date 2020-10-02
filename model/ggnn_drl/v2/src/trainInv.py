@@ -9,7 +9,7 @@ import torch
 from collections import deque
 import os
 import argparse
-
+import utils
 os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 
 def run(agent, config):
@@ -22,13 +22,12 @@ def run(agent, config):
     eps_start=1.0
     eps_end=0.01
     eps_decay=0.995
-    scores = []                        # list containing scores from each episode
     scores_window = deque(maxlen=100)  # last 100 scores
     eps = eps_start
-
+    score_per_episode = []
     trained_model = config.trained_model
-    if trained_model is None:
-        trained_model = os.path.join(PWD, '../trained_model')
+#    if trained_model is None:
+#        trained_model = os.path.join(PWD, '../trained_model')
     
     if not os.path.exists(trained_model):
             os.makedirs(trained_model)
@@ -38,8 +37,9 @@ def run(agent, config):
     #Load the envroinment
     env = DistributeLoopEnv(config)    
     for episode in range(n_episodes):
+        scores = []                        # list containing scores from each episode
         count=0 
-        for path in glob.glob(os.path.join(dataset, 'graphs/train/*.json')): # Number of the iterations
+        for path in glob.glob(os.path.join(dataset, 'graphs/test/*.json')): # Number of the iterations
             with open(path) as f:
                 graph = json.load(f)
             print('DLOOP New graph to the env. {} '.format(path))
@@ -93,11 +93,18 @@ def run(agent, config):
             scores_window.append(score)       # save most recent score
             scores.append(score)              # save most recent score
             eps = max(eps_end, eps_decay*eps) # decrease epsilon
-            print('\rEpisode {}  Count {} \tAverage Score: {:.2f}'.format(episode, count, np.mean(scores_window)), end="")
+            # print('\rEpisode {}  Count {} \tAverage Score: {:.2f}'.format(episode, count, np.mean(scores_window)), end="")
 
             print('\n------------------------------------------------------------------------------------------------')
         torch.save(agent.qnetwork_local.state_dict(), os.path.join(trained_model, 'checkpoint-graphs-{episode}.pth'.format(episode=episode)))
+        score_per_episode.append(np.sum(scores))
+        
+        utils.plot(range(1,len(scores)+1), scores, 'cumilative Reward behaviour in {} th episode'.format(episode+1), location=config.distributed_data)
+
+         
     torch.save(agent.qnetwork_local.state_dict(), os.path.join(trained_model, 'final-model.pth'))
+    utils.plot(range(1, n_episodes+1), score_per_episode, 'Total rewards per episode',location=config.distributed_data)
+
 
 if __name__ == '__main__':
 

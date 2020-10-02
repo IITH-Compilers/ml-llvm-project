@@ -9,6 +9,7 @@ import torch
 from collections import deque
 import os
 import argparse
+import utils
 def run(agent, config):
     action_mask_flag=config.action_mask_flag
     enable_lexographical_constraint = config.enable_lexographical_constraint
@@ -22,6 +23,7 @@ def run(agent, config):
     dataset= config.dataset
     #Load the envroinment
     env = DistributeLoopEnv(config)    
+    score = 0
     
     for path in glob.glob(os.path.join(dataset, 'graphs/test/*.json')): # Number of the iterations
         with open(path) as f:
@@ -30,8 +32,6 @@ def run(agent, config):
         # state, topology = env.reset_env(graph, path)
         # Updated 
         state, topology, focusNode = env.reset_env(graph, path)
-        isStart = True
-        score = 0
         while(True):
             possibleNodes_emb, possibleNodes = state
 
@@ -59,7 +59,9 @@ def run(agent, config):
             # print('\rEpisode {}\tAverage Score: {:.2f}'.format(episode, np.mean(scores_window)), end="")
 
             print('\n------------------------------------------------------------------------------------------------')
-        
+    utils.plot(range(1, len(scores_window)+1), scores_window, 'Last 100 rewards',location=config.distributed_data)
+    utils.plot(range(1, len(scores)+1), scores, 'Total Rewards per time instant',location=config.distributed_data)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
