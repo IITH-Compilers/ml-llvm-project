@@ -25,7 +25,9 @@ class DistributeLoopEnv:
         # self.discovered = []
         
         self.isInputRequired = config.isInputRequired
-        self.O3_runtimes = utils.get_O3_runtimes(config.dataset, self.isInputRequired)
+        self.disable_execute_binaries = config.disable_execute_binaries
+        if not self.disable_execute_binaries:
+            self.O3_runtimes = utils.get_O3_runtimes(config.dataset, self.isInputRequired)
         self.distributed_data = config.distributed_data
     
     def getReward(self):
@@ -64,22 +66,27 @@ class DistributeLoopEnv:
 
         
         # call the Pass 
-        # dist_file_path_out = utils.call_distributionPass( meta_ssa_file_path, self.distribution, method_name, loop_id)
 
         # Run the File 5 times on input. Davg
-        
-        # Druntime = utils.get_runtime_of_file(dist_file_path_out, inputd=input_file_path)
-        Druntime = utils.distribute_and_getRuntime( meta_ssa_file_path, self.distribution, method_name, loop_id, self.distributed_data, input_file_path=input_file_path )
-        # Run the O3 file 5 times, O3avg
-        if ll_file_name not in self.O3_runtimes.keys():
-            print('Warning!!!!!!!!!!!!!!!!!! O3 not prioily calculated.....')
-            O3runtime = utils.get_runtime_of_file(O3_file_path, inputd=input_file_path)
-        else:
-            O3runtime = self.O3_runtimes[ll_file_name] 
+        if not self.disable_execute_binaries: 
+            # Druntime = utils.get_runtime_of_file(dist_file_path_out, inputd=input_file_path)
+            Druntime = utils.distribute_and_getRuntime( meta_ssa_file_path, self.distribution, method_name, loop_id, self.distributed_data, input_file_path=input_file_path )
+            # Run the O3 file 5 times, O3avg
+            if ll_file_name not in self.O3_runtimes.keys():
+                print('Warning!!!!!!!!!!!!!!!!!! O3 not prioily calculated.....')
+                O3runtime = utils.get_runtime_of_file(O3_file_path, inputd=input_file_path)
+            else:
+                O3runtime = self.O3_runtimes[ll_file_name] 
 
-        reward = (O3runtime - Druntime) / O3runtime
-        
-        print('filename|O3runtime|Druntime|reward,{},{},{},{}'.format(ll_file_name, O3runtime, Druntime, reward))
+            reward = (O3runtime - Druntime) / O3runtime
+            
+            print('filename|O3runtime|Druntime|reward,{},{},{},{}'.format(ll_file_name, O3runtime, Druntime, reward))
+        else:
+            distributed_llfile = utils.call_distributionPass( meta_ssa_file_path, self.distribution, method_name, loop_id, self.distributed_data)
+            reward=1
+            if distributed_llfile is None:
+                reward = -1
+
         return reward
 
 

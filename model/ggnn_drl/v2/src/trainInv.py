@@ -8,8 +8,9 @@ import json
 import torch
 from collections import deque
 import os
-import argparse
 import utils
+from utils import get_parse_args
+
 os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 
 def run(agent, config):
@@ -39,7 +40,7 @@ def run(agent, config):
     for episode in range(n_episodes):
         scores = []                        # list containing scores from each episode
         count=0 
-        for path in glob.glob(os.path.join(dataset, 'graphs/test/*.json')): # Number of the iterations
+        for path in glob.glob(os.path.join(dataset, 'graphs/train/*.json')): # Number of the iterations
             with open(path) as f:
                 graph = json.load(f)
             print('DLOOP New graph to the env. {} '.format(path))
@@ -85,11 +86,12 @@ def run(agent, config):
                 print('Distribution till now : {}'.format(distribute))
                 
                 state = (next_possibleNodes_emb, next_possibleNodes)
-
-                score += reward
+                if reward > -10:
+                    score += reward
                 if done:
                     break
                 print('DLOOP Goto to Next.................')
+            agent.writer.add_scalar('trainInv/reward', score)
             scores_window.append(score)       # save most recent score
             scores.append(score)              # save most recent score
             eps = max(eps_end, eps_decay*eps) # decrease epsilon
@@ -108,29 +110,15 @@ def run(agent, config):
 
 if __name__ == '__main__':
 
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--dataset', dest='dataset', metavar='DIRECTORY', help='Location of the dataSet..')
-    parser.add_argument('--action_mask_flag', dest='action_mask_flag', required=False, type=bool, help='Mask the action for the learn fucntion.', default=False)
-
-    parser.add_argument('--lexographical_constraint', dest='enable_lexographical_constraint', required=False, type=bool, help='Enable lexograhical constraint on the model.', default=False)
-    parser.add_argument('--isInputRequired', dest='isInputRequired', required=False, type=bool, help='Input required for the binaries to run.', default=False)
-    
-    parser.add_argument('--state_size', dest='state_size', type=int, required=False, help='Size of the hidden input vector for the state.', default=300)
-    parser.add_argument('--action_space', dest='action_space', required=False, type=int, help='Size of the actiion space.', default=200)
-    
-    parser.add_argument('--trained_model', dest='trained_model', required=False,  help=' location ', default=None)
-    
-    parser.add_argument('--distributed_data', dest='distributed_data', required=True,  help=' location of the distributed llfiles and outfiles.', default=None)
-
-    config = parser.parse_args()
+    config = get_parse_args()
     
     # print(config.state_size)
     print(config)
     # episodes = 100
     dqn_agent = Agent(config=config, seed=0)
 
-    # print('config : enable_lexographical_constraint : ', config.enable_lexographical_constraint)
     run(dqn_agent, config)
+    dqn_agent.writer.flush()
+    dqn_agent.writer.close()
     
     print('Training process finished..') 

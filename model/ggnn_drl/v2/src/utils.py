@@ -8,10 +8,7 @@ import sys
 import numpy as np
 import subprocess
 from matplotlib import pyplot as plt
-
-os.environ['LLVM']="/home/venkat/IF-DV/Rohit/IR2Vec-LoopOptimizationFramework/build"
-os.environ['OPT']=os.environ['LLVM']+"/bin/opt"
-os.environ['CLANG']=os.environ['LLVM']+"/bin/clang"
+import argparse
 
 
 LL_DIR_CONST='llfiles'
@@ -274,3 +271,22 @@ def plot(x,y,title, **args):
         print('Error while plotting the graph for {}'.format(title))
         print(ex)
 
+def get_parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--dataset', dest='dataset', metavar='DIRECTORY', help='Location of the dataSet..')
+    parser.add_argument('--action_mask_flag', dest='action_mask_flag', required=False, type=bool, help='Mask the action for the learn fucntion.', default=False)
+
+    parser.add_argument('--lexographical_constraint', dest='enable_lexographical_constraint', required=False, type=bool, help='Enable lexograhical constraint on the model.', default=False)
+    parser.add_argument('--isInputRequired', dest='isInputRequired', required=False, type=bool, help='Input required for the binaries to run.', default=False)
+    
+    parser.add_argument('--state_size', dest='state_size', type=int, required=False, help='Size of the hidden input vector for the state.', default=300)
+    parser.add_argument('--action_space', dest='action_space', required=False, type=int, help='Size of the actiion space.', default=200)
+    
+    parser.add_argument('--trained_model', dest='trained_model', required=True,  help=' location ')
+
+    parser.add_argument('--distributed_data', dest='distributed_data', required=True,  help=' location of the distributed llfiles and outfiles.', default=None)
+    
+    parser.add_argument('--disable_execute_binaries', dest='disable_execute_binaries', required=False,  type=bool, help='Execute Binaries and get runtime.', default=False)
+    
+    config = parser.parse_args()
+    return config

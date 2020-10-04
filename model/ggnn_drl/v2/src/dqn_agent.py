@@ -5,7 +5,8 @@ from model import QNetwork
 import torch
 import torch.nn.functional as F
 import torch.optim as optim
-
+from torch.utils.tensorboard import SummaryWriter
+import os
 BUFFER_SIZE = int(1e5)  # replay buffer size
 BATCH_SIZE = 64         # minibatch size
 GAMMA = 0.99            # discount factor
@@ -62,7 +63,9 @@ class Agent():
         self.memory = ReplayBuffer(action_size, BUFFER_SIZE, BATCH_SIZE, seed, config)
         # Initialize time step (for updating every UPDATE_EVERY steps)
         self.t_step = 0
-    
+        self.updateDone = 0
+        self.writer = SummaryWriter(os.path.join(config.distributed_data, 'log/tensorboard'))    
+
     def step(self, state, action, reward, next_state, done):
         # Save experience in replay memory
         self.memory.add(state, action, reward, next_state, done)
@@ -259,6 +262,8 @@ class Agent():
         # print('Q_expected', Q_expected.shape)
         # print('Q_targets', Q_targets.shape)
         loss = F.mse_loss(Q_expected, Q_targets)
+        self.updateDone = self.updateDone +1
+        self.writer.add_scalar("Loss/train", loss, self.updateDone)
         # Minimize the loss
         self.optimizer.zero_grad()
         loss.backward()

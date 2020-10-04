@@ -8,8 +8,9 @@ import json
 import torch
 from collections import deque
 import os
-import argparse
 import utils
+from utils import get_parse_args
+
 def run(agent, config):
     action_mask_flag=config.action_mask_flag
     enable_lexographical_constraint = config.enable_lexographical_constraint
@@ -24,7 +25,8 @@ def run(agent, config):
     #Load the envroinment
     env = DistributeLoopEnv(config)    
     score = 0
-    
+    count = 1
+    print(glob.glob(os.path.join(dataset, 'graphs/test/*.json')))
     for path in glob.glob(os.path.join(dataset, 'graphs/test/*.json')): # Number of the iterations
         with open(path) as f:
             graph = json.load(f)
@@ -50,34 +52,26 @@ def run(agent, config):
             print('Distribution till now : {}'.format(distribute))
             
             state = (next_possibleNodes_emb, next_possibleNodes)
-            score += reward
-            if done:
-                break
+            if  reward > -10:
+                score += reward
+ 
             print('DLOOP Goto to Next.................')
             scores_window.append(score)       # save most recent score
             scores.append(score)              # save most recent score
-            # print('\rEpisode {}\tAverage Score: {:.2f}'.format(episode, np.mean(scores_window)), end="")
-
             print('\n------------------------------------------------------------------------------------------------')
+            if done:
+               break
+ 
+        agent.writer.add_scalar('test/reward', score, count)
+        
+        count+=1
     utils.plot(range(1, len(scores_window)+1), scores_window, 'Last 100 rewards',location=config.distributed_data)
     utils.plot(range(1, len(scores)+1), scores, 'Total Rewards per time instant',location=config.distributed_data)
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--dataset', dest='dataset', metavar='DIRECTORY', help='Location of the dataSet..')
-    parser.add_argument('--action_mask_flag', dest='action_mask_flag', required=False, type=bool, help='Mask the action for the learn fucntion.', default=False)
 
-    parser.add_argument('--lexographical_constraint', dest='enable_lexographical_constraint', required=False, type=bool, help='Enable lexograhical constraint on the model.', default=False)
-    parser.add_argument('--isInputRequired', dest='isInputRequired', required=False, type=bool, help='Input required for the binaries to run.', default=False)
-    
-    parser.add_argument('--state_size', dest='state_size', type=int, required=False, help='Size of the hidden input vector for the state.', default=300)
-    parser.add_argument('--action_space', dest='action_space', required=False, type=int, help='Size of the actiion space.', default=200)
-    
-    parser.add_argument('--trained_model', dest='trained_model', required=True,  help=' location ')
-    parser.add_argument('--distributed_data', dest='distributed_data', required=True,  help=' location of the distributed llfiles and outfiles.', default=None)
-
-    config = parser.parse_args()
+    config = get_parse_args()
     
     print(config)
     dqn_agent = Agent(config, seed=0)
@@ -91,7 +85,12 @@ if __name__ == '__main__':
 
 
     dqn_agent.qnetwork_local.load_state_dict(torch.load(trained_model))
+    # dqn_agent.writer.add_graph(dqn_agent.qnetwork_local)
     run(dqn_agent, config)
+
+    # dqn_agent.writer.add_graph(dqn_agent.qnetwork_local)
+    dqn_agent.writer.flush()
+    dqn_agent.writer.close()
 
     print('Testing Completed..... ')
     
