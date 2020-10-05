@@ -67,20 +67,36 @@ void LoopDistribution::removeLoopID(Loop *L) {
 }
 
 void LoopDistribution::createContainer(DataDependenceGraph &SCCGraph) {
+  SmallVector<DDGNode *, 5> unlabelledNodes;
+  SmallVector<std::string, 5> labels;
   for (DDGNode *N : SCCGraph) {
     auto label = N->NodeLabel;
-    if (label != "")
+    if (label != "") {
       addNodeToContainer(N, label);
+      labels.push_back(label);
+    } else
+      unlabelledNodes.push_back(N);
+  }
+
+  // Add the instructions of unlabelled nodes to all the labelled containers
+  // After this each populated container can form a semantically valid loop
+  for (DDGNode *N : unlabelledNodes) {
+    for (auto label : labels) {
+      addNodeToContainer(N, label);
+    }
   }
 }
 
 void LoopDistribution::addNodeToContainer(DDGNode *node, const std::string ID) {
   assert(node && "Node should not be nullptr");
-  assert(container.find(ID) == container.end() && "Cannot add duplicates");
   InstList instList;
   node->collectInstructions([](const Instruction *I) { return true; },
                             instList);
-  container.try_emplace(ID, instList);
+  if (container.find(ID) == container.end())
+    container.try_emplace(ID, instList);
+  else {
+    container[ID].append(instList.begin(), instList.end());
+  }
 }
 
 void LoopDistribution::mergePartitionsOfContainer(std::string srcID,
@@ -237,17 +253,23 @@ void LoopDistribution::removeUnwantedSlices(
   for (auto i : partitionOrder) {
     LLVM_DEBUG(errs() << "removing slices of container --> " << i << "\n");
     SmallVector<Instruction *, 64> instToRemove;
-    for (auto j : partitionOrder) {
-      if (i == j)
-        continue;
-      instToRemove.append(container[j].begin(), container[j].end());
-    }
-    SmallVector<Instruction *, 64> newInstToRemove;
+    // old
+    // for (auto j : partitionOrder) {
+    //   if (i == j)
+    //     continue;
+    //   instToRemove.append(container[j].begin(), container[j].end());
+    // }
+    // new
+    auto curContainer = container[i];
+    SmallVector<Instruction *, 64> newInstToRetain;
+    // SmallVector<Instruction *, 64> newInstToRemove;
     auto instVMap = loopInstVMap[workingLoopID[id]];
 
     if (instVMap.size() > 0) {
       // LLVM_DEBUG(errs() << "Size of instvmap = " << instVMap.size() << "\n");
-      for (auto it = instToRemove.begin(); it != instToRemove.end(); it++) {
+      for (auto it = curContainer.begin(); it != curContainer.end(); it++) {
+        // for (auto it = instToRemove.begin(); it != instToRemove.end(); it++)
+        // {
         Instruction *I = *it;
         // LLVM_DEBUG(errs() << "key: ");
         // LLVM_DEBUG(I->dump());
@@ -260,18 +282,32 @@ void LoopDistribution::removeUnwantedSlices(
         }
         // LLVM_DEBUG(errs() << "value: ");
         // LLVM_DEBUG(x->dump());
-        newInstToRemove.push_back(dyn_cast<Instruction>(x));
+        // newInstToRemove.push_back(dyn_cast<Instruction>(x));
+        newInstToRetain.push_back(dyn_cast<Instruction>(x));
       }
     } else {
       // Special case - original loop - will not have any vmap
       // So, remove directly without referring to vmap
-      for (auto inst : instToRemove)
-        newInstToRemove.push_back(inst);
+      // for (auto inst : instToRemove)
+      for (auto inst : curContainer)
+        // newInstToRemove.push_back(inst);
+        newInstToRetain.push_back(inst);
     }
+
+    for (auto BB : workingLoopID[id]->getBlocks()) {
+      for (auto &ins : *BB) {
+        if (std::find(newInstToRetain.begin(), newInstToRetain.end(), &ins) ==
+            newInstToRetain.end())
+          instToRemove.push_back(&ins);
+        //   // instToRemove.append(container[j].begin(), container[j].end());
+      }
+    }
+
     // Remove the populated instructions
     // Delete the instructions backwards, as it has a reduced likelihood of
     // having to update as many def-use and use-def chains.
-    for (auto I : reverse(newInstToRemove)) {
+    // for (auto I : reverse(newInstToRemove)) {
+    for (auto I : reverse(instToRemove)) {
       if (!I->use_empty())
         I->replaceAllUsesWith(UndefValue::get(I->getType()));
       I->eraseFromParent();
@@ -424,7 +460,10 @@ bool LoopDistribution::runOnFunction(Function &F) {
     clonedLoops.push_back(L);
   }
 
+  LLVM_DEBUG(F.viewCFG());
   removeUnwantedSlices(clonedLoops, loopInstVMap, workingLoopID, order);
+  LLVM_DEBUG(F.viewCFG());
+
   // Report the success.
   ORE->emit([&]() {
     return OptimizationRemark(LDIST_NAME, "Distribute", L->getStartLoc(),
