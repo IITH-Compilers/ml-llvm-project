@@ -6,14 +6,14 @@ class Graph:
 
         # A List of Lists to represent an adjacency list
         self.adjList = [[] for _ in range(N)]
-        
+
         self.num_nodes = N
         # stores in-degree of a vertex
         # initialize in-degree of each vertex by 0
         self.indegree = [0] * N
-        
+
         self.discovered = [False] * N
-        
+
         # add edges to the undirected graph
         for (src, dest) in edges:
 
@@ -33,9 +33,8 @@ class Graph:
         else:
             assert(0)
 
-
     def findAllVertaxWithZeroWeights(self):
-    
+
         points = []
 
         # do for every vertex
@@ -44,10 +43,11 @@ class Graph:
                 # include current node in the path and mark it as discovered
                 points.append(v)
 
-
         return points
 
 # Recursive function to find all topological orderings of a given DAG
+
+
 def findAllTopologicalOrders(graph, path, discovered, N):
 
     # do for every vertex
@@ -80,7 +80,9 @@ def findAllTopologicalOrders(graph, path, discovered, N):
     # print the topological order if all vertices are included in the path
     if len(path) == N:
         print(path)
-#  
+#
+
+
 def findAllDistributions(graph, path, discovered, N, nodeMap, decList, distributions):
 
     # do for every vertex
@@ -99,8 +101,8 @@ def findAllDistributions(graph, path, discovered, N, nodeMap, decList, distribut
                 discovered[v] = True
 
                 # recur
-                findAllDistributions(graph, path, discovered, N, nodeMap, decList, distributions)
-
+                findAllDistributions(
+                    graph, path, discovered, N, nodeMap, decList, distributions)
 
                 # backtrack: reset in-degree information for the current node
                 for u in graph.adjList[v]:
@@ -123,8 +125,8 @@ def findAllDistributions(graph, path, discovered, N, nodeMap, decList, distribut
                     discovered[v] = True
                     decList.append(dec)
                     # recur
-                    findAllDistributions(graph, path, discovered, N, nodeMap, decList, distributions)
-
+                    findAllDistributions(
+                        graph, path, discovered, N, nodeMap, decList, distributions)
 
                     # backtrack: reset in-degree information for the current node
                     for u in graph.adjList[v]:
@@ -138,24 +140,25 @@ def findAllDistributions(graph, path, discovered, N, nodeMap, decList, distribut
 
     # print the topological order if all vertices are included in the path
     if len(path) == N:
-        distribute=nodeMap[path[0]]
+        distribute = nodeMap[path[0]]
         for i in range(N-1):
-            distribute = "{distribute}{dec}{node}".format(distribute=distribute, dec=decList[i], node=nodeMap[path[i+1]])
+            distribute = "{distribute}{dec}{node}".format(
+                distribute=distribute, dec=decList[i], node=nodeMap[path[i+1]])
         # print(distribute)
         distributions.append(distribute)
-#  
+#
 #  # Print all topological orderings of a given DAG
 #  def printAllTopologicalOrders(graph):
-#  
+#
 #      # get number of nodes in the graph
 #      N = len(graph.adjList)
-#  
+#
 #      # create an auxiliary space to keep track of whether vertex is discovered
 #      discovered = [false] * n
-#  
+#
 #      # list to store the topological order
 #      path = []
-#  
+#
 #      # find all topological ordering and print them
 #      findAllTopologicalOrders(graph, path, discovered, N)
 
@@ -163,7 +166,8 @@ def findAllDistributions(graph, path, discovered, N, nodeMap, decList, distribut
 if __name__ == '__main__':
 
     # List of graph edges as per above diagram
-    edges = [(0, 6), (1, 2), (1, 4), (1, 6), (3, 0), (3, 4), (5, 1), (7, 0), (7, 1)]
+    edges = [(0, 6), (1, 2), (1, 4), (1, 6), (3, 0),
+             (3, 4), (5, 1), (7, 0), (7, 1)]
 
     # Number of nodes in the graph
     N = 8
@@ -174,7 +178,6 @@ if __name__ == '__main__':
     graph.UpdateVisitList(listm[1])
     graph.UpdateVisitList(listm[2])
     listm = graph.findAllVertaxWithZeroWeights()
-    print(listm)
+    # print(listm)
     # print all topological ordering of the graph
     # printAllTopologicalOrders(graph)
-

@@ -1,3 +1,4 @@
 add_subdirectory(IR2Vec-SCC)
 add_subdirectory(LoopDistribution)
 add_subdirectory(Locality)
+add_subdirectory(test)
