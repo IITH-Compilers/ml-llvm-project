@@ -5,7 +5,7 @@ find_program(VIRTUALENV virtualenv)
 if(NOT VIRTUALENV)
     message(FATAL_ERROR "Could not find `virtualenv` in PATH")
 endif()
-set(VIRTUALENV ${VIRTUALENV} -p python3.6)
+set(VIRTUALENV ${VIRTUALENV} -p python3)
 
 # Generate the virtualenv and ensure it's up to date.
 add_custom_command(
@@ -27,7 +27,7 @@ set(BUILD_LOC ${CMAKE_BINARY_DIR})
 
 add_custom_command(
     OUTPUT copy.stamp
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/../../IR2Vec-Engine IR2Vec-Engine
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/../IR2Vec-Engine IR2Vec-Engine
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/common common
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/c_files-all c_files-all
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/validate validate
