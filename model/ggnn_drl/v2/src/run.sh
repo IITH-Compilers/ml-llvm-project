@@ -47,6 +47,7 @@ then
             echo "Enter the training dataset directory as as the third argument ...."
             exit
         fi
+        DATA_SET=`realpath ${DATA_SET}`
         DATA_SET_NAME=`echo ${DATA_SET} | rev | cut -d '/' -f 1,2  | rev`
         
         PY_SPT=${MODE}.py
