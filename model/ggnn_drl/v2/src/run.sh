@@ -1,9 +1,10 @@
-
-
+# Taining - bash run.sh [train|trainInv] <dataset>
+# Testing - bash run.sh test <path dataset> <path of model> [<disable runtime calc:Y>] [<POST distribution passes choice: {0, 1, 2}>]
+#
 
 PWD=`pwd`
 # set the llvm Build and other paramter
-LLVM_BUILD=`realpath ${PWD}/../../../../build`
+LLVM_BUILD=`realpath ${PWD}/../../../../build_release`
 
 export LLVM=${LLVM_BUILD}
 export OPT=${LLVM_BUILD}/bin/opt
@@ -24,8 +25,11 @@ then
    ELC='--lexographical_constraint True'
 fi
 
+# Disable the calculation od the binaries for some test scenario. work for test phase only
+DISABLE_EXEC_BIN=
 
-EXEC_BIN=
+# Post distributions passes key. work for test phase only
+PDP=
 
 # Input from the user for the mode
 MODE=$1
@@ -40,7 +44,6 @@ MODEL_PAR=
 PY_SPT=
 if [ $MODE = "train" ] || [ $MODE = "trainInv" ]
 then 
-# '/home/venkat/IF-DV/Rohit/IR2Vec-LoopOptimizationFramework/data/SPEC_N/processed_rdgdis_filter'
         DATA_SET=$2
         if [ -z ${DATA_SET} ] || [ ! -d ${DATA_SET} ]
         then 
@@ -53,7 +56,7 @@ then
         PY_SPT=${MODE}.py
         echo "Running the training using ${PY_SPT}..................."
         MODEL_PAR=`realpath ${PWD}/../trained_model`
-        TRAINED_MODEL=${MODEL_PAR}/${DATA_SET_NAME}/ELC_${SET_ELC}_AMF_${SET_AMF}/${MODE}
+        TRAINED_MODEL=${MODEL_PAR}/${DATA_SET_NAME}/ELC_${SET_ELC}_AMF_${SET_AMF}_rel/${MODE}
 
         DIST_GEN_DATA=${TRAINED_MODEL}
 
@@ -61,14 +64,6 @@ elif [ $MODE = "test" ]
 then
         echo "Run the testing........."
         PY_SPT=test.py
-#         TMODE=$2
-#         if [ -z ${TMODE} ] ||  [ ${TMODE} != "train" -a ${TMODE} != "trainInv" ];
-#         then 
-#             echo "Please enter the model type to train on also - train or trainInv"
-#             exit
-#         fi
-
-# '/home/venkat/IF-DV/Rohit/IR2Vec-LoopOptimizationFramework/data/Handwritten/processed'
         TE_DATA_SET=$2
         if [ -z ${TE_DATA_SET} ] || [ ! -d ${TE_DATA_SET} ]
         then 
@@ -101,7 +96,14 @@ then
         
          DIST_GEN_DATA=${TRAINED_MODEL_DIR}/${MODE}/${TE_DATA_SET_NAME}
         
-        EXEC_BIN="--disable_execute_binaries True"
+         DEB_FLAG=$4
+         if [ ! -z ${DEB_FLAG} -a ${DEB_FLAG} = "Y" ]
+         then
+                 echo "!!!!!Runtime will not be calculated for this run as DEB_FLAG is Y !!!!!"
+         DISABLE_EXEC_BIN="--disable_execute_binaries True"
+         fi
+         POST_DIS_PASSES_ARG=$5
+         PDP="--post_pass_key=$POST_DIS_PASSES_ARG"
 else
         echo "Invalid  MODE:${MODE} [ train , trainInv or test]"
         exit
@@ -125,13 +127,17 @@ echo "Location of the trained model: ${TRAINED_MODEL}"
 echo "Location of the generated llfiles and outfiles : ${DIST_GEN_DATA}"
 echo "Logs files: ${LOG}"
 ## Call the py script 
-python ${PY_SPT} --dataset=${DATA_SET} ${AMF} ${ELC} ${EXEC_BIN} --trained_model=${TRAINED_MODEL} --distributed_data=${DIST_GEN_DATA} > ${LOG}/run.log 2> ${LOG}/error.log
+python ${PY_SPT} --dataset=${DATA_SET} ${AMF} ${ELC} ${DISABLE_EXEC_BIN} ${PDP} --trained_model=${TRAINED_MODEL} --distributed_data=${DIST_GEN_DATA} > ${LOG}/run.log 2> ${LOG}/error.log
 
 echo "Completed the process........."
 
 
 if [ $MODE = "test" ]
 then
-   grep -ri "filename|O3runtime|Druntime|reward" ${LOG}/run.log &> ${LOG}/testing_results.csv
-   echo "Result file generated: ${LOG}/testing_results.csv"
+        if [ -z "${DISABLE_EXEC_BIN}" ]
+        then
+            grep -ri "filename|O3runtime|Druntime|reward" ${LOG}/run.log &> ${LOG}/runtime_results.csv
+        fi
+   grep -ri "\-------------------------->" ${LOG}/run.log &> ${LOG}/distribution_results.csv
+   echo "Results files generated in  ${LOG}"
 fi

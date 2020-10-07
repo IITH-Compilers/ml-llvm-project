@@ -163,6 +163,11 @@ class Agent():
         # Minimize the loss
         self.optimizer.zero_grad()
         loss.backward()
+        # TODO
+        for param in self.qnetwork_local.parameters():
+            param.grad.data.clamp_(-1, 1)
+
+
         self.optimizer.step()
 
         # ------------------- update target network ------------------- #
