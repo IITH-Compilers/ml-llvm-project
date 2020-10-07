@@ -399,8 +399,8 @@ void RDG::SelectOnlyStoreNode(DataDependenceGraph &G) {
 
 DataDependenceGraph *RDG::computeRDGForInnerLoop(Loop &IL) {
   raw_ostream &operator<<(raw_ostream &OS, const DataDependenceGraph &G);
-  // errs() << LAI.getMaxSafeDepDistBytes() << " : " << LAI.canVectorizeMemory()
-  //        << "\n";
+  errs() << LAI.getMaxSafeDepDistBytes() << " : " << LAI.canVectorizeMemory()
+         << "\n";
 
   if (LAI.getMaxSafeDepDistBytes() == -1ULL && !LAI.canVectorizeMemory()) {
     errs() << "No need to make RDG\n";

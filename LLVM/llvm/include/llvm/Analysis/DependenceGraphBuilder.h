@@ -68,7 +68,7 @@ public:
     simplify_Inst();
     createAndConnectRootNode();
     // //  createPiBlocks();
-    createMergedPiBlocks();
+    // createMergedPiBlocks();
     //  sortNodesTopologically();
   }
 

@@ -76,6 +76,7 @@ static bool isOneDimensionalArray(const SCEV &AccessFn, const SCEV &ElemSize,
                                   const Loop &L, ScalarEvolution &SE) {
   const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(&AccessFn);
   if (!AR || !AR->isAffine()) {
+    // errs() << "bbbbbbbbbbbbbb\n";
     errs() << "!AR || !AR->isAffine()\n";
     return false;
   }
@@ -87,6 +88,7 @@ static bool isOneDimensionalArray(const SCEV &AccessFn, const SCEV &ElemSize,
   const SCEV *Step = AR->getStepRecurrence(SE);
   if (isa<SCEVAddRecExpr>(Start) || isa<SCEVAddRecExpr>(Step)) {
     errs() << "isa<SCEVAddRecExpr>(Start) || isa<SCEVAddRecExpr>(Step)\n";
+    // errs() << "ccccccccccccccccc\n";
     return false;
   }
 
@@ -94,9 +96,11 @@ static bool isOneDimensionalArray(const SCEV &AccessFn, const SCEV &ElemSize,
   if (!SE.isLoopInvariant(Start, &L) || !SE.isLoopInvariant(Step, &L)) {
     errs()
         << "!SE.isLoopInvariant(Start, &L) || !SE.isLoopInvariant(Step, &L)\n";
+    // errs() << "ddddddddddddddddddd\n";
     return false;
   }
-
+  // errs() << "eeeeeeeeeeeeeeeeeeee" << *AR->getStepRecurrence(SE) << " : "
+  //        << ElemSize << "\n";
   return AR->getStepRecurrence(SE) == &ElemSize;
 }
 
@@ -260,9 +264,9 @@ Optional<bool> IndexedReference::hasTemporalReuse(const IndexedReference &Other,
           dbgs().indent(2)
           << "No temporal reuse: distance is greater than MaxDistance at depth="
           << Level << "\n");
-      errs()
-          << "No temporal reuse: distance is greater than MaxDistance at depth="
-          << Level << "\n";
+      errs() << "No temporal reuse: distance is greater than MaxDistance at "
+                "depth = "
+             << Level << "\n";
       return false;
     }
   }
@@ -336,12 +340,9 @@ bool IndexedReference::delinearize(const LoopInfo &LI) {
   const SCEV *ElemSize = SE.getElementSize(&StoreOrLoadInst);
   const BasicBlock *BB = StoreOrLoadInst.getParent();
 
-  errs() << "ddddddddddddddddddddddddd\n";
   if (Loop *L = LI.getLoopFor(BB)) {
     const SCEV *AccessFn =
         SE.getSCEVAtScope(getPointerOperand(&StoreOrLoadInst), L);
-    errs() << "In Loop '" << L->getName() << "', AccessFn: " << *AccessFn
-           << "\n";
     BasePointer = dyn_cast<SCEVUnknown>(SE.getPointerBase(AccessFn));
     if (BasePointer == nullptr) {
       LLVM_DEBUG(
@@ -353,18 +354,16 @@ bool IndexedReference::delinearize(const LoopInfo &LI) {
     }
 
     AccessFn = SE.getMinusSCEV(AccessFn, BasePointer);
+    errs() << "AccessFn: " << *AccessFn << "\n";
 
     LLVM_DEBUG(dbgs().indent(2) << "In Loop '" << L->getName()
                                 << "', AccessFn: " << *AccessFn << "\n");
-    errs() << "In Loop '" << L->getName() << "', AccessFn: " << *AccessFn
-           << "\n";
 
     SE.delinearize(AccessFn, Subscripts, Sizes,
                    SE.getElementSize(&StoreOrLoadInst));
 
     if (Subscripts.empty() || Sizes.empty() ||
         Subscripts.size() != Sizes.size()) {
-      errs() << "dddddddddddddddddddd\n";
       // Attempt to determine whether we have a single dimensional array access.
       // before giving up.
       if (!isOneDimensionalArray(*AccessFn, *ElemSize, *L, SE)) {
@@ -518,14 +517,12 @@ CacheCost ::getCacheCost(Loop &Root, LoopStandardAnalysisResults &AR,
 
   LoopVectorTy Loops;
   for (Loop *L : breadth_first(&Root)) {
-    errs() << "Loop: " << *L << "\n";
     Loops.push_back(L);
   }
 
   if (!getInnerMostLoop(Loops)) {
     LLVM_DEBUG(dbgs() << "Cannot compute cache cost of loop nest with more "
                          "than one innermost loop\n");
-    errs() << "aaaaaaaaaa\n";
     return nullptr;
   }
 
@@ -538,6 +535,8 @@ void CacheCost::calculateCacheFootprint() {
   ReferenceGroupsTy RefGroups;
   if (!populateReferenceGroups(RefGroups))
     return;
+
+  errs() << "fffffffffffffffffffffffffffffhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh\n";
 
   LLVM_DEBUG(dbgs() << "COMPUTING LOOP CACHE COSTS\n");
   for (const Loop *L : Loops) {
@@ -560,14 +559,14 @@ bool CacheCost::populateReferenceGroups(ReferenceGroupsTy &RefGroups) const {
   unsigned CLS = TTI.getCacheLineSize();
   Loop *InnerMostLoop = getInnerMostLoop(Loops);
   assert(InnerMostLoop != nullptr && "Expecting a valid innermost loop");
-  errs() << "ccccccccccccc\n";
 
   for (BasicBlock *BB : InnerMostLoop->getBlocks()) {
-    errs() << "aaaaaaaaaaaa\n";
+    errs() << "BBBBBBBBBBBBBBBBB\n";
     for (Instruction &I : *BB) {
       if (!isa<StoreInst>(I) && !isa<LoadInst>(I))
         continue;
 
+      // errs() << "Instruction: " << I << "\n";
       std::unique_ptr<IndexedReference> R(new IndexedReference(I, LI, SE));
       if (!R->isValid())
         continue;
@@ -580,6 +579,7 @@ bool CacheCost::populateReferenceGroups(ReferenceGroupsTy &RefGroups) const {
           dbgs().indent(2) << *R << "\n";
           dbgs().indent(2) << Representative << "\n";
         });
+        // errs() << "RefGroup R: " << *R << "\n";
 
         Optional<bool> HasTemporalReuse =
             R->hasTemporalReuse(Representative, *TRT, *InnerMostLoop, DI, AA);

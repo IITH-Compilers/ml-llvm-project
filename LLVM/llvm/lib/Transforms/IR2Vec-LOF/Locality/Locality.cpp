@@ -43,99 +43,97 @@ bool LocalityPass::runOnFunction(Function &F) {
   // MemorySSA *MSSA = &getAnalysis<MemorySSAWrapperPass>().getMSSA();
 
   LoopStandardAnalysisResults AR{*AA, *AC, *DT, *LI, *SE, *TLI, *TTI, MSSA};
-  // &AR.AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
-  // *AR.AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
-  // LocalityPass::AR.DT =
-  // &getAnalysis<DominatorTreeWrapperPass>().getDomTree(); AR.LI =
-  // &getAnalysis<LoopInfoWrapperPass>().getLoopInfo(); AR.SE =
-  // &getAnalysis<ScalarEvolutionWrapperPass>().getSE(); AR.TLI =
-  // &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(); AR.TTI =
-  // &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F); AR.MSSA =
-  // &getAnalysis<MemorySSAWrapperPass>().getMSSA();
-
   DependenceInfo DI = DependenceInfo(&F, AA, SE, LI);
 
   int loopNum = 0;
-  for (LoopInfo::iterator i = LI->begin(), e = LI->end(); i != e; ++i) {
+
+  ////////////////////////////////////////////////////////////////////////////////
+
+  /* for (LoopInfo::iterator i = LI->begin(), e = LI->end(); i != e; ++i) {
     Loop *L = *i;
+    errs() << "bbbbbbbbbbbbbbbbbbbbbbbbbb\n";
+    errs() << "Loop Here: " << *L << "\n";
     for (auto il = df_begin(L), el = df_end(L); il != el; ++il) {
       if (il->getSubLoops().size() > 0) {
         continue;
-      }
-      loopNum++;
-      auto *LAA = &getAnalysis<LoopAccessLegacyAnalysis>();
-      const LoopAccessInfo &LAI = LAA->getInfo(*il);
-      auto RDGraph = RDG(*AA, *SE, *LI, DI, LAI);
-      auto SCC_Graph = RDGraph.computeRDGForInnerLoop(**il);
-      if (SCC_Graph == nullptr) {
-        continue;
-      }
-      DataDependenceGraph &SCCGraph = *SCC_Graph;
+      } */
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  for (Loop *TopLevelLoop : *LI) {
+    auto CC = CacheCost::getCacheCost(*TopLevelLoop, AR, DI);
+    for (Loop *L : depth_first(TopLevelLoop)) {
+      // Loop *L = *i;
+      if (L->empty()) {
+        loopNum++;
+        auto *LAA = &getAnalysis<LoopAccessLegacyAnalysis>();
+        const LoopAccessInfo &LAI = LAA->getInfo(L);
+        auto RDGraph = RDG(*AA, *SE, *LI, DI, LAI);
+        auto SCC_Graph = RDGraph.computeRDGForInnerLoop(*L);
+        if (SCC_Graph == nullptr) {
+          continue;
+        }
+        DataDependenceGraph &SCCGraph = *SCC_Graph;
 
-      // std::string Graph_Filename = "Graph.txt";
-      // RDGraph.PrintDotFile_LAI(SCCGraph, Graph_Filename, "ss");
+        // std::string Graph_Filename = "Graph.txt";
+        // RDGraph.PrintDotFile_LAI(SCCGraph, Graph_Filename, "ss");
 
-      std::string s1 = F.getParent()->getName().str();
-      std::string s2(s1.substr(s1.rfind('/') + 1));
-      std::string RD_Filename = "RD_locality.txt";
-      std::string SCC_Filename =
-          "SCC_" + s2 + "L" + std::to_string(loopNum) + ".dot";
+        std::string s1 = F.getParent()->getName().str();
+        std::string s2(s1.substr(s1.rfind('/') + 1));
+        std::string RD_Filename = "RD_locality.txt";
+        std::string SCC_Filename =
+            "SCC_" + s2 + "L" + std::to_string(loopNum) + ".dot";
 
-      //   ReferenceGroupsTy RefGroups;
-      auto CC = CacheCost::getCacheCost(*L, AR, DI);
-      errs() << "CacheCost: " << CC->getLoopCost(*L) << "\n";
+        //   ReferenceGroupsTy RefGroups;
+        // auto CC = CacheCost::getCacheCost(*L, AR, DI);
+        errs() << "CacheCost: " << CC->getLoopCost(*L) << "\n";
 
-      // for (auto i = CC->getLoopCosts(), e = CC->getLoopCosts(); i != e;) {
-      //   for (auto x = i.begin(), y = i.end(); x != y; ++x) {
-      //     errs() << "cache cost: " << x << "bbbbbbbbbbbbbb"
-      //            << "\n";
-      //   }
-      // }
-
-      // raw_ostream &operator<<(raw_ostream &OS, const CacheCost &CC);
-      // raw_ostream &OS;
-      // if (auto CC = CacheCost::getCacheCost(*L, AR, DI))
-      // OS << *CC;
-      // auto AM = LoopAnalysisManager{};
-      // auto U = LPMUpdater::addSiblingLoops;
-      // LoopCachePrinterPass::run(*L, AM, AR, U);
-
-      // errs() << "Cache Cost: ";
-      // OS << *CC;
-      // CacheCost::populateReferenceGroups(RefGroups);
-
-      // int loopNum = 0;
-      // for (LoopInfo::iterator i = LI->begin(), e = LI->end(); i != e; ++i)
-      // {
-      //   Loop *L = *i;
-      // for (auto il = df_begin(L), el = df_end(L); il != el; ++il) {
-      //   if (il->getSubLoops().size() > 0) {
-      //     continue;
-      //   }
-      //   loopNum++;
-      //   auto *LAA = &getAnalysis<LoopAccessLegacyAnalysis>();
-      //   const LoopAccessInfo &LAI = LAA->getInfo(*il);
-      //   auto RDGraph = RDG(*AA, *SE, *LI, DI, LAI);
-      //   auto SCCGraph = RDGraph.computeRDGForInnerLoop(**il);
-
-      //   std::string s1 = F.getParent()->getName().str();
-      //   std::string s2(s1.substr(s1.rfind('/') + 1));
-      //   std::string RD_Filename = "RD_locality.txt";
-      //   std::string SCC_Filename = "SCC_" + s2 + "_FUNCTION_" +
-      //                              SCCGraph.GetFunctionName() + "_LOOP" +
-      //                              std::to_string(loopNum) + ".dot";
-      std::error_code EC;
-      raw_fd_ostream File(RD_Filename.c_str(), EC, sys::fs::F_Append);
-      if (!EC) {
-        // if (SCCGraph.SCCExist) {
-        // File << SCC_Filename << " : " << SCCGraph.totalSCCNodes << "\n";
-        File << SCC_Filename << " : " << SCCGraph.dependenceSize << " : "
-             << CC->getLoopCost(*L) << "\n";
+        // for (auto i = CC->getLoopCosts(), e = CC->getLoopCosts(); i != e;) {
+        //   for (auto x = i.begin(), y = i.end(); x != y; ++x) {
+        //     errs() << "cache cost: " << x << "bbbbbbbbbbbbbb"
+        //            << "\n";
+        //   }
         // }
-        // CC->getLoopCosts();
-        // errs() << "Loop costs: " <<
-      } else {
-        errs() << "error opening file for writing! \n";
+
+        // raw_ostream &operator<<(raw_ostream &OS, const CacheCost &CC);
+        // raw_ostream &OS;
+        // if (auto CC = CacheCost::getCacheCost(*L, AR, DI))
+        // OS << *CC;
+        // auto AM = LoopAnalysisManager{};
+        // auto U = LPMUpdater::addSiblingLoops;
+        // LoopCachePrinterPass::run(*L, AM, AR, U);
+
+        // int loopNum = 0;
+        // for (LoopInfo::iterator i = LI->begin(), e = LI->end(); i != e; ++i)
+        // {
+        //   Loop *L = *i;
+        // for (auto il = df_begin(L), el = df_end(L); il != el; ++il) {
+        //   if (il->getSubLoops().size() > 0) {
+        //     continue;
+        //   }
+        //   loopNum++;
+        //   auto *LAA = &getAnalysis<LoopAccessLegacyAnalysis>();
+        //   const LoopAccessInfo &LAI = LAA->getInfo(*il);
+        //   auto RDGraph = RDG(*AA, *SE, *LI, DI, LAI);
+        //   auto SCCGraph = RDGraph.computeRDGForInnerLoop(**il);
+
+        //   std::string s1 = F.getParent()->getName().str();
+        //   std::string s2(s1.substr(s1.rfind('/') + 1));
+        //   std::string RD_Filename = "RD_locality.txt";
+        //   std::string SCC_Filename = "SCC_" + s2 + "_FUNCTION_" +
+        //                              SCCGraph.GetFunctionName() + "_LOOP" +
+        //                              std::to_string(loopNum) + ".dot";
+        std::error_code EC;
+        raw_fd_ostream File(RD_Filename.c_str(), EC, sys::fs::F_Append);
+        if (!EC) {
+          // if (SCCGraph.SCCExist) {
+          // File << SCC_Filename << " : " << SCCGraph.totalSCCNodes << "\n";
+          File << SCC_Filename << " : " << SCCGraph.dependenceSize << " : "
+               << CC->getLoopCost(*L) << "\n";
+          // }
+          // CC->getLoopCosts();
+          // errs() << "Loop costs: " <<
+        } else {
+          errs() << "error opening file for writing! \n";
+        }
       }
     }
   }
