@@ -53,7 +53,7 @@ start=0
 # echo "${FOUT_O3_LEVEL}"
 for d in ${JSON_DIR}/*llL1.json; do 
         # echo ${d}
-        name=`basename ${d}` && oname=`basename ${name} .llL1.json` && oname=${oname#InputGraph_} && if [ $count -ge $start ]; then ${TIME_OUT} ${LLVM_BUILD}/bin/clang  ${LL_O3_LEVEL}/${oname}.ll -o ${OUT_O3_LEVEL}/${oname}.out && ${TIME_OUT} ${OUT_O3_LEVEL}/${oname}.out > /dev/null && res=$? && if [ $res == 0 ]; then cp ${OUT_O3_LEVEL}/${oname}.out ${FOUT_O3_LEVEL}/; cp ${LL_META_SSA}/${oname}.ll ${FLL_META_SSA}/; cp ${DOT}/InputGraph_*${oname}.ll* ${FDOT}/; cp ${d} ${FJSON_DIR}/; cp ${SCC}/SCC_${oname}.ll* ${FSCC}/; fi fi &
+        name=`basename ${d}` && oname=`basename ${name} .llL1.json` && oname=${oname#InputGraph_} && if [ $count -ge $start ]; then ${TIME_OUT} ${LLVM_BUILD}/bin/clang  ${LL_O3_LEVEL}/${oname}.ll -o ${OUT_O3_LEVEL}/${oname}.out && ${TIME_OUT} ${OUT_O3_LEVEL}/${oname}.out && res=$? && if [ $res == 0 ]; then cp ${OUT_O3_LEVEL}/${oname}.out ${FOUT_O3_LEVEL}/; cp ${LL_META_SSA}/${oname}.ll ${FLL_META_SSA}/;cp ${LL_O3_LEVEL}/${oname}.ll ${FLL_O3_LEVEL}/; cp ${DOT}/InputGraph_*${oname}.ll* ${FDOT}/; cp ${d} ${FJSON_DIR}/; cp ${SCC}/SCC_${oname}.ll* ${FSCC}/; fi fi &
         let "inc++"
         # echo "increment $inc"
         if [ $inc == 100 ]

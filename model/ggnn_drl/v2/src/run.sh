@@ -103,7 +103,10 @@ then
          DISABLE_EXEC_BIN="--disable_execute_binaries True"
          fi
          POST_DIS_PASSES_ARG=$5
+         if [ ! -z ${POST_DIS_PASSES_ARG} ]
+         then 
          PDP="--post_pass_key=$POST_DIS_PASSES_ARG"
+         fi
 else
         echo "Invalid  MODE:${MODE} [ train , trainInv or test]"
         exit

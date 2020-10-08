@@ -129,49 +129,49 @@ class Agent():
             return random.choice(np.arange(state.shape[0])), None
 
 
-    def learn_bk(self, experiences, gamma):
-        """Update value parameters using given batch of experience tuples.
-
-        Params
-        ======
-            experiences (Tuple[torch.Tensor]): tuple of (s, a, r, s', done) tuples 
-            gamma (float): discount factor
-        """
-        states, focusNodes, actions1, actions2, rewards, next_states, dones = experiences
-
-        # Get max predicted Q values (for next states) from target model
-        # Q_targets_next = self.qnetwork_target(next_states, start).detach().max(1)[0].unsqueeze(1)
-        Q_targets_next = self.qnetwork_target(next_states, start)[0].detach().unsqueeze(1)
-       # Compute Q targets for current states 
-        Q_targets = rewards + (gamma * Q_targets_next * (1 - dones))
-
-        # Get expected Q values from local model
-        # Q_expected = self.qnetwork_local(states, start).gather(1, actions)
-        Trans_Qvalue,_ = self.qnetwork_local.transitionNet(states)
-        Qvalue1 = Trans_Qvalue.gather(1, actions1)
-        
-        Distribute_Qvalue,_ = self.distributeNet(states[actions1])
-        # This might cause issue in None
-        Qvalue2 = Distribute_Qvalue.gather(1, actions2)
-
-        Q_expected = torch.sum(torch.cat((Qvalue1, Qvalue2),dim=1),dim=1)
-
-
-
-        # Compute loss
-        loss = F.mse_loss(Q_expected, Q_targets)
-        # Minimize the loss
-        self.optimizer.zero_grad()
-        loss.backward()
-        # TODO
-        for param in self.qnetwork_local.parameters():
-            param.grad.data.clamp_(-1, 1)
-
-
-        self.optimizer.step()
-
-        # ------------------- update target network ------------------- #
-        self.soft_update(self.qnetwork_local, self.qnetwork_target, TAU)                     
+#     def learn_bk(self, experiences, gamma):
+#         """Update value parameters using given batch of experience tuples.
+# 
+#         Params
+#         ======
+#             experiences (Tuple[torch.Tensor]): tuple of (s, a, r, s', done) tuples 
+#             gamma (float): discount factor
+#         """
+#         states, focusNodes, actions1, actions2, rewards, next_states, dones = experiences
+# 
+#         # Get max predicted Q values (for next states) from target model
+#         # Q_targets_next = self.qnetwork_target(next_states, start).detach().max(1)[0].unsqueeze(1)
+#         Q_targets_next = self.qnetwork_target(next_states, start)[0].detach().unsqueeze(1)
+#        # Compute Q targets for current states 
+#         Q_targets = rewards + (gamma * Q_targets_next * (1 - dones))
+# 
+#         # Get expected Q values from local model
+#         # Q_expected = self.qnetwork_local(states, start).gather(1, actions)
+#         Trans_Qvalue,_ = self.qnetwork_local.transitionNet(states)
+#         Qvalue1 = Trans_Qvalue.gather(1, actions1)
+#         
+#         Distribute_Qvalue,_ = self.distributeNet(states[actions1])
+#         # This might cause issue in None
+#         Qvalue2 = Distribute_Qvalue.gather(1, actions2)
+# 
+#         Q_expected = torch.sum(torch.cat((Qvalue1, Qvalue2),dim=1),dim=1)
+# 
+# 
+# 
+#         # Compute loss
+#         loss = F.mse_loss(Q_expected, Q_targets)
+#         # Minimize the loss
+#         self.optimizer.zero_grad()
+#         loss.backward()
+#         # TODO
+#         for param in self.qnetwork_local.parameters():
+#             param.grad.data.clamp_(-1, 1)
+# 
+# 
+#         self.optimizer.step()
+# 
+#         # ------------------- update target network ------------------- #
+#         self.soft_update(self.qnetwork_local, self.qnetwork_target, TAU)                     
 
     def getMaxQvalueAndActions(self, Qvalues):
         transitionQvalue, MergeDistributeQvalue = Qvalues
@@ -272,6 +272,10 @@ class Agent():
         # Minimize the loss
         self.optimizer.zero_grad()
         loss.backward()
+        # TODO
+        for param in self.qnetwork_local.parameters():
+            param.grad.data.clamp_(-1, 1)
+
         self.optimizer.step()
 
         # ------------------- update target network ------------------- #

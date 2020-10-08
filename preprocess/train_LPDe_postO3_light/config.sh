@@ -1,13 +1,13 @@
 PWD=`pwd`
 HOME=`realpath ${PWD}/../..`
 
-LLVM_BUILD="${HOME}/build"
+LLVM_BUILD="${HOME}/build_release"
 SEED_FILE="${HOME}/LLVM/IR2Vec-Engine/vocabulary/seedEmbeddingVocab-300-llvm10.txt"
 IR2Vec_SO="${HOME}/LLVM/IR2Vec-Engine/IR2Vec-Binaries/libIR2Vec-RD.so"
 
 WD=${HOME}/data/SPEC_N/processed_rdgdis
 
-FWD=${WD}_filter
+FWD=${WD}_filter2
 
 TIME_OUT="timeout --kill-after=2m 2m "
 

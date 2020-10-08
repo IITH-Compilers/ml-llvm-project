@@ -16,12 +16,12 @@ echo "O0 files are present."
 
 O3_LEVEL=${LL_WD}/level-O3
 
-mkdir -p ${O3_LEVEL}
-for d in ${O0_LEVEL}/*.ll; do 
-        name=`basename ${d}` && oname=${name%.*} && ${TIME_OUT} ${LLVM_BUILD}/bin/opt -loop-distribute ${POST_DIST_PASSES} -S ${d} -o ${O3_LEVEL}/${oname}.ll &   
-done
-
-wait 
+# mkdir -p ${O3_LEVEL}
+# for d in ${O0_LEVEL}/*.ll; do 
+#         name=`basename ${d}` && oname=${name%.*} && ${TIME_OUT} ${LLVM_BUILD}/bin/opt -loop-distribute ${POST_DIST_PASSES} -S ${d} -o ${O3_LEVEL}/${oname}.ll &   
+# done
+# 
+# wait 
 echo "O3 files are generated."
 
 # create the ll files in ssa form
@@ -29,17 +29,17 @@ echo "Loop Optimization passes for ssa form started.."
   
 SSA=${LL_WD}/ssa
   
-if [ -z ${SSA_PASSES_SEQ} ] 
-then 
-        rm -rf ${SSA}
-        cp -r  ${O0_LEVEL} ${SSA} 
-else
-        mkdir -p ${SSA}
-        for d in ${O0_LEVEL}/*.ll; do 
-         name=`basename ${d}` && oname=${name%.*} && ${TIME_OUT} ${LLVM_BUILD}/bin/opt ${SSA_PASSES_SEQ} -S   ${d} -o ${SSA}/${oname}.ll &   
-        done
-fi
-wait 
+# if [ -z ${SSA_PASSES_SEQ} ] 
+# then 
+#         rm -rf ${SSA}
+#         cp -r  ${O0_LEVEL} ${SSA} 
+# else
+#         mkdir -p ${SSA}
+#         for d in ${O0_LEVEL}/*.ll; do 
+#          name=`basename ${d}` && oname=${name%.*} && ${TIME_OUT} ${LLVM_BUILD}/bin/opt ${SSA_PASSES_SEQ} -S   ${d} -o ${SSA}/${oname}.ll &   
+#         done
+# fi
+# wait 
 
 echo "Loop Optimization passes files created in ssa folder"
 

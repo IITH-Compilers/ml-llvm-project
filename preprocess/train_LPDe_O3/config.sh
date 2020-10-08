@@ -5,7 +5,7 @@ LLVM_BUILD="${HOME}/build"
 SEED_FILE="${HOME}/LLVM/IR2Vec-Engine/vocabulary/seedEmbeddingVocab-300-llvm10.txt"
 IR2Vec_SO="${HOME}/LLVM/IR2Vec-Engine/IR2Vec-Binaries/libIR2Vec-RD.so"
 
-WD=${HOME}/data/SPEC_O0/processed
+WD=${HOME}/data/Handwritten/processed
 
 FWD=${WD}_filter
 
@@ -14,4 +14,4 @@ PRE_DIST_PASSES="-targetlibinfo -tti -tbaa -scoped-noalias -assumption-cache-tra
 
 POST_DIST_PASSES="-branch-prob -block-freq -scalar-evolution -basicaa -aa -loop-accesses -demanded-bits -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -loop-vectorize -loop-simplify -scalar-evolution -aa -loop-accesses -lazy-branch-prob -lazy-block-freq -loop-load-elim -basicaa -aa -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -instcombine -simplifycfg -domtree -loops -scalar-evolution -basicaa -aa -demanded-bits -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -slp-vectorizer -opt-remark-emitter -instcombine -loop-simplify -lcssa-verification -lcssa -scalar-evolution -loop-unroll -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -instcombine -memoryssa -loop-simplify -lcssa-verification -lcssa -scalar-evolution -licm -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -transform-warning -alignment-from-assumptions -strip-dead-prototypes -globaldce -constmerge -domtree -loops -branch-prob -block-freq -loop-simplify -lcssa-verification -lcssa -basicaa -aa -scalar-evolution -block-freq -loop-sink -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -instsimplify -div-rem-pairs -simplifycfg -verify"
 
-SSA_PASSES_SEQ="-mem2reg -loop-rotate -loop-simplify"
+SSA_PASSES_SEQ="-mem2reg -loop-rotate -loop-simplify -inline -enable-loop-inline"
