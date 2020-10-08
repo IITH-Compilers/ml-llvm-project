@@ -7,6 +7,8 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
 import os
+from torch.nn.parallel import DistributedDataParallel as DDP
+
 BUFFER_SIZE = int(1e5)  # replay buffer size
 BATCH_SIZE = 64         # minibatch size
 GAMMA = 0.99            # discount factor
@@ -56,7 +58,9 @@ class Agent():
         self.enable_lexographical_constraint=config.enable_lexographical_constraint
         # Q-Network
         self.qnetwork_local = QNetwork(state_size, action_size, seed).to(device)
+        self.qnetwork_local = DDP(self.qnetwork_local) 
         self.qnetwork_target = QNetwork(state_size, action_size, seed).to(device)
+        self.qnetwork_target = DDP(self.qnetwork_target)
         self.optimizer = optim.Adam(self.qnetwork_local.parameters(), lr=LR)
 
         # Replay memory

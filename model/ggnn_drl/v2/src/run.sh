@@ -1,10 +1,19 @@
-# Taining - bash run.sh [train|trainInv] <dataset>
+# Taining - bash run.sh [train|trainInv] <dataset> [<keys point if change some change is done in the model>]
 # Testing - bash run.sh test <path dataset> <path of model> [<disable runtime calc:Y>] [<POST distribution passes choice: {0, 1, 2}>]
 #
 
 PWD=`pwd`
 # set the llvm Build and other paramter
+
+# REL or DEBUG 
+BUILD_TYPE=REL
+
+LLVM_BUILD=`realpath ${PWD}/../../../../build`
+
+if [ ${BUILD_TYPE} = "REL" ]
+then
 LLVM_BUILD=`realpath ${PWD}/../../../../build_release`
+fi
 
 export LLVM=${LLVM_BUILD}
 export OPT=${LLVM_BUILD}/bin/opt
@@ -56,7 +65,15 @@ then
         PY_SPT=${MODE}.py
         echo "Running the training using ${PY_SPT}..................."
         MODEL_PAR=`realpath ${PWD}/../trained_model`
-        TRAINED_MODEL=${MODEL_PAR}/${DATA_SET_NAME}/ELC_${SET_ELC}_AMF_${SET_AMF}_rel/${MODE}
+        
+        KEY_POINT=$3
+
+        if [ -z ${KEY_POINT} ]
+        then 
+            KEY_POINT="Regular"
+        fi
+
+        TRAINED_MODEL=${MODEL_PAR}/${DATA_SET_NAME}/ELC_${SET_ELC}_AMF_${SET_AMF}_${BUILD_TYPE}_${KEY_POINT}/${MODE}
 
         DIST_GEN_DATA=${TRAINED_MODEL}
 
