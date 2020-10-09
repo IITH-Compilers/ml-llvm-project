@@ -65,17 +65,30 @@ then
         PY_SPT=${MODE}.py
         echo "Running the training using ${PY_SPT}..................."
         MODEL_PAR=`realpath ${PWD}/../trained_model`
+
+        POST_DIS_PASSES_ARG=$3
+        if [ -z ${POST_DIS_PASSES_ARG} ]
+        then
+               echo "key of the pass seq map is not mentioned. Enter valid key or -1 for default"
+               exit 
+        fi
         
-        KEY_POINT=$3
+        if [ $POST_DIS_PASSES_ARG -ne -1 ]
+        then
+        PDP="--post_pass_key=$POST_DIS_PASSES_ARG"
+        fi
+
+        KEY_POINT=$4
 
         if [ -z ${KEY_POINT} ]
         then 
             KEY_POINT="Regular"
         fi
 
-        TRAINED_MODEL=${MODEL_PAR}/${DATA_SET_NAME}/ELC_${SET_ELC}_AMF_${SET_AMF}_${BUILD_TYPE}_${KEY_POINT}/${MODE}
+        TRAINED_MODEL=${MODEL_PAR}/${DATA_SET_NAME}/ELC_${SET_ELC}_AMF_${SET_AMF}_${BUILD_TYPE}_PDP_${POST_DIS_PASSES_ARG}_${KEY_POINT}/${MODE}
 
         DIST_GEN_DATA=${TRAINED_MODEL}
+         
 
 elif [ $MODE = "test" ]
 then
@@ -114,7 +127,7 @@ then
          DIST_GEN_DATA=${TRAINED_MODEL_DIR}/${MODE}/${TE_DATA_SET_NAME}
         
          DEB_FLAG=$4
-         if [ ! -z ${DEB_FLAG} -a ${DEB_FLAG} = "Y" ]
+         if [ ! -z ${DEB_FLAG} ] && [ ${DEB_FLAG} = "Y" ]
          then
                  echo "!!!!!Runtime will not be calculated for this run as DEB_FLAG is Y !!!!!"
          DISABLE_EXEC_BIN="--disable_execute_binaries True"
