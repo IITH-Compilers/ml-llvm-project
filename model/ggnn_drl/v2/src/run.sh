@@ -127,16 +127,36 @@ then
          DIST_GEN_DATA=${TRAINED_MODEL_DIR}/${MODE}/${TE_DATA_SET_NAME}
         
          DEB_FLAG=$4
-         if [ ! -z ${DEB_FLAG} ] && [ ${DEB_FLAG} = "Y" ]
+         if [ -z ${DEB_FLAG} ]
+         then
+                echo "Enter Y to disable runtime calculation else N"
+                exit 
+         fi
+         if [ ${DEB_FLAG} = "Y" ]
          then
                  echo "!!!!!Runtime will not be calculated for this run as DEB_FLAG is Y !!!!!"
          DISABLE_EXEC_BIN="--disable_execute_binaries True"
          fi
-         POST_DIS_PASSES_ARG=$5
-         if [ ! -z ${POST_DIS_PASSES_ARG} ]
-         then 
-         PDP="--post_pass_key=$POST_DIS_PASSES_ARG"
-         fi
+
+
+        POST_DIS_PASSES_ARG=$5
+        if [ -z ${POST_DIS_PASSES_ARG} ]
+        then
+               echo "key of the pass seq map is not mentioned. Enter valid key or -1 for default"
+               exit 
+        fi
+        
+        if [ $POST_DIS_PASSES_ARG -ne -1 ]
+        then
+        PDP="--post_pass_key=$POST_DIS_PASSES_ARG"
+        fi
+
+
+        # POST_DIS_PASSES_ARG=$5
+        # if [ ! -z ${POST_DIS_PASSES_ARG} ]
+        # then 
+        # PDP="--post_pass_key=$POST_DIS_PASSES_ARG"
+        # fi
 else
         echo "Invalid  MODE:${MODE} [ train , trainInv or test]"
         exit

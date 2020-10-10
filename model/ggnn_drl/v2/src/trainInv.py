@@ -41,6 +41,10 @@ def run(agent, config):
         scores = []                        # list containing scores from each episode
         count=0 
         for path in glob.glob(os.path.join(dataset, 'graphs/train/*.json')): # Number of the iterations
+            if env.O3_runtimes[utils.getllfileNameFromJSON(path)] == utils.error_runtime:
+                print('!!!!!! Graph has runtime error ', path)
+                continue
+
             with open(path) as f:
                 graph = json.load(f)
             print('DLOOP New graph to the env. {} '.format(path))

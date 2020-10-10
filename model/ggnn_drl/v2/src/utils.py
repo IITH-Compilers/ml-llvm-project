@@ -10,6 +10,7 @@ import subprocess
 from matplotlib import pyplot as plt
 import argparse
 
+error_runtime=100000000
 
 LL_DIR_CONST='llfiles'
 OUT_DIR_CONST='outfiles'
@@ -174,12 +175,12 @@ def get_runtime_of_file(filename, inputd=None, file_format='ll'):
         else:
             raise Exception('Outfile not present!!!!!!')
     except Exception as inst :
-        runtime = 100000000 #None if fails
+        runtime = error_runtime #None if fails
         eprint(sys.exc_info())
         eprint('Runtime: Exception ocurred : {}'.format (inst))
         eprint('Runtime: Some error occured .. for {filename} so runtime={runtime} '.format(filename=filename, runtime=runtime))
     except :
-        runtime = 100000000 #None if fails
+        runtime = error_runtime #None if fails
         eprint(sys.exc_info())
         eprint('Runtime: Other Unknown Some error occured .. for {filename} so runtime={runtime} '.format(filename=filename, runtime=runtime))
 
@@ -192,10 +193,10 @@ def distribute_and_getRuntime(filename, distributeSeq, method_name, loop_id, dis
     if distributed_llfile is not None:
         Druntime = get_runtime_of_file(distributed_llfile, inputd=input_file_path)
     else:
-        Druntime = 100000000
+        Druntime = error_runtime
         eprint('Distributed ll file is not created.')
 
-    if Druntime == 100000000:
+    if Druntime == error_runtime:
         eprint('Distributed file Runtime Error occured!!!!!!!!!!!!! for file={}, distributeSeq={}, method={}, loop={}'.format(filename, distributeSeq, method_name, loop_id))
     return Druntime
 

@@ -28,6 +28,9 @@ def run(agent, config):
     count = 1
     print(glob.glob(os.path.join(dataset, 'graphs/test/*.json')))
     for path in glob.glob(os.path.join(dataset, 'graphs/test/*.json')): # Number of the iterations
+        if env.O3_runtimes[utils.getllfileNameFromJSON(path)] == utils.error_runtime:
+            print('!!!!!! Graph has runtime error ', path)
+            continue
         with open(path) as f:
             graph = json.load(f)
         print('New graph to the env. {} '.format(path))

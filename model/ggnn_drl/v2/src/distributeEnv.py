@@ -77,10 +77,14 @@ class DistributeLoopEnv:
                 O3runtime = utils.get_runtime_of_file(O3_file_path, inputd=input_file_path)
             else:
                 O3runtime = self.O3_runtimes[ll_file_name] 
-
-            reward = (O3runtime - Druntime) / O3runtime
             
-            print('filename|O3runtime|Druntime|reward,{},{},{},{}'.format(ll_file_name, O3runtime, Druntime, reward))
+            if Druntime != utils.error_runtime and  O3runtime != utils.error_runtime:
+                reward = (O3runtime - Druntime) / O3runtime
+            else:
+                print('!!!!!!!!!! Reward is 0 due some error')
+                reward =0
+            
+            print('filename|O3runtime|Druntime|reward|distributeSeq   {}  {}  {}  {}  {}'.format(ll_file_name, O3runtime, Druntime, reward, self.distribution))
         else:
             distributed_llfile = utils.call_distributionPass( meta_ssa_file_path, self.distribution, method_name, loop_id, self.distributed_data)
             reward=1
