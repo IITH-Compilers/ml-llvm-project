@@ -39,7 +39,8 @@ def run(agent, config):
     env = DistributeLoopEnv(config)    
     for episode in range(n_episodes):
         scores = []                        # list containing scores from each episode
-        count=0 
+        count=0
+        score_tensor = 0
         for path in glob.glob(os.path.join(dataset, 'graphs/train/*.json')): # Number of the iterations
             if env.O3_runtimes[utils.getllfileNameFromJSON(path)] == utils.error_runtime:
                 print('!!!!!! Graph has runtime error ', path)
@@ -90,12 +91,15 @@ def run(agent, config):
                 print('Distribution till now : {}'.format(distribute))
                 
                 state = (next_possibleNodes_emb, next_possibleNodes)
-                if reward > -10:
-                    score += reward
+#                if reward > -10:
+                score += reward
+                score_tensor += reward
                 if done:
                     break
                 print('DLOOP Goto to Next.................')
-            agent.writer.add_scalar('trainInv/reward', score)
+            agent.writer.add_scalar('trainInv/rewardStep', score_tensor, count)
+            agent.writer.add_scalar('trainInv/rewardWall', score)
+
             scores_window.append(score)       # save most recent score
             scores.append(score)              # save most recent score
             eps = max(eps_end, eps_decay*eps) # decrease epsilon

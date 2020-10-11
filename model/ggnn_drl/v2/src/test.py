@@ -55,8 +55,8 @@ def run(agent, config):
             print('Distribution till now : {}'.format(distribute))
             
             state = (next_possibleNodes_emb, next_possibleNodes)
-            if  reward > -10:
-                score += reward
+            # if  reward > -10:
+            score += reward
  
             print('DLOOP Goto to Next.................')
             scores_window.append(score)       # save most recent score
@@ -65,8 +65,9 @@ def run(agent, config):
             if done:
                break
  
-        agent.writer.add_scalar('test/reward', score, count)
-        
+        agent.writer.add_scalar('test/rewardStep', score, count)
+        agent.writer.add_scalar('test/rewardWall', reward)
+ 
         count+=1
     utils.plot(range(1, len(scores_window)+1), scores_window, 'Last 100 rewards',location=config.distributed_data)
     utils.plot(range(1, len(scores)+1), scores, 'Total Rewards per time instant',location=config.distributed_data)
