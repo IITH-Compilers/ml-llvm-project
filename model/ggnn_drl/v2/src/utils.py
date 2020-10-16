@@ -292,6 +292,29 @@ def get_parse_args():
     
     parser.add_argument('--disable_execute_binaries', dest='disable_execute_binaries', required=False,  type=bool, help='Execute Binaries and get runtime.', default=False)
     parser.add_argument('--post_pass_key', dest='post_pass_key', required=False,  type=int, help='Key of the post distribution passes map.', default=2)
+
+    parser.add_argument('--rewardtype', dest='rewardtype', required=False,  help='Static or Runtime rewards..', default='runtime')
     global config 
     config = parser.parse_args()
     return config
+
+def get_VF_Locality(filepath):
+    factors =None
+    try:
+       # TODO 
+        cmd = "timeout --kill-after=2m 2m {opt} -S -load {PASSSOFILE} -{PASSNAME} {input_file} -o /dev/null".format(opt=os.environ['OPT'], input_file=filepath)
+        analysedInfo = subprocess.Popen(cmd, executable='/bin/bash', shell=True, stdout=subprocess.PIPE).stdout.read()
+        factors = analysedInfo.split(',')
+    except Exception as inst :
+        runtime = error_runtime #None if fails
+        eprint(sys.exc_info())
+        eprint(': Exception ocurred : {}'.format (inst))
+        eprint('get_VF_Locality: Some error occured .. for {filename}'.format(filename=filepath))
+    except :
+        runtime = error_runtime #None if fails
+        eprint(sys.exc_info())
+        eprint('get_VF_Locality: Other Unknown Some error occured .. for {filename}'.format(filename=filename))
+
+   
+    return factors
+

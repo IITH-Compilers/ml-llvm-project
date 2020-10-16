@@ -26,28 +26,39 @@ class DistributeLoopEnv:
         
         self.isInputRequired = config.isInputRequired
         self.disable_execute_binaries = config.disable_execute_binaries
-        if not self.disable_execute_binaries:
+        self.rewardtype = config.rewardtype
+        if self.rewardtype == "runtime" and not self.disable_execute_binaries:
             self.O3_runtimes = utils.get_O3_runtimes(config.dataset, self.isInputRequired)
         self.distributed_data = config.distributed_data
-    
-    def getReward(self):
-       
-        # code to from the distribtuted ll file by caling distibrution pass
-         
-        # parts = self.path.split('/graphs/json/')
-        # file_dir = parts[0]
-        # file_name_parts = (parts[1].split('InputGraph_'))[1].split('.json')[0]
-        # 
-        # full_file_name = file_name_parts 
-        # 
-        # print('Full file with method and loop id {}'.format(full_file_name))
-        # file_name_parts =file_name_parts.split('_FUNCTION_')
-        # file_name = file_name_parts[0]
-        # 
-        # print('file name : {}'.format(file_name))
 
-        # file_name_parts = file_name_parts[1].split('_Loop')
+
+    def getReward_Static(self):
+       
+        home_dir = self.home_dir
+        method_name = self.functionName
+        loop_id = self.loopId
+        ll_file_name = self.fileName
+
+        meta_ssa_dir = os.path.join(home_dir, 'llfiles/meta_ssa')
+        meta_ssa_file_path = os.path.join(meta_ssa_dir, ll_file_name)
         
+        O3_dir = os.path.join(home_dir, 'llfiles/level-O3')
+        O3_file_path = os.path.join(O3_dir, ll_file_name)
+        
+        
+        distributed_llfile = utils.call_distributionPass( meta_ssa_file_path, self.distribution, method_name, loop_id, self.distributed_data)
+        reward=1
+        if distributed_llfile is None:
+            reward = -1
+        else:
+            factors = utils.get_VF_Locality(distributed_llfile)
+            if factors not None:
+                reward = factors[0]/64 + factors[1]/1000
+
+        return reward
+
+    def getReward_Runtime(self):
+       
         home_dir = self.home_dir
         method_name = self.functionName
         loop_id = self.loopId
@@ -67,7 +78,6 @@ class DistributeLoopEnv:
         
         # call the Pass 
 
-        # Run the File 5 times on input. Davg
         if not self.disable_execute_binaries: 
             # Druntime = utils.get_runtime_of_file(dist_file_path_out, inputd=input_file_path)
             Druntime = utils.distribute_and_getRuntime( meta_ssa_file_path, self.distribution, method_name, loop_id, self.distributed_data, input_file_path=input_file_path )
@@ -93,6 +103,13 @@ class DistributeLoopEnv:
 
         return reward
 
+
+    def getReward(self):
+
+        if self.rewardtype == 'static':
+            return self.getReward_Static()
+        else:
+            return self.getReward_Runtime()
 
 
 
@@ -133,7 +150,6 @@ class DistributeLoopEnv:
             done = True
             next_hidden_state = next_hidden_state[nodeChoosen]
         else:
-        
             # hs --> hidden state
             next_hidden_state = next_hidden_state[possibleStartNodes]
 

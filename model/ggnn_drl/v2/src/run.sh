@@ -1,5 +1,5 @@
-# Taining - bash run.sh [train|trainInv] <dataset> [<keys point if change some change is done in the model>]
-# Testing - bash run.sh test <path dataset> <path of model> [<disable runtime calc:Y>] [<POST distribution passes choice: {0, 1, 2}>]
+# Taining - bash run.sh [train|trainInv] <dataset> <POST distribution passes choice: {0, 1, 2}> <rewardtype R or S> [<keys point if change some change is done in the model>]
+# Testing - bash run.sh test <path dataset> <path of model> <disable runtime calc:Y> <POST distribution passes choice: {0, 1, 2}> <rewardtype R or S>
 #
 
 PWD=`pwd`
@@ -40,6 +40,9 @@ DISABLE_EXEC_BIN=
 # Post distributions passes key. work for test phase only
 PDP=
 
+# Reward type fot the gettng the rewards 
+RT=
+
 # Input from the user for the mode
 MODE=$1
 
@@ -78,8 +81,24 @@ then
         PDP="--post_pass_key=$POST_DIS_PASSES_ARG"
         fi
 
-        KEY_POINT=$4
+        REWARD_TYPE=$4
+        if [ -z ${REWARD_TYPE} ] 
+        then
+                echo "Rewards type, runtime(R) or static(S)"
+               exit 
+        fi
+        
+        if [ ${REWARD_TYPE} = 'R' ]
+        then
+        RT="--rewardtype=runtime"
+        elif [ ${REWARD_TYPE} = 'S' ]
+        RT="--rewardtype=static"
+        else
+                echo "Rewards type, runtime(R) or static(S)"
+               exit
+        fi
 
+        KEY_POINT=$5
         if [ -z ${KEY_POINT} ]
         then 
             KEY_POINT="Regular"
@@ -151,6 +170,22 @@ then
         PDP="--post_pass_key=$POST_DIS_PASSES_ARG"
         fi
 
+        REWARD_TYPE=$6
+        if [ -z ${REWARD_TYPE} ] 
+        then
+                echo "Rewards type, runtime(R) or static(S)"
+               exit 
+        fi
+        
+        if [ ${REWARD_TYPE} = 'R' ]
+        then
+        RT="--rewardtype=runtime"
+        elif [ ${REWARD_TYPE} = 'S' ]
+        RT="--rewardtype=static"
+        else
+                echo "Rewards type, runtime(R) or static(S)"
+               exit
+        fi
 
         # POST_DIS_PASSES_ARG=$5
         # if [ ! -z ${POST_DIS_PASSES_ARG} ]
@@ -180,7 +215,7 @@ echo "Location of the trained model: ${TRAINED_MODEL}"
 echo "Location of the generated llfiles and outfiles : ${DIST_GEN_DATA}"
 echo "Logs files: ${LOG}"
 ## Call the py script 
-python ${PY_SPT} --dataset=${DATA_SET} ${AMF} ${ELC} ${DISABLE_EXEC_BIN} ${PDP} --trained_model=${TRAINED_MODEL} --distributed_data=${DIST_GEN_DATA} > ${LOG}/run.log 2> ${LOG}/error.log
+python ${PY_SPT} --dataset=${DATA_SET} ${AMF} ${ELC} ${DISABLE_EXEC_BIN} ${PDP} ${RT} --trained_model=${TRAINED_MODEL} --distributed_data=${DIST_GEN_DATA} > ${LOG}/run.log 2> ${LOG}/error.log
 
 echo "Completed the process........."
 
