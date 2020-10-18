@@ -32,6 +32,7 @@ private:
 
 public:
   static char ID;
+
   RDG(AAResults &AA, ScalarEvolution &SE, LoopInfo &LI, DependenceInfo &DI,
       const LoopAccessInfo &LAI)
       : AA(AA), SE(SE), LI(LI), DI(DI), LAI(LAI) {}

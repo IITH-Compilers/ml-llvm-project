@@ -226,7 +226,7 @@ DataDependenceGraph::DataDependenceGraph(Loop &L, LoopInfo &LI,
         //  if(RecurrenceDescriptor::isReductionPHI(Phi, &L, RD)) {
         //   errs() << "Reduction phi node: " << *Phi << "\n";
         //   }
-        errs() << "Phi Node Value: " << Phi->getNumIncomingValues() << "\n";
+        // errs() << "Phi Node Value: " << Phi->getNumIncomingValues() << "\n";
         if (Phi->getNumIncomingValues() == 2) {
           if (!InductionDescriptor::isInductionPHI(Phi, &L, SE, ID)) {
             LLVM_DEBUG(errs() << "Not a Induction phi node: " << *Phi << "\n");

@@ -197,11 +197,26 @@ public:
     ++AccessIdx;
   }
 
+  /// Register the location (instructions are given increasing numbers)
+  /// of a write access.
+  // For RAR dependences
+  void addAccess_RAR(LoadInst *LI) {
+    Value *Ptr = LI->getPointerOperand();
+    Accesses[MemAccessInfo(Ptr, true)].push_back(AccessIdx);
+    InstMap.push_back(LI);
+    ++AccessIdx;
+  }
+
   /// Check whether the dependencies between the accesses are safe.
   ///
   /// Only checks sets with elements in \p CheckDeps.
   bool areDepsSafe(DepCandidates &AccessSets, MemAccessInfoList &CheckDeps,
                    const ValueToValueMap &Strides);
+
+  /// Check whether the dependencies between the accesses are safe.
+  /// For RAR Memory Dependences
+  bool areDepsSafe_RAR(DepCandidates &AccessSets, MemAccessInfoList &CheckDeps,
+                       const ValueToValueMap &Strides);
 
   /// No memory dependence was encountered that would inhibit
   /// vectorization.
@@ -540,6 +555,10 @@ public:
   LoopAccessInfo(Loop *L, ScalarEvolution *SE, const TargetLibraryInfo *TLI,
                  AliasAnalysis *AA, DominatorTree *DT, LoopInfo *LI);
 
+  // Constructor for RAR analysis
+  LoopAccessInfo(Loop *L, ScalarEvolution *SE, const TargetLibraryInfo *TLI,
+                 AliasAnalysis *AA, DominatorTree *DT, LoopInfo *LI, bool RAR);
+
   /// Return true we can analyze the memory accesses in the loop and there are
   /// no memory dependence cycles.
   bool canVectorizeMemory() const { return CanVecMem; }
@@ -631,6 +650,10 @@ private:
   /// Analyze the loop.
   void analyzeLoop(AliasAnalysis *AA, LoopInfo *LI,
                    const TargetLibraryInfo *TLI, DominatorTree *DT);
+
+  /// Analyze the loop for RAR dependences.
+  void analyzeLoop_RAR(AliasAnalysis *AA, LoopInfo *LI,
+                       const TargetLibraryInfo *TLI, DominatorTree *DT);
 
   /// Check if the structure of the loop allows it to be analyzed by this
   /// pass.
@@ -756,6 +779,8 @@ public:
   ///
   /// If there is no cached result available run the analysis.
   const LoopAccessInfo &getInfo(Loop *L);
+
+  const LoopAccessInfo &getInfo(Loop *L, bool RAR_flag);
 
   void releaseMemory() override {
     // Invalidate the cache when the pass is freed.

@@ -32,6 +32,7 @@ void RDG::PrintDotFile_LAI(DataDependenceGraph &G, std::string Filename,
 
   if (!EC) {
     File << "digraph G {\n";
+    // File << "node [shape=record];\n";
     // File << "FileName=" << ll_name << ";\n";
     // File << "Function=" << FunctionName << ";\n";
 
@@ -402,11 +403,11 @@ DataDependenceGraph *RDG::computeRDGForInnerLoop(Loop &IL) {
   errs() << LAI.getMaxSafeDepDistBytes() << " : " << LAI.canVectorizeMemory()
          << "\n";
 
-  if (LAI.getMaxSafeDepDistBytes() == -1ULL && !LAI.canVectorizeMemory()) {
-    errs() << "No need to make RDG\n";
-    LLVM_DEBUG(errs() << "No need to make RDG\n");
-    return nullptr;
-  }
+  // if (LAI.getMaxSafeDepDistBytes() == -1ULL && !LAI.canVectorizeMemory()) {
+  //   errs() << "No need to make RDG\n";
+  //   LLVM_DEBUG(errs() << "No need to make RDG\n");
+  //   return nullptr;
+  // }
 
   for (BasicBlock *BB : IL.blocks()) {
     for (Instruction &I : BB->instructionsWithoutDebug()) {

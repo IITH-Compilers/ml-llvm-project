@@ -537,6 +537,160 @@ void AbstractDependenceGraphBuilder<G>::createMemoryDependencyEdges() {
       errs() << ".......................exit MD..........................\n");
 }
 
+template <class G>
+void AbstractDependenceGraphBuilder<G>::computeMemoryDependences() {
+  LLVM_DEBUG(
+      errs() << "....................enter MD..........................\n");
+  using DGIterator = typename G::iterator;
+  auto isMemoryAccess = [](const Instruction *I) {
+    return I->mayReadOrWriteMemory();
+  };
+  for (DGIterator SrcIt = Graph.begin(), E = Graph.end(); SrcIt != E; ++SrcIt) {
+    InstructionListType SrcIList;
+    (*SrcIt)->collectInstructions(isMemoryAccess, SrcIList);
+
+    if (SrcIList.empty())
+      continue;
+
+    for (DGIterator DstIt = SrcIt; DstIt != E; ++DstIt) {
+      if (**SrcIt == **DstIt)
+        continue;
+      InstructionListType DstIList;
+      (*DstIt)->collectInstructions(isMemoryAccess, DstIList);
+
+      if (DstIList.empty())
+        continue;
+      bool ForwardEdgeCreated = false;
+      bool BackwardEdgeCreated = false;
+
+      for (Instruction *ISrc : SrcIList) {
+        // errs() << "..........................SrcList: " << *ISrc << "\n";
+        for (Instruction *IDst : DstIList) {
+          // errs() << "DstList: " << *IDst << "\n";
+          auto D = DI.depends(ISrc, IDst, true);
+          if (!D)
+            continue;
+
+          // errs() << "DstList: " << *IDst << "\n";
+
+          // If we have a dependence with its left-most non-'=' direction
+          // being '>' we need to reverse the direction of the edge, because
+          // the source of the dependence cannot occur after the sink. For
+          // confused dependencies, we will create edges in both directions to
+          // represent the possibility of a cycle.
+
+          auto createConfusedEdges = [&](NodeType &Src, NodeType &Dst) {
+            //  errs() << "Confuse Edge : \n";
+            //  errs() << *Src << "\n" << * Dst << "\n";
+            if (!ForwardEdgeCreated) {
+              createMemoryEdge(Src, Dst);
+              ++TotalMemoryEdges;
+            }
+            if (!BackwardEdgeCreated) {
+              createMemoryEdge(Dst, Src);
+              ++TotalMemoryEdges;
+            }
+            ForwardEdgeCreated = BackwardEdgeCreated = true;
+            ++TotalConfusedEdges;
+          };
+
+          auto createForwardEdge = [&](NodeType &Src, NodeType &Dst) {
+            //  errs() << "Forward Edge : \n";
+            //  errs() << *Src << "\n" << * Dst << "\n";
+            if (!ForwardEdgeCreated) {
+              createMemoryEdge(Src, Dst);
+              ++TotalMemoryEdges;
+            }
+            ForwardEdgeCreated = true;
+          };
+
+          auto createBackwardEdge = [&](NodeType &Src, NodeType &Dst) {
+            //  errs() << "Backward Edge : \n";
+            //  errs() << *Src << "\n" << * Dst << "\n";
+            if (!BackwardEdgeCreated) {
+              createMemoryEdge(Dst, Src);
+              ++TotalMemoryEdges;
+            }
+            BackwardEdgeCreated = true;
+          };
+
+          // errs() << "\tLevels: " << D->getLevels() << "\n";
+
+          for (unsigned Level = 1; Level <= D->getLevels(); ++Level) {
+            if (D->getDistance(Level) != nullptr) {
+              errs() << "++++++++++++++++++++++++++++++Level: " << Level
+                     << "\n";
+              errs() << "Src: " << *ISrc << "\nDst: " << *IDst << "\n";
+              errs() << "Distance: " << *D->getDistance(Level) << "\n";
+            }
+          }
+          // ScalarEvolution *SE;
+          // const SCEV *ElementSize = SE->getElementSize(ISrc);
+          // errs() << "ElementSize: " << *ElementSize << "\n";
+
+          if (D->isConfused()) {
+            createConfusedEdges(**SrcIt, **DstIt);
+            // errs() << "ConfusedEdge \n"; ///////////////
+          } else if (D->isOrdered() && !D->isLoopIndependent()) {
+            bool ReversedEdge = false;
+            // errs() << "$$$$$$$$$$$$$$$$$$$$ dependence $$$$$$$$$$$";
+            for (unsigned Level = 1; Level <= D->getLevels(); ++Level) {
+              // errs() << "getLevels: " << D->getLevels() << "\n";
+              if (D->getDirection(Level) == Dependence::DVEntry::EQ)
+                continue;
+              else if (D->getDirection(Level) == Dependence::DVEntry::GT) {
+                createBackwardEdge(**SrcIt, **DstIt);
+                // errs() << "BackwardEdge: " << **SrcIt << "\t"
+                //        << **DstIt; //////////////////////
+                ReversedEdge = true;
+                ++TotalEdgeReversals;
+                break;
+              } else if (D->getDirection(Level) == Dependence::DVEntry::LT)
+                break;
+              else {
+                createConfusedEdges(**SrcIt, **DstIt);
+                // errs() << "ConfusedEdge: " << **SrcIt << "\t"
+                //        << **DstIt; ////////////////////////
+                break;
+              }
+            }
+            if (!ReversedEdge)
+              createForwardEdge(**SrcIt, **DstIt);
+            // errs() << "ForwardEdge: " << **SrcIt << "\t"
+            //        << **DstIt; ////////////////////
+          } else {
+            if (D->isUnordered()) {
+              // errs() << "Input Dependence: \n\n";
+            }
+            createForwardEdge(**SrcIt, **DstIt);
+            // errs() << "ForwardEdge creaed \n";
+          }
+
+          // Avoid creating duplicate edges.
+          if (ForwardEdgeCreated && BackwardEdgeCreated)
+            break;
+        }
+
+        // If we've created edges in both directions, there is no more
+        // unique edge that we can create between these two nodes, so we
+        // can exit early.
+        if (ForwardEdgeCreated && BackwardEdgeCreated)
+          break;
+      }
+      ///////////////////////////////////
+      //  errs() << "DstIList: ";
+      //  for(InstructionListType::iterator i=DstIList.begin(),
+      //  e=DstIList.end(); i!=e; ++i){
+      //    errs() << **i << "\n";
+      //  }
+      //  errs() << "\n";
+      ///////////////////////////////////////
+    }
+  }
+  LLVM_DEBUG(
+      errs() << ".......................exit MD..........................\n");
+}
+
 template <class G> void AbstractDependenceGraphBuilder<G>::simplify() {
   if (!shouldSimplify())
     return;

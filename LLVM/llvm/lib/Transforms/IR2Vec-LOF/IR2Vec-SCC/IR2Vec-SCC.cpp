@@ -1,4 +1,5 @@
 #include "llvm/Transforms/IR2Vec-LOF/IR2Vec-SCC.h"
+#include "llvm/Transforms/IR2Vec-LOF/Locality.h"
 #include "llvm/Transforms/IR2Vec-LOF/RDG.h"
 
 #include "./../../IR2Vec-Engine/include/IR2Vec-RD.h"
@@ -209,6 +210,16 @@ bool RDGWrapperPass::runOnFunction(Function &F) {
       } else {
         errs() << "error opening file for writing! \n";
       }
+
+      auto *LAA_WR = &getAnalysis<LoopAccessLegacyAnalysis>();
+      const LoopAccessInfo &LAI_WR = LAA_WR->getInfo(*il);
+
+      bool RAR_flag = 1;
+      auto *LAA_RAR = &getAnalysis<LoopAccessLegacyAnalysis>();
+      const LoopAccessInfo &LAI_RAR = LAA_RAR->getInfo(*il, RAR_flag);
+
+      auto Locality_Obj = Locality(LAI_WR, LAI_RAR);
+      int LocalityCost = Locality_Obj.computeLocalityCost(**il);
     }
   }
   return false;

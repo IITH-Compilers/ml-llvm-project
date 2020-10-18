@@ -62,7 +62,9 @@ public:
     computeInstructionOrdinals();
     createFineGrainedNodes();
     createDefUseEdges();
-    //  createMemoryDependencyEdges();
+    // createMemoryDependencyEdges();
+    computeMemoryDependences();
+
     //  simplify();
     // createAndConnectRootNode();
     simplify_Inst();
@@ -89,6 +91,8 @@ public:
   /// Analyze data dependencies that exist between memory loads or stores,
   /// in the graph nodes and create edges between them.
   void createMemoryDependencyEdges();
+
+  void computeMemoryDependences();
 
   /// Create a root node and add edges such that each node in the graph is
   /// reachable from the root.

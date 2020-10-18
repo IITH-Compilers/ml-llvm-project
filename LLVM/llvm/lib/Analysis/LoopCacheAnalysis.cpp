@@ -157,7 +157,6 @@ Optional<bool> IndexedReference::hasSpacialReuse(const IndexedReference &Other,
   if (BasePointer != Other.getBasePointer() && !isAliased(Other, AA)) {
     LLVM_DEBUG(dbgs().indent(2)
                << "No spacial reuse: different base pointers\n");
-    errs() << "No spacial reuse: different base pointers\n";
     return false;
   }
 
@@ -165,7 +164,6 @@ Optional<bool> IndexedReference::hasSpacialReuse(const IndexedReference &Other,
   if (NumSubscripts != Other.getNumSubscripts()) {
     LLVM_DEBUG(dbgs().indent(2)
                << "No spacial reuse: different number of subscripts\n");
-    errs() << "No spacial reuse: different number of subscripts\n";
     return false;
   }
 
@@ -175,9 +173,6 @@ Optional<bool> IndexedReference::hasSpacialReuse(const IndexedReference &Other,
       LLVM_DEBUG(dbgs().indent(2) << "No spacial reuse, different subscripts: "
                                   << "\n\t" << *getSubscript(SubNum) << "\n\t"
                                   << *Other.getSubscript(SubNum) << "\n");
-      errs() << "No spacial reuse, different subscripts: "
-             << "\n\t" << *getSubscript(SubNum) << "\n\t"
-             << *Other.getSubscript(SubNum) << "\n";
       return false;
     }
   }
@@ -219,7 +214,6 @@ Optional<bool> IndexedReference::hasTemporalReuse(const IndexedReference &Other,
   if (BasePointer != Other.getBasePointer() && !isAliased(Other, AA)) {
     LLVM_DEBUG(dbgs().indent(2)
                << "No temporal reuse: different base pointer\n");
-    errs() << "No temporal reuse: different base pointer\n";
     return false;
   }
 
@@ -228,7 +222,6 @@ Optional<bool> IndexedReference::hasTemporalReuse(const IndexedReference &Other,
 
   if (D == nullptr) {
     LLVM_DEBUG(dbgs().indent(2) << "No temporal reuse: no dependence\n");
-    errs() << "No temporal reuse: no dependence\n";
     return false;
   }
 
@@ -256,17 +249,12 @@ Optional<bool> IndexedReference::hasTemporalReuse(const IndexedReference &Other,
       LLVM_DEBUG(dbgs().indent(2)
                  << "No temporal reuse: distance is not zero at depth=" << Level
                  << "\n");
-      errs() << "No temporal reuse: distance is not zero at depth=" << Level
-             << "\n";
       return false;
     } else if (Level == LoopDepth && CI.getSExtValue() > MaxDistance) {
       LLVM_DEBUG(
           dbgs().indent(2)
           << "No temporal reuse: distance is greater than MaxDistance at depth="
           << Level << "\n");
-      errs() << "No temporal reuse: distance is greater than MaxDistance at "
-                "depth = "
-             << Level << "\n";
       return false;
     }
   }
@@ -536,8 +524,6 @@ void CacheCost::calculateCacheFootprint() {
   if (!populateReferenceGroups(RefGroups))
     return;
 
-  errs() << "fffffffffffffffffffffffffffffhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh\n";
-
   LLVM_DEBUG(dbgs() << "COMPUTING LOOP CACHE COSTS\n");
   for (const Loop *L : Loops) {
     assert((std::find_if(LoopCosts.begin(), LoopCosts.end(),
@@ -561,7 +547,6 @@ bool CacheCost::populateReferenceGroups(ReferenceGroupsTy &RefGroups) const {
   assert(InnerMostLoop != nullptr && "Expecting a valid innermost loop");
 
   for (BasicBlock *BB : InnerMostLoop->getBlocks()) {
-    errs() << "BBBBBBBBBBBBBBBBB\n";
     for (Instruction &I : *BB) {
       if (!isa<StoreInst>(I) && !isa<LoadInst>(I))
         continue;

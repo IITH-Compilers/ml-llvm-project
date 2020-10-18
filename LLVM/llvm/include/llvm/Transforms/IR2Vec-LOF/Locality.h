@@ -7,40 +7,34 @@
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
-class LocalityPass : public FunctionPass {
+class Locality {
 private:
   using ReferenceGroupTy = SmallVector<std::unique_ptr<IndexedReference>, 8>;
   using ReferenceGroupsTy = SmallVector<ReferenceGroupTy, 8>;
-  // raw_ostream &operator<<(raw_ostream &OS, const CacheCost &CC);
 
-  // struct LoopStandardAnalysisResults;
-  // LoopStandardAnalysisResults &AR;
+  int Locality_Cost = 0;
+
+  // AAResults *AA;
+  // LoopInfo *LI;
+  // ScalarEvolution *SE;
+  const LoopAccessInfo &LAI_WR;
+  const LoopAccessInfo &LAI_RAR;
 
 public:
   static char ID;
 
-  LocalityPass() : FunctionPass(ID) {}
+  Locality(const LoopAccessInfo &LAI_WR, const LoopAccessInfo &LAI_RAR)
+      : LAI_WR(LAI_WR), LAI_RAR(LAI_RAR) {}
 
-  bool Print_Locality_File(DataDependenceGraph &G, std::string Filename,
-                           CacheCostTy CC);
+  // Locality(AAResults *AA, LoopInfo *LI, ScalarEvolution *SE,
+  //              const LoopAccessInfo &LAI_WR, const LoopAccessInfo &LAI_RAR)
+  //     : AA(AA), LI(LI), SE(SE), LAI_WR(LAI_WR), LAI_RAR(LAI_RAR) {}
 
   bool runOnFunction(Function &F);
 
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
-};
+  int computeLocalityCost(Loop &IL);
 
-struct LoopStandardAnalysisResults;
-// raw_ostream &operator<<(raw_ostream &OS, const CacheCost &CC);
-// raw_ostream &OS;
-// struct LoopStandardAnalysisResults {
-//   AAResults *AA;
-//   AssumptionCache *AC;
-//   DominatorTree *DT;
-//   LoopInfo *LI;
-//   ScalarEvolution *SE;
-//   TargetLibraryInfo *TLI;
-//   TargetTransformInfo *TTI;
-//   MemorySSA *MSSA;
-// } & AR;
+  // void getAnalysisUsage(AnalysisUsage &AU) const override;
+};
 
 } // namespace llvm

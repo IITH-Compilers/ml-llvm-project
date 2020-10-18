@@ -8,6 +8,9 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/MemoryBuiltins.h"
+#include "llvm/Analysis/MemorySSA.h"
+#include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Dominators.h"
@@ -25,134 +28,172 @@
 
 using namespace llvm;
 
-// LocalityPass::LocalityPass() : FunctionPass(ID) {}
+// bool Locality::runOnFunction(Function &F) {
+//   //   LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+//   AAResults *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
+//   LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+//   ScalarEvolution *SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
+//   DependenceInfo DI = DependenceInfo(&F, AA, SE, LI);
 
-bool LocalityPass::runOnFunction(Function &F) {
-  //   LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-  AAResults *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
-  AssumptionCache *AC =
-      &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
-  DominatorTree *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-  ScalarEvolution *SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
-  TargetLibraryInfo *TLI =
-      &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
-  TargetTransformInfo *TTI =
-      &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-  MemorySSA *MSSA = nullptr;
-  // MemorySSA *MSSA = &getAnalysis<MemorySSAWrapperPass>().getMSSA();
+//   int loopNum = 0;
 
-  LoopStandardAnalysisResults AR{*AA, *AC, *DT, *LI, *SE, *TLI, *TTI, MSSA};
-  DependenceInfo DI = DependenceInfo(&F, AA, SE, LI);
+//   for (Loop *TopLevelLoop : *LI) {
+//     for (Loop *L : depth_first(TopLevelLoop)) {
+//       // Loop *L = *i;
+//       if (L->empty()) {
+//         loopNum++;
 
-  int loopNum = 0;
+//         auto *LAA = &getAnalysis<LoopAccessLegacyAnalysis>();
+//         const LoopAccessInfo &LAI = LAA->getInfo(L);
+//         const auto dependences_Write =
+//             LAI.getDepChecker().getDependences(); // List of dependences
+//         const SmallVector<int64_t, 8> DependenceDistances =
+//             LAI.getDepChecker().getDDist(); // List of dependence distances
+//         if (dependences_Write != nullptr) {
+//           for (auto i : DependenceDistances) {
+//             if (i > 0)
+//               Locality_Cost += i;
+//             else
+//               Locality_Cost -= i;
+//           }
+//           /* int dep_count = 1;
+//           for (auto dep : *dependences_Write) {
+//             Instruction *Src, *Dst;
+//             Src = dep.getSource(LAI);
+//             Dst = dep.getDestination(LAI);
+//             errs() << "Src: " << *Src << "\n";
+//             errs() << "Dst: " << *Dst << "\n";
 
-  ////////////////////////////////////////////////////////////////////////////////
+//             int dist_count = 1;
+//             for (auto i : DependenceDistances) {
+//               if (dep_count == dist_count)
+//                 errs() << "Dist: " << i << "\n";
+//               dist_count++;
+//             }
+//             dep_count++;
+//           } */
+//         }
 
-  /* for (LoopInfo::iterator i = LI->begin(), e = LI->end(); i != e; ++i) {
-    Loop *L = *i;
-    errs() << "bbbbbbbbbbbbbbbbbbbbbbbbbb\n";
-    errs() << "Loop Here: " << *L << "\n";
-    for (auto il = df_begin(L), el = df_end(L); il != el; ++il) {
-      if (il->getSubLoops().size() > 0) {
-        continue;
-      } */
-  /////////////////////////////////////////////////////////////////////////////////////////////////
-  for (Loop *TopLevelLoop : *LI) {
-    auto CC = CacheCost::getCacheCost(*TopLevelLoop, AR, DI);
-    for (Loop *L : depth_first(TopLevelLoop)) {
-      // Loop *L = *i;
-      if (L->empty()) {
-        loopNum++;
-        auto *LAA = &getAnalysis<LoopAccessLegacyAnalysis>();
-        const LoopAccessInfo &LAI = LAA->getInfo(L);
-        auto RDGraph = RDG(*AA, *SE, *LI, DI, LAI);
-        auto SCC_Graph = RDGraph.computeRDGForInnerLoop(*L);
-        if (SCC_Graph == nullptr) {
-          continue;
-        }
-        DataDependenceGraph &SCCGraph = *SCC_Graph;
+//         errs() << "\nRead-After-Read\n";
+//         bool RAR_flag = 1;
+//         auto *LAA_RAR = &getAnalysis<LoopAccessLegacyAnalysis>();
+//         const LoopAccessInfo &LAI_RAR = LAA_RAR->getInfo(L, RAR_flag);
+//         const auto dependences_Read =
+//             LAI_RAR.getDepChecker().getDependences(); // List of dependences
+//         const SmallVector<int64_t, 8> DependenceDistances_Read =
+//             LAI_RAR.getDepChecker().getDDist(); // List of dependence
+//             distances
+//         if (dependences_Read != nullptr) {
+//           for (auto i : DependenceDistances_Read) {
+//             if (i > 0)
+//               Locality_Cost += i;
+//             else
+//               Locality_Cost -= i;
+//           }
+//           /* int dep_count = 1;
+//           for (auto dep : *dependences_Read) {
+//             Instruction *Src, *Dst;
+//             Src = dep.getSource(LAI_RAR);
+//             Dst = dep.getDestination(LAI_RAR);
+//             errs() << "Src: " << *Src << "\n";
+//             errs() << "Dst: " << *Dst << "\n";
 
-        // std::string Graph_Filename = "Graph.txt";
-        // RDGraph.PrintDotFile_LAI(SCCGraph, Graph_Filename, "ss");
+//             int dist_count = 1;
+//             for (auto i : DependenceDistances_Read) {
+//               if (dep_count == dist_count)
+//                 errs() << "Dist: " << i << "\n";
+//               dist_count++;
+//             }
+//             dep_count++;
+//           } */
+//         }
 
-        std::string s1 = F.getParent()->getName().str();
-        std::string s2(s1.substr(s1.rfind('/') + 1));
-        std::string RD_Filename = "RD_locality.txt";
-        std::string SCC_Filename =
-            "SCC_" + s2 + "L" + std::to_string(loopNum) + ".dot";
+//         errs() << "Locality Cost: " << Locality_Cost << "\n";
 
-        //   ReferenceGroupsTy RefGroups;
-        // auto CC = CacheCost::getCacheCost(*L, AR, DI);
-        errs() << "CacheCost: " << CC->getLoopCost(*L) << "\n";
+//         /* auto RDGraph = RDG(*AA, *SE, *LI, DI, LAI_RAR);
+//         auto SCC_Graph = RDGraph.computeRDGForInnerLoop(*L);
+//         if (SCC_Graph == nullptr) {
+//           continue;
+//         }
+//         DataDependenceGraph &SCCGraph = *SCC_Graph;
 
-        // for (auto i = CC->getLoopCosts(), e = CC->getLoopCosts(); i != e;) {
-        //   for (auto x = i.begin(), y = i.end(); x != y; ++x) {
-        //     errs() << "cache cost: " << x << "bbbbbbbbbbbbbb"
-        //            << "\n";
-        //   }
-        // }
+//         std::string s1 = F.getParent()->getName().str();
+//         std::string s2(s1.substr(s1.rfind('/') + 1));
+//         std::string RD_Filename = "RD_locality.txt";
+//         std::string SCC_Filename =
+//             "SCC_" + s2 + "L" + std::to_string(loopNum) + ".dot";
 
-        // raw_ostream &operator<<(raw_ostream &OS, const CacheCost &CC);
-        // raw_ostream &OS;
-        // if (auto CC = CacheCost::getCacheCost(*L, AR, DI))
-        // OS << *CC;
-        // auto AM = LoopAnalysisManager{};
-        // auto U = LPMUpdater::addSiblingLoops;
-        // LoopCachePrinterPass::run(*L, AM, AR, U);
+//         for (BasicBlock *BB : L->blocks()) {
+//           for (Instruction &I : BB->instructionsWithoutDebug()) {
+//             for (auto i = I.op_begin(), e = I.op_end(); i != e; ++i) {
+//               if (isa<ArrayType>(I.getType())) {
+//                 errs() << "MemInst: " << I << "\n";
+//               }
+//             }
+//           }
+//         }
 
-        // int loopNum = 0;
-        // for (LoopInfo::iterator i = LI->begin(), e = LI->end(); i != e; ++i)
-        // {
-        //   Loop *L = *i;
-        // for (auto il = df_begin(L), el = df_end(L); il != el; ++il) {
-        //   if (il->getSubLoops().size() > 0) {
-        //     continue;
-        //   }
-        //   loopNum++;
-        //   auto *LAA = &getAnalysis<LoopAccessLegacyAnalysis>();
-        //   const LoopAccessInfo &LAI = LAA->getInfo(*il);
-        //   auto RDGraph = RDG(*AA, *SE, *LI, DI, LAI);
-        //   auto SCCGraph = RDGraph.computeRDGForInnerLoop(**il);
+//         std::error_code EC;
+//         raw_fd_ostream File(RD_Filename.c_str(), EC, sys::fs::F_Append);
+//         if (!EC) {
+//         } else {
+//           errs() << "error opening file for writing! \n";
+//         } */
+//       }
+//     }
+//   }
+//   return false;
+// }
 
-        //   std::string s1 = F.getParent()->getName().str();
-        //   std::string s2(s1.substr(s1.rfind('/') + 1));
-        //   std::string RD_Filename = "RD_locality.txt";
-        //   std::string SCC_Filename = "SCC_" + s2 + "_FUNCTION_" +
-        //                              SCCGraph.GetFunctionName() + "_LOOP" +
-        //                              std::to_string(loopNum) + ".dot";
-        std::error_code EC;
-        raw_fd_ostream File(RD_Filename.c_str(), EC, sys::fs::F_Append);
-        if (!EC) {
-          // if (SCCGraph.SCCExist) {
-          // File << SCC_Filename << " : " << SCCGraph.totalSCCNodes << "\n";
-          File << SCC_Filename << " : " << SCCGraph.dependenceSize << " : "
-               << CC->getLoopCost(*L) << "\n";
-          // }
-          // CC->getLoopCosts();
-          // errs() << "Loop costs: " <<
-        } else {
-          errs() << "error opening file for writing! \n";
-        }
-      }
+int Locality::computeLocalityCost(Loop &IL) {
+  // AAResults *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
+  // LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+  // ScalarEvolution *SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
+
+  // int loopNum = 0;
+
+  /*  for (Loop *TopLevelLoop : *LI) {
+     for (Loop *L : depth_first(TopLevelLoop)) {
+       // Loop *L = *i;
+       if (L->empty()) {
+         loopNum++; */
+
+  // auto *LAA_WR = &getAnalysis<LoopAccessLegacyAnalysis>();
+  // const LoopAccessInfo &LAI_WR = LAA_WR->getInfo(L);
+  errs() << "aaaaaaaaaaaaaaaaaaaaaaaa\n";
+  const auto dependences_Write =
+      LAI_WR.getDepChecker().getDependences(); // List of dependences
+  const SmallVector<int64_t, 8> DependenceDistances_Write =
+      LAI_WR.getDepChecker().getDDist(); // List of dependence distances
+  if (dependences_Write != nullptr) {
+    for (auto i : DependenceDistances_Write) {
+      if (i > 0)
+        Locality_Cost += i;
+      else
+        Locality_Cost -= i;
     }
   }
-  return false;
+
+  errs() << "\nRead-After-Read\n";
+  // bool RAR_flag = 1;
+  // auto *LAA_RAR = &getAnalysis<LoopAccessLegacyAnalysis>();
+  // const LoopAccessInfo &LAI_RAR = LAA_RAR->getInfo(L, RAR_flag);
+  const auto dependences_Read =
+      LAI_RAR.getDepChecker().getDependences(); // List of dependences
+  const SmallVector<int64_t, 8> DependenceDistances_Read =
+      LAI_RAR.getDepChecker().getDDist(); // List of dependence distances
+  if (dependences_Read != nullptr) {
+    for (auto i : DependenceDistances_Read) {
+      if (i > 0)
+        Locality_Cost += i;
+      else
+        Locality_Cost -= i;
+    }
+  }
+
+  errs() << "Locality Cost: " << Locality_Cost << "\n";
+  /*   }
+  }
+} */
+  return Locality_Cost;
 }
-
-void LocalityPass::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<LoopInfoWrapperPass>();
-  AU.addRequired<TargetTransformInfoWrapperPass>();
-  AU.addRequired<DominatorTreeWrapperPass>();
-  AU.addRequired<AssumptionCacheTracker>();
-  AU.addRequired<ScalarEvolutionWrapperPass>();
-  AU.addRequired<AAResultsWrapperPass>();
-  AU.addRequired<TargetLibraryInfoWrapperPass>();
-  AU.addRequired<LoopAccessLegacyAnalysis>();
-  // AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
-}
-
-char LocalityPass::ID = 0;
-static RegisterPass<LocalityPass> X("locality", "Calculate cache cost");
-
-#undef DEBUG_TYPE
