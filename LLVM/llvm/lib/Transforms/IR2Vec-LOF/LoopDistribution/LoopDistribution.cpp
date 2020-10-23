@@ -59,11 +59,18 @@ MDNode *LoopDistribution::getLoopID(Loop *L) const {
   return LoopID;
 }
 
-void LoopDistribution::removeLoopID(Loop *L) {
+void LoopDistribution::changeLoopIDMetaData(Loop *L) {
+  LLVMContext &Context = L->getHeader()->getContext();
+  MDNode *LoopID =
+      MDNode::get(Context, ConstantAsMetadata::get(ConstantInt::get(
+                               Context, llvm::APInt(64, loopID, false))));
+
   SmallVector<BasicBlock *, 4> LoopLatches;
   L->getLoopLatches(LoopLatches);
-  for (BasicBlock *BB : LoopLatches)
+  for (BasicBlock *BB : LoopLatches) {
+    BB->getTerminator()->setMetadata("IR2Vec-Distributed-LoopID", LoopID);
     BB->getTerminator()->setMetadata("IR2Vec-SCC-LoopID", NULL);
+  }
 }
 
 void LoopDistribution::createContainer(DataDependenceGraph &SCCGraph) {
@@ -387,7 +394,7 @@ bool LoopDistribution::runOnFunction(Function &F) {
         if (loopID == dyn_cast<ConstantInt>(constVal)->getZExtValue()) {
           il = L;
           loopFound = true;
-          removeLoopID(il);
+          changeLoopIDMetaData(il);
           break;
         }
       }

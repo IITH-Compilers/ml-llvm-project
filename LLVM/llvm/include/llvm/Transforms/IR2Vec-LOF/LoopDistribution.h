@@ -44,7 +44,7 @@ private:
   bool fail(StringRef RemarkName, StringRef Message, Loop *L);
   bool doSanityChecks(Loop *L);
   MDNode *getLoopID(Loop *L) const;
-  void removeLoopID(Loop *L);
+  void changeLoopIDMetaData(Loop *L);
 
   bool distributed;
   OptimizationRemarkEmitter *ORE;
