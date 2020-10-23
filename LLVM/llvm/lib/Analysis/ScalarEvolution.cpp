@@ -4054,7 +4054,6 @@ const SCEV *ScalarEvolution::getMinusSCEV(const SCEV *LHS, const SCEV *RHS,
   // not in RHS. Applying NSW to (-1)*M may then let the NSW have a
   // larger scope than intended.
   auto NegFlags = RHSIsNotMinSigned ? SCEV::FlagNSW : SCEV::FlagAnyWrap;
-
   return getAddExpr(LHS, getNegativeSCEV(RHS, NegFlags), AddFlags, Depth);
 }
 
@@ -11023,10 +11022,6 @@ struct SCEVCollectTerms {
   SCEVCollectTerms(SmallVectorImpl<const SCEV *> &T) : Terms(T) {}
 
   bool follow(const SCEV *S) {
-    errs() << "SCEV Type: " << S->getSCEVType() << "\n";
-    errs() << "SCEV: " << *S << "\n";
-    errs() << isa<SCEVUnknown>(S) << " : " << isa<SCEVMulExpr>(S) << " : "
-           << isa<SCEVSignExtendExpr>(S) << "\n";
     if (isa<SCEVUnknown>(S) || isa<SCEVMulExpr>(S) ||
         isa<SCEVSignExtendExpr>(S)) {
       if (!containsUndefs(S))
@@ -11131,7 +11126,6 @@ void ScalarEvolution::collectParametricTerms(
     const SCEV *Expr, SmallVectorImpl<const SCEV *> &Terms) {
   SmallVector<const SCEV *, 4> Strides;
   SCEVCollectStrides StrideCollector(*this, Strides);
-  errs() << "Expr: " << *Expr << "\n";
   visitAll(Expr, StrideCollector);
 
   LLVM_DEBUG({
@@ -11139,11 +11133,6 @@ void ScalarEvolution::collectParametricTerms(
     for (const SCEV *S : Strides)
       dbgs() << *S << "\n";
   });
-
-  errs() << "Strides: ";
-  for (const SCEV *S : Strides)
-    errs() << *S << " : ";
-  errs() << "\n";
 
   for (const SCEV *S : Strides) {
     SCEVCollectTerms TermCollector(Terms);
@@ -11155,10 +11144,6 @@ void ScalarEvolution::collectParametricTerms(
     for (const SCEV *T : Terms)
       dbgs() << *T << "\n";
   });
-  errs() << "Terms: ";
-  for (const SCEV *T : Terms)
-    errs() << *T << " : ";
-  errs() << "\n";
 
   SCEVCollectAddRecMultiplies MulCollector(Terms, *this);
   visitAll(Expr, MulCollector);
@@ -11436,8 +11421,9 @@ void ScalarEvolution::delinearize(const SCEV *Expr,
   SmallVector<const SCEV *, 4> Terms;
   collectParametricTerms(Expr, Terms);
 
-  if (Terms.empty())
+  if (Terms.empty()) {
     return;
+  }
 
   // Second step: find subscript sizes.
   findArrayDimensions(Terms, Sizes, ElementSize);

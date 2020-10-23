@@ -150,9 +150,7 @@ public:
   // SCEV and all its operands recursively. We may use it to avoid performing
   // heavy transformations on SCEVs of excessive size for sake of saving the
   // compilation time.
-  unsigned short getExpressionSize() const {
-    return ExpressionSize;
-  }
+  unsigned short getExpressionSize() const { return ExpressionSize; }
 
   /// Print out the internal representation of this scalar to the specified
   /// stream.  This should really only be used for debugging purposes.
@@ -383,9 +381,7 @@ public:
   bool isAlwaysTrue() const override;
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
-  static bool classof(const SCEVPredicate *P) {
-    return P->getKind() == P_Wrap;
-  }
+  static bool classof(const SCEVPredicate *P) { return P->getKind() == P_Wrap; }
 };
 
 /// This class represents a composition of other SCEV predicates, and is the
@@ -393,7 +389,8 @@ public:
 /// logical "AND" of all the predicates in the union.
 ///
 /// NB! Unlike other SCEVPredicate sub-classes this class does not live in the
-/// ScalarEvolution::Preds folding set.  This is why the \c add function is sound.
+/// ScalarEvolution::Preds folding set.  This is why the \c add function is
+/// sound.
 class SCEVUnionPredicate final : public SCEVPredicate {
 private:
   using PredicateMap =
@@ -719,9 +716,8 @@ public:
   unsigned getSmallConstantTripMultiple(const Loop *L,
                                         BasicBlock *ExitingBlock);
 
-
   /// The terms "backedge taken count" and "exit count" are used
-  /// interchangeably to refer to the number of times the backedge of a loop 
+  /// interchangeably to refer to the number of times the backedge of a loop
   /// has executed before the loop is exited.
   enum ExitCountKind {
     /// An expression exactly describing the number of times the backedge has
@@ -732,11 +728,11 @@ public:
   };
 
   /// Return the number of times the backedge executes before the given exit
-  /// would be taken; if not exactly computable, return SCEVCouldNotCompute. 
+  /// would be taken; if not exactly computable, return SCEVCouldNotCompute.
   /// For a single exit loop, this value is equivelent to the result of
   /// getBackedgeTakenCount.  The loop is guaranteed to exit (via *some* exit)
   /// before the backedge is executed (ExitCount + 1) times.  Note that there
-  /// is no guarantee about *which* exit is taken on the exiting iteration.  
+  /// is no guarantee about *which* exit is taken on the exiting iteration.
   const SCEV *getExitCount(const Loop *L, BasicBlock *ExitingBlock,
                            ExitCountKind Kind = Exact);
 
@@ -765,7 +761,7 @@ public:
   /// SCEVCouldNotCompute object.
   const SCEV *getConstantMaxBackedgeTakenCount(const Loop *L) {
     return getBackedgeTakenCount(L, ConstantMaximum);
-  } 
+  }
 
   /// Return true if the backedge taken count is either the value returned by
   /// getConstantMaxBackedgeTakenCount or zero.
@@ -1198,7 +1194,7 @@ private:
   /// ExitNotTakenInfo and BackedgeTakenInfo.
   struct ExitLimit {
     const SCEV *ExactNotTaken; // The exit is not taken exactly this many times
-    const SCEV *MaxNotTaken; // The exit is not taken at most this many times
+    const SCEV *MaxNotTaken;   // The exit is not taken at most this many times
 
     // Not taken either exactly MaxNotTaken or zero times
     bool MaxOrZero = false;
@@ -1254,8 +1250,8 @@ private:
                               const SCEV *ExactNotTaken,
                               const SCEV *MaxNotTaken,
                               std::unique_ptr<SCEVUnionPredicate> Predicate)
-      : ExitingBlock(ExitingBlock), ExactNotTaken(ExactNotTaken),
-        MaxNotTaken(ExactNotTaken), Predicate(std::move(Predicate)) {}
+        : ExitingBlock(ExitingBlock), ExactNotTaken(ExactNotTaken),
+          MaxNotTaken(ExactNotTaken), Predicate(std::move(Predicate)) {}
 
     bool hasAlwaysTruePredicate() const {
       return !Predicate || Predicate->isAlwaysTrue();
@@ -1466,7 +1462,7 @@ private:
 
   /// A helper function for createAddRecFromPHI to handle simple cases.
   const SCEV *createSimpleAffineAddRec(PHINode *PN, Value *BEValueV,
-                                            Value *StartValueV);
+                                       Value *StartValueV);
 
   /// Helper function called from createNodeForPHI.
   const SCEV *createNodeFromSelectLikePHI(PHINode *PN);
@@ -1556,8 +1552,7 @@ private:
 
   ExitLimit computeExitLimitFromCondCached(ExitLimitCacheTy &Cache,
                                            const Loop *L, Value *ExitCond,
-                                           bool ExitIfTrue,
-                                           bool ControlsExit,
+                                           bool ExitIfTrue, bool ControlsExit,
                                            bool AllowPredicates);
   ExitLimit computeExitLimitFromCondImpl(ExitLimitCacheTy &Cache, const Loop *L,
                                          Value *ExitCond, bool ExitIfTrue,
@@ -1570,8 +1565,7 @@ private:
   /// to use a minimal set of SCEV predicates in order to return an exact
   /// answer.
   ExitLimit computeExitLimitFromICmp(const Loop *L, ICmpInst *ExitCond,
-                                     bool ExitIfTrue,
-                                     bool IsSubExpr,
+                                     bool ExitIfTrue, bool IsSubExpr,
                                      bool AllowPredicates = false);
 
   /// Compute the number of times the backedge of the specified loop will
@@ -1667,10 +1661,9 @@ private:
   /// whenever the condition described by Pred, FoundLHS, and FoundRHS is
   /// true. Here LHS is an operation that includes FoundLHS as one of its
   /// arguments.
-  bool isImpliedViaOperations(ICmpInst::Predicate Pred,
-                              const SCEV *LHS, const SCEV *RHS,
-                              const SCEV *FoundLHS, const SCEV *FoundRHS,
-                              unsigned Depth = 0);
+  bool isImpliedViaOperations(ICmpInst::Predicate Pred, const SCEV *LHS,
+                              const SCEV *RHS, const SCEV *FoundLHS,
+                              const SCEV *FoundRHS, unsigned Depth = 0);
 
   /// Test whether the condition described by Pred, LHS, and RHS is true.
   /// Use only simple non-recursive types of checks, such as range analysis etc.
@@ -1715,10 +1708,9 @@ private:
   /// This routine tries to figure out predicate for Phis which are SCEVUnknown
   /// if it is true for every possible incoming value from their respective
   /// basic blocks.
-  bool isImpliedViaMerge(ICmpInst::Predicate Pred,
-                         const SCEV *LHS, const SCEV *RHS,
-                         const SCEV *FoundLHS, const SCEV *FoundRHS,
-                         unsigned Depth);
+  bool isImpliedViaMerge(ICmpInst::Predicate Pred, const SCEV *LHS,
+                         const SCEV *RHS, const SCEV *FoundLHS,
+                         const SCEV *FoundRHS, unsigned Depth);
 
   /// If we know that the specified Phi is in the header of its containing
   /// loop, we know the loop executes a constant number of times, and the PHI
@@ -1860,8 +1852,8 @@ private:
                                  SCEV::NoWrapFlags Flags);
 
   // Get addrec expr already created or create a new one.
-  const SCEV *getOrCreateAddRecExpr(ArrayRef<const SCEV *> Ops,
-                                    const Loop *L, SCEV::NoWrapFlags Flags);
+  const SCEV *getOrCreateAddRecExpr(ArrayRef<const SCEV *> Ops, const Loop *L,
+                                    SCEV::NoWrapFlags Flags);
 
   /// Return x if \p Val is f(x) where f is a 1-1 function.
   const SCEV *stripInjectiveFunctions(const SCEV *Val) const;

@@ -1,6 +1,7 @@
 #include "llvm/Analysis/DDG.h"
 #include "llvm/Analysis/LoopCacheAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
@@ -14,27 +15,38 @@ private:
 
   int Locality_Cost = 0;
 
-  // AAResults *AA;
-  // LoopInfo *LI;
-  // ScalarEvolution *SE;
   const LoopAccessInfo &LAI_WR;
   const LoopAccessInfo &LAI_RAR;
+  TargetTransformInfo *TTI;
+
+  // uint64_t Cache_Miss;
+
+  using Inst_List = SmallVector<Instruction *, 2>;
+  // List of all instructions that are part of dependences
+  Inst_List dep_InstList;
+  // List of all instructions that is having memory access
+  Inst_List Mem_InstList;
+
+  // Map of Array BasePointer and count of access to that
+  using MemoryInstList = DenseMap<const SCEVUnknown *, int>;
+  MemoryInstList dependence_Inst_Count;
+
+  // using InstructionListType = SmallVector<Instruction *, 2>;
+  // InstructionListType dep_InstList;
 
 public:
   static char ID;
 
-  Locality(const LoopAccessInfo &LAI_WR, const LoopAccessInfo &LAI_RAR)
-      : LAI_WR(LAI_WR), LAI_RAR(LAI_RAR) {}
+  Locality(const LoopAccessInfo &LAI_WR, const LoopAccessInfo &LAI_RAR,
+           TargetTransformInfo *TTI)
+      : LAI_WR(LAI_WR), LAI_RAR(LAI_RAR), TTI(TTI) {}
 
-  // Locality(AAResults *AA, LoopInfo *LI, ScalarEvolution *SE,
-  //              const LoopAccessInfo &LAI_WR, const LoopAccessInfo &LAI_RAR)
-  //     : AA(AA), LI(LI), SE(SE), LAI_WR(LAI_WR), LAI_RAR(LAI_RAR) {}
+  // void Insert_dep_InstList(Instruction *I) { dep_InstList.insert(I); }
 
-  bool runOnFunction(Function &F);
+  // InstructionListType get_dep_InstList() { return dep_InstList; }
+  // bool runOnFunction(Function &F);
 
-  int computeLocalityCost(Loop &IL);
-
-  // void getAnalysisUsage(AnalysisUsage &AU) const override;
+  int computeLocalityCost(Loop &IL, ScalarEvolution *SE);
 };
 
 } // namespace llvm

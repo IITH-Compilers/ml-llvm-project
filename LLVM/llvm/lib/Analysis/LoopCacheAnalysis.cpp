@@ -76,8 +76,6 @@ static bool isOneDimensionalArray(const SCEV &AccessFn, const SCEV &ElemSize,
                                   const Loop &L, ScalarEvolution &SE) {
   const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(&AccessFn);
   if (!AR || !AR->isAffine()) {
-    // errs() << "bbbbbbbbbbbbbb\n";
-    errs() << "!AR || !AR->isAffine()\n";
     return false;
   }
 
@@ -87,20 +85,13 @@ static bool isOneDimensionalArray(const SCEV &AccessFn, const SCEV &ElemSize,
   const SCEV *Start = AR->getStart();
   const SCEV *Step = AR->getStepRecurrence(SE);
   if (isa<SCEVAddRecExpr>(Start) || isa<SCEVAddRecExpr>(Step)) {
-    errs() << "isa<SCEVAddRecExpr>(Start) || isa<SCEVAddRecExpr>(Step)\n";
-    // errs() << "ccccccccccccccccc\n";
     return false;
   }
 
   // Check that start and increment are both invariant in the loop.
   if (!SE.isLoopInvariant(Start, &L) || !SE.isLoopInvariant(Step, &L)) {
-    errs()
-        << "!SE.isLoopInvariant(Start, &L) || !SE.isLoopInvariant(Step, &L)\n";
-    // errs() << "ddddddddddddddddddd\n";
     return false;
   }
-  // errs() << "eeeeeeeeeeeeeeeeeeee" << *AR->getStepRecurrence(SE) << " : "
-  //        << ElemSize << "\n";
   return AR->getStepRecurrence(SE) == &ElemSize;
 }
 
@@ -336,13 +327,10 @@ bool IndexedReference::delinearize(const LoopInfo &LI) {
       LLVM_DEBUG(
           dbgs().indent(2)
           << "ERROR: failed to delinearize, can't identify base pointer\n");
-      errs() << "ERROR: failed to delinearize, can't identify base "
-                "pointer\n";
       return false;
     }
 
     AccessFn = SE.getMinusSCEV(AccessFn, BasePointer);
-    errs() << "AccessFn: " << *AccessFn << "\n";
 
     LLVM_DEBUG(dbgs().indent(2) << "In Loop '" << L->getName()
                                 << "', AccessFn: " << *AccessFn << "\n");
@@ -359,7 +347,6 @@ bool IndexedReference::delinearize(const LoopInfo &LI) {
                    << "ERROR: failed to delinearize reference\n");
         Subscripts.clear();
         Sizes.clear();
-        errs() << "ERROR: failed to delinearize reference\n";
         return false;
       }
 
@@ -372,7 +359,6 @@ bool IndexedReference::delinearize(const LoopInfo &LI) {
       return isSimpleAddRecurrence(*Subscript, *L);
     });
   }
-  errs() << "final return\n";
   return false;
 }
 
@@ -401,7 +387,6 @@ bool IndexedReference::isConsecutive(const Loop &L, unsigned CLS) const {
     if (Subscript == LastSubscript)
       continue;
     if (!isCoeffForLoopZeroOrInvariant(*Subscript, L)) {
-      errs() << "!isCoeffForLoopZeroOrInvariant(*Subscript, L)\n";
       return false;
     }
   }
@@ -433,7 +418,6 @@ bool IndexedReference::isCoeffForLoopZeroOrInvariant(const SCEV &Subscript,
 bool IndexedReference::isSimpleAddRecurrence(const SCEV &Subscript,
                                              const Loop &L) const {
   if (!isa<SCEVAddRecExpr>(Subscript)) {
-    errs() << "!isa<SCEVAddRecExpr>(Subscript)\n";
     return false;
   }
 
@@ -441,7 +425,6 @@ bool IndexedReference::isSimpleAddRecurrence(const SCEV &Subscript,
   assert(AR->getLoop() && "AR should have a loop");
 
   if (!AR->isAffine()) {
-    errs() << "!AR->isAffine()\n";
     return false;
   }
 
@@ -449,8 +432,6 @@ bool IndexedReference::isSimpleAddRecurrence(const SCEV &Subscript,
   const SCEV *Step = AR->getStepRecurrence(SE);
 
   if (!SE.isLoopInvariant(Start, &L) || !SE.isLoopInvariant(Step, &L)) {
-    errs()
-        << "!SE.isLoopInvariant(Start, &L) || !SE.isLoopInvariant(Step, &L)\n";
     return false;
   }
 
@@ -486,8 +467,6 @@ CacheCost::CacheCost(const LoopVectorTy &Loops, const LoopInfo &LI,
 
   for (const Loop *L : Loops) {
     unsigned TripCount = SE.getSmallConstantTripCount(L);
-    errs() << "TripCount: " << TripCount
-           << ", Default TripCount: " << DefaultTripCount << "\n";
     TripCount = (TripCount == 0) ? DefaultTripCount : TripCount;
     TripCounts.push_back({L, TripCount});
   }
@@ -551,7 +530,6 @@ bool CacheCost::populateReferenceGroups(ReferenceGroupsTy &RefGroups) const {
       if (!isa<StoreInst>(I) && !isa<LoadInst>(I))
         continue;
 
-      // errs() << "Instruction: " << I << "\n";
       std::unique_ptr<IndexedReference> R(new IndexedReference(I, LI, SE));
       if (!R->isValid())
         continue;
@@ -564,7 +542,6 @@ bool CacheCost::populateReferenceGroups(ReferenceGroupsTy &RefGroups) const {
           dbgs().indent(2) << *R << "\n";
           dbgs().indent(2) << Representative << "\n";
         });
-        // errs() << "RefGroup R: " << *R << "\n";
 
         Optional<bool> HasTemporalReuse =
             R->hasTemporalReuse(Representative, *TRT, *InnerMostLoop, DI, AA);
@@ -588,7 +565,6 @@ bool CacheCost::populateReferenceGroups(ReferenceGroupsTy &RefGroups) const {
   }
 
   if (RefGroups.empty()) {
-    errs() << "RefGroups.empty()\n";
     return false;
   }
 

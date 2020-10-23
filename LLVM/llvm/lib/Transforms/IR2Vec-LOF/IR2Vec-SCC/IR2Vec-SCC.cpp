@@ -15,6 +15,8 @@
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Mangler.h"
@@ -154,6 +156,8 @@ bool RDGWrapperPass::runOnFunction(Function &F) {
   ScalarEvolution *SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
   LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   DependenceInfo DI = DependenceInfo(&F, AA, SE, LI);
+  TargetTransformInfo *TTI =
+      &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
 
   int loopNum = 0;
   for (LoopInfo::iterator i = LI->begin(), e = LI->end(); i != e; ++i) {
@@ -211,6 +215,12 @@ bool RDGWrapperPass::runOnFunction(Function &F) {
         errs() << "error opening file for writing! \n";
       }
 
+      /*  Loop *L1;
+       Value *Ptr1 = getLoadStorePointerOperand(&I1);
+       const SCEV *S = SE->getSCEVAtScope(*Ptr1, **il);
+       AddRecLoopReplacer Rewriter(*SE, **il, *L1);
+       Rewriter.visitAddRecExpr(*S);
+  */
       auto *LAA_WR = &getAnalysis<LoopAccessLegacyAnalysis>();
       const LoopAccessInfo &LAI_WR = LAA_WR->getInfo(*il);
 
@@ -218,8 +228,14 @@ bool RDGWrapperPass::runOnFunction(Function &F) {
       auto *LAA_RAR = &getAnalysis<LoopAccessLegacyAnalysis>();
       const LoopAccessInfo &LAI_RAR = LAA_RAR->getInfo(*il, RAR_flag);
 
-      auto Locality_Obj = Locality(LAI_WR, LAI_RAR);
-      int LocalityCost = Locality_Obj.computeLocalityCost(**il);
+      auto Locality_Obj = Locality(LAI_WR, LAI_RAR, TTI);
+      int LocalityCost = Locality_Obj.computeLocalityCost(**il, SE);
+
+      /* Loop *L1;
+      Value *Ptr1 = getLoadStorePointerOperand(&I1);
+      AddRecLoopReplacer Rewriter(*SE, **il, *L1);
+      errs() << "bbbbbbbbbbbbbbbbbbbbbb\n";
+      const SCEV *SCEVPtr0 = Rewriter.visit(SCEVPtr0); */
     }
   }
   return false;
@@ -228,6 +244,7 @@ bool RDGWrapperPass::runOnFunction(Function &F) {
 void RDGWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<LoopInfoWrapperPass>();
   AU.addRequired<ScalarEvolutionWrapperPass>();
+  AU.addRequired<TargetTransformInfoWrapperPass>();
   AU.addRequired<AAResultsWrapperPass>();
   AU.addRequired<LoopAccessLegacyAnalysis>();
   AU.addRequired<IR2Vec_RD>();

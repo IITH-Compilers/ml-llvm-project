@@ -1601,12 +1601,8 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   int64_t StrideAPtr = getPtrStride(PSE, APtr, InnermostLoop, Strides, true);
   int64_t StrideBPtr = getPtrStride(PSE, BPtr, InnermostLoop, Strides, true);
 
-  errs() << StrideAPtr << " : " << StrideBPtr << "\n";
-
   const SCEV *Src = PSE.getSCEV(APtr);
   const SCEV *Sink = PSE.getSCEV(BPtr);
-
-  errs() << *Src << " : " << *Sink << "\n";
 
   // If the induction step is negative we have to invert source and sink of the
   // dependence.
@@ -1619,7 +1615,7 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   }
 
   const SCEV *Dist = PSE.getSE()->getMinusSCEV(Sink, Src);
-  errs() << "SCEV *Dist: " << *Dist << "\n";
+  // errs() << "SCEV *Dist: " << *Dist << "\n";
 
   LLVM_DEBUG(dbgs() << "LAA: Src Scev: " << *Src << "Sink Scev: " << *Sink
                     << "(Induction step: " << StrideAPtr << ")\n");
@@ -2006,7 +2002,6 @@ bool MemoryDepChecker::areDepsSafe_RAR(DepCandidates &AccessSets,
   }
 
   LLVM_DEBUG(dbgs() << "Total Dependences: " << Dependences.size() << "\n");
-  errs() << "Total Dependences: " << Dependences.size() << "\n";
   return isSafeForVectorization();
 }
 
@@ -2953,7 +2948,6 @@ LoopAccessInfo::LoopAccessInfo(Loop *L, ScalarEvolution *SE,
       NumLoads(0), NumStores(0), MaxSafeDepDistBytes(-1), CanVecMem(false),
       HasConvergentOp(false),
       HasDependenceInvolvingLoopInvariantAddress(false) {
-  errs() << "wwwwwwwwwwwwwwwwwwwwwwwwwww\n";
   // if (get_RAR_flag() == 1)
   //   analyzeLoop_RAR(AA, LI, TLI, DT);
   // else {
@@ -2971,13 +2965,7 @@ LoopAccessInfo::LoopAccessInfo(Loop *L, ScalarEvolution *SE,
       NumLoads(0), NumStores(0), MaxSafeDepDistBytes(-1), CanVecMem(false),
       HasConvergentOp(false),
       HasDependenceInvolvingLoopInvariantAddress(false) {
-  errs() << "rrrrrrrrrrrrrrrrrrrrrrrrr\n";
-  // if (get_RAR_flag() == 1)
   analyzeLoop_RAR(AA, LI, TLI, DT);
-  // else {
-  //   if (canAnalyzeLoop())
-  //     analyzeLoop(AA, LI, TLI, DT);
-  // }
 }
 
 void LoopAccessInfo::print(raw_ostream &OS, unsigned Depth) const {
