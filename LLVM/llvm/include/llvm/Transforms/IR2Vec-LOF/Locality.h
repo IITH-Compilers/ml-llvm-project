@@ -27,9 +27,14 @@ private:
   // List of all instructions that is having memory access
   Inst_List Mem_InstList;
 
+  int threshold;
+
   // Map of Array BasePointer and count of access to that
   using MemoryInstList = DenseMap<const SCEVUnknown *, int>;
   MemoryInstList dependence_Inst_Count;
+
+  using dependence_threshold = DenseMap<const SCEVUnknown *, bool>;
+  dependence_threshold dep_threshold;
 
   // using InstructionListType = SmallVector<Instruction *, 2>;
   // InstructionListType dep_InstList;
