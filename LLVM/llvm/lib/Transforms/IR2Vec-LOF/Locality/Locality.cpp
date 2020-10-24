@@ -23,12 +23,135 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/CommandLine.h"
 #include <algorithm>
 #include <string>
 
-#define DEBUG_Type "locality"
+#define MemoryInstCost 10
 
 using namespace llvm;
+
+static cl::opt<unsigned> TemporalThreshold(
+    "cache-temporal-threshold-byte", cl::init(256), cl::Hidden,
+    cl::desc("Temporal cache locality distance"));
+
+static cl::opt<unsigned> SpatialThreshold(
+    "cache-spatial-threshold-byte", cl::init(512), cl::Hidden,
+    cl::desc("Spatial cache locality distance"));
+
+#define DEBUG_Type "locality"
+
+class VectorLoopCost : public FunctionPass {
+public:
+  static char ID;
+  ScalarEvolution *SE;
+
+  VectorLoopCost() : FunctionPass(ID) {}
+  void GetInnerLoops(Loop *, SmallVectorImpl<Loop *>&);
+  bool isLoopVectorized(Loop *, unsigned&);
+
+  bool runOnFunction(Function &F) override {
+    if (skipFunction(F))
+      return false;
+
+    auto *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+    auto *LAA = &getAnalysis<LoopAccessLegacyAnalysis>();
+    auto *TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
+    // auto *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+    SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
+    // auto *ORE = &getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
+    std::function<const LoopAccessInfo &(Loop &)> GetLAA =
+        [&](Loop &L) -> const LoopAccessInfo & { return LAA->getInfo(&L); };
+
+    SmallVector<Loop *, 32> InnerLoops;
+    for (Loop *L : *LI)
+      GetInnerLoops(L, InnerLoops);
+
+    for (Loop *L : InnerLoops) {
+      unsigned LoopCost = 0;
+      auto Latch = L->getLoopLatch();
+      MDNode *MD = Latch->getTerminator()->getMetadata("IR2Vec-Distributed-LoopID");
+      if (!MD)
+        continue;
+
+      unsigned VF = 0;
+      if (!isLoopVectorized(L, VF))
+        continue;
+
+      unsigned NumMemInsts = 0;
+      for (auto BB : L->getBlocks()) {
+        for (auto &I : *BB) {
+          if (I.mayReadOrWriteMemory()) {
+            NumMemInsts++;
+            continue;
+          }
+
+          LoopCost += TTI->getInstructionCost(&I, TargetTransformInfo::TCK_Latency);
+        }
+      }
+      const LoopAccessInfo &LAI_WR = LAA->getInfo(L);
+      const LoopAccessInfo &LAI_RAR = LAA->getInfo(L, 1);
+      Locality CL(LAI_WR, LAI_RAR, TTI);
+      int CacheMisses = CL.computeLocalityCost(*L, SE);
+      assert(CacheMisses > 0 && "Cache cost cannot be zero");
+      const SCEV *TC = SE->getBackedgeTakenCount(L);
+      uint64_t TripCount;
+      const SCEVConstant *SCEVConst_TC = dyn_cast_or_null<SCEVConstant>(TC);
+      if (SCEVConst_TC)
+        TripCount = SCEVConst_TC->getValue()->getZExtValue() * VF;
+      else
+        TripCount = 1000;
+      unsigned TotalMemAccess = NumMemInsts * TripCount;
+      unsigned CacheCost = CacheMisses * 0.7 * MemoryInstCost + (TotalMemAccess - CacheMisses) * 0.3 * MemoryInstCost;
+      unsigned TotalLoopCost = LoopCost + CacheCost;
+      dbgs() << "TotalLoopCost for Loop: "
+             << TotalLoopCost << "\n";
+    }
+
+    return false;
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<ScalarEvolutionWrapperPass>();
+    AU.addRequired<LoopInfoWrapperPass>();
+    // AU.addPreserved<LoopInfoWrapperPass>();
+    AU.addRequired<LoopAccessLegacyAnalysis>();
+    AU.setPreservesAll();
+    // AU.addRequired<DominatorTreeWrapperPass>();
+    // AU.addPreserved<DominatorTreeWrapperPass>();
+    // AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
+    // AU.addPreserved<GlobalsAAWrapperPass>();
+  }
+
+};
+
+bool VectorLoopCost::isLoopVectorized(Loop *L, unsigned &VF) {
+  for (auto BB : L->getBlocks()) {
+    for (auto &I : *BB) {
+      if (I.getType()->isVectorTy()) {
+        auto Bounds = L->getBounds(*SE);
+        if (!Bounds && isa<ConstantInt>(Bounds->getStepValue())) {
+          int step = cast<ConstantInt>(Bounds->getStepValue())->getSExtValue();
+          assert(step == cast<VectorType>(I.getType())->getNumElements() && "Could not determine VF");
+          VF = step;
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+void VectorLoopCost::GetInnerLoops(Loop *L, SmallVectorImpl<Loop *> &InnerLoops) {
+  if (L->empty())
+    InnerLoops.push_back(L);
+  else {
+    for (Loop *SubLoop : *L)
+      GetInnerLoops(SubLoop, InnerLoops);
+  }
+  return;
+}
+
 
 int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
   // LLVMContext &Context = IL.getHeader()->getContext();
@@ -56,19 +179,20 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
   unsigned CLS = TTI->getCacheLineSize();
   errs() << "CacheLineSize: " << CLS << "\n";
 
-  threshold = 50; // Initialize threshold
+  assert(CLS > 0 && "Unknown cache line size");
+
+  // threshold = 50; // Initialize threshold
 
   // Create Mem_InstList: Consist all the accesses to memory
-  bool Mflag = 0;
   for (BasicBlock *BB : IL.blocks()) {
     for (Instruction &I : BB->instructionsWithoutDebug()) {
       if (I.mayReadOrWriteMemory()) {
+        bool Mflag = 0;
         for (auto i : Mem_InstList)
           if (&I == i) {
             Mflag = 1;
             break;
           }
-
         if (Mflag == 0)
           Mem_InstList.push_back(&I);
       }
@@ -80,9 +204,10 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
   for (auto i : Mem_InstList) {
     bool depFlag = 0;
     Value *Ptr = getLoadStorePointerOperand(i);
+    assert(Ptr && "Pointer operand doesn't exit");
     const SCEV *AccessFn = SE->getSCEV(Ptr);
     auto BasePointer = dyn_cast<SCEVUnknown>(SE->getPointerBase(AccessFn));
-
+    assert(BasePointer && "BasePointer doesn't exit. Include else case");
     if (BasePointer != nullptr) {
       if (dependence_Inst_Count.find(BasePointer) !=
           dependence_Inst_Count.end()) {
@@ -119,7 +244,7 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
       ui = -i;
     }
 
-    if (ui > threshold) {
+    if (ui > TemporalThreshold) {
       int x = 0;
       for (auto dep : *dependences_Write) {
         x++;
@@ -129,10 +254,11 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
           // Dst = dep.getDestination(LAI_WR);
 
           Value *Ptr_S = getLoadStorePointerOperand(Src);
+          assert(Ptr_S && "Could not find pointer operand\n");
           const SCEV *AccessFn_S = SE->getSCEV(Ptr_S);
           auto BasePointer_S =
               dyn_cast<SCEVUnknown>(SE->getPointerBase(AccessFn_S));
-
+          assert(BasePointer_S && "Base pointer is nullptr");
           if (BasePointer_S != nullptr)
             dep_threshold.find(BasePointer_S)->second = true;
         }
@@ -160,7 +286,7 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
       ui = -i;
     }
 
-    if (ui > threshold) {
+    if (ui > TemporalThreshold) {
       int x = 0;
       for (auto dep : *dependences_Read) {
         x++;
@@ -170,10 +296,11 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
           // Dst = dep.getDestination(LAI_WR);
 
           Value *Ptr_S = getLoadStorePointerOperand(Src);
+          assert(Ptr_S && "Could not find pointer operand");
           const SCEV *AccessFn_S = SE->getSCEV(Ptr_S);
           auto BasePointer_S =
               dyn_cast<SCEVUnknown>(SE->getPointerBase(AccessFn_S));
-
+          assert(BasePointer_S && "Base pointer unknown");
           if (BasePointer_S != nullptr)
             dep_threshold.find(BasePointer_S)->second = true;
         }
@@ -185,11 +312,13 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
   for (auto Inst : Mem_InstList) {
     errs() << "\tMem_List: " << *Inst << "\n";
     Value *Ptr = getLoadStorePointerOperand(Inst);
+    assert(Ptr && "Pointer expected");
     const SCEV *SCEVPtr = SE->getSCEV(Ptr);
     // SCEVPtr = RTC.visit(SCEVPtr);
 
     // Calculate Stride
     const SCEVAddRecExpr *Expr = dyn_cast<SCEVAddRecExpr>(SCEVPtr);
+    assert(Expr && "AddrecExpr expected");
     // Expr should not be null
     if (Expr == nullptr) {
       continue;
@@ -198,6 +327,7 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
     const SCEV *stride = Expr->getStepRecurrence(*SE);
     const SCEVConstant *SCEVConst_stride =
         dyn_cast_or_null<SCEVConstant>(stride);
+    assert(SCEVConst_stride && "Not constant stride");
     auto Stride = SCEVConst_stride->getValue()->getZExtValue();
     errs() << "Stride: " << Stride << "\n";
 
@@ -212,25 +342,26 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
     errs() << "Data Type Size: " << dataType_Size << "\n";
 
     if (Stride < CLS) { // make sure Stride is in bytes
-      if (CLS > 0) {    // asert
-        auto miss = TripCount * Stride * dataType_Size / CLS;
-        Locality_Cost += miss;
-      }
+      // auto miss = TripCount * Stride * dataType_Size / CLS;
+      auto miss = TripCount * Stride / CLS; // Access stride will have stride*dataType
+      Locality_Cost += miss;
     } else {
-      Locality_Cost += TripCount * dataType_Size;
+      Locality_Cost += TripCount * Stride;
     }
 
-    errs() << "Cache_Miss: " << Locality_Cost << "\n";
+    errs() << "Initaial guess of Cache_Miss: " << Locality_Cost << "\n";
   }
 
   // Substract Cache hits by dependence accesses, from Cache_miss
   for (auto Inst : dep_InstList) {
     errs() << "\tdep_List: " << *Inst << "\n";
     Value *Ptr = getLoadStorePointerOperand(Inst);
+    assert(Ptr && "Ptr expected");
     const SCEV *SCEVPtr = SE->getSCEV(Ptr);
 
     // Check for number for accesses to same array (Base Pointer)
     auto BasePointer = dyn_cast<SCEVUnknown>(SE->getPointerBase(SCEVPtr));
+    assert(BasePointer && "BasePointer expected");
     int n = dependence_Inst_Count.find(BasePointer)->second;
     errs() << "Count: " << n << "\n";
 
@@ -244,6 +375,7 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
 
     // Calculate Stride
     const SCEVAddRecExpr *Expr = dyn_cast<SCEVAddRecExpr>(SCEVPtr);
+    assert(Expr && "AddRec expected");
     if (Expr == nullptr) {
       continue;
       //***************************************
@@ -263,12 +395,10 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
     errs() << "Data Type Size: " << dataType_Size << "\n";
 
     if (Stride < CLS) {
-      if (CLS > 0) {
-        auto hit = (n - 1) * TripCount * Stride * dataType_Size / CLS;
-        Locality_Cost -= hit;
-      }
+      auto hit = (n - 1) * TripCount * Stride / CLS;
+      Locality_Cost -= hit;
     } else {
-      Locality_Cost -= (n - 1) * TripCount * dataType_Size;
+      Locality_Cost -= (n - 1) * TripCount;
     }
 
     errs() << "Cache_Miss - Cache_Hit: " << Locality_Cost << "\n";
