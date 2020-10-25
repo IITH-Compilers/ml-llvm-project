@@ -251,7 +251,7 @@ public:
 
   const SmallVector<int64_t, 8> getDDist() const { return DDist; }
 
-  void clearDependences() { Dependences.clear(); }
+  void clearDependences() { Dependences.clear(); DDist.clear(); }
 
   /// The vector of memory access instructions.  The indices are used as
   /// instruction identifiers in the Dependence class.
