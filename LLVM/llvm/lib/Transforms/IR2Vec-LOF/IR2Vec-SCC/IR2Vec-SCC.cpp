@@ -190,18 +190,21 @@ bool RDGWrapperPass::runOnFunction(Function &F) {
 
       std::string s1 = F.getParent()->getName().str();
       std::string s2(s1.substr(s1.rfind('/') + 1));
+      std::string::size_type pos = s2.find('.');
+      std::string s3 = s2.substr(0, pos);
+      std::string s4 = F.getName().str();
       std::string SCC_Filename =
-          "SCC_" + s2 + "L" + std::to_string(loopNum) + ".dot";
+          "S_" + s3 + "_F_" + s4 + "_L" + std::to_string(loopNum) + ".dot";
 
       errs() << "Writing " + SCC_Filename + "\n";
-      RDGraph.PrintDotFile_LAI(SCCGraph, SCC_Filename, s2);
+      RDGraph.PrintDotFile_LAI(SCCGraph, SCC_Filename, s1);
 
       // Print Input File
       std::string Input_Filename =
-          "InputGraph_" + s2 + "L" + std::to_string(loopNum) + ".dot";
+          "I_" + s3 + "_F_" + s4 + "_L" + std::to_string(loopNum) + ".dot";
 
       errs() << "Writing " + Input_Filename + "\n";
-      Print_IR2Vec_File(SCCGraph, Input_Filename, s2, instVecMap);
+      Print_IR2Vec_File(SCCGraph, Input_Filename, s1, instVecMap);
 
       std::string totalSCC_Filename = "totalSCC.txt";
       std::error_code EC;
