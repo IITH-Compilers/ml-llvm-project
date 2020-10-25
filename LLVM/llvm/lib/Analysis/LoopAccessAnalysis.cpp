@@ -193,7 +193,6 @@ void RuntimePointerChecking::insert(Loop *Lp, Value *Ptr, bool WritePtr,
   // Get the stride replaced scev.
   const SCEV *Sc = replaceSymbolicStrideSCEV(PSE, Strides, Ptr);
   ScalarEvolution *SE = PSE.getSE();
-
   const SCEV *ScStart;
   const SCEV *ScEnd;
 
@@ -203,28 +202,30 @@ void RuntimePointerChecking::insert(Loop *Lp, Value *Ptr, bool WritePtr,
     const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(Sc);
     assert(AR && "Invalid addrec expression");
     const SCEV *Ex = PSE.getBackedgeTakenCount();
+    if (Ex->getSCEVType() != scCouldNotCompute) { // Condition added *********
+      // errs() << "Type: " << Ex->getSCEVType() << "\n";
+      ScStart = AR->getStart();
+      ScEnd = AR->evaluateAtIteration(Ex, *SE);
+      const SCEV *Step = AR->getStepRecurrence(*SE);
 
-    ScStart = AR->getStart();
-    ScEnd = AR->evaluateAtIteration(Ex, *SE);
-    const SCEV *Step = AR->getStepRecurrence(*SE);
-
-    // For expressions with negative step, the upper bound is ScStart and the
-    // lower bound is ScEnd.
-    if (const auto *CStep = dyn_cast<SCEVConstant>(Step)) {
-      if (CStep->getValue()->isNegative())
-        std::swap(ScStart, ScEnd);
-    } else {
-      // Fallback case: the step is not constant, but we can still
-      // get the upper and lower bounds of the interval by using min/max
-      // expressions.
-      ScStart = SE->getUMinExpr(ScStart, ScEnd);
-      ScEnd = SE->getUMaxExpr(AR->getStart(), ScEnd);
+      // For expressions with negative step, the upper bound is ScStart and the
+      // lower bound is ScEnd.
+      if (const auto *CStep = dyn_cast<SCEVConstant>(Step)) {
+        if (CStep->getValue()->isNegative())
+          std::swap(ScStart, ScEnd);
+      } else {
+        // Fallback case: the step is not constant, but we can still
+        // get the upper and lower bounds of the interval by using min/max
+        // expressions.
+        ScStart = SE->getUMinExpr(ScStart, ScEnd);
+        ScEnd = SE->getUMaxExpr(AR->getStart(), ScEnd);
+      }
+      // Add the size of the pointed element to ScEnd.
+      unsigned EltSize =
+          Ptr->getType()->getPointerElementType()->getScalarSizeInBits() / 8;
+      const SCEV *EltSizeSCEV = SE->getConstant(ScEnd->getType(), EltSize);
+      ScEnd = SE->getAddExpr(ScEnd, EltSizeSCEV);
     }
-    // Add the size of the pointed element to ScEnd.
-    unsigned EltSize =
-        Ptr->getType()->getPointerElementType()->getScalarSizeInBits() / 8;
-    const SCEV *EltSizeSCEV = SE->getConstant(ScEnd->getType(), EltSize);
-    ScEnd = SE->getAddExpr(ScEnd, EltSizeSCEV);
   }
 
   Pointers.emplace_back(Ptr, ScStart, ScEnd, WritePtr, DepSetId, ASId, Sc);
@@ -694,7 +695,6 @@ bool AccessAnalysis::createCheckForAccess(RuntimePointerChecking &RtCheck,
   bool IsWrite = Access.getInt();
   RtCheck.insert(TheLoop, Ptr, IsWrite, DepId, ASId, StridesMap, PSE);
   LLVM_DEBUG(dbgs() << "LAA: Found a runtime check ptr:" << *Ptr << '\n');
-
   return true;
 }
 
@@ -711,7 +711,6 @@ bool AccessAnalysis::canCheckPtrAtRT(RuntimePointerChecking &RtCheck,
     return true;
 
   bool IsDepCheckNeeded = isDependencyCheckNeeded();
-
   // We assign a consecutive id to access from different alias sets.
   // Accesses between different groups doesn't need to be checked.
   unsigned ASId = 1;
@@ -1888,7 +1887,6 @@ bool MemoryDepChecker::areDepsSafe(DepCandidates &AccessSets,
   }
 
   LLVM_DEBUG(dbgs() << "Total Dependences: " << Dependences.size() << "\n");
-  errs() << "Total Dependences: " << Dependences.size() << "\n";
   return isSafeForVectorization();
 }
 
@@ -1951,7 +1949,7 @@ bool MemoryDepChecker::areDepsSafe_RAR(DepCandidates &AccessSets,
               if (Type != Dependence::NoDep) {
 
                 Dependences.push_back(Dependence(A.second, B.second, Type));
-                errs() << "New distance: " << dist << "\n";
+                // errs() << "New distance: " << dist << "\n";
                 int s = Dependences.size();
                 int tmp = 1;
 
@@ -2598,7 +2596,6 @@ void LoopAccessInfo::analyzeLoop_RAR(AliasAnalysis *AA, LoopInfo *LI,
   // Build dependence sets and check whether we need a runtime pointer bounds
   // check.
   Accesses.buildDependenceSets_RAR();
-
   // Find pointers with computable bounds. We are going to use this information
   // to place a runtime bound check.
   bool CanDoRTIfNeeded = Accesses.canCheckPtrAtRT(*PtrRtChecking, PSE->getSE(),
@@ -3025,11 +3022,11 @@ const LoopAccessInfo &LoopAccessLegacyAnalysis::getInfo(Loop *L) {
 
 const LoopAccessInfo &LoopAccessLegacyAnalysis::getInfo(Loop *L,
                                                         bool RAR_flag) {
-  auto &LAI = LoopAccessInfoMap[L];
-  // if (!LAI)
-  LAI = std::make_unique<LoopAccessInfo>(L, SE, TLI, AA, DT, LI, RAR_flag);
-
-  return *LAI.get();
+  auto &LAI_R = LoopAccessInfoMap_R[L];
+  if (!LAI_R) {
+    LAI_R = std::make_unique<LoopAccessInfo>(L, SE, TLI, AA, DT, LI, RAR_flag);
+  }
+  return *LAI_R.get();
 }
 
 void LoopAccessLegacyAnalysis::print(raw_ostream &OS, const Module *M) const {

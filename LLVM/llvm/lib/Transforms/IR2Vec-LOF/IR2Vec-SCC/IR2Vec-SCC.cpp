@@ -215,27 +215,15 @@ bool RDGWrapperPass::runOnFunction(Function &F) {
         errs() << "error opening file for writing! \n";
       }
 
-      /*  Loop *L1;
-       Value *Ptr1 = getLoadStorePointerOperand(&I1);
-       const SCEV *S = SE->getSCEVAtScope(*Ptr1, **il);
-       AddRecLoopReplacer Rewriter(*SE, **il, *L1);
-       Rewriter.visitAddRecExpr(*S);
-  */
       auto *LAA_WR = &getAnalysis<LoopAccessLegacyAnalysis>();
       const LoopAccessInfo &LAI_WR = LAA_WR->getInfo(*il);
 
       bool RAR_flag = 1;
       auto *LAA_RAR = &getAnalysis<LoopAccessLegacyAnalysis>();
-      const LoopAccessInfo &LAI_RAR = LAA_RAR->getInfo(*il, RAR_flag);
 
+      const LoopAccessInfo &LAI_RAR = LAA_RAR->getInfo(*il, RAR_flag);
       auto Locality_Obj = Locality(LAI_WR, LAI_RAR, TTI);
       int LocalityCost = Locality_Obj.computeLocalityCost(**il, SE);
-
-      /* Loop *L1;
-      Value *Ptr1 = getLoadStorePointerOperand(&I1);
-      AddRecLoopReplacer Rewriter(*SE, **il, *L1);
-      errs() << "bbbbbbbbbbbbbbbbbbbbbb\n";
-      const SCEV *SCEVPtr0 = Rewriter.visit(SCEVPtr0); */
     }
   }
   return false;

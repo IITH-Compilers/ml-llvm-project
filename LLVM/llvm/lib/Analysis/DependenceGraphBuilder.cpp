@@ -595,8 +595,6 @@ void AbstractDependenceGraphBuilder<G>::computeMemoryDependences() {
           };
 
           auto createForwardEdge = [&](NodeType &Src, NodeType &Dst) {
-            //  errs() << "Forward Edge : \n";
-            //  errs() << *Src << "\n" << * Dst << "\n";
             if (!ForwardEdgeCreated) {
               createMemoryEdge(Src, Dst);
               ++TotalMemoryEdges;
@@ -605,8 +603,6 @@ void AbstractDependenceGraphBuilder<G>::computeMemoryDependences() {
           };
 
           auto createBackwardEdge = [&](NodeType &Src, NodeType &Dst) {
-            //  errs() << "Backward Edge : \n";
-            //  errs() << *Src << "\n" << * Dst << "\n";
             if (!BackwardEdgeCreated) {
               createMemoryEdge(Dst, Src);
               ++TotalMemoryEdges;
@@ -614,34 +610,24 @@ void AbstractDependenceGraphBuilder<G>::computeMemoryDependences() {
             BackwardEdgeCreated = true;
           };
 
-          // errs() << "\tLevels: " << D->getLevels() << "\n";
-
-          for (unsigned Level = 1; Level <= D->getLevels(); ++Level) {
+          /* for (unsigned Level = 1; Level <= D->getLevels(); ++Level) {
             if (D->getDistance(Level) != nullptr) {
               errs() << "++++++++++++++++++++++++++++++Level: " << Level
                      << "\n";
               errs() << "Src: " << *ISrc << "\nDst: " << *IDst << "\n";
               errs() << "Distance: " << *D->getDistance(Level) << "\n";
             }
-          }
-          // ScalarEvolution *SE;
-          // const SCEV *ElementSize = SE->getElementSize(ISrc);
-          // errs() << "ElementSize: " << *ElementSize << "\n";
+          } */
 
           if (D->isConfused()) {
             createConfusedEdges(**SrcIt, **DstIt);
-            // errs() << "ConfusedEdge \n"; ///////////////
           } else if (D->isOrdered() && !D->isLoopIndependent()) {
             bool ReversedEdge = false;
-            // errs() << "$$$$$$$$$$$$$$$$$$$$ dependence $$$$$$$$$$$";
             for (unsigned Level = 1; Level <= D->getLevels(); ++Level) {
-              // errs() << "getLevels: " << D->getLevels() << "\n";
               if (D->getDirection(Level) == Dependence::DVEntry::EQ)
                 continue;
               else if (D->getDirection(Level) == Dependence::DVEntry::GT) {
                 createBackwardEdge(**SrcIt, **DstIt);
-                // errs() << "BackwardEdge: " << **SrcIt << "\t"
-                //        << **DstIt; //////////////////////
                 ReversedEdge = true;
                 ++TotalEdgeReversals;
                 break;
@@ -649,21 +635,16 @@ void AbstractDependenceGraphBuilder<G>::computeMemoryDependences() {
                 break;
               else {
                 createConfusedEdges(**SrcIt, **DstIt);
-                // errs() << "ConfusedEdge: " << **SrcIt << "\t"
-                //        << **DstIt; ////////////////////////
                 break;
               }
             }
             if (!ReversedEdge)
               createForwardEdge(**SrcIt, **DstIt);
-            // errs() << "ForwardEdge: " << **SrcIt << "\t"
-            //        << **DstIt; ////////////////////
           } else {
-            if (D->isUnordered()) {
+            /* if (D->isUnordered()) {
               // errs() << "Input Dependence: \n\n";
-            }
+            } */
             createForwardEdge(**SrcIt, **DstIt);
-            // errs() << "ForwardEdge creaed \n";
           }
 
           // Avoid creating duplicate edges.
@@ -677,14 +658,6 @@ void AbstractDependenceGraphBuilder<G>::computeMemoryDependences() {
         if (ForwardEdgeCreated && BackwardEdgeCreated)
           break;
       }
-      ///////////////////////////////////
-      //  errs() << "DstIList: ";
-      //  for(InstructionListType::iterator i=DstIList.begin(),
-      //  e=DstIList.end(); i!=e; ++i){
-      //    errs() << **i << "\n";
-      //  }
-      //  errs() << "\n";
-      ///////////////////////////////////////
     }
   }
   LLVM_DEBUG(

@@ -1185,7 +1185,6 @@ static const SCEV *BinomialCoefficient(const SCEV *It, unsigned K,
   // but it probably doesn't matter.
   if (K > 1000)
     return SE.getCouldNotCompute();
-
   unsigned W = SE.getTypeSizeInBits(ResultTy);
 
   // Calculate K! / 2^T and T; we divide out the factors of two before
@@ -1246,6 +1245,7 @@ static const SCEV *BinomialCoefficient(const SCEV *It, unsigned K,
 const SCEV *SCEVAddRecExpr::evaluateAtIteration(const SCEV *It,
                                                 ScalarEvolution &SE) const {
   const SCEV *Result = getStart();
+
   for (unsigned i = 1, e = getNumOperands(); i != e; ++i) {
     // The computation is correct in the face of overflow provided that the
     // multiplication is performed _after_ the evaluation of the binomial

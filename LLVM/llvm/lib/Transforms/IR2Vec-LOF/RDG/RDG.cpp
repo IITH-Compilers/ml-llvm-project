@@ -296,6 +296,7 @@ void RDG::createMemoryEdgeMergedNode(DataDependenceGraph &G, DependenceInfo &DI,
         }
       }
     }
+
     for (EdgeType *e : *N) {
       NodeType *tgt = &e->getTargetNode();
       if (*tgt == MergingNode) {

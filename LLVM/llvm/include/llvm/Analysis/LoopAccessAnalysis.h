@@ -785,6 +785,7 @@ public:
   void releaseMemory() override {
     // Invalidate the cache when the pass is freed.
     LoopAccessInfoMap.clear();
+    LoopAccessInfoMap_R.clear();
   }
 
   /// Print the result of the analysis when invoked with -analyze.
@@ -793,6 +794,8 @@ public:
 private:
   /// The cache.
   DenseMap<Loop *, std::unique_ptr<LoopAccessInfo>> LoopAccessInfoMap;
+
+  DenseMap<Loop *, std::unique_ptr<LoopAccessInfo>> LoopAccessInfoMap_R;
 
   // The used analysis passes.
   ScalarEvolution *SE = nullptr;
