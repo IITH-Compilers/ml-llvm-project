@@ -180,8 +180,9 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
          << *StepValue << "\n"; */
 
   // Compute CacheLineSize
-  unsigned CLS = TTI->getCacheLineSize();
-  // errs() << "CacheLineSize: " << CLS << "\n";
+  // unsigned CLS = TTI->getCacheLineSize();
+  unsigned CLS = 32;
+  errs() << "CacheLineSize: " << CLS << "\n";
 
   assert(CLS > 0 && "Unknown cache line size");
 
@@ -191,14 +192,16 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
   for (BasicBlock *BB : IL.blocks()) {
     for (Instruction &I : BB->instructionsWithoutDebug()) {
       if (I.mayReadOrWriteMemory()) {
-        bool Mflag = 0;
-        for (auto i : Mem_InstList)
-          if (&I == i) {
-            Mflag = 1;
-            break;
-          }
-        if (Mflag == 0)
-          Mem_InstList.push_back(&I);
+        if (isa<LoadInst>(I) || isa<StoreInst>(I)) {
+          bool Mflag = 0;
+          for (auto i : Mem_InstList)
+            if (&I == i) {
+              Mflag = 1;
+              break;
+            }
+          if (Mflag == 0)
+            Mem_InstList.push_back(&I);
+        }
       }
     }
   }
@@ -211,6 +214,7 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
     assert(Ptr && "Pointer operand doesn't exit");
     const SCEV *AccessFn = SE->getSCEV(Ptr);
     auto BasePointer = dyn_cast<SCEVUnknown>(SE->getPointerBase(AccessFn));
+    ;
     assert(BasePointer && "BasePointer doesn't exit. Include else case");
     if (BasePointer != nullptr) {
       if (dependence_Inst_Count.find(BasePointer) !=
@@ -301,9 +305,9 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
     }
   }
 
-  for (auto i : DependenceDistances_Write) {
+  /* for (auto i : DependenceDistances_Write) {
     errs() << "Distance: " << i << "\n";
-  }
+  } */
 
   // Calculate dependences For Write/Read
   const auto dependences_Read =
@@ -311,9 +315,9 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
   const SmallVector<int64_t, 8> DependenceDistances_Read =
       LAI_RAR.getDepChecker().getDDist(); // List of dependence
 
-  for (auto i : DependenceDistances_Read) {
-    errs() << "Distance Read: " << i << "\n";
-  }
+  /*  for (auto i : DependenceDistances_Read) {
+     errs() << "Distance Read: " << i << "\n";
+   } */
 
   // Check for all Read-Read Dependences
   if (dependences_Read == nullptr) {
@@ -378,7 +382,9 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
 
   // Compute compulsary Cache misses
   for (auto Inst : Mem_InstList) {
-    // errs() << "\tMem_List: " << *Inst << "\n";
+    // if (isa<InvokeInst>(Inst))z
+    //   errs() << "\tMem_List: " << *Inst << "\n";
+
     Value *Ptr = getLoadStorePointerOperand(Inst);
     assert(Ptr && "Pointer expected");
     const SCEV *SCEVPtr = SE->getSCEV(Ptr);
@@ -404,9 +410,9 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
 
     // Calculate Size of the datatype of arrary for access in load/store
     // instruction
-    auto dataType = SE->getElementSize(Inst);
-    const SCEVConstant *SCEVConst = dyn_cast_or_null<SCEVConstant>(dataType);
-    auto dataType_Size = SCEVConst->getValue()->getZExtValue();
+    // auto dataType = SE->getElementSize(Inst);
+    // const SCEVConstant *SCEVConst = dyn_cast_or_null<SCEVConstant>(dataType);
+    // auto dataType_Size = SCEVConst->getValue()->getZExtValue();
     // errs() << "Data Type Size: " << dataType_Size << "\n";
 
     if (Stride < CLS) { // make sure Stride is in bytes
@@ -458,9 +464,9 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
 
     // Calculate Size of the datatype of arrary for access in load/store
     // instruction
-    auto dataType = SE->getElementSize(Inst);
-    const SCEVConstant *SCEVConst = dyn_cast_or_null<SCEVConstant>(dataType);
-    auto dataType_Size = SCEVConst->getValue()->getZExtValue();
+    // auto dataType = SE->getElementSize(Inst);
+    // const SCEVConstant *SCEVConst = dyn_cast_or_null<SCEVConstant>(dataType);
+    // auto dataType_Size = SCEVConst->getValue()->getZExtValue();
     // errs() << "Data Type Size: " << dataType_Size << "\n";
 
     if (Stride < CLS) {
