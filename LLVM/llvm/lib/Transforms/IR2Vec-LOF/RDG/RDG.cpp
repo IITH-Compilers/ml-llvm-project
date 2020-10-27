@@ -8,6 +8,7 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/DDG.h"
 #include "llvm/Analysis/DependenceAnalysis.h"
+#include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/IR/MDBuilder.h"
@@ -417,6 +418,14 @@ DataDependenceGraph *RDG::computeRDGForInnerLoop(Loop &IL) {
             errs()
             << "FuncCallFound: no need to make RDG with function calls\n");
         return nullptr;
+      }
+
+      if (auto *Phi = dyn_cast<PHINode>(&I)) {
+        RecurrenceDescriptor RD;
+        InductionDescriptor ID;
+        if (!InductionDescriptor::isInductionPHI(Phi, &IL, &SE, ID)) {
+          return nullptr;
+        }
       }
     }
     auto br = dyn_cast<BranchInst>(BB->getTerminator());

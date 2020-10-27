@@ -39,7 +39,7 @@ static cl::opt<unsigned>
     SpatialThreshold("cache-spatial-threshold-byte", cl::init(512), cl::Hidden,
                      cl::desc("Spatial cache locality distance"));
 
-#define DEBUG_Type "locality"
+#define DEBUG_TYPE "locality"
 
 class VectorLoopCost : public FunctionPass {
 public:
