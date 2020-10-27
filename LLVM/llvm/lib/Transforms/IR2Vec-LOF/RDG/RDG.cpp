@@ -335,7 +335,7 @@ void RDG::CreateSCC(DataDependenceGraph &G, DependenceInfo &DI) {
     LLVM_DEBUG(dbgs() << "Creating pi-block node with " << NL.size()
                       << " nodes in it.\n");
 
-    errs() << "SCC Node: " << &NL << "\n";
+    // errs() << "SCC Node: " << &NL << "\n";
     for (NodeType *Source : NL) {
       for (NodeType *Target : NL) {
         // No Merging Possible: if Source and Target are same node

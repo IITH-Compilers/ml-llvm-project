@@ -162,6 +162,7 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
 
   // Compute TripCount of the loop
   const SCEV *TC = SE->getBackedgeTakenCount(&IL);
+  assert(TC && "TC expected");
   uint64_t TripCount;
   const SCEVConstant *SCEVConst_TC = dyn_cast_or_null<SCEVConstant>(TC);
   if (SCEVConst_TC)
@@ -181,8 +182,8 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
 
   // Compute CacheLineSize
   // unsigned CLS = TTI->getCacheLineSize();
-  unsigned CLS = 32;
-  errs() << "CacheLineSize: " << CLS << "\n";
+  unsigned CLS = 64;
+  // errs() << "CacheLineSize: " << CLS << "\n";
 
   assert(CLS > 0 && "Unknown cache line size");
 
@@ -211,6 +212,7 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
   for (auto i : Mem_InstList) {
     bool depFlag = 0;
     Value *Ptr = getLoadStorePointerOperand(i);
+    assert(Ptr && "Ptr expected");
     assert(Ptr && "Pointer operand doesn't exit");
     const SCEV *AccessFn = SE->getSCEV(Ptr);
     auto BasePointer = dyn_cast<SCEVUnknown>(SE->getPointerBase(AccessFn));
@@ -290,6 +292,7 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
             continue;
 
             Value *Ptr = getLoadStorePointerOperand(Src);
+            assert(Ptr && "Ptr expected");
             const SCEV *AccessFn = SE->getSCEV(Ptr);
             auto BasePointer =
                 dyn_cast<SCEVUnknown>(SE->getPointerBase(AccessFn));
@@ -314,7 +317,8 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
       LAI_RAR.getDepChecker().getDependences(); // List of dependences
   const SmallVector<int64_t, 8> DependenceDistances_Read =
       LAI_RAR.getDepChecker().getDDist(); // List of dependence
-
+  // errs() << "depWrite: " << dependences_Write->size() << "\n";
+  // errs() << "depRead: " << dependences_Read->size() << "\n";
   /*  for (auto i : DependenceDistances_Read) {
      errs() << "Distance Read: " << i << "\n";
    } */
@@ -365,6 +369,7 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
             continue;
 
             Value *Ptr = getLoadStorePointerOperand(Src);
+            assert(Ptr && "Ptr expected");
             const SCEV *AccessFn = SE->getSCEV(Ptr);
             auto BasePointer =
                 dyn_cast<SCEVUnknown>(SE->getPointerBase(AccessFn));
@@ -382,49 +387,60 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
 
   // Compute compulsary Cache misses
   for (auto Inst : Mem_InstList) {
-    // if (isa<InvokeInst>(Inst))z
-    //   errs() << "\tMem_List: " << *Inst << "\n";
+    // errs() << "\tMem_List: " << *Inst << "\n";
 
     Value *Ptr = getLoadStorePointerOperand(Inst);
-    assert(Ptr && "Pointer expected");
+    // assert(Ptr && "Pointer expected");
     const SCEV *SCEVPtr = SE->getSCEV(Ptr);
     // SCEVPtr = RTC.visit(SCEVPtr);
-
-    // Calculate Stride
-    const SCEVAddRecExpr *Expr = dyn_cast<SCEVAddRecExpr>(SCEVPtr);
-    assert(Expr && "AddrecExpr expected");
-    // Expr should not be null
-    if (Expr == nullptr) {
-      continue;
-      //***************************************
-    }
-    const SCEV *stride = Expr->getStepRecurrence(*SE);
-    const SCEVConstant *SCEVConst_stride =
-        dyn_cast_or_null<SCEVConstant>(stride);
-    assert(SCEVConst_stride && "Not constant stride");
-    auto Stride = SCEVConst_stride->getValue()->getZExtValue();
-    // errs() << "Stride: " << Stride << "\n";
-
-    // const SCEV *CacheLineSize = SE->getConstant(stride->getType(), CLS);
-    // errs() << *CacheLineSize << "\n";
-
-    // Calculate Size of the datatype of arrary for access in load/store
-    // instruction
-    // auto dataType = SE->getElementSize(Inst);
-    // const SCEVConstant *SCEVConst = dyn_cast_or_null<SCEVConstant>(dataType);
-    // auto dataType_Size = SCEVConst->getValue()->getZExtValue();
-    // errs() << "Data Type Size: " << dataType_Size << "\n";
-
-    if (Stride < CLS) { // make sure Stride is in bytes
-      // auto miss = TripCount * Stride * dataType_Size / CLS;
-      auto miss =
-          TripCount * Stride / CLS; // Access stride will have stride*dataType
-      Locality_Cost += miss;
+    // errs() << "Ptr: " << *SCEVPtr << "\n";
+    if (!isa<SCEVAddRecExpr>(SCEVPtr)) {
+      Locality_Cost += TripCount;
     } else {
-      Locality_Cost += TripCount * Stride;
-    }
+      // Calculate Stride
+      const SCEVAddRecExpr *Expr = dyn_cast<SCEVAddRecExpr>(SCEVPtr);
+      assert(Expr && "AddrecExpr expected");
+      // Expr should not be null
+      if (Expr == nullptr) {
+        continue;
+        //***************************************
+      }
 
-    // errs() << "Cache_Miss: " << Locality_Cost << "\n";
+      const SCEV *stride = Expr->getStepRecurrence(*SE);
+      errs() << "Stride: " << *stride << "\n";
+      const SCEVConstant *SCEVConst_stride =
+          dyn_cast_or_null<SCEVConstant>(stride);
+
+      if (!isa<SCEVConstant>(stride)) {
+        Locality_Cost += TripCount;
+      } else {
+        // assert(SCEVConst_stride && "Not constant stride");
+        auto Stride = SCEVConst_stride->getValue()->getZExtValue();
+        // errs() << "Stride: " << Stride << "\n";
+
+        // const SCEV *CacheLineSize = SE->getConstant(stride->getType(), CLS);
+        // errs() << *CacheLineSize << "\n";
+
+        // Calculate Size of the datatype of arrary for access in load/store
+        // instruction
+        // auto dataType = SE->getElementSize(Inst);
+        // const SCEVConstant *SCEVConst =
+        // dyn_cast_or_null<SCEVConstant>(dataType); auto dataType_Size =
+        // SCEVConst->getValue()->getZExtValue(); errs() << "Data Type Size: "
+        // << dataType_Size << "\n";
+
+        if (Stride < CLS) { // make sure Stride is in bytes
+          // auto miss = TripCount * Stride * dataType_Size / CLS;
+          auto miss = TripCount * Stride /
+                      CLS; // Access stride will have stride*dataType
+          Locality_Cost += miss;
+        } else {
+          Locality_Cost += TripCount * Stride;
+        }
+
+        // errs() << "Cache_Miss: " << Locality_Cost << "\n";
+      }
+    }
   }
 
   // Substract Cache hits by dependence accesses, from Cache_miss
@@ -434,49 +450,58 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
     assert(Ptr && "Ptr expected");
     const SCEV *SCEVPtr = SE->getSCEV(Ptr);
 
-    // Check for number for accesses to same array (Base Pointer)
-    auto BasePointer = dyn_cast<SCEVUnknown>(SE->getPointerBase(SCEVPtr));
-    assert(BasePointer && "BasePointer expected");
-    int n = dependence_Inst_Count.find(BasePointer)->second;
-    // errs() << "Count: " << n << "\n";
-
-    // Bail out if array access is only once
-    if (n < 2)
+    if (!isa<SCEVAddRecExpr>(SCEVPtr)) {
       continue;
-
-    // In case of dependence > threshold
-    if (dep_threshold.find(BasePointer)->second == true)
-      continue;
-
-    // Calculate Stride
-    const SCEVAddRecExpr *Expr = dyn_cast<SCEVAddRecExpr>(SCEVPtr);
-    assert(Expr && "AddRec expected");
-    if (Expr == nullptr) {
-      continue;
-      //***************************************
-    }
-
-    const SCEV *stride = Expr->getStepRecurrence(*SE);
-    const SCEVConstant *SCEVConst_stride =
-        dyn_cast_or_null<SCEVConstant>(stride);
-    auto Stride = SCEVConst_stride->getValue()->getZExtValue();
-    // errs() << "Stride: " << Stride << "\n";
-
-    // Calculate Size of the datatype of arrary for access in load/store
-    // instruction
-    // auto dataType = SE->getElementSize(Inst);
-    // const SCEVConstant *SCEVConst = dyn_cast_or_null<SCEVConstant>(dataType);
-    // auto dataType_Size = SCEVConst->getValue()->getZExtValue();
-    // errs() << "Data Type Size: " << dataType_Size << "\n";
-
-    if (Stride < CLS) {
-      auto hit = (n - 1) * TripCount * Stride / CLS;
-      Locality_Cost -= hit;
     } else {
-      Locality_Cost -= (n - 1) * TripCount;
-    }
+      // Check for number for accesses to same array (Base Pointer)
+      auto BasePointer = dyn_cast<SCEVUnknown>(SE->getPointerBase(SCEVPtr));
+      assert(BasePointer && "BasePointer expected");
+      int n = dependence_Inst_Count.find(BasePointer)->second;
+      // errs() << "Count: " << n << "\n";
 
-    // errs() << "Cache_Miss - Cache_Hit: " << Locality_Cost << "\n";
+      // Bail out if array access is only once
+      if (n < 2)
+        continue;
+
+      // In case of dependence > threshold
+      if (dep_threshold.find(BasePointer)->second == true)
+        continue;
+
+      // Calculate Stride
+      const SCEVAddRecExpr *Expr = dyn_cast<SCEVAddRecExpr>(SCEVPtr);
+      assert(Expr && "AddRec expected");
+      if (Expr == nullptr) {
+        continue;
+        //***************************************
+      }
+
+      const SCEV *stride = Expr->getStepRecurrence(*SE);
+      const SCEVConstant *SCEVConst_stride =
+          dyn_cast_or_null<SCEVConstant>(stride);
+      if (!isa<SCEVConstant>(stride)) {
+        Locality_Cost += TripCount;
+      } else {
+        auto Stride = SCEVConst_stride->getValue()->getZExtValue();
+        // errs() << "Stride: " << Stride << "\n";
+
+        // Calculate Size of the datatype of arrary for access in load/store
+        // instruction
+        // auto dataType = SE->getElementSize(Inst);
+        // const SCEVConstant *SCEVConst =
+        // dyn_cast_or_null<SCEVConstant>(dataType); auto dataType_Size =
+        // SCEVConst->getValue()->getZExtValue(); errs() << "Data Type Size: "
+        // << dataType_Size << "\n";
+
+        if (Stride < CLS) {
+          auto hit = (n - 1) * TripCount * Stride / CLS;
+          Locality_Cost -= hit;
+        } else {
+          Locality_Cost -= (n - 1) * TripCount;
+        }
+
+        // errs() << "Cache_Miss - Cache_Hit: " << Locality_Cost << "\n";
+      }
+    }
   }
 
   errs() << "Locality Cost: " << Locality_Cost << "\n";
