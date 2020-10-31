@@ -1,5 +1,5 @@
-#include "llvm/Transforms/IR2Vec-LOF/Locality.h"
 #include "llvm/Analysis/LoopCacheAnalysis.h"
+#include "llvm/Transforms/IR2Vec-LOF/Locality.h"
 #include "llvm/Transforms/IR2Vec-LOF/RDG.h"
 
 #include "llvm/ADT/DepthFirstIterator.h"
@@ -39,14 +39,18 @@ static cl::opt<unsigned>
     SpatialThreshold("cache-spatial-threshold-byte", cl::init(512), cl::Hidden,
                      cl::desc("Spatial cache locality distance"));
 
+static cl::opt<unsigned int>
+    loopID("lID", cl::Hidden, cl::Required,
+           cl::desc("ID of the loop set by RDG/loop distribution pass"));
+
 #define DEBUG_TYPE "locality"
 
-class VectorLoopCost : public FunctionPass {
+class LoopCost : public FunctionPass {
 public:
   static char ID;
   ScalarEvolution *SE;
 
-  VectorLoopCost() : FunctionPass(ID) {}
+  LoopCost() : FunctionPass(ID) {}
   void GetInnerLoops(Loop *, SmallVectorImpl<Loop *> &);
   bool isLoopVectorized(Loop *, unsigned &);
 
@@ -71,14 +75,29 @@ public:
     for (Loop *L : InnerLoops) {
       unsigned LoopCost = 0;
       auto Latch = L->getLoopLatch();
-      MDNode *MD =
+      MDNode *MD1 =
           Latch->getTerminator()->getMetadata("IR2Vec-Distributed-LoopID");
-      if (!MD)
+      MDNode *MD2 = Latch->getTerminator()->getMetadata("IR2Vec-SCC-LoopID");
+      if (!MD1 && !MD2)
         continue;
 
+      if (MD1) {
+        auto constVal =
+            dyn_cast<ConstantAsMetadata>(MD1->getOperand(0))->getValue();
+        if (loopID != dyn_cast<ConstantInt>(constVal)->getZExtValue())
+          continue;
+      }
+
+      else if (MD2) {
+        auto constVal =
+            dyn_cast<ConstantAsMetadata>(MD2->getOperand(0))->getValue();
+        if (loopID != dyn_cast<ConstantInt>(constVal)->getZExtValue())
+          continue;
+      }
+
       unsigned VF = 0;
-      if (!isLoopVectorized(L, VF))
-        continue;
+      // if (!isLoopVectorized(L, VF))
+      //   continue;
 
       unsigned NumMemInsts = 0;
       for (auto BB : L->getBlocks()) {
@@ -118,6 +137,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<ScalarEvolutionWrapperPass>();
     AU.addRequired<LoopInfoWrapperPass>();
+    AU.addRequired<TargetTransformInfoWrapperPass>();
     // AU.addPreserved<LoopInfoWrapperPass>();
     AU.addRequired<LoopAccessLegacyAnalysis>();
     AU.setPreservesAll();
@@ -128,7 +148,7 @@ public:
   }
 };
 
-bool VectorLoopCost::isLoopVectorized(Loop *L, unsigned &VF) {
+bool LoopCost::isLoopVectorized(Loop *L, unsigned &VF) {
   for (auto BB : L->getBlocks()) {
     for (auto &I : *BB) {
       if (I.getType()->isVectorTy()) {
@@ -146,8 +166,7 @@ bool VectorLoopCost::isLoopVectorized(Loop *L, unsigned &VF) {
   return false;
 }
 
-void VectorLoopCost::GetInnerLoops(Loop *L,
-                                   SmallVectorImpl<Loop *> &InnerLoops) {
+void LoopCost::GetInnerLoops(Loop *L, SmallVectorImpl<Loop *> &InnerLoops) {
   if (L->empty())
     InnerLoops.push_back(L);
   else {
@@ -156,6 +175,10 @@ void VectorLoopCost::GetInnerLoops(Loop *L,
   }
   return;
 }
+
+// Registering the pass
+char LoopCost::ID = 0;
+static RegisterPass<LoopCost> X("LoopCost", "LoopCost");
 
 int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
   // LLVMContext &Context = IL.getHeader()->getContext();
