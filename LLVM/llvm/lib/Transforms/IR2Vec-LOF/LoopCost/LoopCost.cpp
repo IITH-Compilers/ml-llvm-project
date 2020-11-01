@@ -433,7 +433,6 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
       }
 
       const SCEV *stride = Expr->getStepRecurrence(*SE);
-      errs() << "Stride: " << *stride << "\n";
       const SCEVConstant *SCEVConst_stride =
           dyn_cast_or_null<SCEVConstant>(stride);
 
@@ -457,9 +456,13 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
 
         if (Stride < CLS) { // make sure Stride is in bytes
           // auto miss = TripCount * Stride * dataType_Size / CLS;
-          auto miss = TripCount * Stride /
-                      CLS; // Access stride will have stride*dataType
-          Locality_Cost += miss;
+          auto m = TripCount * Stride;
+          if (m < CLS)
+            Locality_Cost += m;
+          else {
+            auto miss = m / CLS; // Access stride will have stride*dataType
+            Locality_Cost += miss;
+          }
         } else {
           Locality_Cost += TripCount * Stride;
         }
@@ -519,8 +522,13 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
         // << dataType_Size << "\n";
 
         if (Stride < CLS) {
-          auto hit = (n - 1) * TripCount * Stride / CLS;
-          Locality_Cost -= hit;
+          auto m = TripCount * Stride;
+          if (m < CLS)
+            Locality_Cost -= m;
+          else {
+            auto hit = (n - 1) * m / CLS;
+            Locality_Cost -= hit;
+          }
         } else {
           Locality_Cost -= (n - 1) * TripCount;
         }

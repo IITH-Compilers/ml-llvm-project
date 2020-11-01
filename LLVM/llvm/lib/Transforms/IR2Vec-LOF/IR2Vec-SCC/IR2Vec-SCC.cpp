@@ -106,9 +106,10 @@ void RDGWrapperPass::Print_IR2Vec_File(
           if (tgtNode->NodeLabel != "") {
             if ((*E).isMemoryDependence()) {
               md++;
-              errs() << NodeNumber.find(N)->second << " -> "
-                     << NodeNumber.find(&E->getTargetNode())->second << " : "
-                     << (*E).getKind() << " : " << (*E).getEdgeWeight() << "\n";
+              // errs() << NodeNumber.find(N)->second << " -> "
+              //        << NodeNumber.find(&E->getTargetNode())->second << " : "
+              //        << (*E).getKind() << " : " << (*E).getEdgeWeight() <<
+              //        "\n";
 
               File << NodeNumber.find(N)->second << " -> "
                    << NodeNumber.find(&E->getTargetNode())->second
@@ -156,10 +157,11 @@ bool RDGWrapperPass::runOnFunction(Function &F) {
   LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   DependenceInfo DI = DependenceInfo(&F, AA, SE, LI);
 
+  FunctionNumber++;
+
   int loopNum = 0;
   for (LoopInfo::iterator i = LI->begin(), e = LI->end(); i != e; ++i) {
     Loop *L = *i;
-    errs() << "===================================\n";
     for (auto il = df_begin(L), el = df_end(L); il != el; ++il) {
       if (il->getSubLoops().size() > 0) {
         continue;
@@ -190,17 +192,21 @@ bool RDGWrapperPass::runOnFunction(Function &F) {
       std::string::size_type pos = s2.find('.');
       std::string s3 = s2.substr(0, pos);
       std::string s4 = F.getName().str();
-      std::string SCC_Filename =
-          "S_" + s3 + "_F_" + s4 + "_L" + std::to_string(loopNum) + ".dot";
+      std::string SCC_Filename = "S_" + s3 + "_F" +
+                                 std::to_string(FunctionNumber) + "_L" +
+                                 std::to_string(loopNum) + ".dot";
+      // "S_" + s3 + "_F_" + s4 + "_L" + std::to_string(loopNum) + ".dot";
 
-      errs() << "Writing " + SCC_Filename + "\n";
+      // errs() << "Writing " + SCC_Filename + "\n";
       RDGraph.PrintDotFile_LAI(SCCGraph, SCC_Filename, s1);
 
       // Print Input File
-      std::string Input_Filename =
-          "I_" + s3 + "_F_" + s4 + "_L" + std::to_string(loopNum) + ".dot";
+      std::string Input_Filename = "I_" + s3 + "_F" +
+                                   std::to_string(FunctionNumber) + "_L" +
+                                   std::to_string(loopNum) + ".dot";
+      // "I_" + s3 + "_F_" + s4 + "_L" + std::to_string(loopNum) + ".dot";
 
-      errs() << "Writing " + Input_Filename + "\n";
+      // errs() << "Writing " + Input_Filename + "\n";
       Print_IR2Vec_File(SCCGraph, Input_Filename, s2, instVecMap);
 
       std::string totalSCC_Filename = "totalSCC.txt";

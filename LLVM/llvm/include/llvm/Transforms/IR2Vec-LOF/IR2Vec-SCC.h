@@ -53,6 +53,8 @@ private:
   using NodeToNumber = DenseMap<const DDGNode *, std::string>;
   NodeToNumber NodeNumber;
 
+  int FunctionNumber = 0;
+
   void setLoopID(Loop *L, MDNode *LoopID) const;
 
 public:
