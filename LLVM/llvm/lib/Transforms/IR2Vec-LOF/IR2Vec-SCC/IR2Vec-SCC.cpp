@@ -192,7 +192,7 @@ bool RDGWrapperPass::runOnFunction(Function &F) {
       std::string::size_type pos = s2.find('.');
       std::string s3 = s2.substr(0, pos);
       std::string s4 = F.getName().str();
-      std::string SCC_Filename = "S_" + s3 + "_F" +
+      std::string SCC_Filename = "S_" + s2 + "_F" +
                                  std::to_string(FunctionNumber) + "_L" +
                                  std::to_string(loopNum) + ".dot";
       // "S_" + s3 + "_F_" + s4 + "_L" + std::to_string(loopNum) + ".dot";
@@ -201,7 +201,7 @@ bool RDGWrapperPass::runOnFunction(Function &F) {
       RDGraph.PrintDotFile_LAI(SCCGraph, SCC_Filename, s1);
 
       // Print Input File
-      std::string Input_Filename = "I_" + s3 + "_F" +
+      std::string Input_Filename = "I_" + s2 + "_F" +
                                    std::to_string(FunctionNumber) + "_L" +
                                    std::to_string(loopNum) + ".dot";
       // "I_" + s3 + "_F_" + s4 + "_L" + std::to_string(loopNum) + ".dot";

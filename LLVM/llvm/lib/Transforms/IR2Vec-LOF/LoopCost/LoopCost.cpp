@@ -441,28 +441,13 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
       } else {
         // assert(SCEVConst_stride && "Not constant stride");
         auto Stride = SCEVConst_stride->getValue()->getZExtValue();
-        // errs() << "Stride: " << Stride << "\n";
-
-        // const SCEV *CacheLineSize = SE->getConstant(stride->getType(), CLS);
-        // errs() << *CacheLineSize << "\n";
-
-        // Calculate Size of the datatype of arrary for access in load/store
-        // instruction
-        // auto dataType = SE->getElementSize(Inst);
-        // const SCEVConstant *SCEVConst =
-        // dyn_cast_or_null<SCEVConstant>(dataType); auto dataType_Size =
-        // SCEVConst->getValue()->getZExtValue(); errs() << "Data Type Size: "
-        // << dataType_Size << "\n";
 
         if (Stride < CLS) { // make sure Stride is in bytes
           // auto miss = TripCount * Stride * dataType_Size / CLS;
-          auto m = TripCount * Stride;
-          if (m < CLS)
-            Locality_Cost += m;
-          else {
-            auto miss = m / CLS; // Access stride will have stride*dataType
-            Locality_Cost += miss;
-          }
+          auto miss = (long)(ceil((float)TripCount * Stride / CLS));
+          // auto miss = TripCount * Stride /
+          //             CLS; // Access stride will have stride*dataType
+          Locality_Cost += miss;
         } else {
           Locality_Cost += TripCount * Stride;
         }
@@ -501,7 +486,6 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
       assert(Expr && "AddRec expected");
       if (Expr == nullptr) {
         continue;
-        //***************************************
       }
 
       const SCEV *stride = Expr->getStepRecurrence(*SE);
@@ -511,29 +495,15 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
         Locality_Cost += TripCount;
       } else {
         auto Stride = SCEVConst_stride->getValue()->getZExtValue();
-        // errs() << "Stride: " << Stride << "\n";
-
-        // Calculate Size of the datatype of arrary for access in load/store
-        // instruction
-        // auto dataType = SE->getElementSize(Inst);
-        // const SCEVConstant *SCEVConst =
-        // dyn_cast_or_null<SCEVConstant>(dataType); auto dataType_Size =
-        // SCEVConst->getValue()->getZExtValue(); errs() << "Data Type Size: "
-        // << dataType_Size << "\n";
 
         if (Stride < CLS) {
-          auto m = TripCount * Stride;
-          if (m < CLS)
-            Locality_Cost -= m;
-          else {
-            auto hit = (n - 1) * m / CLS;
-            Locality_Cost -= hit;
-          }
+          auto h = (long)(ceil((float)TripCount * Stride / CLS));
+          auto hit = (n - 1) * h;
+          // auto hit = (n - 1) * TripCount * Stride / CLS;
+          Locality_Cost -= hit;
         } else {
           Locality_Cost -= (n - 1) * TripCount;
         }
-
-        // errs() << "Cache_Miss - Cache_Hit: " << Locality_Cost << "\n";
       }
     }
   }
