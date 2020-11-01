@@ -1,5 +1,5 @@
 #include "llvm/Transforms/IR2Vec-LOF/IR2Vec-SCC.h"
-#include "llvm/Transforms/IR2Vec-LOF/Locality.h"
+// #include "llvm/Transforms/IR2Vec-LOF/Locality.h"
 #include "llvm/Transforms/IR2Vec-LOF/RDG.h"
 
 #include "./../../IR2Vec-Engine/include/IR2Vec-RD.h"
@@ -16,7 +16,6 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
-#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Mangler.h"
@@ -54,8 +53,8 @@ void RDGWrapperPass::Print_IR2Vec_File(
 
   if (!EC) {
     File << "digraph G {\n";
-    File << "FileName=" << ll_name << ";\n";
-    File << "Function=" << FunctionName << ";\n";
+    File << "FileName=\"" << ll_name << "\";\n";
+    File << "Function=\"" << FunctionName << "\";\n";
     // Append all the nodes with labels into DOT File
     for (auto *N : G) {
       InstructionListType IList;
@@ -156,8 +155,6 @@ bool RDGWrapperPass::runOnFunction(Function &F) {
   ScalarEvolution *SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
   LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   DependenceInfo DI = DependenceInfo(&F, AA, SE, LI);
-  TargetTransformInfo *TTI =
-      &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
 
   int loopNum = 0;
   for (LoopInfo::iterator i = LI->begin(), e = LI->end(); i != e; ++i) {
@@ -204,7 +201,7 @@ bool RDGWrapperPass::runOnFunction(Function &F) {
           "I_" + s3 + "_F_" + s4 + "_L" + std::to_string(loopNum) + ".dot";
 
       errs() << "Writing " + Input_Filename + "\n";
-      Print_IR2Vec_File(SCCGraph, Input_Filename, s1, instVecMap);
+      Print_IR2Vec_File(SCCGraph, Input_Filename, s2, instVecMap);
 
       std::string totalSCC_Filename = "totalSCC.txt";
       std::error_code EC;
@@ -217,16 +214,6 @@ bool RDGWrapperPass::runOnFunction(Function &F) {
       } else {
         errs() << "error opening file for writing! \n";
       }
-
-      auto *LAA_WR = &getAnalysis<LoopAccessLegacyAnalysis>();
-      const LoopAccessInfo &LAI_WR = LAA_WR->getInfo(*il);
-
-      bool RAR_flag = 1;
-      auto *LAA_RAR = &getAnalysis<LoopAccessLegacyAnalysis>();
-
-      const LoopAccessInfo &LAI_RAR = LAA_RAR->getInfo(*il, RAR_flag);
-      auto Locality_Obj = Locality(LAI_WR, LAI_RAR, TTI);
-      int LocalityCost = Locality_Obj.computeLocalityCost(**il, SE);
     }
   }
   return false;
@@ -235,7 +222,7 @@ bool RDGWrapperPass::runOnFunction(Function &F) {
 void RDGWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<LoopInfoWrapperPass>();
   AU.addRequired<ScalarEvolutionWrapperPass>();
-  AU.addRequired<TargetTransformInfoWrapperPass>();
+  // AU.addRequired<TargetTransformInfoWrapperPass>();
   AU.addRequired<AAResultsWrapperPass>();
   AU.addRequired<LoopAccessLegacyAnalysis>();
   AU.addRequired<IR2Vec_RD>();
