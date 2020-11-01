@@ -39,6 +39,9 @@ static cl::opt<unsigned>
     SpatialThreshold("cache-spatial-threshold-byte", cl::init(512), cl::Hidden,
                      cl::desc("Spatial cache locality distance"));
 
+static cl::opt<std::string> funcName("function", cl::Hidden, cl::Required,
+                                     cl::desc("Name of the function"));
+
 static cl::opt<unsigned int>
     loopID("lID", cl::Hidden, cl::Required,
            cl::desc("ID of the loop set by RDG/loop distribution pass"));
@@ -55,7 +58,7 @@ public:
   bool isLoopVectorized(Loop *, unsigned &);
 
   bool runOnFunction(Function &F) override {
-    if (skipFunction(F))
+    if (F.getName() != funcName || skipFunction(F))
       return false;
 
     auto *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
