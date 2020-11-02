@@ -424,13 +424,14 @@ DataDependenceGraph *RDG::computeRDGForInnerLoop(Loop &IL) {
       if (auto *Phi = dyn_cast<PHINode>(&I)) {
         RecurrenceDescriptor RD;
         InductionDescriptor ID;
-        if (!InductionDescriptor::isInductionPHI(Phi, &IL, &SE, ID)) {
+
+        if (Phi->getBasicBlockIndex(BB) < 0)
           return nullptr;
-        }
+        if (!InductionDescriptor::isInductionPHI(Phi, &IL, &SE, ID))
+          return nullptr;
       }
     }
     auto br = dyn_cast<BranchInst>(BB->getTerminator());
-
     if (br && br->isConditional() && BB != IL.getLoopLatch()) {
       LLVM_DEBUG(errs() << "Conditions Present: no need to make RDG in case of "
                            "conditionals inside loop body\n");
@@ -442,10 +443,10 @@ DataDependenceGraph *RDG::computeRDGForInnerLoop(Loop &IL) {
   // Make Data Dependence Graph for IR instructions with def-use edges
   // Merge nodes based on source code instructions
   DataDependenceGraph *G2 = new DataDependenceGraph(IL, LI, DI, &SE);
-
+  // errs() << "cccccccccccccccccccccccccc\n";
   // Append Memory Dependence Edges with weights into Graph
   BuildRDG_LAI(*G2, DI, LAI);
-
+  // errs() << "ddddddddddddddddddddddd\n";
   // Create SCC Graph
   CreateSCC(*G2, DI);
 
