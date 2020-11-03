@@ -57,6 +57,30 @@ public:
   void GetInnerLoops(Loop *, SmallVectorImpl<Loop *> &);
   bool isLoopVectorized(Loop *, unsigned &);
 
+  MDNode *getValueFromMD(Loop *L, StringRef kind) const {
+    MDNode *ID = nullptr;
+
+    // Go through the latch blocks and check the terminator for the metadata.
+    SmallVector<BasicBlock *, 4> LatchesBlocks;
+    L->getLoopLatches(LatchesBlocks);
+    for (BasicBlock *BB : LatchesBlocks) {
+      Instruction *TI = BB->getTerminator();
+      MDNode *MD = TI->getMetadata(kind);
+
+      if (!MD)
+        return nullptr;
+
+      if (!ID)
+        ID = MD;
+      else if (MD != ID)
+        return nullptr;
+    }
+    if (!ID || ID->getNumOperands() == 0)
+      return nullptr;
+
+    return ID;
+  }
+
   bool runOnFunction(Function &F) override {
     if (F.getName() != funcName || skipFunction(F))
       return false;
@@ -98,7 +122,25 @@ public:
           continue;
       }
 
-      unsigned VF = 0;
+      unsigned VF = 1;
+      auto MD = getValueFromMD(L, "VF");
+      if (MD) {
+        auto constVal =
+            dyn_cast<ConstantAsMetadata>(MD->getOperand(0))->getValue();
+        VF = dyn_cast<ConstantInt>(constVal)->getZExtValue();
+      }
+
+      unsigned IF = 1;
+      auto MD = getValueFromMD(L, "IF");
+      if (MD) {
+        auto constVal =
+            dyn_cast<ConstantAsMetadata>(MD->getOperand(0))->getValue();
+        IF = dyn_cast<ConstantInt>(constVal)->getZExtValue();
+      }
+
+      dbgs() << "VF: " << VF << "\n";
+      dbgs() << "IF: " << IF << "\n";
+
       // if (!isLoopVectorized(L, VF))
       //   continue;
 
@@ -112,6 +154,7 @@ public:
 
           LoopCost +=
               TTI->getInstructionCost(&I, TargetTransformInfo::TCK_Latency);
+          // * TC/VF;
         }
       }
       const LoopAccessInfo &LAI_WR = LAA->getInfo(L);
