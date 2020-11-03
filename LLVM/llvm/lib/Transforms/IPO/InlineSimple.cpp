@@ -91,7 +91,8 @@ public:
               LLVM_DEBUG(dbgs() << "Callee : " << Callee->getName() << "\n\n");
               return llvm::InlineCost::
                           getAlways("IITH: Inlined call in innermost loop");
-            } else {
+            } 
+            /* else {
             //Rule#2: Inline the callsites in the loop if there is an innmost loop adjacent to it
               bool EmptySubloop = false;
               for (auto SubLoop : L->getSubLoops()) {
@@ -107,7 +108,7 @@ public:
                 return llvm::InlineCost::
                             getAlways("IITH: Inlined call in non-inner-most loop");
               }
-            }
+            } */
           }
         }
       }

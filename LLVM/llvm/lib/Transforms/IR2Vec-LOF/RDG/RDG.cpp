@@ -425,10 +425,16 @@ DataDependenceGraph *RDG::computeRDGForInnerLoop(Loop &IL) {
         RecurrenceDescriptor RD;
         InductionDescriptor ID;
 
-        if (Phi->getBasicBlockIndex(BB) < 0)
-          return nullptr;
-        if (!InductionDescriptor::isInductionPHI(Phi, &IL, &SE, ID))
-          return nullptr;
+        // errs() << "Phi Node: " << *Phi << "\n";
+        if (Phi->getNumIncomingValues() == 2) {
+          if (Phi->getBasicBlockIndex(IL.getLoopPreheader()) < 0)
+            return nullptr;
+          if (Phi->getBasicBlockIndex(IL.getLoopLatch()) < 0)
+            return nullptr;
+
+          if (!InductionDescriptor::isInductionPHI(Phi, &IL, &SE, ID))
+            return nullptr;
+        }
       }
     }
     auto br = dyn_cast<BranchInst>(BB->getTerminator());

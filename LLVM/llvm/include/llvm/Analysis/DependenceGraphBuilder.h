@@ -63,7 +63,7 @@ public:
     createFineGrainedNodes();
     createDefUseEdges();
     // createMemoryDependencyEdges();
-    computeMemoryDependences();
+    // computeMemoryDependences();
 
     //  simplify();
     // createAndConnectRootNode();

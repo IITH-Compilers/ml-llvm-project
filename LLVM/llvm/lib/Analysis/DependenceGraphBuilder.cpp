@@ -1123,9 +1123,9 @@ template <class G> void AbstractDependenceGraphBuilder<G>::simplify_Inst() {
   SmallPtrSet<NodeType *, 32> NonStoreInstList;
   NodeListType NodeDeletionList;
 
-  for (auto &I : ReductionPHIList)
-    LLVM_DEBUG(errs() << "Reduction Phi Node: " << *I << "\n");
-
+  /*  for (auto &I : ReductionPHIList)
+     LLVM_DEBUG(errs() << "Reduction Phi Node: " << *I << "\n");
+  */
   for (NodeType *N : Graph) {
     // errs() << *N << "\n";
     InstructionListType InstList;
