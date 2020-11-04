@@ -90,17 +90,13 @@ public:
     auto *TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
     // auto *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
     SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
-    // auto *ORE =
-    // &getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
-    std::function<const LoopAccessInfo &(Loop &)> GetLAA =
-        [&](Loop &L) -> const LoopAccessInfo & { return LAA->getInfo(&L); };
 
     SmallVector<Loop *, 32> InnerLoops;
     for (Loop *L : *LI)
       GetInnerLoops(L, InnerLoops);
 
     for (Loop *L : InnerLoops) {
-      unsigned LoopCost = 0;
+      uint64_t LoopCost = 0;
       auto Latch = L->getLoopLatch();
       MDNode *MD1 =
           Latch->getTerminator()->getMetadata("IR2Vec-Distributed-LoopID");
@@ -123,18 +119,18 @@ public:
       }
 
       unsigned VF = 1;
-      auto MD = getValueFromMD(L, "VF");
-      if (MD) {
+      auto VF_MD = getValueFromMD(L, "VF");
+      if (VF_MD) {
         auto constVal =
-            dyn_cast<ConstantAsMetadata>(MD->getOperand(0))->getValue();
+            dyn_cast<ConstantAsMetadata>(VF_MD->getOperand(0))->getValue();
         VF = dyn_cast<ConstantInt>(constVal)->getZExtValue();
       }
 
       unsigned IF = 1;
-      auto MD = getValueFromMD(L, "IF");
-      if (MD) {
+      auto IF_MD = getValueFromMD(L, "IF");
+      if (IF_MD) {
         auto constVal =
-            dyn_cast<ConstantAsMetadata>(MD->getOperand(0))->getValue();
+            dyn_cast<ConstantAsMetadata>(IF_MD->getOperand(0))->getValue();
         IF = dyn_cast<ConstantInt>(constVal)->getZExtValue();
       }
 
@@ -160,20 +156,21 @@ public:
       const LoopAccessInfo &LAI_WR = LAA->getInfo(L);
       const LoopAccessInfo &LAI_RAR = LAA->getInfo(L, 1);
       Locality CL(LAI_WR, LAI_RAR, TTI);
-      int CacheMisses = CL.computeLocalityCost(*L, SE);
+      int64_t CacheMisses = CL.computeLocalityCost(*L, SE);
       assert(CacheMisses > 0 && "Cache cost cannot be zero");
       const SCEV *TC = SE->getBackedgeTakenCount(L);
       uint64_t TripCount;
       const SCEVConstant *SCEVConst_TC = dyn_cast_or_null<SCEVConstant>(TC);
       if (SCEVConst_TC)
-        TripCount = SCEVConst_TC->getValue()->getZExtValue() * VF;
+        TripCount = SCEVConst_TC->getValue()->getZExtValue();
       else
         TripCount = 1000;
-      unsigned TotalMemAccess = NumMemInsts * TripCount;
-      unsigned CacheCost =
+      LoopCost = LoopCost * TripCount/VF;
+      uint64_t TotalMemAccess = NumMemInsts * (TripCount == 1000)? TripCount : TripCount * VF;
+      uint64_t CacheCost =
           CacheMisses * 0.7 * MemoryInstCost +
           (TotalMemAccess - CacheMisses) * 0.3 * MemoryInstCost;
-      unsigned TotalLoopCost = LoopCost + CacheCost;
+      uint64_t TotalLoopCost = LoopCost + CacheCost;
       dbgs() << "TotalLoopCost for Loop: " << TotalLoopCost << "\n";
     }
 
