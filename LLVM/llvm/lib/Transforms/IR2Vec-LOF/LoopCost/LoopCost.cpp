@@ -157,7 +157,6 @@ public:
       const LoopAccessInfo &LAI_RAR = LAA->getInfo(L, 1);
       Locality CL(LAI_WR, LAI_RAR, TTI);
       int64_t CacheMisses = CL.computeLocalityCost(*L, SE);
-      assert(CacheMisses > 0 && "Cache cost cannot be zero");
       const SCEV *TC = SE->getBackedgeTakenCount(L);
       uint64_t TripCount;
       const SCEVConstant *SCEVConst_TC = dyn_cast_or_null<SCEVConstant>(TC);
@@ -223,9 +222,17 @@ void LoopCost::GetInnerLoops(Loop *L, SmallVectorImpl<Loop *> &InnerLoops) {
 char LoopCost::ID = 0;
 static RegisterPass<LoopCost> X("LoopCost", "LoopCost");
 
+void Locality::clearDS() {
+  Mem_InstList.clear();
+  dep_InstList.clear();
+  dependence_Inst_Count.clear();
+  dep_threshold.clear();
+  Locality_Cost = 0;
+}
+
 int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
   // LLVMContext &Context = IL.getHeader()->getContext();
-
+  clearDS();
   // Compute TripCount of the loop
   const SCEV *TC = SE->getBackedgeTakenCount(&IL);
   assert(TC && "TC expected");
@@ -235,6 +242,8 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
     TripCount = SCEVConst_TC->getValue()->getZExtValue();
   else
     TripCount = 1000;
+
+  assert(TripCount > 0 && "Trip count expected to greater than zero");
   // errs() << "\n\nTrip Count: " << TripCount << "\n";
 
   // Compute Bounds (Lower and Upper) and Step Size
@@ -480,16 +489,18 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
         Locality_Cost += TripCount;
       } else {
         // assert(SCEVConst_stride && "Not constant stride");
-        auto Stride = SCEVConst_stride->getValue()->getZExtValue();
-
+        auto Stride = SCEVConst_stride->getValue()->getSExtValue();
+        Stride = (Stride < 0)? -Stride : Stride;
+        assert(Stride > 0 && "Stride is zero?");
         if (Stride < CLS) { // make sure Stride is in bytes
           // auto miss = TripCount * Stride * dataType_Size / CLS;
-          auto miss = (long)(ceil((float)TripCount * Stride / CLS));
+          auto miss = (int64_t)(ceil((float)TripCount * Stride / CLS));
           // auto miss = TripCount * Stride /
           //             CLS; // Access stride will have stride*dataType
+          assert(miss > 0 && "Zero misses?");
           Locality_Cost += miss;
         } else {
-          Locality_Cost += TripCount * Stride;
+          Locality_Cost += TripCount;
         }
 
         // errs() << "Cache_Miss: " << Locality_Cost << "\n";
@@ -498,6 +509,9 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
   }
 
   // Substract Cache hits by dependence accesses, from Cache_miss
+  if (Mem_InstList.size() == 0 and dep_InstList.size() > 0)
+    assert(false);
+
   for (auto Inst : dep_InstList) {
     // errs() << "\tdep_List: " << *Inst << "\n";
     Value *Ptr = getLoadStorePointerOperand(Inst);
@@ -549,6 +563,8 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
   }
 
   errs() << "Locality Cost: " << Locality_Cost << "\n";
+  if (Mem_InstList.size() > 0)
+    assert(Locality_Cost > 0 && "Locality cost is zero?");
 
   return Locality_Cost;
 }

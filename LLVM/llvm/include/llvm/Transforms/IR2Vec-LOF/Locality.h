@@ -39,6 +39,8 @@ private:
   // using InstructionListType = SmallVector<Instruction *, 2>;
   // InstructionListType dep_InstList;
 
+  void clearDS();
+
 public:
   static char ID;
 
