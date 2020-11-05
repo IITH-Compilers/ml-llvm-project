@@ -1,0 +1,26 @@
+name: Test
+
+on:
+  [repository_dispatch]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Event Information
+        run: |
+          echo "Event '${{ github.event.action }}' received from '${{ github.event.client_payload.repository }}'"
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.client_payload.ref }}
+      - run: echo ${{ github.event.client_payload.sha }} && echo "SUCCESS"
+        
+      - name: Install LLVM10
+        run: wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add - && sudo apt-add-repository "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-10 main" && sudo apt-get update && sudo apt-get install -y llvm-10 llvm-10-dev clang-10 llvm-10-tools
+          
+      - name: Generate Embeddings 
+        run: |
+          ulimit -s unlimited
+          while IFS= read -r file; do opt-10 -load ./IR2Vec-Binaries/libIR2Vec-RD.so -IR2Vec_RD -file ./vocabulary/seedEmbeddingVocab-300-llvm10.txt -level p -of VIR_FILE -bpi 0 ${file} -o /dev/null; echo ${file}; done < test-suite/index.files
+        
+      - name: Compare files
+        run: diff ./test-suite/ir2vec.txt VIR_FILE
