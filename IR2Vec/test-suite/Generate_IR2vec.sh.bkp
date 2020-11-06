@@ -1,0 +1,64 @@
+#!/bin/bash
+#./Generate_IR2Vec.sh <Absolute_path_of_RepresentationFile> <LLVM_BUILD>
+
+Absolute_path_of_RepresentationFile=$1
+if [ -z "$Absolute_path_of_RepresentationFile" ]
+then
+      echo "Please enter the Absolute_path_of_RepresentationFile"
+      exit
+fi
+
+LLVM_BUILD=$2
+if [ -z "${LLVM_BUILD}" ]
+then
+      echo "Please enter the LLVM_BUILD"
+      exit
+fi
+
+WD=`pwd`
+embedding_level="p"
+EncodingType="VN"
+BPI=0
+
+Wo=1
+Wt=0.5
+Wa=0.2
+
+WEIGHTS="-wo ${Wo} -wt ${Wt} -wa ${Wa}"
+
+SO_FILE=
+PASS=
+if [ $EncodingType = "VN" ]
+then
+      SO_FILE="IR2VecVanilla"
+      PASS="IR2VecVanilla"
+      Trans_type="Symbolic_llvm8"
+fi
+
+if [ $EncodingType = "RD" ]
+then
+      SO_FILE="IR2Vec-RD"
+      PASS="IR2Vec_RD"
+      Trans_type="FlowAware_llvm8"
+fi
+
+
+
+if [ -f res_${Trans_type}.txt ]
+then
+    rm res_${Trans_type}.txt
+fi    
+
+if [ -f missCount_res_${Trans_type}.txt ]
+then
+    rm missCount_res_${Trans_type}.txt
+fi
+while IFS= read -r d
+do
+ ${LLVM_BUILD}/bin/opt -load ${LLVM_BUILD}/lib/${SO_FILE}.so -${PASS} -file $Absolute_path_of_RepresentationFile -bpi $BPI -of res_$Trans_type.txt -level $embedding_level $WEIGHTS  $d  -o /dev/null 
+done < index-llvm8.files
+
+# for d in PE-benchmarks-llfiles-llvm8/*.ll
+# do
+#     ${LLVM_BUILD}/bin/opt -load ${LLVM_BUILD}/lib/${SO_FILE}.so -${PASS} -file $Absolute_path_of_RepresentationFile -bpi $BPI -of res_$Trans_type.txt -level $embedding_level $WEIGHTS  $d  -o /dev/null 
+# done 

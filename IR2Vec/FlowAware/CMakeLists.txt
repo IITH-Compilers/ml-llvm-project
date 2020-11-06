@@ -1,0 +1,1 @@
+add_library(IR2Vec-FA SHARED  IR2Vec-FA.cpp)
