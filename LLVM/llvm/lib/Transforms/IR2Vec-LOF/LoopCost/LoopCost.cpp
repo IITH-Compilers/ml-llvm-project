@@ -161,11 +161,12 @@ public:
       uint64_t TripCount;
       const SCEVConstant *SCEVConst_TC = dyn_cast_or_null<SCEVConstant>(TC);
       if (SCEVConst_TC)
-        TripCount = SCEVConst_TC->getValue()->getZExtValue();
+        TripCount = SCEVConst_TC->getValue()->getZExtValue() + 1;
       else
         TripCount = 1000;
       LoopCost = LoopCost * TripCount/VF;
       uint64_t TotalMemAccess = NumMemInsts * (TripCount == 1000)? TripCount : TripCount * VF;
+      // dbgs() << "TotalMemAccess : " << TotalMemAccess << "\n";
       uint64_t CacheCost =
           CacheMisses * 0.7 * MemoryInstCost +
           (TotalMemAccess - CacheMisses) * 0.3 * MemoryInstCost;
@@ -239,21 +240,11 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
   uint64_t TripCount;
   const SCEVConstant *SCEVConst_TC = dyn_cast_or_null<SCEVConstant>(TC);
   if (SCEVConst_TC)
-    TripCount = SCEVConst_TC->getValue()->getZExtValue();
+    TripCount = SCEVConst_TC->getValue()->getZExtValue() + 1;
   else
     TripCount = 1000;
 
   assert(TripCount > 0 && "Trip count expected to greater than zero");
-  // errs() << "\n\nTrip Count: " << TripCount << "\n";
-
-  // Compute Bounds (Lower and Upper) and Step Size
-  /* Optional<Loop::LoopBounds> Bounds = IL.getBounds(*SE);
-  ConstantInt *InitialIVValue =
-      dyn_cast<ConstantInt>(&Bounds->getInitialIVValue());
-  ConstantInt *FinalIVValue = dyn_cast<ConstantInt>(&Bounds->getFinalIVValue());
-  ConstantInt *StepValue = dyn_cast<ConstantInt>(Bounds->getStepValue());
-  errs() << "Bounds: " << *InitialIVValue << " : " << FinalIVValue << " : "
-         << *StepValue << "\n"; */
 
   // Compute CacheLineSize
   // unsigned CLS = TTI->getCacheLineSize();
@@ -261,8 +252,6 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
   // errs() << "CacheLineSize: " << CLS << "\n";
 
   assert(CLS > 0 && "Unknown cache line size");
-
-  // threshold = 50; // Initialize threshold
 
   // Create Mem_InstList: Consist all the accesses to memory
   for (BasicBlock *BB : IL.blocks()) {
@@ -291,18 +280,11 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
     assert(Ptr && "Pointer operand doesn't exit");
     const SCEV *AccessFn = SE->getSCEV(Ptr);
     auto BasePointer = dyn_cast<SCEVUnknown>(SE->getPointerBase(AccessFn));
-    ;
     assert(BasePointer && "BasePointer doesn't exit. Include else case");
     if (BasePointer != nullptr) {
-      if (dependence_Inst_Count.find(BasePointer) !=
-          dependence_Inst_Count.end()) {
-        int x = dependence_Inst_Count.find(BasePointer)->second;
-        x++;
-        dependence_Inst_Count.find(BasePointer)->second = x;
-        depFlag = 1;
-      }
-
-      if (depFlag == 0) {
+      if (dependence_Inst_Count.find(BasePointer) != dependence_Inst_Count.end()) {
+        dependence_Inst_Count.find(BasePointer)->second++;
+      } else {
         dep_InstList.push_back(i);
         dependence_Inst_Count.insert(std::make_pair(BasePointer, 1));
         // Initialize dep_threshold with false
@@ -310,10 +292,6 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
       }
     }
   }
-
-  /* for (auto i : dependence_Inst_Count)
-    errs() << "dep dist: " << i.second << "\n";
- */
 
   // Calculate dependences For Write/Read
   const auto dependences_Write =
@@ -351,11 +329,6 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
         Dst = dep.getDestination(LAI_WR);
       }
 
-      if (Src->getParent() != Dst->getParent()) {
-        LLVM_DEBUG(errs() << "Ignoring a dependence from LLVM.\n");
-        continue;
-      }
-
       int tmp = 1;
       for (auto i : DependenceDistances_Write) {
         if (x == tmp) {
@@ -363,7 +336,7 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
           if (i < 0) {
             ui = -i;
           }
-          if (ui > threshold) {
+          if (ui > TemporalThreshold) {
             continue;
 
             Value *Ptr = getLoadStorePointerOperand(Src);
@@ -371,7 +344,7 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
             const SCEV *AccessFn = SE->getSCEV(Ptr);
             auto BasePointer =
                 dyn_cast<SCEVUnknown>(SE->getPointerBase(AccessFn));
-
+            assert(BasePointer && "BasePointer doesn't exit\n");
             if (BasePointer != nullptr)
               if (dep_threshold.find(BasePointer)->second == false)
                 dep_threshold.find(BasePointer)->second = true;
@@ -382,10 +355,6 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
       x++;
     }
   }
-
-  /* for (auto i : DependenceDistances_Write) {
-    errs() << "Distance: " << i << "\n";
-  } */
 
   // Calculate dependences For Write/Read
   const auto dependences_Read =
@@ -428,11 +397,6 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
         Dst = dep.getDestination(LAI_RAR);
       }
 
-      if (Src->getParent() != Dst->getParent()) {
-        LLVM_DEBUG(errs() << "Ignoring a dependence from LLVM.\n");
-        continue;
-      }
-
       int tmp = 1;
       for (auto i : DependenceDistances_Read) {
         if (x == tmp) {
@@ -440,7 +404,7 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
           if (i < 0) {
             ui = -i;
           }
-          if (ui > threshold) {
+          if (ui > TemporalThreshold) {
             continue;
 
             Value *Ptr = getLoadStorePointerOperand(Src);
@@ -448,7 +412,7 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
             const SCEV *AccessFn = SE->getSCEV(Ptr);
             auto BasePointer =
                 dyn_cast<SCEVUnknown>(SE->getPointerBase(AccessFn));
-
+            assert(BasePointer && "BasePointer doesn't exit");
             if (BasePointer != nullptr)
               if (dep_threshold.find(BasePointer)->second == false)
                 dep_threshold.find(BasePointer)->second = true;
@@ -503,7 +467,6 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
           Locality_Cost += TripCount;
         }
 
-        // errs() << "Cache_Miss: " << Locality_Cost << "\n";
       }
     }
   }

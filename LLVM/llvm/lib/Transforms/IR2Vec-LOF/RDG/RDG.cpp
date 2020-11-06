@@ -141,10 +141,10 @@ bool RDG::BuildRDG_LAI(DataDependenceGraph &G, DependenceInfo &DI,
       Dst = dep.getDestination(LAI);
     }
 
-    if (Src->getParent() != Dst->getParent()) {
-      LLVM_DEBUG(errs() << "Ignoring a dependence from LLVM.\n");
-      continue;
-    }
+    // if (Src->getParent() != Dst->getParent()) {
+    //   LLVM_DEBUG(errs() << "Ignoring a dependence from LLVM.\n");
+    //   continue;
+    // }
 
     // errs() << "Src: " << *Src << "\nDst: " << *Dst << "\n";
 
