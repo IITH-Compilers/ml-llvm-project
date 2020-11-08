@@ -511,7 +511,8 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
       if (!isa<SCEVConstant>(stride)) {
         Locality_Cost += TripCount;
       } else {
-        auto Stride = SCEVConst_stride->getValue()->getZExtValue();
+        auto Stride = SCEVConst_stride->getValue()->getSExtValue();
+        Stride = (Stride < 0)? -Stride : Stride;
 
         if (Stride < CLS) {
           auto h = (long)(ceil((float)TripCount * Stride / CLS));
