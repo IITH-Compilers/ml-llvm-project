@@ -55,7 +55,8 @@ public:
 
   LoopCost() : FunctionPass(ID) {}
   void GetInnerLoops(Loop *, SmallVectorImpl<Loop *> &);
-  bool isLoopVectorized(Loop *, unsigned &);
+  // bool isLoopVectorized(Loop *, unsigned &);
+  Loop *getVectorLoop(Loop *L, DominatorTree&, LoopInfo&) const;
 
   MDNode *getValueFromMD(Loop *L, StringRef kind) const {
     MDNode *ID = nullptr;
@@ -88,7 +89,7 @@ public:
     auto *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
     auto *LAA = &getAnalysis<LoopAccessLegacyAnalysis>();
     auto *TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-    // auto *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+    auto *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
     SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
 
     SmallVector<Loop *, 32> InnerLoops;
@@ -137,6 +138,8 @@ public:
       dbgs() << "VF: " << VF << "\n";
       dbgs() << "IF: " << IF << "\n";
 
+      if (VF != 1)
+        L = getVectorLoop(L, *DT, *LI);
       // if (!isLoopVectorized(L, VF))
       //   continue;
 
@@ -158,10 +161,15 @@ public:
       Locality CL(LAI_WR, LAI_RAR, TTI);
       int64_t CacheMisses = CL.computeLocalityCost(*L, SE);
       const SCEV *TC = SE->getBackedgeTakenCount(L);
-      uint64_t TripCount;
+      int64_t TripCount;
       const SCEVConstant *SCEVConst_TC = dyn_cast_or_null<SCEVConstant>(TC);
-      if (SCEVConst_TC)
-        TripCount = SCEVConst_TC->getValue()->getZExtValue() + 1;
+      if (SCEVConst_TC) {
+        TripCount = SCEVConst_TC->getValue()->getSExtValue();
+        if (TripCount == -1)
+          TripCount = 1000;
+        else
+          TripCount++; // BackedgeTakenCount is one less than TripCount
+      }
       else
         TripCount = 1000;
       LoopCost = LoopCost * TripCount/VF;
@@ -181,16 +189,35 @@ public:
     AU.addRequired<ScalarEvolutionWrapperPass>();
     AU.addRequired<LoopInfoWrapperPass>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
-    // AU.addPreserved<LoopInfoWrapperPass>();
     AU.addRequired<LoopAccessLegacyAnalysis>();
+    AU.addRequired<DominatorTreeWrapperPass>();
     AU.setPreservesAll();
-    // AU.addRequired<DominatorTreeWrapperPass>();
-    // AU.addPreserved<DominatorTreeWrapperPass>();
-    // AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
-    // AU.addPreserved<GlobalsAAWrapperPass>();
   }
 };
 
+Loop *LoopCost::getVectorLoop(Loop *L, DominatorTree &DT, LoopInfo &LI) const {
+  auto Preheader = L->getLoopPreheader();
+  auto FirstPHI = &Preheader->front();
+  assert(isa<PHINode>(FirstPHI) && "Not a Phi Node :(");
+  BasicBlock *VLGuard = nullptr;
+  auto Block_1 = cast<PHINode>(FirstPHI)->getIncomingBlock(0);
+  auto Block_2 = cast<PHINode>(FirstPHI)->getIncomingBlock(1);
+  if (DT.dominates(Block_1, Preheader))
+    VLGuard = Block_1;
+  else if (DT.dominates(Block_2, Preheader))
+    VLGuard = Block_2;
+  else
+    assert(false && "Maybe this is not scalar epilogue");
+
+  assert(VLGuard->getTerminator()->getNumSuccessors() == 2 && "Should have 2 successors");
+  auto VLPreheader = VLGuard->getTerminator()->getSuccessor(1);
+  auto VLHeader =  VLPreheader->getTerminator()->getSuccessor(0);
+  Loop *VL = LI.getLoopFor(VLHeader);
+  assert(VL && VL->getHeader() == VLHeader && "This should be VL Header");
+  return VL;
+}
+
+#if 0
 bool LoopCost::isLoopVectorized(Loop *L, unsigned &VF) {
   for (auto BB : L->getBlocks()) {
     for (auto &I : *BB) {
@@ -208,6 +235,7 @@ bool LoopCost::isLoopVectorized(Loop *L, unsigned &VF) {
   }
   return false;
 }
+#endif
 
 void LoopCost::GetInnerLoops(Loop *L, SmallVectorImpl<Loop *> &InnerLoops) {
   if (L->empty())
@@ -237,10 +265,15 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
   // Compute TripCount of the loop
   const SCEV *TC = SE->getBackedgeTakenCount(&IL);
   assert(TC && "TC expected");
-  uint64_t TripCount;
+  int64_t TripCount;
   const SCEVConstant *SCEVConst_TC = dyn_cast_or_null<SCEVConstant>(TC);
-  if (SCEVConst_TC)
-    TripCount = SCEVConst_TC->getValue()->getZExtValue() + 1;
+  if (SCEVConst_TC) {
+    TripCount = SCEVConst_TC->getValue()->getSExtValue();
+    if (TripCount == -1)
+      TripCount = 1000;
+    else
+      TripCount++; // BackedgeTakenCount is one less than tripcount
+  }
   else
     TripCount = 1000;
 
