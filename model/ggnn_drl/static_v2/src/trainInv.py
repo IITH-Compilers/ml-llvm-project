@@ -10,7 +10,7 @@ from collections import deque
 import os
 import utils
 from utils import get_parse_args
-
+import random
 os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 
 def run(agent, config):
@@ -18,11 +18,11 @@ def run(agent, config):
     action_mask_flag=config.action_mask_flag
     enable_lexographical_constraint = config.enable_lexographical_constraint
     
-    n_episodes=15
+    n_episodes=60
     max_t=1000
     eps_start=1.0
     eps_end=0.01
-    eps_decay=0.995
+    eps_decay=0.000015
     scores_window = deque(maxlen=100)  # last 100 scores
     eps = eps_start
     score_per_episode = []
@@ -35,13 +35,15 @@ def run(agent, config):
     
     dataset=config.dataset
 
+    count=0
     #Load the envroinment
     env = DistributeLoopEnv(config)    
     for episode in range(n_episodes):
         scores = []                        # list containing scores from each episode
-        count=0
         score_tensor = 0
-        for path in glob.glob(os.path.join(dataset, 'graphs/train/*.json')): # Number of the iterations
+        training_graphs=glob.glob(os.path.join(dataset, 'graphs/train/*.json'))
+        random.shuffle(training_graphs)
+        for path in training_graphs: # Number of the iterations
             # if env.O3_runtimes[utils.getllfileNameFromJSON(path)] == utils.error_runtime:
             #     print('!!!!!! Graph has runtime error ', path)
             #     continue
@@ -102,13 +104,12 @@ def run(agent, config):
 
             scores_window.append(score)       # save most recent score
             scores.append(score)              # save most recent score
-            eps = max(eps_end, eps_decay*eps) # decrease epsilon
-            # print('\rEpisode {}  Count {} \tAverage Score: {:.2f}'.format(episode, count, np.mean(scores_window)), end="")
+            eps = max(eps_end, eps-eps_decay) # decrease epsilon
 
             print('\n------------------------------------------------------------------------------------------------')
         torch.save(agent.qnetwork_local.state_dict(), os.path.join(trained_model, 'checkpoint-graphs-{episode}.pth'.format(episode=episode)))
         score_per_episode.append(np.sum(scores))
-        
+        agent.writer.add_scalar('trainInv/total_score', np.sum(scores) ,episode) 
         utils.plot(range(1,len(scores)+1), scores, 'cumilative Reward behaviour in {} th episode'.format(episode+1), location=config.distributed_data)
 
          

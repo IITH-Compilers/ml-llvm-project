@@ -213,7 +213,7 @@ def call_distributionPass(filename, distributeSeq, method_name, fun_id, loop_id,
         dist_llfile = os.path.join(dist_ll_dir, dist_llfile)
         # print(dist_llfile) 
         print(parts[1],' --------------------------> ',distributeSeq) 
-        cmd = "{opt} -load {LLVM}/lib/LoopDistribution.so -LoopDistribution -lID={loop_id} -function {method_name} --partition=\"{dseq}\" {post_distribution_passes} -S {input_file} -o {dist_llfile}".format(opt=os.environ['OPT'], LLVM=os.environ['LLVM'], dseq=distributeSeq ,input_file=filename, dist_llfile=dist_llfile, method_name=method_name, loop_id=loop_id, post_distribution_passes=POST_DIS_PASSES_MAP[config.post_pass_key])
+        cmd = "{opt} -load {LLVM}/lib/LoopDistribution.so -LoopDistribution -lID={loop_id} -function {method_name} --partition=\"{dseq}\" -S {input_file} -o {dist_llfile}".format(opt=os.environ['OPT'], LLVM=os.environ['LLVM'], dseq=distributeSeq ,input_file=filename, dist_llfile=dist_llfile, method_name=method_name, loop_id=loop_id)
 ## Use for replicate the O3
 
         print('Call to LoopDistribute pass thru command line \n: ', cmd)
@@ -307,22 +307,34 @@ def getLoopCost(filepath, loopId, fname):
     loopCost = 0 # []
     try:
        # TODO 
-        cmd = "{opt} -S -load {llvm}/lib/LoopCost.so -LoopCost -lID {loopId} -function {fname} {input_file} -o /dev/null ".format(opt=os.environ['OPT'], llvm=os.environ['LLVM'], input_file=filepath, loopId=loopId,fname=fname)
+        cmd = "{opt} -S -load {llvm}/lib/LoopCost.so {post_distribution_passes} -LoopCost -lID {loopId} -function {fname} {input_file} -o /dev/null ".format(opt=os.environ['OPT'], llvm=os.environ['LLVM'], input_file=filepath, loopId=loopId,fname=fname, post_distribution_passes=POST_DIS_PASSES_MAP[config.post_pass_key])
         # analysedInfo = subprocess.Popen(cmd, executable='/bin/bash', shell=True, stdout=subprocess.PIPE).stdout.read()
-        output = subprocess.Popen(cmd, executable='/bin/bash', shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout
+        pro = subprocess.Popen(cmd, executable='/bin/bash', shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        output = pro.stdout
         line = output.readline()
         
+        if pro.stderr is not None:
+            eprint('Error : ', pro.stderr)
+        
+        print('***Metric for the loop****')
         while line:
             line = line.decode('utf-8').rstrip("\n")
-
+            
             pair = line.split(':')
             if pair[0] == 'TotalLoopCost for Loop':
-                loopCost+=int(pair[1].strip(' '))
+                lc=int(pair[1].strip(' '))
+                if lc > 0:
+                    loopCost+=lc
+                else:
+                    eprint('loopcost <=0 : ', cmd)
+                    loopcost=0
+                    break
+            print(line)
             line = output.readline()
         # p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         # stdout_text, stderr_text = p.communicate()
         # print(' p ', stdout_text, stderr_text)
-        print('-------------|Analyze Info loopCost', loopCost)
+        # print('----|Analyze Info loopCost', loopCost)
         # factors = analysedInfo.split(',')
         # loopCost = analysedInfo
     except Exception as inst :

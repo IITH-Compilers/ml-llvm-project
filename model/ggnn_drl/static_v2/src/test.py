@@ -87,6 +87,7 @@ if __name__ == '__main__':
     if os.path.isdir(trained_model):
         trained_model = os.path.join(trained_model, 'final-model.pth')
 
+    print('model selected for training : ', trained_model)
 
     dqn_agent.qnetwork_local.load_state_dict(torch.load(trained_model))
     # dqn_agent.writer.add_graph(dqn_agent.qnetwork_local)

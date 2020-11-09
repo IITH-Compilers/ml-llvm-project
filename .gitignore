@@ -15,6 +15,7 @@
 *.orig
 # Byte compiled python modules.
 *.pyc
+__pycache__/
 # vim swap files
 .*.sw?
 .sw?
@@ -45,7 +46,8 @@ autoconf/autom4te.cache
 /CMakeSettings.json
 # CLion project configuration
 /.idea
-
+log/
+*.log
 #==============================================================================#
 # Directories to ignore (do not add trailing '/'s, they skip symlinks).
 #==============================================================================#
@@ -55,6 +57,12 @@ autoconf/autom4te.cache
 # clangd index
 .clangd
 
-
+# !**/IR2Vec-Binaries/**/README.md
+# !IR2Vec-Binaries/README.md
+LLVM/IR2Vec-Engine/IR2Vec-Binaries/*
+!LLVM/IR2Vec-Engine/IR2Vec-Binaries/README.md
 # Data
 /data
+
+# trained model
+trained_model/
