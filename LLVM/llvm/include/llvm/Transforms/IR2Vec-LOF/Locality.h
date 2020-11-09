@@ -30,10 +30,10 @@ private:
   int threshold;
 
   // Map of Array BasePointer and count of access to that
-  using MemoryInstList = DenseMap<const SCEVUnknown *, int>;
+  using MemoryInstList = DenseMap<const SCEV *, int>;
   MemoryInstList dependence_Inst_Count;
 
-  using dependence_threshold = DenseMap<const SCEVUnknown *, bool>;
+  using dependence_threshold = DenseMap<const SCEV *, bool>;
   dependence_threshold dep_threshold;
 
   // using InstructionListType = SmallVector<Instruction *, 2>;

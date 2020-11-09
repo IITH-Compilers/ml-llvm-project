@@ -1,6 +1,7 @@
 #include "llvm/Analysis/LoopCacheAnalysis.h"
 #include "llvm/Transforms/IR2Vec-LOF/Locality.h"
 #include "llvm/Transforms/IR2Vec-LOF/RDG.h"
+#include "llvm/Analysis/ValueTracking.h"
 
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SCCIterator.h"
@@ -45,6 +46,9 @@ static cl::opt<std::string> funcName("function", cl::Hidden, cl::Required,
 static cl::opt<unsigned int>
     loopID("lID", cl::Hidden, cl::Required,
            cl::desc("ID of the loop set by RDG/loop distribution pass"));
+
+static cl::opt<unsigned>
+    CLS("cache-line-size", cl::init(64), cl::Hidden, cl::desc("Cache line size for LoopCost"));
 
 #define DEBUG_TYPE "locality"
 
@@ -260,7 +264,6 @@ void Locality::clearDS() {
 }
 
 int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
-  // LLVMContext &Context = IL.getHeader()->getContext();
   clearDS();
   // Compute TripCount of the loop
   const SCEV *TC = SE->getBackedgeTakenCount(&IL);
@@ -286,6 +289,7 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
 
   assert(CLS > 0 && "Unknown cache line size");
 
+  const DataLayout &DL = IL.getHeader()->front().getModule()->getDataLayout();
   // Create Mem_InstList: Consist all the accesses to memory
   for (BasicBlock *BB : IL.blocks()) {
     for (Instruction &I : BB->instructionsWithoutDebug()) {
@@ -312,17 +316,21 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
     assert(Ptr && "Ptr expected");
     assert(Ptr && "Pointer operand doesn't exit");
     const SCEV *AccessFn = SE->getSCEV(Ptr);
-    auto BasePointer = dyn_cast<SCEVUnknown>(SE->getPointerBase(AccessFn));
-    assert(BasePointer && "BasePointer doesn't exit. Include else case");
-    if (BasePointer != nullptr) {
-      if (dependence_Inst_Count.find(BasePointer) != dependence_Inst_Count.end()) {
-        dependence_Inst_Count.find(BasePointer)->second++;
-      } else {
-        dep_InstList.push_back(i);
-        dependence_Inst_Count.insert(std::make_pair(BasePointer, 1));
-        // Initialize dep_threshold with false
-        dep_threshold.insert(std::make_pair(BasePointer, false));
-      }
+    const SCEV *BasePointer = nullptr;
+    if (isa<SCEVUnknown>(SE->getPointerBase(AccessFn))) {
+      BasePointer = SE->getPointerBase(AccessFn);
+    } else if (Value *BPtr = llvm::GetUnderlyingObject (Ptr, DL)) {
+      BasePointer = SE->getSCEV(BPtr);
+    } else
+      BasePointer = AccessFn;
+
+    if (dependence_Inst_Count.find(BasePointer) != dependence_Inst_Count.end()) {
+      dependence_Inst_Count.find(BasePointer)->second++;
+    } else {
+      dep_InstList.push_back(i);
+      dependence_Inst_Count.insert(std::make_pair(BasePointer, 1));
+      // Initialize dep_threshold with false
+      dep_threshold.insert(std::make_pair(BasePointer, false));
     }
   }
 
@@ -375,12 +383,17 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
             Value *Ptr = getLoadStorePointerOperand(Src);
             assert(Ptr && "Ptr expected");
             const SCEV *AccessFn = SE->getSCEV(Ptr);
-            auto BasePointer =
-                dyn_cast<SCEVUnknown>(SE->getPointerBase(AccessFn));
-            assert(BasePointer && "BasePointer doesn't exit\n");
-            if (BasePointer != nullptr)
-              if (dep_threshold.find(BasePointer)->second == false)
-                dep_threshold.find(BasePointer)->second = true;
+
+            const SCEV *BasePointer = nullptr;
+            if (isa<SCEVUnknown>(SE->getPointerBase(AccessFn))) {
+              BasePointer = SE->getPointerBase(AccessFn);
+            } else if (Value *BPtr = llvm::GetUnderlyingObject(Ptr, DL)) {
+              BasePointer = SE->getSCEV(BPtr);
+            } else
+              BasePointer = AccessFn;
+
+            if (dep_threshold.find(BasePointer)->second == false)
+              dep_threshold.find(BasePointer)->second = true;
           }
         }
         tmp++;
@@ -443,12 +456,16 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
             Value *Ptr = getLoadStorePointerOperand(Src);
             assert(Ptr && "Ptr expected");
             const SCEV *AccessFn = SE->getSCEV(Ptr);
-            auto BasePointer =
-                dyn_cast<SCEVUnknown>(SE->getPointerBase(AccessFn));
-            assert(BasePointer && "BasePointer doesn't exit");
-            if (BasePointer != nullptr)
-              if (dep_threshold.find(BasePointer)->second == false)
-                dep_threshold.find(BasePointer)->second = true;
+            const SCEV *BasePointer = nullptr;
+            if (isa<SCEVUnknown>(SE->getPointerBase(AccessFn))) {
+              BasePointer = SE->getPointerBase(AccessFn);
+            } else if (Value *BPtr = llvm::GetUnderlyingObject (Ptr, DL)) {
+              BasePointer = SE->getSCEV(BPtr);
+            } else
+              BasePointer = AccessFn;
+
+            if (dep_threshold.find(BasePointer)->second == false)
+              dep_threshold.find(BasePointer)->second = true;
           }
         }
         tmp++;
@@ -499,7 +516,6 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
         } else {
           Locality_Cost += TripCount;
         }
-
       }
     }
   }
@@ -518,8 +534,14 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
       continue;
     } else {
       // Check for number for accesses to same array (Base Pointer)
-      auto BasePointer = dyn_cast<SCEVUnknown>(SE->getPointerBase(SCEVPtr));
-      assert(BasePointer && "BasePointer expected");
+      const SCEV *BasePointer = nullptr;
+      if (isa<SCEVUnknown>(SE->getPointerBase(SCEVPtr))) {
+        BasePointer = SE->getPointerBase(SCEVPtr);
+      } else if (Value *BPtr = llvm::GetUnderlyingObject (Ptr, DL)) {
+        BasePointer = SE->getSCEV(BPtr);
+      } else
+        BasePointer = SCEVPtr;
+
       int n = dependence_Inst_Count.find(BasePointer)->second;
       // errs() << "Count: " << n << "\n";
 
