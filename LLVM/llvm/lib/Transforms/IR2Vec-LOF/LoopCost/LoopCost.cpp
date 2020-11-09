@@ -1,7 +1,7 @@
 #include "llvm/Analysis/LoopCacheAnalysis.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Transforms/IR2Vec-LOF/Locality.h"
 #include "llvm/Transforms/IR2Vec-LOF/RDG.h"
-#include "llvm/Analysis/ValueTracking.h"
 
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SCCIterator.h"
@@ -47,8 +47,8 @@ static cl::opt<unsigned int>
     loopID("lID", cl::Hidden, cl::Required,
            cl::desc("ID of the loop set by RDG/loop distribution pass"));
 
-static cl::opt<unsigned>
-    CLS("cache-line-size", cl::init(64), cl::Hidden, cl::desc("Cache line size for LoopCost"));
+static cl::opt<unsigned> CLS("cache-line-size", cl::init(64), cl::Hidden,
+                             cl::desc("Cache line size for LoopCost"));
 
 #define DEBUG_TYPE "locality"
 
@@ -60,7 +60,7 @@ public:
   LoopCost() : FunctionPass(ID) {}
   void GetInnerLoops(Loop *, SmallVectorImpl<Loop *> &);
   // bool isLoopVectorized(Loop *, unsigned &);
-  Loop *getVectorLoop(Loop *L, DominatorTree&, LoopInfo&) const;
+  Loop *getVectorLoop(Loop *L, DominatorTree &, LoopInfo &) const;
 
   MDNode *getValueFromMD(Loop *L, StringRef kind) const {
     MDNode *ID = nullptr;
@@ -173,11 +173,11 @@ public:
           TripCount = 1000;
         else
           TripCount++; // BackedgeTakenCount is one less than TripCount
-      }
-      else
+      } else
         TripCount = 1000;
-      LoopCost = LoopCost * TripCount/VF;
-      uint64_t TotalMemAccess = NumMemInsts * (TripCount == 1000)? TripCount : TripCount * VF;
+      LoopCost = LoopCost * TripCount / VF;
+      uint64_t TotalMemAccess =
+          NumMemInsts * (TripCount == 1000) ? TripCount : TripCount * VF;
       // dbgs() << "TotalMemAccess : " << TotalMemAccess << "\n";
       uint64_t CacheCost =
           CacheMisses * 0.7 * MemoryInstCost +
@@ -213,9 +213,10 @@ Loop *LoopCost::getVectorLoop(Loop *L, DominatorTree &DT, LoopInfo &LI) const {
   else
     assert(false && "Maybe this is not scalar epilogue");
 
-  assert(VLGuard->getTerminator()->getNumSuccessors() == 2 && "Should have 2 successors");
+  assert(VLGuard->getTerminator()->getNumSuccessors() == 2 &&
+         "Should have 2 successors");
   auto VLPreheader = VLGuard->getTerminator()->getSuccessor(1);
-  auto VLHeader =  VLPreheader->getTerminator()->getSuccessor(0);
+  auto VLHeader = VLPreheader->getTerminator()->getSuccessor(0);
   Loop *VL = LI.getLoopFor(VLHeader);
   assert(VL && VL->getHeader() == VLHeader && "This should be VL Header");
   return VL;
@@ -276,8 +277,7 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
       TripCount = 1000;
     else
       TripCount++; // BackedgeTakenCount is one less than tripcount
-  }
-  else
+  } else
     TripCount = 1000;
 
   assert(TripCount > 0 && "Trip count expected to greater than zero");
@@ -319,12 +319,13 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
     const SCEV *BasePointer = nullptr;
     if (isa<SCEVUnknown>(SE->getPointerBase(AccessFn))) {
       BasePointer = SE->getPointerBase(AccessFn);
-    } else if (Value *BPtr = llvm::GetUnderlyingObject (Ptr, DL)) {
+    } else if (Value *BPtr = llvm::GetUnderlyingObject(Ptr, DL)) {
       BasePointer = SE->getSCEV(BPtr);
     } else
       BasePointer = AccessFn;
 
-    if (dependence_Inst_Count.find(BasePointer) != dependence_Inst_Count.end()) {
+    if (dependence_Inst_Count.find(BasePointer) !=
+        dependence_Inst_Count.end()) {
       dependence_Inst_Count.find(BasePointer)->second++;
     } else {
       dep_InstList.push_back(i);
@@ -459,7 +460,7 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
             const SCEV *BasePointer = nullptr;
             if (isa<SCEVUnknown>(SE->getPointerBase(AccessFn))) {
               BasePointer = SE->getPointerBase(AccessFn);
-            } else if (Value *BPtr = llvm::GetUnderlyingObject (Ptr, DL)) {
+            } else if (Value *BPtr = llvm::GetUnderlyingObject(Ptr, DL)) {
               BasePointer = SE->getSCEV(BPtr);
             } else
               BasePointer = AccessFn;
@@ -481,8 +482,6 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
     Value *Ptr = getLoadStorePointerOperand(Inst);
     // assert(Ptr && "Pointer expected");
     const SCEV *SCEVPtr = SE->getSCEV(Ptr);
-    // SCEVPtr = RTC.visit(SCEVPtr);
-    // errs() << "Ptr: " << *SCEVPtr << "\n";
     if (!isa<SCEVAddRecExpr>(SCEVPtr)) {
       Locality_Cost += TripCount;
     } else {
@@ -492,7 +491,6 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
       // Expr should not be null
       if (Expr == nullptr) {
         continue;
-        //***************************************
       }
 
       const SCEV *stride = Expr->getStepRecurrence(*SE);
@@ -504,7 +502,7 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
       } else {
         // assert(SCEVConst_stride && "Not constant stride");
         auto Stride = SCEVConst_stride->getValue()->getSExtValue();
-        Stride = (Stride < 0)? -Stride : Stride;
+        Stride = (Stride < 0) ? -Stride : Stride;
         assert(Stride > 0 && "Stride is zero?");
         if (Stride < CLS) { // make sure Stride is in bytes
           // auto miss = TripCount * Stride * dataType_Size / CLS;
@@ -518,14 +516,26 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
         }
       }
     }
+    errs() << "miss: " << Locality_Cost << "\n";
   }
 
   // Substract Cache hits by dependence accesses, from Cache_miss
   if (Mem_InstList.size() == 0 and dep_InstList.size() > 0)
     assert(false);
 
-  for (auto Inst : dep_InstList) {
+  MemoryInstList temp_dependence_Inst_Count;
+  // for (auto Inst : dep_InstList) {
+  for (auto Inst : Mem_InstList) {
     // errs() << "\tdep_List: " << *Inst << "\n";
+    bool dep_flag = 0;
+    for (auto dep_Inst : dep_InstList) {
+      if (Inst == dep_Inst)
+        dep_flag = 1;
+    }
+
+    if (dep_flag == 1)
+      continue;
+
     Value *Ptr = getLoadStorePointerOperand(Inst);
     assert(Ptr && "Ptr expected");
     const SCEV *SCEVPtr = SE->getSCEV(Ptr);
@@ -537,10 +547,16 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
       const SCEV *BasePointer = nullptr;
       if (isa<SCEVUnknown>(SE->getPointerBase(SCEVPtr))) {
         BasePointer = SE->getPointerBase(SCEVPtr);
-      } else if (Value *BPtr = llvm::GetUnderlyingObject (Ptr, DL)) {
+      } else if (Value *BPtr = llvm::GetUnderlyingObject(Ptr, DL)) {
         BasePointer = SE->getSCEV(BPtr);
       } else
         BasePointer = SCEVPtr;
+
+      /* if (dependence_Inst_Count.find(BasePointer) !=
+          dependence_Inst_Count.end()) {
+        errs() << "bbbbbbbbbbbbbbbbbbbbbbb\n";
+        // dependence_Inst_Count.find(BasePointer)->second++;
+      } */
 
       int n = dependence_Inst_Count.find(BasePointer)->second;
       // errs() << "Count: " << n << "\n";
@@ -567,18 +583,20 @@ int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
         Locality_Cost += TripCount;
       } else {
         auto Stride = SCEVConst_stride->getValue()->getSExtValue();
-        Stride = (Stride < 0)? -Stride : Stride;
+        Stride = (Stride < 0) ? -Stride : Stride;
 
         if (Stride < CLS) {
-          auto h = (long)(ceil((float)TripCount * Stride / CLS));
-          auto hit = (n - 1) * h;
+          auto hit = (long)(ceil((float)TripCount * Stride / CLS));
+          // auto hit = (n - 1) * h;
           // auto hit = (n - 1) * TripCount * Stride / CLS;
           Locality_Cost -= hit;
         } else {
-          Locality_Cost -= (n - 1) * TripCount;
+          Locality_Cost -= TripCount;
+          // Locality_Cost -= (n - 1) * TripCount;
         }
       }
     }
+    errs() << "hit: " << Locality_Cost << "\n";
   }
 
   errs() << "Locality Cost: " << Locality_Cost << "\n";
