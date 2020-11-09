@@ -233,4 +233,7 @@ then
         fi
    grep -ri "\-------------------------->" ${LOG}/run.log &> ${LOG}/distribution_results.csv
    echo "Results files generated in  ${LOG}"
+# else
+#         echo  "Delete the generated distirbuted files"
+#         rm -rf ${DIST_GEN_DATA}/llfiles
 fi

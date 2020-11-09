@@ -53,11 +53,19 @@ class DistributeLoopEnv:
             # reward = -1
             print('warning:distributed file  not generated...., reward={}'.format(reward))
         else:
+            print('Get the metric for original loop')
             OriginalLoopCost = utils.getLoopCost(meta_ssa_file_path, loop_id, method_name)
-             
+            print('Get the value for distributed loop')
             distributedLoopCost = utils.getLoopCost(distributed_llfile, loop_id, method_name)
+            
+            # Remove, it is occupies a lot of space
+            os.remove(distributed_llfile)
             if distributedLoopCost !=0 and OriginalLoopCost != 0:
-                reward = OriginalLoopCost - distributedLoopCost
+                reward = (OriginalLoopCost - distributedLoopCost)/OriginalLoopCost - 0.5
+
+                if reward < -5:
+                    print('Warning:reward={} < -5 so rplace by -5'.format(reward))
+                    reward=-5
             else:
                 print('warning:distributedLoopCost or Original LoopCost is Zero ....., reward={}'.format(reward))
             

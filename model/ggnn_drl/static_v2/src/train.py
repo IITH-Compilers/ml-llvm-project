@@ -18,11 +18,11 @@ def run(agent, config):
     action_mask_flag=config.action_mask_flag
     enable_lexographical_constraint = config.enable_lexographical_constraint
     
-    n_episodes=15
-    max_t=1000
+    n_episodes=60
+    # max_t=1000
     eps_start=1.0
     eps_end=0.01
-    eps_decay=0.995
+    eps_decay=0.000015
     score_per_episode = []
     scores = []                        # list containing scores from each episode
     scores_window = deque(maxlen=100)  # last 100 scores
@@ -41,7 +41,8 @@ def run(agent, config):
     env = DistributeLoopEnv(config)    
     count=0 
     score = 0
-    for path in glob.glob(os.path.join(dataset, 'graphs/train/*.json')): # Number of the iterations
+    training_graphs=glob.glob(os.path.join(dataset, 'graphs/train/*.json'))
+    for path in training_graphs: # Number of the iterations
         score_tensor = 0 
 
         # if env.O3_runtimes[utils.getllfileNameFromJSON(path)] == utils.error_runtime:
@@ -106,7 +107,7 @@ def run(agent, config):
             agent.writer.add_scalar('train/rewardWall', score_tensor)
             scores_window.append(score)       # save most recent score
             scores.append(score)              # save most recent score
-            eps = max(eps_end, eps_decay*eps) # decrease epsilon
+            eps = max(eps_end, eps-eps_decay) # decrease epsilon
             print('\rEpisode {}\tAverage Score: {:.2f}'.format(episode, np.mean(scores_window)), end="")
             if episode % 50 == 0:
                 print('\rEpisode {}\tAverage Score: {:.2f}'.format(episode, np.mean(scores_window)))
@@ -114,6 +115,8 @@ def run(agent, config):
             print('\n------------------------------------------------------------------------------------------------')
         if count % 50 == 0:
             torch.save(agent.qnetwork_local.state_dict(), os.path.join(trained_model, 'checkpoint-graphs-{count}.pth'.format(count=count)))
+        agent.writer.add_scalar('train/score_per_graph', score_tensor , count)
+
     torch.save(agent.qnetwork_local.state_dict(), os.path.join(trained_model, 'final-model.pth'))
     utils.plot(range(1, len(scores)+1), scores, 'Total Rewards per time instant',location=config.distributed_data)
     utils.plot(range(1, len(scores_window)+1), scores_window, 'Last 100 rewards',location=config.distributed_data)
