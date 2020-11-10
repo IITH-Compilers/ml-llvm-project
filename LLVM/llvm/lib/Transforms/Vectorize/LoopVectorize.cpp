@@ -3481,6 +3481,11 @@ void InnerLoopVectorizer::fixVectorizedLoop() {
 
   // Remove redundant induction instructions.
   cse(LoopVectorBody);
+  LLVMContext &Context = LoopVectorBody->getContext();
+  MDNode *JustPlaceMarker =
+        MDNode::get(Context, ConstantAsMetadata::get(ConstantInt::get(
+                                 Context, llvm::APInt(64, 1, false))));
+  LoopMiddleBlock->getTerminator()->setMetadata("VectorMiddleBlock", JustPlaceMarker);
 }
 
 void InnerLoopVectorizer::fixCrossIterationPHIs() {

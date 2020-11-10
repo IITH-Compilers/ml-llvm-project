@@ -199,28 +199,23 @@ public:
   }
 };
 
+#if 1
 Loop *LoopCost::getVectorLoop(Loop *L, DominatorTree &DT, LoopInfo &LI) const {
   auto Preheader = L->getLoopPreheader();
-  auto FirstPHI = &Preheader->front();
-  assert(isa<PHINode>(FirstPHI) && "Not a Phi Node :(");
-  BasicBlock *VLGuard = nullptr;
-  auto Block_1 = cast<PHINode>(FirstPHI)->getIncomingBlock(0);
-  auto Block_2 = cast<PHINode>(FirstPHI)->getIncomingBlock(1);
-  if (DT.dominates(Block_1, Preheader))
-    VLGuard = Block_1;
-  else if (DT.dominates(Block_2, Preheader))
-    VLGuard = Block_2;
-  else
-    assert(false && "Maybe this is not scalar epilogue");
+  auto FirstPHI = dyn_cast<PHINode>(&Preheader->front());
+  assert(FirstPHI && "Not a Phi Node :(");
 
-  assert(VLGuard->getTerminator()->getNumSuccessors() == 2 &&
-         "Should have 2 successors");
-  auto VLPreheader = VLGuard->getTerminator()->getSuccessor(1);
-  auto VLHeader = VLPreheader->getTerminator()->getSuccessor(0);
-  Loop *VL = LI.getLoopFor(VLHeader);
-  assert(VL && VL->getHeader() == VLHeader && "This should be VL Header");
-  return VL;
+  for (auto BB : FirstPHI->blocks()) {
+    if (BB->getTerminator()->getMetadata("VectorMiddleBlock")) {
+      auto VB = BB->getSinglePredecessor();
+      assert(VB && "VB should exist");
+      Loop *VL = LI.getLoopFor(VB);
+      assert(VL && "VL doesn't exist");
+      return VL;
+    }
+  }
 }
+#endif
 
 #if 0
 bool LoopCost::isLoopVectorized(Loop *L, unsigned &VF) {
