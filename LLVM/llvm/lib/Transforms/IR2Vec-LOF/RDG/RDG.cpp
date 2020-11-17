@@ -459,9 +459,16 @@ DataDependenceGraph *RDG::computeRDGForInnerLoop(Loop &IL) {
             return nullptr;
           }
 
+          if (!InductionDescriptor::isInductionPHI(Phi, &IL, &SE, ID) &&
+              !RecurrenceDescriptor::isReductionPHI(Phi, &IL, RD)) {
+            if (ORE) {
+              fail("UnkPHI", "Neither induction nor reduction phi", &IL);
+            }
+          }
+
           if (!InductionDescriptor::isInductionPHI(Phi, &IL, &SE, ID)) {
             if (ORE)
-              fail("InductionPHI", "No support for induction phis", &IL);
+              fail("ReductionPHI", "No support for Reduction phis", &IL);
             return nullptr;
           }
         }
