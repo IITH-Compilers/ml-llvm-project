@@ -1,6 +1,7 @@
 #include "llvm/Analysis/DDG.h"
 #include "llvm/Analysis/DependenceGraphBuilder.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
@@ -54,6 +55,7 @@ private:
   NodeToNumber NodeNumber;
 
   int FunctionNumber = 0;
+  OptimizationRemarkEmitter *ORE;
 
   void setLoopID(Loop *L, MDNode *LoopID) const;
 

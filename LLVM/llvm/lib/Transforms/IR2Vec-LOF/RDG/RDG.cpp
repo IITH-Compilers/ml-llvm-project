@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <string>
 
+#define RDG_NAME "ir2vec-RDG"
 #define DEBUG_TYPE "RDG"
 
 using namespace llvm;
@@ -411,6 +412,20 @@ DataDependenceGraph *RDG::computeRDGForInnerLoop(Loop &IL) {
   //   LLVM_DEBUG(errs() << "No need to make RDG\n");
   //   return nullptr;
   // }
+  if (!IL.isLoopSimplifyForm()) {
+    fail("NotLoopSimplifyForm", "loop is not in loop-simplify form", &IL);
+    return nullptr;
+  }
+
+  if (!IL.isRotatedForm()) {
+    fail("NotLoopRotateForm", "loop is not in loop-rotate form", &IL);
+    return nullptr;
+  }
+
+  if (!IL.getExitBlock()) {
+    fail("MultipleExitBlocks", "multiple exit blocks", &IL);
+    return nullptr;
+  }
 
   for (BasicBlock *BB : IL.blocks()) {
     for (Instruction &I : BB->instructionsWithoutDebug()) {
@@ -418,6 +433,9 @@ DataDependenceGraph *RDG::computeRDGForInnerLoop(Loop &IL) {
         LLVM_DEBUG(
             errs()
             << "FuncCallFound: no need to make RDG with function calls\n");
+        if (ORE)
+          fail("FuncCallFound", "No support for Loops with function calls",
+               &IL);
         return nullptr;
       }
 
@@ -427,13 +445,25 @@ DataDependenceGraph *RDG::computeRDGForInnerLoop(Loop &IL) {
 
         // errs() << "Phi Node: " << *Phi << "\n";
         if (Phi->getNumIncomingValues() == 2) {
-          if (Phi->getBasicBlockIndex(IL.getLoopPreheader()) < 0)
+          if (Phi->getBasicBlockIndex(IL.getLoopPreheader()) < 0) {
+            if (ORE)
+              fail("PHIBranchPH",
+                   "Loop Preheader is not an incoming BB for PHI", &IL);
             return nullptr;
-          if (Phi->getBasicBlockIndex(IL.getLoopLatch()) < 0)
-            return nullptr;
+          }
 
-          if (!InductionDescriptor::isInductionPHI(Phi, &IL, &SE, ID))
+          if (Phi->getBasicBlockIndex(IL.getLoopLatch()) < 0) {
+            if (ORE)
+              fail("PHIBranchLatch", "Loop latch is not an incoming BB for PHI",
+                   &IL);
             return nullptr;
+          }
+
+          if (!InductionDescriptor::isInductionPHI(Phi, &IL, &SE, ID)) {
+            if (ORE)
+              fail("InductionPHI", "No support for induction phis", &IL);
+            return nullptr;
+          }
         }
       }
     }
@@ -441,6 +471,11 @@ DataDependenceGraph *RDG::computeRDGForInnerLoop(Loop &IL) {
     if (br && br->isConditional() && BB != IL.getLoopLatch()) {
       LLVM_DEBUG(errs() << "Conditions Present: no need to make RDG in case of "
                            "conditionals inside loop body\n");
+      if (ORE)
+        fail("MultipleConditions",
+             "no support for distribution in case of conditionals inside "
+             "loop body",
+             &IL);
       return nullptr;
     }
   }
@@ -451,7 +486,12 @@ DataDependenceGraph *RDG::computeRDGForInnerLoop(Loop &IL) {
   DataDependenceGraph *G2 = new DataDependenceGraph(IL, LI, DI, &SE);
   // errs() << "cccccccccccccccccccccccccc\n";
   // Append Memory Dependence Edges with weights into Graph
-  BuildRDG_LAI(*G2, DI, LAI);
+  auto res = BuildRDG_LAI(*G2, DI, LAI);
+  if (!res) {
+    if (ORE)
+      fail("EmptyDeps", "LAI is empty..", &IL);
+    return nullptr;
+  }
   // errs() << "ddddddddddddddddddddddd\n";
   // Create SCC Graph
   CreateSCC(*G2, DI);
@@ -459,5 +499,25 @@ DataDependenceGraph *RDG::computeRDGForInnerLoop(Loop &IL) {
   // Assign Labels to the Store Nodes
   SelectOnlyStoreNode(*G2);
 
+  if (ORE) {
+    // Report the success.
+    ORE->emit([&]() {
+      return OptimizationRemark(RDG_NAME, "RDGGenerated", IL.getStartLoc(),
+                                IL.getHeader())
+             << IL.getHeader()->getParent()->getName() << " --> RDG Generated ";
+    });
+  }
+
   return G2;
+}
+
+/// Provide diagnostics then \return with false.
+bool RDG::fail(StringRef RemarkName, StringRef Message, Loop *L) {
+  // Report failure
+  assert(ORE);
+  ORE->emit(OptimizationRemarkAnalysis(RDG_NAME, RemarkName, L->getStartLoc(),
+                                       L->getHeader())
+            << L->getHeader()->getParent()->getName()
+            << "--> RDG not generated: " << Message);
+  return false;
 }

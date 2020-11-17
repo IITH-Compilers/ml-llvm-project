@@ -2,6 +2,7 @@
 #include "llvm/Analysis/DependenceGraphBuilder.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
@@ -30,12 +31,21 @@ private:
   DependenceInfo &DI;
   const LoopAccessInfo &LAI;
 
+  OptimizationRemarkEmitter *ORE;
+  bool fail(StringRef RemarkName, StringRef Message, Loop *L);
+
 public:
   static char ID;
 
   RDG(AAResults &AA, ScalarEvolution &SE, LoopInfo &LI, DependenceInfo &DI,
       const LoopAccessInfo &LAI)
-      : AA(AA), SE(SE), LI(LI), DI(DI), LAI(LAI) {}
+      : AA(AA), SE(SE), LI(LI), DI(DI), LAI(LAI) {
+    ORE = nullptr;
+  }
+
+  RDG(AAResults &AA, ScalarEvolution &SE, LoopInfo &LI, DependenceInfo &DI,
+      const LoopAccessInfo &LAI, OptimizationRemarkEmitter *ORE)
+      : AA(AA), SE(SE), LI(LI), DI(DI), LAI(LAI), ORE(ORE) {}
   DataDependenceGraph *computeRDGForInnerLoop(Loop &L);
 
   void PrintDotFile_LAI(DataDependenceGraph &G, std::string Filename,

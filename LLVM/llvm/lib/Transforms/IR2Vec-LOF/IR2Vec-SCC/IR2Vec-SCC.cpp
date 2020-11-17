@@ -156,6 +156,7 @@ bool RDGWrapperPass::runOnFunction(Function &F) {
   ScalarEvolution *SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
   LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   DependenceInfo DI = DependenceInfo(&F, AA, SE, LI);
+  ORE = &getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
 
   FunctionNumber++;
 
@@ -171,7 +172,7 @@ bool RDGWrapperPass::runOnFunction(Function &F) {
       loopNum++;
       auto *LAA = &getAnalysis<LoopAccessLegacyAnalysis>();
       const LoopAccessInfo &LAI = LAA->getInfo(*il);
-      auto RDGraph = RDG(*AA, *SE, *LI, DI, LAI);
+      auto RDGraph = RDG(*AA, *SE, *LI, DI, LAI, ORE);
       auto SCC_Graph = RDGraph.computeRDGForInnerLoop(**il);
 
       if (SCC_Graph == nullptr) {
@@ -232,4 +233,5 @@ void RDGWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<AAResultsWrapperPass>();
   AU.addRequired<LoopAccessLegacyAnalysis>();
   AU.addRequired<IR2Vec_RD>();
+  AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
 }
