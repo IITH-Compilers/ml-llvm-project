@@ -28,6 +28,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 
 using namespace llvm;
 
@@ -37,10 +38,20 @@ using namespace llvm;
 
 namespace {
 
+struct Node{
+    bool isVirtReg = true;
+    double weight = 0;
+};
+
 class RA : public MachineFunctionPass {
 private:
-    MachineRegisterInfo *MRI;
-
+    const TargetRegisterInfo *TRI = nullptr;
+    MachineRegisterInfo *MRI = nullptr;
+    VirtRegMap *VRM = nullptr;
+    LiveIntervals *LIS = nullptr;
+    LiveRegMatrix *Matrix = nullptr;
+    MachineFunction *MF = nullptr;
+    RegisterClassInfo RegClassInfo;
 public:
     static char ID;
 
@@ -53,8 +64,24 @@ public:
     StringRef getPassName() const override { return RA_PASS_NAME; }
 
     void getAnalysisUsage(AnalysisUsage &AU) const {
+        AU.setPreservesCFG();
+        AU.addRequired<AAResultsWrapperPass>();
+        AU.addPreserved<AAResultsWrapperPass>();
         AU.addRequired<LiveIntervals>();
         AU.addPreserved<LiveIntervals>();
+        AU.addPreserved<SlotIndexes>();
+        AU.addRequired<LiveStacks>();
+        AU.addPreserved<LiveStacks>();
+        AU.addRequired<MachineBlockFrequencyInfo>();
+        AU.addPreserved<MachineBlockFrequencyInfo>();
+        AU.addRequiredID(MachineDominatorsID);
+        AU.addPreservedID(MachineDominatorsID);
+        AU.addRequired<MachineLoopInfo>();
+        AU.addPreserved<MachineLoopInfo>();
+        AU.addRequired<VirtRegMap>();
+        AU.addPreserved<VirtRegMap>();
+        AU.addRequired<LiveRegMatrix>();
+        AU.addPreserved<LiveRegMatrix>();
         MachineFunctionPass::getAnalysisUsage(AU);
     }
 };
@@ -63,20 +90,56 @@ public:
 
 char RA::ID = 0;
 
-bool RA::runOnMachineFunction(MachineFunction &MF) {
+bool RA::runOnMachineFunction(MachineFunction &mf) {
+
+    MF = &mf;
+    VirtRegMap &vrm = getAnalysis<VirtRegMap>(); 
+    LiveIntervals &lis = getAnalysis<LiveIntervals>(); 
+    LiveRegMatrix &mat = getAnalysis<LiveRegMatrix>();
+    TRI = &vrm.getTargetRegInfo();
+    MRI = &vrm.getRegInfo();
+    VRM = &vrm;
+    LIS = &lis;
+    Matrix = &mat;
+    MRI->freezeReservedRegs(vrm.getMachineFunction());
+    RegClassInfo.runOnMachineFunction(vrm.getMachineFunction());
+
+    calculateSpillWeightsAndHints(*LIS, *MF, VRM,
+        getAnalysis<MachineLoopInfo>(),
+        getAnalysis<MachineBlockFrequencyInfo>());
     
-    auto &LI = getAnalysis<LiveIntervals>();
-    // LI.print(outs());
-    MRI = &MF.getRegInfo();
-    for (unsigned i = 0, e = MRI->getNumVirtRegs(); i != e; ++i) {
-        // reg ID
+    unsigned graphSize = MRI->getNumVirtRegs();
+    std::vector<Node>regs(graphSize);
+
+    std::vector<std::vector<bool>>interferenceGraph(graphSize, std::vector<bool>(graphSize, 0));
+
+    outs() << "No. of Registers: " << TRI->getNumRegs() << "\n";
+    for (unsigned i = 0, e = MRI->getNumVirtRegs(); i < e; ++i) {
         unsigned Reg = Register::index2VirtReg(i);
-        // if is not a DEBUG register
         if (MRI->reg_nodbg_empty(Reg))
             continue;
-        // get the respective LiveInterval
-        auto &VirtReg = LI.getInterval(Reg);
-        VirtReg.print(outs());
+        LiveInterval *VirtReg = &LIS->getInterval(Reg);
+        regs[i].weight = VirtReg->weight;
+        VirtReg->print(outs());
+        outs() << "\n";
+
+        for (unsigned j = 0, e = MRI->getNumVirtRegs(); j < e; ++j) {
+            unsigned Reg1 = Register::index2VirtReg(j);
+            if (MRI->reg_nodbg_empty(Reg1))
+                continue;
+            if(i!=j)
+                interferenceGraph[i][j] = VirtReg->overlaps(LIS->getInterval(Reg1));
+        }
+    }
+
+    for (unsigned i = 0; i < graphSize; ++i) {
+        for (unsigned j = 0; j < graphSize; ++j) {
+            outs() << interferenceGraph[i][j]<<" ";
+        }
+        outs() << "\n";
+    }
+    for (unsigned i = 0; i < graphSize; ++i) {
+        outs() << regs[i].weight << " " << regs[i].isVirtReg;
         outs() << "\n";
     }
     return false;
