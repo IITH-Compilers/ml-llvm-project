@@ -39,7 +39,8 @@ using namespace llvm;
 namespace {
 
 struct Node{
-    bool isVirtReg = true;
+    // bool isVirtReg = true;
+    std::string MIR = "MIR"; 
     double weight = 0;
 };
 
@@ -113,15 +114,14 @@ bool RA::runOnMachineFunction(MachineFunction &mf) {
 
     std::vector<std::vector<bool>>interferenceGraph(graphSize, std::vector<bool>(graphSize, 0));
 
-    outs() << "No. of Registers: " << TRI->getNumRegs() << "\n";
     for (unsigned i = 0, e = MRI->getNumVirtRegs(); i < e; ++i) {
         unsigned Reg = Register::index2VirtReg(i);
         if (MRI->reg_nodbg_empty(Reg))
             continue;
         LiveInterval *VirtReg = &LIS->getInterval(Reg);
         regs[i].weight = VirtReg->weight;
-        VirtReg->print(outs());
-        outs() << "\n";
+        LLVM_DEBUG(VirtReg->print(dbgs()));
+        LLVM_DEBUG(dbgs() << "\n");
 
         for (unsigned j = 0, e = MRI->getNumVirtRegs(); j < e; ++j) {
             unsigned Reg1 = Register::index2VirtReg(j);
@@ -131,17 +131,25 @@ bool RA::runOnMachineFunction(MachineFunction &mf) {
                 interferenceGraph[i][j] = VirtReg->overlaps(LIS->getInterval(Reg1));
         }
     }
+    std::error_code EC;
+    raw_fd_ostream File(MF->getName().str() + ".dot", EC, sys::fs::F_Text);
+
+    File << "graph G {\n";
+    File << "Function=\"" << MF->getName() << "\";\n";
+    File << "Registers=" << TRI->getNumRegs() << ";\n";
 
     for (unsigned i = 0; i < graphSize; ++i) {
-        for (unsigned j = 0; j < graphSize; ++j) {
-            outs() << interferenceGraph[i][j]<<" ";
-        }
-        outs() << "\n";
+        File << i << " [label=\"" << regs[i].weight << " MIR" << "\"];\n";
     }
+
     for (unsigned i = 0; i < graphSize; ++i) {
-        outs() << regs[i].weight << " " << regs[i].isVirtReg;
-        outs() << "\n";
+        for (unsigned j = i + 1; j < graphSize; ++j) {
+            if (interferenceGraph[i][j]) {
+                File << i << " -- " << j << ";\n";
+            }
+        }
     }
+    File << "}";
     return false;
 }
 
