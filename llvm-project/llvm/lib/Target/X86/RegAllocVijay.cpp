@@ -8,6 +8,8 @@
 #include "X86InstrInfo.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/Pass.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/CalcSpillWeights.h"
@@ -38,12 +40,6 @@ using namespace llvm;
 
 namespace {
 
-struct Node{
-    // bool isVirtReg = true;
-    std::string MIR = "MIR"; 
-    double weight = 0;
-};
-
 class RA : public MachineFunctionPass {
 private:
     const TargetRegisterInfo *TRI = nullptr;
@@ -70,6 +66,7 @@ public:
         AU.addPreserved<AAResultsWrapperPass>();
         AU.addRequired<LiveIntervals>();
         AU.addPreserved<LiveIntervals>();
+        AU.addRequired<SlotIndexes>();
         AU.addPreserved<SlotIndexes>();
         AU.addRequired<LiveStacks>();
         AU.addPreserved<LiveStacks>();
@@ -94,6 +91,14 @@ char RA::ID = 0;
 bool RA::runOnMachineFunction(MachineFunction &mf) {
 
     MF = &mf;
+    // LLVM_DEBUG(MF->print(outs()));
+    // for(auto &MD: MF->getVariableDbgInfo()){
+    //     LLVM_DEBUG(dbgs() << MD.Loc->getFilename() << " ");
+    //     LLVM_DEBUG(dbgs() << MD.Loc->getDirectory() << " ");
+    //     LLVM_DEBUG(dbgs() << MD.Var->getFilename() << " ");
+    //     LLVM_DEBUG(dbgs() << MD.Var->getDirectory() << " ");
+    //     LLVM_DEBUG(dbgs() << "LOC\n");
+    // }
     VirtRegMap &vrm = getAnalysis<VirtRegMap>(); 
     LiveIntervals &lis = getAnalysis<LiveIntervals>(); 
     LiveRegMatrix &mat = getAnalysis<LiveRegMatrix>();
@@ -109,47 +114,50 @@ bool RA::runOnMachineFunction(MachineFunction &mf) {
         getAnalysis<MachineLoopInfo>(),
         getAnalysis<MachineBlockFrequencyInfo>());
     
-    unsigned graphSize = MRI->getNumVirtRegs();
-    std::vector<Node>regs(graphSize);
+    std::error_code EC;
+    // TODO: Name mangling
+    raw_fd_ostream File(MF->getName().str() + ".dot", EC, sys::fs::F_Text);
 
-    std::vector<std::vector<bool>>interferenceGraph(graphSize, std::vector<bool>(graphSize, 0));
+    File << "graph G {\n";
+    File << "Function=\"" << MF->getName() << "\";\n";
+    
+    // TODO: Fix no of Registers
+    File << "Registers=" << TRI->getNumRegUnits() << ";\n";
 
     for (unsigned i = 0, e = MRI->getNumVirtRegs(); i < e; ++i) {
         unsigned Reg = Register::index2VirtReg(i);
         if (MRI->reg_nodbg_empty(Reg))
             continue;
         LiveInterval *VirtReg = &LIS->getInterval(Reg);
-        regs[i].weight = VirtReg->weight;
+        File << i << " [label=\"" << VirtReg->weight << " ";
+
         LLVM_DEBUG(VirtReg->print(dbgs()));
         LLVM_DEBUG(dbgs() << "\n");
 
-        for (unsigned j = 0, e = MRI->getNumVirtRegs(); j < e; ++j) {
+        for (auto &S : VirtReg->segments){
+            for (SlotIndex I = S.start.getBaseIndex(), E = S.end.getBaseIndex();
+            I != E; I = I.getNextIndex()) {
+                auto* MIR = LIS->getInstructionFromIndex(I);
+                if (!MIR)
+                    continue;
+                MIR->print(File);
+            }
+        }
+        File << "\"];\n";
+
+        for (unsigned j = i+1, e = MRI->getNumVirtRegs(); j < e; ++j) {
             unsigned Reg1 = Register::index2VirtReg(j);
             if (MRI->reg_nodbg_empty(Reg1))
                 continue;
-            if(i!=j)
-                interferenceGraph[i][j] = VirtReg->overlaps(LIS->getInterval(Reg1));
-        }
-    }
-    std::error_code EC;
-    raw_fd_ostream File(MF->getName().str() + ".dot", EC, sys::fs::F_Text);
-
-    File << "graph G {\n";
-    File << "Function=\"" << MF->getName() << "\";\n";
-    File << "Registers=" << TRI->getNumRegs() << ";\n";
-
-    for (unsigned i = 0; i < graphSize; ++i) {
-        File << i << " [label=\"" << regs[i].weight << " MIR" << "\"];\n";
-    }
-
-    for (unsigned i = 0; i < graphSize; ++i) {
-        for (unsigned j = i + 1; j < graphSize; ++j) {
-            if (interferenceGraph[i][j]) {
+            if(VirtReg->overlaps(LIS->getInterval(Reg1)))
                 File << i << " -- " << j << ";\n";
-            }
         }
     }
     File << "}";
+    LLVM_DEBUG(dbgs() << "\n\nSlot Indexes\n\n");
+    LLVM_DEBUG(LIS->getSlotIndexes()->dump());
+    LLVM_DEBUG(dbgs() << "\n\nComplete\n\n");
+    LLVM_DEBUG(LIS->print(dbgs()));
     return false;
 }
 
