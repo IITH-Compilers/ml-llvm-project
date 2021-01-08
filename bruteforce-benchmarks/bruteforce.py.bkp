@@ -1,0 +1,154 @@
+import pandas as pd
+import numpy as np
+import json
+import glob
+import threading
+import json
+from collections import deque
+import os
+import argparse
+from topologicalSort import findAllDistributions
+import utils
+
+from typing import List, Tuple, Dict, Sequence, Any
+from topologicalSort import Graph
+# from termcolor import colored
+
+
+no_of_threads=60
+# dataset=None
+
+def constructGraph(graph):
+    nodes = graph['nodes']
+    adjlist = graph['adjacency']
+
+    num_nodes = len(nodes)
+
+    initial_node_representation = []
+
+    idx_nid = {}
+    nid_idx = {}
+    unique_type_map = {'pair': []}
+    all_edges = []
+    for idx, node in enumerate(nodes):
+
+        nodeId = node['id']
+        nodeVec = list(map(float, node['label'].strip("\"").split(', ')))
+
+        initial_node_representation.append(nodeVec)
+        nid_idx[nodeId] = idx
+        idx_nid[idx] = nodeId
+
+    for i, adj in enumerate(adjlist):
+
+        for nlink in adj:
+            label = nlink['label'].strip("\" ")
+            neighId = nid_idx[nlink['id']]
+            if label in unique_type_map.keys():
+                unique_type_map[label].append((i, neighId))
+            else:
+                unique_type_map[label] = [(i, neighId)]
+            if i != neighId:
+                all_edges.append((i, neighId))
+
+    # Create aGraph obj for getting the Zero incoming egdes nodes
+    graphObj = Graph(all_edges,  num_nodes)
+    # print('All links : {}'.format(all_edges))
+    # print("num_nodes : {}".format(num_nodes))
+
+    return graphObj, idx_nid
+
+skipped=0
+
+def run(*graphpathlist):
+    count = 0
+    global skipped
+    # print('--------------------------------------1', graphpathlist)
+    for path in graphpathlist:
+        with open(path) as f:
+            graph = json.load(f)
+        count = count+1
+        
+        topology, nodeMap = constructGraph(graph)
+        N = topology.num_nodes
+        discovered = [False] * N
+
+        combs = []
+        decList = []
+        distributions = []
+        if N <= 3 or N > 8:
+            # print(colored('['+graph['graph'][1][1]['FileName']+']', 'blue') +
+            #       'Skipping the files with nodes more than 4\t' + colored('Case skipped', 'magenta'))
+            skipped += 1
+            continue
+
+        findAllDistributions(topology, combs, discovered,
+                             N, nodeMap, decList, distributions)
+
+        # print(path)
+        attr = utils.getllFileAttributes(path)
+
+        fileName = graph['graph'][1][1]['FileName'].strip("\"")
+        method_name = graph['graph'][1][1]['Function'].strip("\"")
+        loop_id = attr['LOOP_ID']
+        home_dir = attr['HOME_DIR']
+
+        meta_ssa_dir = os.path.join(home_dir, 'llfiles/meta_ssa')
+        meta_ssa_file_path = os.path.join(meta_ssa_dir, fileName)
+        mutex.acquire()
+#        print('Json file ', path)
+#        print('meta_ssa_file_path ', meta_ssa_file_path)
+       
+
+        un_seq = ','.join(["S{}".format(i+1) for i in range(N)])
+        unll_file = utils.call_distributionPass(
+            meta_ssa_file_path, un_seq, method_name, loop_id, config.distributed)
+        utils.getLoopCost(unll_file, loop_id, method_name)
+        print("\n")
+
+        for distribution in distributions:
+            ll_file = utils.call_distributionPass(
+                meta_ssa_file_path, distribution, method_name, loop_id, config.distributed)
+            utils.getLoopCost(ll_file, loop_id, method_name)
+            print("\n")
+        mutex.release()
+	
+def chunkify(lst,n):
+    return [lst[i::n] for i in range(n)]
+
+if __name__ == '__main__':
+
+
+    config = utils.get_parse_args()
+    
+    global dataset
+    dataset=config.dataset
+    
+    file_list=[]
+    for llpath in glob.glob(os.path.join(dataset,'graphs/json/*.json')):
+        file_list.append(llpath)
+    # file_list=glob.glob(os.path.join(dataset, ))
+    chunk_list=chunkify(file_list,no_of_threads)
+
+    threads=[]
+    mutex=threading.Lock()	
+
+    for i in range(no_of_threads):
+       t = threading.Thread(target=run,args=(chunk_list[i]))
+       t.start()
+       threads.append(t)
+
+    for t in threads:
+      t.join()
+
+#    import concurrent.futures 
+
+#    with concurrent.futures.ThreadPoolExecutor(max_workers=no_of_threads) as executor:
+#        executor.map(run, file_list)
+
+        	    
+	
+    # print('config : enable_lexographical_constraint : ', config.enable_lexographical_constraint)
+    #run(chunk_list[0],dataset)
+
+    print("Done with data gen.")
