@@ -12,8 +12,12 @@ class Locality {
 private:
   using ReferenceGroupTy = SmallVector<std::unique_ptr<IndexedReference>, 8>;
   using ReferenceGroupsTy = SmallVector<ReferenceGroupTy, 8>;
+  using MemroyInstructionGraph = DenseMap<Instruction*, SmallVector<Instruction*, 4>*>;
 
-  int Locality_Cost = 0;
+  MemroyInstructionGraph MemGraph;
+  SmallVectorImpl<Instruction *> *findVertexCover(MemroyInstructionGraph &);
+
+  int64_t Locality_Cost = 0;
 
   const LoopAccessInfo &LAI_WR;
   const LoopAccessInfo &LAI_RAR;
@@ -53,7 +57,9 @@ public:
   // InstructionListType get_dep_InstList() { return dep_InstList; }
   // bool runOnFunction(Function &F);
 
-  int computeLocalityCost(Loop &IL, ScalarEvolution *SE);
+  int64_t computeLocalityCost(Loop *L, unsigned TripCount, ScalarEvolution *SE);
+
+  // int computeLocalityCost(Loop &IL, ScalarEvolution *SE);
 };
 
 } // namespace llvm
