@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger('topologicalSort.py') 
 # class to represent a graph object:
 class Graph:
 

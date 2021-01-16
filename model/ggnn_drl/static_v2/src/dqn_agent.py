@@ -7,7 +7,10 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
 import os
+import logging
 # from torch.nn.parallel import DistributedDataParallel as DDP
+
+logger = logging.getLogger('dqn_agent.py') 
 
 BUFFER_SIZE = int(20000)  # replay buffer size
 BATCH_SIZE = 64         # minibatch size
@@ -95,11 +98,11 @@ class Agent():
         
         # masked_action = generate_actions(next_loops)
         
-        # print("valid action space for the state : {}".format(masked_action))
+        # logging.info("valid action space for the state : {}".format(masked_action))
 
-        print("DLOOP state type : {}, {}".format(type(state), state.shape))
+        logging.info("DLOOP state type : {}, {}".format(type(state), state.shape))
         state = torch.from_numpy(state).float() # .unsqueeze(0)
-        print(state.shape, type(state))
+        logging.info("shape={} and type={}".format(state.shape, type(state)))
         state = state.to(device)
         self.qnetwork_local.eval()
         with torch.no_grad():
@@ -110,89 +113,46 @@ class Agent():
             # masked_action_space = action_values[masked_action]
             # action_values = masked_action_space
 
-            # print('action_values : {}'.format(action_values))
+            # logging.info('action_values : {}'.format(action_values))
             # TODO Mask for each state via SCC
         self.qnetwork_local.train()
 
         # Epsilon-greedy action selection
-        # print('EXP: Random num : ', random.random(), 'eps ', eps)
+        # logging.info('EXP: Random num : ', random.random(), 'eps ', eps)
         if random.random() > eps:
-            print('EXP: Model decision')
-            # print('DQN:act:indexchoosen ', indexchoosen)
-            # print('DQN:act:MergeDistribute_decision', MergeDistribute_decision)
+            logging.info('EXP: Model decision')
+            # logging.info('DQN:act:indexchoosen ', indexchoosen)
+            # logging.info('DQN:act:MergeDistribute_decision', MergeDistribute_decision)
             if MergeDistribute_decision == -1:
                 MergeDistribute_decision=None
             else:
                 MergeDistribute_decision = MergeDistribute_decision.cpu().data.numpy() 
             return indexchoosen.cpu().data.numpy(), MergeDistribute_decision 
         elif focusNode is not None:
-            print('EXP: Random ')
+            logging.info('EXP: Random ')
             return random.choice(np.arange(state.shape[0])), random.choice([0,1])
         else:
-            print('EXP: Random for start node ')
+            logging.info('EXP: Random for start node ')
             return random.choice(np.arange(state.shape[0])), None
 
 
-#     def learn_bk(self, experiences, gamma):
-#         """Update value parameters using given batch of experience tuples.
-# 
-#         Params
-#         ======
-#             experiences (Tuple[torch.Tensor]): tuple of (s, a, r, s', done) tuples 
-#             gamma (float): discount factor
-#         """
-#         states, focusNodes, actions1, actions2, rewards, next_states, dones = experiences
-# 
-#         # Get max predicted Q values (for next states) from target model
-#         # Q_targets_next = self.qnetwork_target(next_states, start).detach().max(1)[0].unsqueeze(1)
-#         Q_targets_next = self.qnetwork_target(next_states, start)[0].detach().unsqueeze(1)
-#        # Compute Q targets for current states 
-#         Q_targets = rewards + (gamma * Q_targets_next * (1 - dones))
-# 
-#         # Get expected Q values from local model
-#         # Q_expected = self.qnetwork_local(states, start).gather(1, actions)
-#         Trans_Qvalue,_ = self.qnetwork_local.transitionNet(states)
-#         Qvalue1 = Trans_Qvalue.gather(1, actions1)
-#         
-#         Distribute_Qvalue,_ = self.distributeNet(states[actions1])
-#         # This might cause issue in None
-#         Qvalue2 = Distribute_Qvalue.gather(1, actions2)
-# 
-#         Q_expected = torch.sum(torch.cat((Qvalue1, Qvalue2),dim=1),dim=1)
-# 
-# 
-# 
-#         # Compute loss
-#         loss = F.mse_loss(Q_expected, Q_targets)
-#         # Minimize the loss
-#         self.optimizer.zero_grad()
-#         loss.backward()
-#         # TODO
-#         for param in self.qnetwork_local.parameters():
-#             param.grad.data.clamp_(-1, 1)
-# 
-# 
-#         self.optimizer.step()
-# 
-#         # ------------------- update target network ------------------- #
-#         self.soft_update(self.qnetwork_local, self.qnetwork_target, TAU)                     
 
     def getMaxQvalueAndActions(self, Qvalues):
         transitionQvalue, MergeDistributeQvalue = Qvalues
 
         indexchoose = torch.argmax(transitionQvalue)
         MaxTransQvalue = torch.max(transitionQvalue)
-        # print('DQN:getMaxQvalueAndActions:transitionQvalue, ', transitionQvalue.shape, indexchoose, MaxTransQvalue, transitionQvalue)
+        # logging.info('DQN:getMaxQvalueAndActions:transitionQvalue, ', transitionQvalue.shape, indexchoose, MaxTransQvalue, transitionQvalue)
         QMax = None
         MergeDistribute_decision = -1
         if MergeDistributeQvalue is not None:
             MergeDistributeQvalue =  MergeDistributeQvalue[indexchoose]
             MaxDistributeQvalue, MergeDistribute_decision  = torch.max(MergeDistributeQvalue), torch.argmax(MergeDistributeQvalue)
-            # print('DQN:getMaxQvalueAndActions:mergedistributeQvalue ', MergeDistributeQvalue.shape, MergeDistribute_decision, MaxDistributeQvalue, MergeDistributeQvalue)
+            # logging.info('DQN:getMaxQvalueAndActions:mergedistributeQvalue ', MergeDistributeQvalue.shape, MergeDistribute_decision, MaxDistributeQvalue, MergeDistributeQvalue)
             QMax = MaxTransQvalue + MaxDistributeQvalue
         else:
             QMax = MaxTransQvalue
-        # print('Return from getMaxQvalueAndActions : ', QMax, indexchoose, MergeDistribute_decision) 
+        # logging.info('Return from getMaxQvalueAndActions : ', QMax, indexchoose, MergeDistribute_decision) 
         return (QMax, indexchoose, MergeDistribute_decision)
  
     def getMaxQvalue(self, next_state):
@@ -205,7 +165,7 @@ class Agent():
     def getQvalueForAction(self, state, focusNode, action):
         try:
             
-            # print(state.shape, type(state))
+            # logging.info(state.shape, type(state))
 
             state = torch.from_numpy(state).float().to(device)
             Qvalues = self.qnetwork_local(state, True if focusNode == -1 else False)
@@ -215,10 +175,10 @@ class Agent():
             MergeDistribute_decision = action[1]
             Qvalue = None
             if MergeDistribute_decision !=-1 :
-                # print(MergeDistributeQvalue[indexchoose].shape, MergeDistributeQvalue[indexchoose])
+                # logging.info(MergeDistributeQvalue[indexchoose].shape, MergeDistributeQvalue[indexchoose])
                 MergeDistributeQvalue = MergeDistributeQvalue[indexchoose].squeeze(0)
-                # print(MergeDistributeQvalue.shape, MergeDistributeQvalue)
-                # print(MergeDistribute_decision)
+                # logging.info(MergeDistributeQvalue.shape, MergeDistributeQvalue)
+                # logging.info(MergeDistribute_decision)
                 DistributeQvalue = MergeDistributeQvalue[MergeDistribute_decision]
                 Qvalue = TransQvalue + DistributeQvalue
             else:
@@ -226,9 +186,9 @@ class Agent():
  
             return Qvalue
         except:
-            print('Error int getQvalueForAction')
+            logging.error('Error int getQvalueForAction')
             for s in state:
-                print(type(s), s)
+                logging.error("{} {}".format(type(s), s))
             raise
 
     def learn(self, experiences, gamma):
@@ -247,7 +207,7 @@ class Agent():
         
 
         Q_targets_next = torch.stack([self.getMaxQvalue(next_state) for next_state in next_states]).detach().unsqueeze(1)
-        # print('V2: Q_targets_shape : ', Q_targets_next.shape)
+        # logging.info('V2: Q_targets_shape : ', Q_targets_next.shape)
         # Compute Q targets for current states 
         Q_targets = rewards + (gamma * Q_targets_next * (1 - dones))
 
@@ -268,17 +228,17 @@ class Agent():
 
 
         # Compute loss
-        # print('Q_expected', Q_expected.shape)
-        # print('Q_targets', Q_targets.shape)
+        # logging.info('Q_expected', Q_expected.shape)
+        # logging.info('Q_targets', Q_targets.shape)
         loss = F.mse_loss(Q_expected, Q_targets)
         self.updateDone = self.updateDone +1
         self.writer.add_scalar("Loss/train", loss, self.updateDone)
         # Minimize the loss
         self.optimizer.zero_grad()
         loss.backward()
-        # TODO
+        # TODO TODO
         for param in self.qnetwork_local.parameters():
-            param.grad.data.clamp_(-1, 1)
+           param.grad.data.clamp_(-1, 1)
 
         self.optimizer.step()
 
@@ -336,11 +296,11 @@ class ReplayBuffer:
         states = [e.state[0] for e in experiences if e is not None]
         
         focusNodes = torch.from_numpy(np.vstack([e.state[1] if e.state[0] is not None else -1 for e in experiences if e is not None])).float().to(device)
-        # print([e.state[1] for e in experiences if e is not None]) 
+        # logging.info([e.state[1] for e in experiences if e is not None]) 
         # action1 has the node index selected
         # action2 corresponds to merge or distribute decision.
-        # print([e.action[0] for e in experiences if e is not None]) 
-        # print([e.action[1] for e in experiences if e is not None]) 
+        # logging.info([e.action[0] for e in experiences if e is not None]) 
+        # logging.info([e.action[1] for e in experiences if e is not None]) 
         actions1 = torch.from_numpy(np.vstack([e.action[0] for e in experiences if e is not None])).long().to(device)
         actions2 = torch.from_numpy(np.vstack([e.action[1] if e.action[1] is not None else -1 for e in experiences if e is not None])).long().to(device)
         

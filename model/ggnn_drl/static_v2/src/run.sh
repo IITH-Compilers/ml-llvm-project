@@ -6,7 +6,7 @@ PWD=`pwd`
 # set the llvm Build and other paramter
 
 # REL or DEBUG 
-BUILD_TYPE=REL_AsrtON
+BUILD_TYPE=LoopCost_REL_AsrtON
 
 # LLVM_BUILD=`realpath ${PWD}/../../../../build`
 
@@ -15,7 +15,7 @@ BUILD_TYPE=REL_AsrtON
 LLVM_BUILD=`realpath ${PWD}/../../../../build_${BUILD_TYPE}`
 # fi
 
-echo ${LLVM_BUILD}
+echo "LLVM build directory selected for training : ${LLVM_BUILD}"
 export LLVM=${LLVM_BUILD}
 export OPT=${LLVM_BUILD}/bin/opt
 export CLANG=${LLVM_BUILD}/bin/clang
@@ -133,10 +133,12 @@ then
             exit
         fi
         
-       TRAINED_MODEL=`realpath ${TRAINED_MODEL}` 
+       TRAINED_MODEL=`realpath ${TRAINED_MODEL}`
+       CHECKPOINT=final
         if [ -f ${TRAINED_MODEL} ]
         then
            TRAINED_MODEL_DIR=`dirname ${TRAINED_MODEL}`
+           CHECKPOINT=`basename ${TRAINED_MODEL} .pth`
         elif [ -d ${TRAINED_MODEL} ]
         then
             TRAINED_MODEL_DIR=${TRAINED_MODEL}
@@ -145,7 +147,7 @@ then
             exit
         fi
         
-         DIST_GEN_DATA=${TRAINED_MODEL_DIR}/${MODE}/${TE_DATA_SET_NAME}
+         DIST_GEN_DATA=${TRAINED_MODEL_DIR}/${MODE}/${TE_DATA_SET_NAME}/${CHECKPOINT}
         
          DEB_FLAG=$4
          if [ -z ${DEB_FLAG} ]
@@ -218,7 +220,7 @@ echo "Location of the trained model: ${TRAINED_MODEL}"
 echo "Location of the generated llfiles and outfiles : ${DIST_GEN_DATA}"
 echo "Logs files: ${LOG}"
 ## Call the py script 
-python ${PY_SPT} --dataset=${DATA_SET} ${AMF} ${ELC} ${DISABLE_EXEC_BIN} ${PDP} ${RT} --trained_model=${TRAINED_MODEL} --distributed_data=${DIST_GEN_DATA} > ${LOG}/run.log 2> ${LOG}/error.log
+python ${PY_SPT} --dataset=${DATA_SET} ${AMF} ${ELC} ${DISABLE_EXEC_BIN} ${PDP} ${RT} --trained_model=${TRAINED_MODEL} --distributed_data=${DIST_GEN_DATA}  --logdir ${LOG}
 
 echo "Completed the process........."
 
@@ -229,7 +231,7 @@ then
         then
             grep -ri "filename|O3runtime|Druntime|reward" ${LOG}/run.log &> ${LOG}/runtime_results.csv
     else
-            grep -ri "filename|OriginalLoopCost|distributedLoopCost|reward|distributeSeq" ${LOG}/run.log &> ${LOG}/loopcost_results.csv
+            grep -ri "ll_filename|OriginalLoopCost|distributedLoopCost|reward|speedup|distributeSeq|RDG" ${LOG}/running.log &> ${LOG}/loopcost_results.csv
         fi
    grep -ri "\-------------------------->" ${LOG}/run.log &> ${LOG}/distribution_results.csv
    echo "Results files generated in  ${LOG}"

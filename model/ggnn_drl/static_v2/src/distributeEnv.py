@@ -3,7 +3,8 @@ from topologicalSort import Graph
 import random
 import utils
 import os
-
+import logging
+logger = logging.getLogger('distributeEnv.py') 
 class DistributeLoopEnv:
 
     def __init__(self, config):
@@ -27,9 +28,34 @@ class DistributeLoopEnv:
         self.isInputRequired = config.isInputRequired
         self.disable_execute_binaries = config.disable_execute_binaries
         self.rewardtype = config.rewardtype
-        if self.rewardtype == "runtime" and not self.disable_execute_binaries:
-            self.O3_runtimes = utils.get_O3_runtimes(config.dataset, self.isInputRequired)
+        # if self.rewardtype == "runtime" and not self.disable_execute_binaries:
+        #     self.O3_runtimes = utils.get_O3_runtimes(config.dataset, self.isInputRequired)
+        self.loopcost_cache = utils.load_precomputed_loopcost() 
         self.distributed_data = config.distributed_data
+        
+        # cols = list(self.loopcost_cache.index.names) + list(self.loopcost_cache.columns)
+        # lastrow = self.loopcost_cache.iloc[-1,:]
+        # self.second_loopcost_cache = pd.DataFrame(data=[list(lastrow.name)+list(lastrow)], columns=cols)
+        self.second_loopcost_cache = set()
+    
+    # @staticmethod
+    def reward_formula(self, distributedLoopCost, OriginalLoopCost):
+        reward = 0
+        speedup = 0
+        if distributedLoopCost !=0 and OriginalLoopCost != 0:
+            speedup = (OriginalLoopCost - distributedLoopCost)/OriginalLoopCost
+            reward = speedup
+            if reward <= 0:
+                reward = reward - 0.5
+            else:
+                reward = reward + 5
+            if reward < -5:
+                logging.warning('reward={} < -5 so rplace by -5'.format(reward))
+                reward=-5
+        else:
+            logging.warning('distributedLoopCost or Original LoopCost is Zero ....., reward={}'.format(reward))
+
+        return reward, speedup
 
 
     def getReward_Static(self):
@@ -39,37 +65,47 @@ class DistributeLoopEnv:
         loop_id = self.loopId
         ll_file_name = self.fileName
         fun_id = self.fun_id
-
-        meta_ssa_dir = os.path.join(home_dir, 'llfiles/meta_ssa')
-        meta_ssa_file_path = os.path.join(meta_ssa_dir, ll_file_name)
         
-        CMP_dir = os.path.join(home_dir, 'llfiles/level-CMP')
-        CMP_file_path = os.path.join(CMP_dir, ll_file_name)
-        
-        
-        distributed_llfile = utils.call_distributionPass( meta_ssa_file_path, self.distribution, method_name, fun_id, loop_id, self.distributed_data)
         reward=0
-        if distributed_llfile is None:
-            # reward = -1
-            print('warning:distributed file  not generated...., reward={}'.format(reward))
-        else:
-            print('Get the metric for original loop')
-            OriginalLoopCost = utils.getLoopCost(meta_ssa_file_path, loop_id, method_name)
-            print('Get the value for distributed loop')
-            distributedLoopCost = utils.getLoopCost(distributed_llfile, loop_id, method_name)
+        # key = "{filename}_{function_name}_{loopid}_{disSeq}".format(filename=ll_file_name, function_name=method_name, loopid=loop_id, disSeq=self.distribution)   
+        key = (ll_file_name, method_name, int(loop_id), '|'.join([ ','.join(sorted(seqdis.split(','))) for seqdis in self.distribution.split('|')]))   
+        isFound=True
+        try:
+            record = self.loopcost_cache.iloc[self.loopcost_cache.index.get_loc(key)]
+            OriginalLoopCost=record['Undsitributed Cost']
+            distributedLoopCost = record['Distributed cost']
+            reward, speedup = self.reward_formula(distributedLoopCost, OriginalLoopCost)
+            logging.info('ll_filename|OriginalLoopCost|distributedLoopCost|reward|speedup|distributeSeq|RDG {} {} {} {} {} {}'.format(ll_file_name, OriginalLoopCost, distributedLoopCost, reward, speedup, self.distribution, self.path.split('/')[-1]))
+            logging.info('******Cache Found the data point******')
+        except:
+            logging.warning('Index not found in the cache.. key={}'.format(key))
+            isFound = False
+        
+        if not isFound:
+            meta_ssa_dir = os.path.join(home_dir, 'llfiles/meta_ssa')
+            meta_ssa_file_path = os.path.join(meta_ssa_dir, ll_file_name)
             
-            # Remove, it is occupies a lot of space
-            os.remove(distributed_llfile)
-            if distributedLoopCost !=0 and OriginalLoopCost != 0:
-                reward = (OriginalLoopCost - distributedLoopCost)/OriginalLoopCost - 0.5
-
-                if reward < -5:
-                    print('Warning:reward={} < -5 so rplace by -5'.format(reward))
-                    reward=-5
+            distributed_llfile = utils.call_distributionPass( meta_ssa_file_path, self.distribution, method_name, fun_id, loop_id, self.distributed_data)
+            speedup=0
+            if distributed_llfile is None:
+                logging.info('warning:distributed file  not generated...., reward={}'.format(reward))
             else:
-                print('warning:distributedLoopCost or Original LoopCost is Zero ....., reward={}'.format(reward))
-            
-            print('ll_filename|OriginalLoopCost|distributedLoopCost|reward|distributeSeq|RDG {} {} {} {} {} {}'.format(ll_file_name, OriginalLoopCost, distributedLoopCost, reward, self.distribution, self.path.split('/')[-1]))
+                logging.info('Get the metric for original loop')
+                OriginalLoopCost = utils.getLoopCost(meta_ssa_file_path, loop_id, method_name)
+                logging.info('Get the value for distributed loop')
+                distributedLoopCost = utils.getLoopCost(distributed_llfile, loop_id, method_name)
+                reward, speedup = self.reward_formula(distributedLoopCost, OriginalLoopCost)  
+                # Remove, it is occupies a lot of space
+                os.remove(distributed_llfile)
+                # update the cache 
+                # self.second_loopcost_cache.append(list(key) + [ distributedLoopCost, OriginalLoopCost])
+                self.second_loopcost_cache.add(key + (distributedLoopCost, OriginalLoopCost,))
+                
+                # costly operation
+                # self.loopcost_cache.loc[key,['Distributed cost', 'Undsitributed Cost']] = [ distributedLoopCost, OriginalLoopCost]
+                
+                logging.info('***Key added to the cache***')
+                logging.info('ll_filename|OriginalLoopCost|distributedLoopCost|reward|speedup|distributeSeq|RDG {} {} {} {} {} {}'.format(ll_file_name, OriginalLoopCost, distributedLoopCost, reward, speedup, self.distribution, self.path.split('/')[-1]))
 
         return reward
 
@@ -83,7 +119,6 @@ class DistributeLoopEnv:
             raise Exception()
         
         nodeChoosen, merge_distribute = action
-        # print('DLOOP nodeChoosen & Merge | Dis: {} & {}'.format(nodeChoosen, merge_distribute))
         
         # add the node to the visited list
         self.topology.UpdateVisitList(nodeChoosen)
@@ -97,10 +132,10 @@ class DistributeLoopEnv:
             if merge_distribute == 1:
                 self.distribution = "{},{}".format(self.distribution, node_id)
                 self.ggnn.addPairEdge(self.cur_node, nodeChoosen)
-                print('DLOOP merge {cur_node} with {nodeChoosen}'.format(cur_node=self.cur_node, nodeChoosen=nodeChoosen))
+                logging.info('DLOOP merge {cur_node} with {nodeChoosen}'.format(cur_node=self.cur_node, nodeChoosen=nodeChoosen))
             else:
                 self.distribution = "{}|{}".format(self.distribution,node_id)
-                print('DLOOP distribute{cur_node} with {nodeChoosen}'.format(cur_node=self.cur_node, nodeChoosen=nodeChoosen))
+                logging.info('DLOOP distribute{cur_node} with {nodeChoosen}'.format(cur_node=self.cur_node, nodeChoosen=nodeChoosen))
         else:
             self.ggnn.mpAfterDisplacement(nodeChoosen, True)
             self.distribution = node_id

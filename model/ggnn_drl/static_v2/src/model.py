@@ -1,7 +1,9 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import logging
 
+logger = logging.getLogger('model.py') 
 class TransitionNetwork(nn.Module):
     """Actor (Policy) Model."""
 
@@ -84,7 +86,7 @@ class QNetwork(nn.Module):
 
     def forward(self, state,isStart=False):
         """Build a network that maps state -> action values."""
-        # print('MODEL: forward : ', state.shape, type(state) , state)
+        # logging.info('MODEL: forward : ', state.shape, type(state) , state)
         out = self.transitionNet(state)
         # indexchoose = torch.argmax(out)
         # Trans_Qvalue = torch.max(out)

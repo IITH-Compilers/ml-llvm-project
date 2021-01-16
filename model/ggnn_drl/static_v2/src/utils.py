@@ -9,7 +9,11 @@ import numpy as np
 import subprocess
 from matplotlib import pyplot as plt
 import argparse
+import datetime
+import pandas as pd
+import logging
 
+logger = logging.getLogger('utils.py') 
 error_runtime=100000000
 
 LL_DIR_CONST='llfiles'
@@ -24,35 +28,11 @@ SSA_LL_DIR_CONST='{}/ssa'.format(LL_DIR_CONST)
 META_SSA_LL_DIR_CONST='{}/meta_ssa'.format(LL_DIR_CONST)
 
 ## Use for replicate the O3
-POST_DIST_O3_PASSES='-branch-prob -block-freq -scalar-evolution -basicaa -aa -loop-accesses -demanded-bits -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -loop-vectorize -loop-simplify -scalar-evolution -aa -loop-accesses -lazy-branch-prob -lazy-block-freq -loop-load-elim -basicaa -aa -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -instcombine -simplifycfg -domtree -loops -scalar-evolution -basicaa -aa -demanded-bits -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -slp-vectorizer -opt-remark-emitter -instcombine -loop-simplify -lcssa-verification -lcssa -scalar-evolution -loop-unroll -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -instcombine -memoryssa -loop-simplify -lcssa-verification -lcssa -scalar-evolution -licm -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -transform-warning -alignment-from-assumptions -strip-dead-prototypes -globaldce -constmerge -domtree -loops -branch-prob -block-freq -loop-simplify -lcssa-verification -lcssa -basicaa -aa -scalar-evolution -block-freq -loop-sink -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -instsimplify -div-rem-pairs -simplifycfg -verify'
+POST_DIST_O3_PASSES='-branch-prob -block-freq -scalar-evolution -basicaa -aa -loop-accesses -demanded-bits -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -loop-vectorize -loop-simplify -LoopCost -scalar-evolution -aa -loop-accesses -lazy-branch-prob -lazy-block-freq -loop-load-elim -basicaa -aa -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -instcombine -simplifycfg -domtree -loops -scalar-evolution -basicaa -aa -demanded-bits -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -slp-vectorizer -opt-remark-emitter -instcombine -loop-simplify -lcssa-verification -lcssa -scalar-evolution -loop-unroll -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -instcombine -memoryssa -loop-simplify -lcssa-verification -lcssa -scalar-evolution -licm -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -transform-warning -alignment-from-assumptions -strip-dead-prototypes -globaldce -constmerge -domtree -loops -branch-prob -block-freq -loop-simplify -lcssa-verification -lcssa -basicaa -aa -scalar-evolution -block-freq -loop-sink -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -instsimplify -div-rem-pairs -simplifycfg -verify'
 
-POST_DIS_PASSES_MAP= { 0 : "",  1 : "-loop-vectorize", 2 : POST_DIST_O3_PASSES }
+POST_DIS_PASSES_MAP= { 0 : "-LoopCost",  1 : "-loop-vectorize -LoopCost", 2 : POST_DIST_O3_PASSES }
 
 config=None
-
-def eprint(*args, **kwargs):
-    print(*args,file=sys.stderr)
-
-# def load_O3_runtimes(filepath):
-#     if path.exists(filepath):
-#         with open(filepath, 'r') as f:
-#             O3_runtimes = pk.load(f)
-#         return O3_runtimes
-#     else:
-#         return None
-
-'''Old parition split logic'''
-# def getllfileName(jsonfile):
-# 
-#     parts = jsonfile.split('/graphs/json/')
-#     file_dir = parts[0]
-#     file_name_parts = (parts[1].split('InputGraph_'))[1].split('.json')[0]
-#     
-#     file_name_parts =file_name_parts.split('_FUNCTION_')
-#     file_name = file_name_parts[0]
-#     
-#     # print('file name : {}'.format(file_name))
-#     return os.path.join(O3_folder, file_name)
 
 def getllFileAttributes(file):
     record = {}
@@ -68,139 +48,6 @@ def getllFileAttributes(file):
 
     return record
 
-# def getllfileNameFromJSON(jsonfile):
-#     file_name = getllFileAttributes(jsonfile)['FILE_NAME']
-#     file_name = "{}.ll".format(file_name)
-#     
-#     return file_name
-# 
-# def get_O3_runtimes(dataset, isInputRequired):
-#     '''get all runetimes for O3 (baseline).'''
-#     try:
-#         O3_rt_pkl ='O3_rt_PDP_{}.pkl'.format(config.post_pass_key)
-#         print('Checking if local {} file exists to avoid waste of compilation.'.format(O3_rt_pkl)) 
-#         with open(os.path.join(dataset, O3_rt_pkl), 'rb') as f:
-#             print('returning preprocess O3 runtimes')
-#             return pk.load(f)
-#     except:
-#         print('Did not find O3_runtimes.pkl...', 'Compiling to get -O3 runtimes.')
-#         pass
-#     
-#     O3_runtimes={}
-#    
-#     O3_folder  = os.path.join(dataset, O3_LL_DIR_CONST)
-#     jsons = glob.glob(os.path.join(os.path.join(dataset, JSON_DIR_CONST), '*.json'))
-#     
-# 
-#     llfiles_validjson = [ os.path.join(O3_folder, getllfileNameFromJSON(json)) for json in jsons]
-#     
-#     #print(llfiles_validjson)
-#     
-#     llfiles = glob.glob(os.path.join(O3_folder, '*.ll')) 
-#     llfiles=list(set(llfiles).intersection(llfiles_validjson))
-#     ### Add c check for the intersection
-#     # print(llfiles)
-#     input_folder = os.path.join(dataset, INP_DIR_CONST)
-#     
-#     None_count=0
-#     if isInputRequired:
-#         input_files = glob.glob(os.path.join(input_folder , '*.inputd'))
-#    
-#         assert len(input_files) == len(llfiles), ' Count of source and input should be same'  
-# 
-#         pack = zip(llfiles, input_files)
-#         
-#         for filename, inputd in pack:
-#             runtime = get_runtime_of_file(filename, inputd)
-#             O3_runtimes[filename]=runtime
-#             if runtime is None:
-#                 None_count = None_count+1
-#     else:
-#         for filename in llfiles:
-#             runtime = get_runtime_of_file(filename)
-#             filename_key = filename.split('/')[-1]
-#             O3_runtimes[filename_key]=runtime
-#             if runtime is None:
-#                 None_count = None_count+1
-#     
-#     print('Number of data points with None runtime : ', None_count)
-#     with open(os.path.join(dataset, O3_rt_pkl), 'wb') as output:
-#         pk.dump(O3_runtimes, output)
-#         
-#     return O3_runtimes
-# 
-# def get_runtime_of_file(filename, inputd=None, file_format='ll'):
-#     # print('DLOOP filename to get runtime {}'.format(filename)) 
-#     try:
-#         if file_format == 'll':
-# 
-#             parts = filename.split(LL_DIR_CONST+'/')
-#             out_dir = os.path.join(parts[0], OUT_DIR_CONST)
-#             if not os.path.exists(out_dir):
-#                 os.makedirs(out_dir)
-#             # print('before  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1', parts[1])
-#             out_file=os.path.join(out_dir, "{file_name}.out".format(file_name=parts[1][:-3]))
-#             
-#             # print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1',out_file)
-#             #if not path.exists(out_file):
-#             cmd1 = "timeout --kill-after=2m 2m {clang} {input_file} -o {out_file}".format(clang=os.environ['CLANG'], input_file=filename, out_file=out_file)
-#             # print(cmd1)
-#             response = os.system(cmd1)
-#             if response != 0:
-#                 raise Exception(" Compilation error: Out file not generated")
-#         else:
-#             out_file=filename
-#         
-#         if path.exists(out_file):
-#             if inputd is not None: 
-#                 cmd2 = "timeout --kill-after=2m 2m {out_file}<{inputd}".format(out_file=out_file,inputd=inputd)
-#             else:
-#                 cmd2="timeout --kill-after=2m 2m {out_file}".format(out_file=out_file)
-# 
-#             print('Runtime command\n', cmd2)
-#             #runtime = executeNtimes(cmd2, N=5)
-#             import concurrent.futures 
-# 
-#             with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-#                         runtimes=[]
-#                         for runtime in executor.map(execute_in_clockticks, [cmd2]*5):
-#                             try:
-#                                 if isinstance(runtime, Exception):
-#                                     raise
-#                                 runtimes.append(runtime)
-#                             except:
-#                                 raise Exception('Exception during running {}'.format(cmd2))
-#             
-#             
-#             runtime=np.mean(runtimes)
-#         else:
-#             raise Exception('Outfile not present!!!!!!')
-#     except Exception as inst :
-#         runtime = error_runtime #None if fails
-#         eprint(sys.exc_info())
-#         eprint('Runtime: Exception ocurred : {}'.format (inst))
-#         eprint('Runtime: Some error occured .. for {filename} so runtime={runtime} '.format(filename=filename, runtime=runtime))
-#     except :
-#         runtime = error_runtime #None if fails
-#         eprint(sys.exc_info())
-#         eprint('Runtime: Other Unknown Some error occured .. for {filename} so runtime={runtime} '.format(filename=filename, runtime=runtime))
-# 
-#    
-#     return runtime
-# 
-# def distribute_and_getRuntime(filename, distributeSeq, method_name, loop_id, distributed_data, input_file_path=None):
-#     distributed_llfile = call_distributionPass(filename, distributeSeq, method_name, loop_id, distributed_data)
-# 
-#     if distributed_llfile is not None:
-#         Druntime = get_runtime_of_file(distributed_llfile, inputd=input_file_path)
-#     else:
-#         Druntime = error_runtime
-#         eprint('Distributed ll file is not created.')
-# 
-#     if Druntime == error_runtime:
-#         eprint('Distributed file Runtime Error occured!!!!!!!!!!!!! for file={}, distributeSeq={}, method={}, loop={}'.format(filename, distributeSeq, method_name, loop_id))
-#     return Druntime
-
 def call_distributionPass(filename, distributeSeq, method_name, fun_id, loop_id, distributed_data):
     
 
@@ -211,12 +58,12 @@ def call_distributionPass(filename, distributeSeq, method_name, fun_id, loop_id,
         if not os.path.exists(dist_ll_dir):
             os.makedirs(dist_ll_dir)
         dist_llfile = os.path.join(dist_ll_dir, dist_llfile)
-        # print(dist_llfile) 
-        print(parts[1],' --------------------------> ',distributeSeq) 
+        # logging.info(dist_llfile) 
+        logging.info("{} --------------------------> {}".format(parts[1],distributeSeq))
         cmd = "{opt} -load {LLVM}/lib/LoopDistribution.so -LoopDistribution -lID={loop_id} -function {method_name} --partition=\"{dseq}\" -S {input_file} -o {dist_llfile}".format(opt=os.environ['OPT'], LLVM=os.environ['LLVM'], dseq=distributeSeq ,input_file=filename, dist_llfile=dist_llfile, method_name=method_name, loop_id=loop_id)
 ## Use for replicate the O3
 
-        print('Call to LoopDistribute pass thru command line \n: ', cmd)
+        logging.info('Call to LoopDistribute pass thru command line {} \n: '.format(cmd))
 
         response=os.system(cmd)
         if response != 0:
@@ -224,41 +71,15 @@ def call_distributionPass(filename, distributeSeq, method_name, fun_id, loop_id,
             raise Exception('Distribution Pass error')
     except Exception as err:
         dist_llfile=None
-        eprint(sys.exc_info())
-        eprint('CallLoopDistribute: Exception ocurred : ', err)
+        logging.critical(sys.exc_info())
+        logging.critical('CallLoopDistribute: Exception ocurred : {}'.format(err))
         # raise
     except:
         dist_llfile = None #None if fails
-        eprint('CallLoopDistribute: Some error occured while calling the distribution pass for {filename}. '.format(filename=filename))
+        logging.critical('CallLoopDistribute: Some error occured while calling the distribution pass for {filename}. '.format(filename=filename))
         raise 
     return dist_llfile
    
-
-#  def executeNtimes(cmd, N=5):
-#      runtime=0
-#      for i in range(N):
-#          # print('Run {i}'.format(i=i))
-#          rt=execute(cmd)
-#          runtime+=rt
-#      return runtime/N
-#  
-#  def execute_in_clockticks(cmd):
-#      try:
-#          runtime = int(subprocess.Popen(cmd, executable='/bin/bash', shell=True, stdout=subprocess.PIPE).stdout.read())
-#      except:
-#          raise Exception("Runtime Error occurs. while calling subprocess..")
-#  
-#      return runtime
-#  
-#  def execute(cmd):
-#      start = time.time() 
-#      response = os.system(cmd)
-#      end = time.time()
-#      
-#      if response != 0:
-#          raise Exception("Runtime Error occurs.")
-#      return end-start
-
 def plot(x,y,title, **args):
     try:
         plt.plot(x, y)
@@ -273,8 +94,8 @@ def plot(x,y,title, **args):
             pass
         plt.close()
     except Exception as ex:
-        print('Error while plotting the graph for {}'.format(title))
-        print(ex)
+        logging.info('Error while plotting the graph for {}'.format(title))
+        logging.info(ex)
 
 def get_parse_args():
     parser = argparse.ArgumentParser()
@@ -296,27 +117,29 @@ def get_parse_args():
 
     parser.add_argument('--rewardtype', dest='rewardtype', required=False,  help='Static or Runtime rewards..', default='runtime')
     global config 
+    parser.add_argument('--logdir', dest='logdir', metavar='DIRECTORY', help='Location of the log directory.', required=True)
     config = parser.parse_args()
     return config
 def log_subprocess_output(pipe):
     for line in iter(pipe.readline, b''): # b'\n'-separated lines
-        print('got line from subprocess: ', line)
+        logging.info('got line from subprocess: {}'.format(line))
 
 def getLoopCost(filepath, loopId, fname):
     this_function_name = sys._getframe().f_code.co_name
     loopCost = 0 # []
     try:
        # TODO 
-        cmd = "{opt} -S -load {llvm}/lib/LoopCost.so {post_distribution_passes} -LoopCost -lID {loopId} -function {fname} {input_file} -o /dev/null ".format(opt=os.environ['OPT'], llvm=os.environ['LLVM'], input_file=filepath, loopId=loopId,fname=fname, post_distribution_passes=POST_DIS_PASSES_MAP[config.post_pass_key])
+        cmd = "{opt} -S -load {llvm}/lib/LoopCost.so {post_distribution_passes}  -lID {loopId} -function {fname}  {input_file} -o /dev/null ".format(opt=os.environ['OPT'], llvm=os.environ['LLVM'], input_file=filepath, loopId=loopId,fname=fname, post_distribution_passes=POST_DIS_PASSES_MAP[config.post_pass_key])
         # analysedInfo = subprocess.Popen(cmd, executable='/bin/bash', shell=True, stdout=subprocess.PIPE).stdout.read()
+        # logging.info(cmd)
         pro = subprocess.Popen(cmd, executable='/bin/bash', shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         output = pro.stdout
         line = output.readline()
         
         if pro.stderr is not None:
-            eprint('Error : ', pro.stderr)
+            logging.critical('Error : {}'.format(pro.stderr))
         
-        print('***Metric for the loop****')
+        logging.info('***Metric for the loop****')
         while line:
             line = line.decode('utf-8').rstrip("\n")
             
@@ -326,23 +149,42 @@ def getLoopCost(filepath, loopId, fname):
                 if lc > 0:
                     loopCost+=lc
                 else:
-                    eprint('loopcost <=0 : ', cmd)
+                    logging.critical('loopcost <=0 : {}'.format(cmd))
                     loopcost=0
                     break
-            print(line)
+            logging.info(line)
             line = output.readline()
         # p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         # stdout_text, stderr_text = p.communicate()
-        # print(' p ', stdout_text, stderr_text)
-        # print('----|Analyze Info loopCost', loopCost)
+        # logging.info(' p ', stdout_text, stderr_text)
+        # logging.info('----|Analyze Info loopCost', loopCost)
         # factors = analysedInfo.split(',')
         # loopCost = analysedInfo
     except Exception as inst :
-        eprint(sys.exc_info())
-        eprint(': Exception ocurred : {}'.format (inst))
-        eprint('{this_function_name}: Some error occured .. for {filename}'.format(this_function_name=this_function_name,filename=filepath))
+        logging.critical(sys.exc_info())
+        logging.critical(': Exception ocurred : {}'.format(inst))
+        logging.critical('{this_function_name}: Some error occured .. for {filename}'.format(this_function_name=this_function_name,filename=filepath))
     except :
-        eprint(sys.exc_info())
-        eprint('{this_function_name}: Other Unknown Some error occured .. for {filename}'.format(this_function_name=this_function_name, filename=filename))
+        logging.critical(sys.exc_info())
+        logging.critical('{this_function_name}: Other Unknown Some error occured .. for {filename}'.format(this_function_name=this_function_name, filename=filepath))
     return loopCost
+
+
+def load_precomputed_loopcost():
+    logging.info('Load pre computed LoopCost..')
+    filename = 'loopcost_p{}.csv'.format(config.post_pass_key)
+    filepath = os.path.join(config.dataset, filename)
+    df = pd.read_csv(filepath, sep=',')
+    df = df.set_index(['Filename', 'Function Name', 'Loop ID', 'Combination'])
+    df = df[['Distributed cost', 'Undsitributed Cost']]
+    # logging.info(df)
+    # logging.info(df.iloc[df.index.get_loc(('110_0pulgares.zip_2.ll','main','1', 'S1,S2,S3,S4'))])
+    return df
+
+def save_precomputed_loopCost(df):
+     filename = 'updated_loopcost_p{}_{}.csv'.format(config.post_pass_key, datetime.datetime.now())
+     filepath = os.path.join(config.dataset, filename)
+     df = df.reset_index()
+     df.to_csv(filepath, index=False, sep=',')
+     logging.info('Save computed LoopCost for furture use at {}'.format(filepath))
 
