@@ -7846,6 +7846,10 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   bool DisableRuntimeUnroll = false;
   MDNode *OrigLoopID = L->getLoopID();
 
+  unsigned TC = SE->getSmallConstantMaxTripCount(L);
+  if (TC == 0)
+    TC = 1000;
+
   if (!VectorizeLoop) {
     assert(IC > 1 && "interleave count should not be 1 or 0");
     // If we decided that it is not legal to vectorize the loop, then
@@ -7880,11 +7884,16 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     MDNode *IFMD =
         MDNode::get(Context, ConstantAsMetadata::get(ConstantInt::get(
                                  Context, llvm::APInt(64, IC, false))));
+    MDNode *TCMD =
+        MDNode::get(Context, ConstantAsMetadata::get(ConstantInt::get(
+                                 Context, llvm::APInt(64, TC, false))));
+
     SmallVector<BasicBlock *, 4> LoopLatches;
     L->getLoopLatches(LoopLatches);
     for (BasicBlock *BB : LoopLatches) {
       BB->getTerminator()->setMetadata("VF", VFMD);
       BB->getTerminator()->setMetadata("IF", IFMD);
+      BB->getTerminator()->setMetadata("TC", TCMD);
     }
 
     // Report the vectorization decision.
