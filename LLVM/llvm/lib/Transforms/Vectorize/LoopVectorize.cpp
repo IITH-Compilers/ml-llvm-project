@@ -7846,7 +7846,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   bool DisableRuntimeUnroll = false;
   MDNode *OrigLoopID = L->getLoopID();
 
-  unsigned TC = SE->getSmallConstantMaxTripCount(L);
+  unsigned TC = SE->getSmallConstantTripCount(L);
   if (TC == 0)
     TC = 1000;
 

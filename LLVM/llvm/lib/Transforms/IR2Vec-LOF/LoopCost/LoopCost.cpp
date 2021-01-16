@@ -139,39 +139,10 @@ public:
         IF = dyn_cast<ConstantInt>(constVal)->getZExtValue();
       }
 
-      dbgs() << "VF: " << VF << "\n";
-      dbgs() << "IF: " << IF << "\n";
 
-      if (VF != 1)
-        L = getVectorLoop(L, *DT, *LI);
-      // if (!isLoopVectorized(L, VF))
-      //   continue;
-
-      unsigned NumMemInsts = 0;
-      for (auto BB : L->getBlocks()) {
-        for (auto &I : *BB) {
-          if (I.mayReadOrWriteMemory()) {
-            NumMemInsts++;
-            continue;
-          }
-
-          LoopCost +=
-              TTI->getInstructionCost(&I, TargetTransformInfo::TCK_Latency);
-          // * TC/VF;
-        }
-      }
-      const SCEV *TC = SE->getBackedgeTakenCount(L);
-      int64_t TripCount;
-
+      unsigned TripCount = SE->getSmallConstantTripCount(L);
       if (VF == 1) {
-        const SCEVConstant *SCEVConst_TC = dyn_cast_or_null<SCEVConstant>(TC);
-        if (SCEVConst_TC) {
-          TripCount = SCEVConst_TC->getValue()->getSExtValue();
-          if (TripCount == -1)
-            TripCount = 1000;
-          else
-            TripCount++; // BackedgeTakenCount is one less than TripCount
-        } else
+        if (TripCount == 0)
           TripCount = 1000;
       } else {
         auto TC_MD = getValueFromMD(L, "TC");
@@ -182,6 +153,39 @@ public:
           TripCount = dyn_cast<ConstantInt>(constVal)->getZExtValue();
         }
       }
+
+      dbgs() << "VF: " << VF << "\n";
+      dbgs() << "IF: " << IF << "\n";
+      dbgs() << "TC: " << TripCount << "\n";
+
+      Loop *VecLoop = nullptr;
+      if (VF != 1)
+        VecLoop = getVectorLoop(L, *DT, *LI);
+
+      Loop *InstCostLoop = nullptr;
+      if (VecLoop)
+        InstCostLoop = VecLoop;
+      else
+        InstCostLoop = L;
+
+      unsigned NumMemInsts = 0;
+      for (auto BB : InstCostLoop->getBlocks()) {
+        for (auto &I : *BB) {
+          if (!I.mayReadOrWriteMemory()) {
+            LoopCost +=
+                TTI->getInstructionCost(&I, TargetTransformInfo::TCK_Latency);
+          }
+        }
+      }
+
+      for (auto BB : L->getBlocks()) {
+        for (auto &I : *BB) {
+          if (I.mayReadOrWriteMemory()) {
+            NumMemInsts++;
+          }
+        }
+      }
+
       const LoopAccessInfo &LAI_WR = LAA->getInfo(L);
       const LoopAccessInfo &LAI_RAR = LAA->getInfo(L, 1);
       Locality CL(LAI_WR, LAI_RAR, TTI);
@@ -320,7 +324,7 @@ int64_t Locality::computeLocalityCost(Loop *L, unsigned TripCount, ScalarEvoluti
   for (unsigned Ind = 0; Ind < ReadDependences->size(); Ind++) {
       auto Dep = (*ReadDependences)[Ind];
       unsigned Dist = ReadDependenceDistances[Ind];
-      Instruction *Src = Dep.getSource(LAI_WR), *Dst = Dep.getDestination(LAI_WR);
+      Instruction *Src = Dep.getSource(LAI_RAR), *Dst = Dep.getDestination(LAI_RAR);
       if (Dist <= TemporalThreshold) {
           MemGraph[Src]->push_back(Dst);
           MemGraph[Dst]->push_back(Src);
