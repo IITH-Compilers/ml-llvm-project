@@ -14,7 +14,7 @@ if [ ${INP_TYPE} = "llfiles" ]
    if [ ! -d ${O0_LEVEL} ]
    then
            echo "${O0_LEVEL} is not present..."
-   cp -r ${INP_DIR}/llfiles ${O0_LEVEL} 
+   cp -r ${INP_DIR}/${LL_FLR_NAME} ${O0_LEVEL} 
    echo "O0 files copied."
    
    else
@@ -41,59 +41,67 @@ fi
 
 fi
 
-echo "Start processing for level-CMP"
+# echo "Start processing for level-CMP"
 
-CMP_LEVEL=${LL_WD}/level-CMP
+# CMP_LEVEL=${LL_WD}/level-CMP
 
-if [ ! -d ${CMP_LEVEL} ]
-then
-mkdir -p ${CMP_LEVEL}
-for d in ${O0_LEVEL}/*.ll; do 
-        name=`basename ${d}` && oname=${name%.*} && ${TIME_OUT} ${LLVM_BUILD}/bin/opt ${SSA_COMMOM_SEQ} -loop-distribute ${POST_DIST_PASSES} -S ${d} -o ${CMP_LEVEL}/${oname}.ll &   
-done
+# if [ ! -d ${CMP_LEVEL} ]
+# then
+# mkdir -p ${CMP_LEVEL}
 
-wait 
-echo "CMP level are generated with passed : ${SSA_COMMOM_SEQ} -loop-distribute ${POST_DIST_PASSES}"
-else
-        echo "level-CMP Already present."
-fi
+# # PASS_CHAIN="${SSA_COMMOM_SEQ} -loop-distribute ${POST_DIST_PASSES}"
+# PASS_CHAIN="${POST_DIST_PASSES}"
 
-# create the ll files in ssa form
+# for d in ${O0_LEVEL}/*.ll; do 
+#         name=`basename ${d}` && oname=${name%.*} && ${TIME_OUT} ${LLVM_BUILD}/bin/opt  ${PASS_CHAIN} -S ${d} -o ${CMP_LEVEL}/${oname}.ll &   
+# done
 
-echo "Start Processing for ssa"
-SSA=${LL_WD}/ssa
+# wait 
+# echo "CMP level are generated with passed : ${PASS_CHAIN}"
+# else
+#         echo "level-CMP Already present."
+# fi
 
-if [ ! -d ${SSA} ]
-then
-    if [ -z "${SSA_PASSES_SEQ}" ] 
-    then 
-            rm -rf ${SSA}
-            cp -r  ${O0_LEVEL} ${SSA}
-            echo "SSA filed copied from level O0 as Pass seq is empty." 
-    else
-            mkdir -p ${SSA}
-            for d in ${O0_LEVEL}/*.ll; do 
-             name=`basename ${d}` && oname=${name%.*} && ${TIME_OUT} ${LLVM_BUILD}/bin/opt ${SSA_PASSES_SEQ} -S   ${d} -o ${SSA}/${oname}.ll &   
-            done
-            wait 
-            echo "SSA generated with passes seq : ${SSA_PASSES_SEQ} "
-    fi
-else
-        echo "SSA folder Already present."
-fi
+# exit
+# # create the ll files in ssa form
+# 
+
+
+# echo "Start Processing for ssa"
+# SSA=${LL_WD}/ssa
+# 
+# if [ ! -d ${SSA} ]
+# then
+#     if [ -z "${SSA_PASSES_SEQ}" ] 
+#     then 
+#             rm -rf ${SSA}
+#             cp -r  ${O0_LEVEL} ${SSA}
+#             echo "SSA filed copied from level O0 as Pass seq is empty." 
+#     else
+#             mkdir -p ${SSA}
+#             for d in ${O0_LEVEL}/*.ll; do 
+#              name=`basename ${d}` && oname=${name%.*} && ${TIME_OUT} ${LLVM_BUILD}/bin/opt ${SSA_PASSES_SEQ} -S   ${d} -o ${SSA}/${oname}.ll &   
+#             done
+#             wait 
+#             echo "SSA generated with passes seq : ${SSA_PASSES_SEQ} "
+#     fi
+# else
+#         echo "SSA folder Already present."
+# fi
 
 GRAPHS=${WD}/graphs
-
+REMARKS_DIR=${WD}/remarks
 DOT=${GRAPHS}/dot
 JSON_DIR=${GRAPHS}/json
 SCC=${GRAPHS}/scc
 META_SSA=${LL_WD}/meta_ssa
 
-mkdir -p ${DOT} ${JSON_DIR} ${META_SSA} ${SCC}
+mkdir -p ${DOT} ${JSON_DIR} ${META_SSA} ${SCC} ${REMARKS_DIR}
 
 # Store the dots file
-for d in ${SSA}/*.ll; do 
-        name=`basename ${d}` && oname=${name%.*} && cd ${DOT} && ${TIME_OUT} ${LLVM_BUILD}/bin/opt -S  -load ${IR2Vec_SO} -load ${LLVM_BUILD}/lib/RDG.so  -file ${SEED_FILE} -level p -of temp.txt -bpi 0 -RDG  ${d} -o ${META_SSA}/${oname}.ll  &
+
+for d in ${O0_LEVEL}/*.ll; do 
+        name=`basename ${d}` && oname=${name%.*} && rfile= && if [ ! -z "${REMARKS}" ]; then rfile="-pass-remarks-output=${oname}.yaml"; fi && cd ${DOT} && ${TIME_OUT} ${LLVM_BUILD}/bin/opt ${SSA_PASSES_SEQ} -S  -load ${IR2Vec_SO} -load ${LLVM_BUILD}/lib/RDG.so  -file ${SEED_FILE} -level p -of temp.txt -bpi 0 -RDG ${REMARKS} ${rfile}   ${d} -o ${META_SSA}/${oname}.ll & 
 done 
  
 wait
@@ -101,8 +109,11 @@ wait
 echo "============================   Dots file generated in dots folder. ================================="
 rm ${DOT}/*temp.txt 
 mv ${DOT}/S_* ${SCC}/
-
+mv ${DOT}/*.yaml ${REMARKS_DIR}/
 # Covert dot to json and filter out unwanted json
+
+echo "Graphs are present at ${GRAPHS}"
 python  Dot-\>Json.py ${GRAPHS}
 
 echo "valid graphs generated inside ${JSON_DIR}"
+exit
