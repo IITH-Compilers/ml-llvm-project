@@ -108,8 +108,7 @@ bool RDG::BuildRDG_LAI(DataDependenceGraph &G, DependenceInfo &DI,
 
   LLVM_DEBUG(errs() << "+++++++++++++++++++++++++++++ "
                     << alldependences->size() << "\n");
-  // errs() << "+++++++++++++++++++++++++++++ " << alldependences->size() <<
-  // "\n";
+  errs() << "+++++++++++++++++++++++++++++ " << alldependences->size() << "\n";
 
   G.dependenceSize = alldependences->size();
   // for (auto di : DependenceDistances) {
@@ -443,48 +442,69 @@ DataDependenceGraph *RDG::computeRDGForInnerLoop(Loop &IL) {
         RecurrenceDescriptor RD;
         InductionDescriptor ID;
 
-        // errs() << "Phi Node: " << *Phi << "\n";
         if (Phi->getNumIncomingValues() == 2) {
-          if (Phi->getBasicBlockIndex(IL.getLoopPreheader()) < 0) {
-            if (ORE)
-              fail("PHIBranchPH",
-                   "Loop Preheader is not an incoming BB for PHI", &IL);
-            return nullptr;
-          }
+          // errs() << "PHI: " << *Phi << "\n";
+          // errs() << "Loop Address: " << &IL << "\n";
+          // errs() << "Loop: " << LI.getLoopFor(Phi->getParent()) << "\n";
 
-          if (Phi->getBasicBlockIndex(IL.getLoopLatch()) < 0) {
-            if (ORE)
-              fail("PHIBranchLatch", "Loop latch is not an incoming BB for PHI",
-                   &IL);
-            return nullptr;
-          }
+          if (LI.getLoopFor(Phi->getParent()) == &IL) {
 
-          if (!InductionDescriptor::isInductionPHI(Phi, &IL, &SE, ID) &&
-              !RecurrenceDescriptor::isReductionPHI(Phi, &IL, RD)) {
-            if (ORE) {
-              fail("UnkPHI", "Neither induction nor reduction phi", &IL);
+            // for (auto i : IL.blocks()) {
+            //   i->dump();
+            // }
+            if (Phi->getBasicBlockIndex(IL.getLoopPreheader()) < 0) {
+              if (ORE)
+                fail("PHIBranchPH",
+                     "Loop Preheader is not an incoming BB for PHI", &IL);
+              return nullptr;
             }
-          }
 
-          if (!InductionDescriptor::isInductionPHI(Phi, &IL, &SE, ID)) {
-            if (ORE)
-              fail("ReductionPHI", "No support for Reduction phis", &IL);
-            return nullptr;
+            if (Phi->getBasicBlockIndex(IL.getLoopLatch()) < 0) {
+              if (ORE)
+                fail("PHIBranchLatch",
+                     "Loop latch is not an incoming BB for  PHI ", &IL);
+              return nullptr;
+            }
+
+            if (!InductionDescriptor::isInductionPHI(Phi, &IL, &SE, ID) &&
+                !RecurrenceDescriptor::isReductionPHI(Phi, &IL, RD)) {
+              if (ORE) {
+                fail("UnkPHI", "Neither induction nor reduction phi", &IL);
+              }
+            }
+
+            if (!InductionDescriptor::isInductionPHI(Phi, &IL, &SE, ID)) {
+              if (ORE)
+                fail("ReductionPHI", "No support for Reduction phis ", &IL);
+              return nullptr;
+            }
           }
         }
       }
     }
-    auto br = dyn_cast<BranchInst>(BB->getTerminator());
-    if (br && br->isConditional() && BB != IL.getLoopLatch()) {
+    /* auto br = dyn_cast<BranchInst>(BB->getTerminator());
+    errs() << "BB: " << &IL << "\n";
+    errs() << "BB Latch: " << LI.getLoopFor(BB) << "\n";
+    errs() << "Loop Latch: " << LI.getLoopFor(IL.getLoopLatch()) << "\n";
+    errs() << "Latch Block: "
+           << LI.getLoopFor(IL.getLoopLatch())->getLoopLatch() << "\n";
+    errs() << "br block: " << LI.getLoopFor(br->getParent())->getLoopLatch()
+           << "\n\n";
+    // if (br && br->isConditional() && BB != IL.getLoopLatch()) {
+    if (br && br->isConditional()) {
       LLVM_DEBUG(errs() << "Conditions Present: no need to make RDG in case of "
                            "conditionals inside loop body\n");
+      errs() << *br << "\n";
+      errs() << (BB != IL.getLoopLatch()) << "\n";
+      errs() << "Latch: " << IL.getLoopLatch() << "\n";
+      errs() << "BB: " << BB << "\n";
       if (ORE)
         fail("MultipleConditions",
              "no support for distribution in case of conditionals inside "
              "loop body",
              &IL);
       return nullptr;
-    }
+    } */
   }
 
   // Use of DependenceGraphBuilder
@@ -499,7 +519,7 @@ DataDependenceGraph *RDG::computeRDGForInnerLoop(Loop &IL) {
       fail("EmptyDeps", "LAI is empty..", &IL);
     return nullptr;
   }
-  // errs() << "ddddddddddddddddddddddd\n";
+
   // Create SCC Graph
   CreateSCC(*G2, DI);
 

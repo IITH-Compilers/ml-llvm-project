@@ -164,9 +164,16 @@ bool RDGWrapperPass::runOnFunction(Function &F) {
   for (LoopInfo::iterator i = LI->begin(), e = LI->end(); i != e; ++i) {
     Loop *L = *i;
     for (auto il = df_begin(L), el = df_end(L); il != el; ++il) {
+      errs() << "bbbbbbbbbbbbbbbbbbbbbbbbbbb\n";
       if (il->getSubLoops().size() > 0) {
+        // if (il->getSubLoops().size() == 0) {
+        errs() << "aaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n";
         continue;
       }
+
+      // for (auto i : il->blocks()) {
+      //   i->dump();
+      // }
 
       // Append Memory Dependence Edges with weights into Graph
       loopNum++;
@@ -198,7 +205,7 @@ bool RDGWrapperPass::runOnFunction(Function &F) {
                                  std::to_string(loopNum) + ".dot";
       // "S_" + s3 + "_F_" + s4 + "_L" + std::to_string(loopNum) + ".dot";
 
-      // errs() << "Writing " + SCC_Filename + "\n";
+      errs() << "Writing " + SCC_Filename + "\n";
       RDGraph.PrintDotFile_LAI(SCCGraph, SCC_Filename, s1);
 
       // Print Input File
@@ -207,7 +214,7 @@ bool RDGWrapperPass::runOnFunction(Function &F) {
                                    std::to_string(loopNum) + ".dot";
       // "I_" + s3 + "_F_" + s4 + "_L" + std::to_string(loopNum) + ".dot";
 
-      // errs() << "Writing " + Input_Filename + "\n";
+      errs() << "Writing " + Input_Filename + "\n";
       Print_IR2Vec_File(SCCGraph, Input_Filename, s2, instVecMap);
 
       std::string totalSCC_Filename = "totalSCC.txt";
