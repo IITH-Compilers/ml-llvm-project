@@ -2,13 +2,15 @@
 
 
 PWD=`pwd`
-HOME=`realpath ${PWD}/../../IR2Vec-LoopOptimizationFramework`
-BUILD_TYPE="_release"
-LLVM_BUILD="${HOME}/build${BUILD_TYPE}"
+HOME=`realpath ${PWD}/..`
+BUILD_TYPE="LoopCost_REL_AsrtON"
+
+LLVM_BUILD="${HOME}/build_${BUILD_TYPE}"
+
+echo "LLVM build directory selected for collecting data : ${LLVM_BUILD}" 
 export LLVM=${LLVM_BUILD}
 export OPT=${LLVM_BUILD}/bin/opt
 export CLANG=${LLVM_BUILD}/bin/clang
-#export PYTHONPATH=/home/cs20mtech01002/.local/lib/python3.8/site-packages/
 
 DATA_SET=$1
 

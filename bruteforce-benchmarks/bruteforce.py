@@ -70,7 +70,7 @@ def extract_cost(filename,funcname,loopid,combination,factors, undistributed_loo
     vf=re.findall("VF: \d+",factors)
     iff=re.findall("IF: \d+",factors)
     vecfac=[vf,iff]
-    Lcostslist=re.findall("Locality Cost: \d+",factors)
+    Lcostslist=re.findall("Cache cost: \d+",factors)
     Lcosts=[]
     for x in Lcostslist:
         Lcosts.append(int(x.split(":")[1]))
@@ -98,8 +98,11 @@ def extract_cost(filename,funcname,loopid,combination,factors, undistributed_loo
     
     #checking if file has correct size of locality factors and total loop cost	
     count=combination.count("|")
-    if((count+1) > len(Lcosts) or (count+1) > len(TLcosts)) or isinstance(undistributed_loop_cost,str) or  undistributed_loop_cost == 0:				 
+    if((count+1) > len(Lcosts) or (count+1) > len(TLcosts)):				 
           temp=[filename,funcname,loopid,combination,"size less than no of loops","size less than no of loops",sum_of_Lcost,sum_of_TLcosts,vecfac,undistributed_loop_cost,sum_of_TLcosts,speedup,"Failure"]
+    elif  isinstance(undistributed_loop_cost,str) or  undistributed_loop_cost == 0:
+          temp=[filename,funcname,loopid,combination,Lcosts,TLcosts,sum_of_Lcost,sum_of_TLcosts,vecfac,undistributed_loop_cost,sum_of_TLcosts,speedup,"Failure"]
+
     else: 
           temp=[filename,funcname,loopid,combination,Lcosts,TLcosts,sum_of_Lcost,sum_of_TLcosts,vecfac,undistributed_loop_cost,sum_of_TLcosts,speedup,""]
     #finally appending to row for CSV file
@@ -125,7 +128,7 @@ def run(graphpathlist):
         combs = []
         decList = []
         distributions = []
-        if N > 4:
+        if N > 6:
             # print(colored('['+graph['graph'][1][1]['FileName']+']', 'blue') +
             #       'Skipping the files with nodes more than 4\t' + colored('Case skipped', 'magenta'))
             skipped += 1
@@ -190,6 +193,9 @@ if __name__ == '__main__':
     
     file_list=glob.glob(os.path.join(dataset,'graphs/json/I_*.json'))
 #    run(file_list)
+    dist_ll_dir=os.path.join(config.distributed, utils.LL_DIR_CONST)
+    if not os.path.exists(dist_ll_dir):
+        os.makedirs(dist_ll_dir)
 
     chunk_list=chunkify(file_list, no_of_threads)
 
