@@ -25,6 +25,11 @@ __pycache__/
 # Nested build directory
 /build*
 
+.cache/
+
+bruteforce-benchmarks/*.txt
+bruteforce-benchmarks/*.csv
+bruteforce-benchmarks/*.log
 #==============================================================================#
 # Explicit files to ignore (only matches one).
 #==============================================================================#

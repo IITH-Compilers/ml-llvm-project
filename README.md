@@ -1,0 +1,8 @@
+Build RELEASE with Assertion ON
+> cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="clang" -DLLVM_TARGETS_TO_BUILD="X86" -DLLVM_ENABLE_ASSERTIONS=ON ../LLVM/llvm
+
+Build RELEASE with Assertion OFF
+> cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="clang" -DLLVM_TARGETS_TO_BUILD="X86" ../LLVM/llvm
+
+Buid Debug
+> cmake -G Ninja -DLLVM_ENABLE_PROJECTS="clang" -DLLVM_TARGETS_TO_BUILD="X86" ../LLVM/llvm
