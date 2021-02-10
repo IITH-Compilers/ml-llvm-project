@@ -26,19 +26,15 @@ class DistributeLoopEnv:
         # self.discovered = []
         
         self.isInputRequired = config.isInputRequired
-        self.disable_execute_binaries = config.disable_execute_binaries
-        self.rewardtype = config.rewardtype
-        # if self.rewardtype == "runtime" and not self.disable_execute_binaries:
-        #     self.O3_runtimes = utils.get_O3_runtimes(config.dataset, self.isInputRequired)
         self.loopcost_cache = utils.load_precomputed_loopcost() 
         self.distributed_data = config.distributed_data
+        self.mode = config.mode
         
         # cols = list(self.loopcost_cache.index.names) + list(self.loopcost_cache.columns)
         # lastrow = self.loopcost_cache.iloc[-1,:]
         # self.second_loopcost_cache = pd.DataFrame(data=[list(lastrow.name)+list(lastrow)], columns=cols)
         self.second_loopcost_cache = set()
     
-    # @staticmethod
     def reward_formula(self, distributedLoopCost, OriginalLoopCost):
         reward = 0
         speedup = 0
@@ -69,14 +65,16 @@ class DistributeLoopEnv:
         reward=0
         # key = "{filename}_{function_name}_{loopid}_{disSeq}".format(filename=ll_file_name, function_name=method_name, loopid=loop_id, disSeq=self.distribution)   
         key = (ll_file_name, method_name, int(loop_id), '|'.join([ ','.join(sorted(seqdis.split(','))) for seqdis in self.distribution.split('|')]))   
-        isFound=True
+        
         try:
-            record = self.loopcost_cache.iloc[self.loopcost_cache.index.get_loc(key)]
-            OriginalLoopCost=record['Undsitributed Cost']
-            distributedLoopCost = record['Distributed cost']
-            reward, speedup = self.reward_formula(distributedLoopCost, OriginalLoopCost)
-            logging.info('ll_filename|OriginalLoopCost|distributedLoopCost|reward|speedup|distributeSeq|RDG {} {} {} {} {} {}'.format(ll_file_name, OriginalLoopCost, distributedLoopCost, reward, speedup, self.distribution, self.path.split('/')[-1]))
-            logging.info('******Cache Found the data point******')
+            if self.mode == 'train':
+                record = self.loopcost_cache.iloc[self.loopcost_cache.index.get_loc(key)]
+                OriginalLoopCost=record['Undsitributed Cost']
+                distributedLoopCost = record['Distributed cost']
+                reward, speedup = self.reward_formula(distributedLoopCost, OriginalLoopCost)
+                logging.info('ll_filename|OriginalLoopCost|distributedLoopCost|reward|speedup|distributeSeq|RDG {} {} {} {} {} {}'.format(ll_file_name, OriginalLoopCost, distributedLoopCost, reward, speedup, self.distribution, self.path.split('/')[-1]))
+                logging.info('******Cache Found the data point******')
+                isFound=True
         except:
             logging.warning('Index not found in the cache.. key={}'.format(key))
             isFound = False
@@ -84,8 +82,20 @@ class DistributeLoopEnv:
         if not isFound:
             meta_ssa_dir = os.path.join(home_dir, 'llfiles/meta_ssa')
             meta_ssa_file_path = os.path.join(meta_ssa_dir, ll_file_name)
+            input_file_path = meta_ssa_file_path
             
-            distributed_llfile = utils.call_distributionPass( meta_ssa_file_path, self.distribution, method_name, fun_id, loop_id, self.distributed_data)
+            if self.mode == 'test':
+                LL_DIR_CONST='llfiles'
+                dist_ll_dir=os.path.join(self.distributed_data, LL_DIR_CONST)
+                if not os.path.exists(dist_ll_dir):
+                    os.makedirs(dist_ll_dir)
+                dist_llfile = os.path.join(dist_ll_dir, ll_file_name)
+                
+                Is_exist=os.path.exists(dist_llfile)
+                if Is_exist:
+                	input_file_path = dist_llfile
+            
+            distributed_llfile = utils.call_distributionPass( input_file_path, self.distribution, method_name, fun_id, loop_id, self.distributed_data)
             speedup=0
             if distributed_llfile is None:
                 logging.info('warning:distributed file  not generated...., reward={}'.format(reward))
@@ -96,7 +106,8 @@ class DistributeLoopEnv:
                 distributedLoopCost = utils.getLoopCost(distributed_llfile, loop_id, method_name)
                 reward, speedup = self.reward_formula(distributedLoopCost, OriginalLoopCost)  
                 # Remove, it is occupies a lot of space
-                os.remove(distributed_llfile)
+                if self.mode != 'test':
+                    os.remove(distributed_llfile)
                 # update the cache 
                 # self.second_loopcost_cache.append(list(key) + [ distributedLoopCost, OriginalLoopCost])
                 self.second_loopcost_cache.add(key + (distributedLoopCost, OriginalLoopCost,))

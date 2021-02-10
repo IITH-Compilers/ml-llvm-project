@@ -1,4 +1,4 @@
-# Taining - bash run.sh [train|trainInv] <dataset> <POST distribution passes choice: {0, 1, 2}> <rewardtype R or S> [<keys point if change some change is done in the model>]
+# Taining - bash run.sh [train|trainInv|supervised_trainInv] <dataset> <POST distribution passes choice: {0, 1, 2}> <rewardtype R or S> [<keys point if change some change is done in the model>]
 # Testing - bash run.sh test <path dataset> <path of model> <disable runtime calc:Y> <POST distribution passes choice: {0, 1, 2}> <rewardtype R or S>
 #
 
@@ -52,11 +52,12 @@ then
     echo "Please enter the mode- train , trainInv or test"
     exit
 fi
-
+MODE_PROCESS=
 MODEL_PAR=
 PY_SPT=
-if [ $MODE = "train" ] || [ $MODE = "trainInv" ]
+if [ $MODE = "train" ] || [ $MODE = "trainInv" ] || [ $MODE = "supervised_trainInv" ]
 then 
+        MODE_PROCESS='train'
         DATA_SET=$2
         if [ -z ${DATA_SET} ] || [ ! -d ${DATA_SET} ]
         then 
@@ -113,6 +114,7 @@ then
 
 elif [ $MODE = "test" ]
 then
+        MODE_PROCESS='test'
         echo "Run the testing........."
         PY_SPT=test.py
         TE_DATA_SET=$2
@@ -147,7 +149,6 @@ then
             exit
         fi
         
-         DIST_GEN_DATA=${TRAINED_MODEL_DIR}/${MODE}/${TE_DATA_SET_NAME}/${CHECKPOINT}
         
          DEB_FLAG=$4
          if [ -z ${DEB_FLAG} ]
@@ -192,11 +193,15 @@ then
                exit
         fi
 
-        # POST_DIS_PASSES_ARG=$5
-        # if [ ! -z ${POST_DIS_PASSES_ARG} ]
-        # then 
-        # PDP="--post_pass_key=$POST_DIS_PASSES_ARG"
-        # fi
+
+        KEY_POINT=$7
+        if [ -z ${KEY_POINT} ]
+        then 
+            KEY_POINT="Full"
+        fi
+
+        DIST_GEN_DATA=${TRAINED_MODEL_DIR}/${MODE}/${TE_DATA_SET_NAME}/${CHECKPOINT}/${KEY_POINT}
+
 else
         echo "Invalid  MODE:${MODE} [ train , trainInv or test]"
         exit
@@ -220,7 +225,7 @@ echo "Location of the trained model: ${TRAINED_MODEL}"
 echo "Location of the generated llfiles and outfiles : ${DIST_GEN_DATA}"
 echo "Logs files: ${LOG}"
 ## Call the py script 
-python ${PY_SPT} --dataset=${DATA_SET} ${AMF} ${ELC} ${DISABLE_EXEC_BIN} ${PDP} ${RT} --trained_model=${TRAINED_MODEL} --distributed_data=${DIST_GEN_DATA}  --logdir ${LOG}
+python ${PY_SPT} --dataset=${DATA_SET} ${AMF} ${ELC} ${DISABLE_EXEC_BIN} ${PDP} ${RT} --trained_model=${TRAINED_MODEL} --distributed_data=${DIST_GEN_DATA}  --logdir ${LOG} --mode ${MODE_PROCESS}
 
 echo "Completed the process........."
 

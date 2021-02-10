@@ -21,7 +21,7 @@ def run(agent, config):
     action_mask_flag=config.action_mask_flag
     enable_lexographical_constraint = config.enable_lexographical_constraint
     
-    n_episodes=150
+    n_episodes=500
     max_t=1000
     eps_start=1.0
     eps_end=0.01
@@ -48,7 +48,7 @@ def run(agent, config):
         selected_gs = training_graphs
         random.shuffle(selected_gs)
         # TODO
-        # selected_gs = random.sample(training_graphs, 20)
+        # selected_gs = random.sample(training_graphs, 500)
         for path in selected_gs: # Number of the iterations
             # if env.O3_runtimes[utils.getllfileNameFromJSON(path)] == utils.error_runtime:
             #     logging.info('!!!!!! Graph has runtime error ', path)
