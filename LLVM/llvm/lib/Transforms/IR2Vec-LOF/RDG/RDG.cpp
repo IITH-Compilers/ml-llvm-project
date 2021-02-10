@@ -108,7 +108,7 @@ bool RDG::BuildRDG_LAI(DataDependenceGraph &G, DependenceInfo &DI,
 
   LLVM_DEBUG(errs() << "+++++++++++++++++++++++++++++ "
                     << alldependences->size() << "\n");
-  errs() << "+++++++++++++++++++++++++++++ " << alldependences->size() << "\n";
+  // errs() << "+++++++++++++++++++++++++++++ " << alldependences->size() << "\n";
 
   G.dependenceSize = alldependences->size();
   // for (auto di : DependenceDistances) {
