@@ -53,14 +53,22 @@ static cl::opt<unsigned> CLS("cache-line-size", cl::init(64), cl::Hidden,
 #define DEBUG_TYPE "locality"
 
 class LoopCost : public FunctionPass {
+  DenseMap<Loop *, Loop*> ScalarToVecLoop;
+  void collectScalarVectorLoops(SmallVectorImpl<Loop *> &);
+  void GetInnerLoops(Loop *, SmallVectorImpl<Loop *> &);
+
 public:
   static char ID;
   ScalarEvolution *SE;
 
   LoopCost() : FunctionPass(ID) {}
-  void GetInnerLoops(Loop *, SmallVectorImpl<Loop *> &);
-  // bool isLoopVectorized(Loop *, unsigned &);
-  Loop *getVectorLoop(Loop *L, DominatorTree &, LoopInfo &) const;
+
+  Loop *getVectorLoop(Loop *L) {
+    if (ScalarToVecLoop.find(L) != ScalarToVecLoop.end())
+      return ScalarToVecLoop[L];
+
+    return nullptr;
+  }
 
   MDNode *getValueFromMD(Loop *L, StringRef kind) const {
     MDNode *ID = nullptr;
@@ -93,12 +101,13 @@ public:
     auto *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
     auto *LAA = &getAnalysis<LoopAccessLegacyAnalysis>();
     auto *TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-    auto *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
     SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
 
     SmallVector<Loop *, 32> InnerLoops;
     for (Loop *L : *LI)
       GetInnerLoops(L, InnerLoops);
+
+    collectScalarVectorLoops(InnerLoops);
 
     for (Loop *L : InnerLoops) {
       uint64_t LoopCost = 0;
@@ -139,7 +148,6 @@ public:
         IF = dyn_cast<ConstantInt>(constVal)->getZExtValue();
       }
 
-
       unsigned TripCount = SE->getSmallConstantTripCount(L);
       if (VF == 1) {
         if (TripCount == 0)
@@ -154,13 +162,29 @@ public:
         }
       }
 
+      Loop *VecLoop = nullptr;
+      if (VF != 1) {
+        VecLoop = getVectorLoop(L);
+        assert(VecLoop && "Could not find vector loop for a vectorized loop");
+        if (MDNode *IF_MD = VecLoop->getLoopLatch()->getTerminator()->getMetadata("IF")) {
+          auto constVal =
+              dyn_cast<ConstantAsMetadata>(IF_MD->getOperand(0))->getValue();
+          unsigned UF = dyn_cast<ConstantInt>(constVal)->getZExtValue();
+
+          if (IF == 1 && UF != 1)
+            IF = UF;
+          else if (IF != 1 && UF != 1)
+            IF += UF;
+          else if (IF != 1 && UF == 1)
+            IF = IF;
+          else if (IF == 1 && UF == 1)
+            IF = IF;
+        }
+      }
+
       dbgs() << "VF: " << VF << "\n";
       dbgs() << "IF: " << IF << "\n";
       dbgs() << "TC: " << TripCount << "\n";
-
-      Loop *VecLoop = nullptr;
-      if (VF != 1)
-        VecLoop = getVectorLoop(L, *DT, *LI);
 
       Loop *InstCostLoop = nullptr;
       if (VecLoop)
@@ -190,10 +214,10 @@ public:
       const LoopAccessInfo &LAI_RAR = LAA->getInfo(L, 1);
       Locality CL(LAI_WR, LAI_RAR, TTI);
       int64_t CacheMisses = CL.computeLocalityCost(L, TripCount, SE);
-      LoopCost = LoopCost * (TripCount / VF);
+      LoopCost = LoopCost * (TripCount / (VF * IF));
       dbgs() << "Loop cost with only instructions: " << LoopCost << "\n";
       uint64_t TotalMemAccess =
-          NumMemInsts * ((TripCount == 1000) ? TripCount : TripCount * VF);
+          NumMemInsts * ((TripCount == 1000) ? TripCount : TripCount * (VF * IF));
       dbgs() << "Total memory accesses : " << NumMemInsts << " * " << TripCount << " = " << TotalMemAccess << "\n";
       uint64_t CacheCost =
           CacheMisses * (0.7 * MemoryInstCost) +
@@ -210,49 +234,26 @@ public:
     AU.addRequired<LoopInfoWrapperPass>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
     AU.addRequired<LoopAccessLegacyAnalysis>();
-    AU.addRequired<DominatorTreeWrapperPass>();
     AU.setPreservesAll();
   }
 };
 
-#if 1
-Loop *LoopCost::getVectorLoop(Loop *L, DominatorTree &DT, LoopInfo &LI) const {
-  auto Preheader = L->getLoopPreheader();
-  auto FirstPHI = dyn_cast<PHINode>(&Preheader->front());
-  assert(FirstPHI && "Not a Phi Node :(");
-
-  for (auto BB : FirstPHI->blocks()) {
-    if (BB->getTerminator()->getMetadata("VectorMiddleBlock")) {
-      auto VB = BB->getSinglePredecessor();
-      assert(VB && "VB should exist");
-      Loop *VL = LI.getLoopFor(VB);
-      assert(VL && "VL doesn't exist");
-      return VL;
-    }
-  }
-  return nullptr;
-}
-#endif
-
-#if 0
-bool LoopCost::isLoopVectorized(Loop *L, unsigned &VF) {
-  for (auto BB : L->getBlocks()) {
-    for (auto &I : *BB) {
-      if (I.getType()->isVectorTy()) {
-        auto Bounds = L->getBounds(*SE);
-        if (!Bounds && isa<ConstantInt>(Bounds->getStepValue())) {
-          int step = cast<ConstantInt>(Bounds->getStepValue())->getSExtValue();
-          assert(step == cast<VectorType>(I.getType())->getNumElements() &&
-                 "Could not determine VF");
-          VF = step;
-          return true;
+void LoopCost::collectScalarVectorLoops(SmallVectorImpl<Loop *> &AllLoops) {
+  for (auto L : AllLoops) {
+    if (MDNode *MD = L->getLoopLatch()->getTerminator()->getMetadata("SLID")) {
+      for (auto VL : AllLoops) {
+        if (L == VL) continue;
+        if (MDNode *VLMD = VL->getLoopLatch()->getTerminator()->getMetadata("VLID")) {
+          if (MD == VLMD) {
+            ScalarToVecLoop[L] = VL;
+            break;
+          }
         }
       }
     }
   }
-  return false;
+  return;
 }
-#endif
 
 void LoopCost::GetInnerLoops(Loop *L, SmallVectorImpl<Loop *> &InnerLoops) {
   if (L->empty())

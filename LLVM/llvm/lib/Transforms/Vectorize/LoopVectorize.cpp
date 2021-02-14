@@ -295,6 +295,10 @@ cl::opt<bool> llvm::EnableLoopVectorization(
     "vectorize-loops", cl::init(true), cl::Hidden,
     cl::desc("Run the Loop vectorization passes"));
 
+unsigned loopCount;
+
+static unsigned getNextLoopID() { return ++loopCount; }
+
 /// A helper function for converting Scalar types to vector types.
 /// If the incoming type is void, we return void. If the VF is 1, we return
 /// the scalar type.
@@ -1609,6 +1613,7 @@ struct LoopVectorize : public FunctionPass {
     if (skipFunction(F))
       return false;
 
+    loopCount = 0;
     auto *SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
     auto *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
     auto *TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
@@ -3481,11 +3486,26 @@ void InnerLoopVectorizer::fixVectorizedLoop() {
 
   // Remove redundant induction instructions.
   cse(LoopVectorBody);
+
   LLVMContext &Context = LoopVectorBody->getContext();
-  MDNode *JustPlaceMarker =
-        MDNode::get(Context, ConstantAsMetadata::get(ConstantInt::get(
-                                 Context, llvm::APInt(64, 1, false))));
-  LoopMiddleBlock->getTerminator()->setMetadata("VectorMiddleBlock", JustPlaceMarker);
+  unsigned ID = getNextLoopID();
+  MDNode *LMD =
+  MDNode::get(Context, ConstantAsMetadata::get(ConstantInt::get(
+                      Context, llvm::APInt(64, ID, false))));
+  // Give same ID to scalar and vector loop
+  SmallVector<BasicBlock *, 4> LoopLatches;
+  OrigLoop->getLoopLatches(LoopLatches);
+
+  for (auto SLL : LoopLatches) {
+    SLL->getTerminator()->setMetadata("SLID", LMD);
+  }
+
+  LoopLatches.clear();
+  LI->getLoopFor(LoopVectorBody)->getLoopLatches(LoopLatches);
+
+  for (auto VLL : LoopLatches) {
+    VLL->getTerminator()->setMetadata("VLID", LMD);
+  }
 }
 
 void InnerLoopVectorizer::fixCrossIterationPHIs() {
