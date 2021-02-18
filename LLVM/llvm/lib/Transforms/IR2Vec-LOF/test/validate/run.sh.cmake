@@ -45,10 +45,12 @@ META_SSA=${LL_WD}/meta_ssa
 
 mkdir -p ${DOT} ${JSON_DIR} ${META_SSA} ${SCC}
 
+REMARKS=" -pass-remarks=ir2vec-RDG -pass-remarks-analysis=ir2vec-RDG -pass-remarks-missed=ir2vec-RDG " 
+
 cd $DOT
 # Store the dots file
 for d in ${LL_WD}/level-O0/*.ll; do
-    name=`basename ${d}` && oname=${name%.*} && timeout --kill-after=5m 5m ${OPT} -S -mem2reg -loop-simplify -loop-rotate -load ${IR2VEC_SO} -load ${LIB}/RDG.so -file ${IR2VEC_VOCAB} -level p -of ${DATA_SET}/tmp.txt -bpi 0 -RDG ${d} -o ${META_SSA}/${oname}.ll &>> ${LOG}/${oname}.log&
+name=`basename ${d}` && oname=${name%.*} && timeout --kill-after=5m 5m ${OPT} -S -mem2reg -loop-simplify -loop-rotate -load ${IR2VEC_SO} -load ${LIB}/RDG.so -file ${IR2VEC_VOCAB} -level p -of ${DATA_SET}/tmp.txt -bpi 0 -RDG ${REMARKS} ${d} -o ${META_SSA}/${oname}.ll &>> ${LOG}/${oname}.log&
 done 
 wait
 cd - 
