@@ -279,13 +279,14 @@ def call_distributionPass(filename, distributeSeq, method_name, loop_id, config)
             config.distributed, 'val/llfiles/{}'.format(out_file))
         log_file = os.path.join(
             config.distributed, 'log/{}.log'.format(parts[1]))
-        # print(out_file)
+        # print(log_file)
         # print('--------------------------', distributeSeq)
-        cmd = "{opt} -load {LLVM}/lib/LoopDistribution.so -LoopDistribution -lID={loop_id} -function {method_name} --partition=\"{dseq}\" {post_distribution_passes} -S {input_file} -o {out_file} &>> {logfile}".format(
-            opt=os.environ['OPT'], LLVM=os.environ['LLVM'], dseq=distributeSeq, input_file=filename, out_file=out_file, method_name=method_name, loop_id=loop_id, post_distribution_passes=POST_DIST_PASSES, logfile=log_file)
+        REMARKS=" -pass-remarks=ir2vec-loop-distribution -pass-remarks-analysis=ir2vec-loop-distribution -pass-remarks-missed=ir2vec-loop-distribution " 
+        cmd = "{opt} -load {LLVM}/lib/LoopDistribution.so -LoopDistribution {remarks}  -lID={loop_id} -function {method_name} --partition=\"{dseq}\" {post_distribution_passes} -S {input_file} -o {out_file} &> {logfile}".format(
+        opt=os.environ['OPT'], LLVM=os.environ['LLVM'], dseq=distributeSeq, input_file=filename, out_file=out_file, method_name=method_name, loop_id=loop_id, post_distribution_passes=POST_DIST_PASSES, logfile=log_file, remarks=REMARKS)
         # cmd = "{opt} {input_file} -o {out_file}".format(opt=os.environ['OPT'] ,input_file=filename, out_file=out_file)
 
-        # print('Call to LoopDistribute pass thru command line \n: ', cmd)
+        print('Call to LoopDistribute pass thru command line \n: ', cmd)
 
         response = os.system(cmd)
         if response != 0:
