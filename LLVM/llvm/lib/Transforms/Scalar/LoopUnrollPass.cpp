@@ -1141,6 +1141,19 @@ static LoopUnrollResult tryToUnrollLoop(
   if (UnrollResult == LoopUnrollResult::Unmodified)
     return LoopUnrollResult::Unmodified;
 
+  if (UnrollResult == LoopUnrollResult::PartiallyUnrolled) {
+    LLVMContext &Context = L->getHeader()->getContext();
+    if (L->getLoopLatch()->getTerminator()->getMetadata("VLID")) {
+      MDNode *New_IF_MD = MDNode::get(Context, ConstantAsMetadata::get(ConstantInt::get(
+                    Context, llvm::APInt(64, UP.Count , false))));
+      SmallVector<BasicBlock*, 4> LoopLatches;
+      L->getLoopLatches(LoopLatches);
+      for (auto LL : LoopLatches) {
+        LL->getTerminator()->setMetadata("IF", New_IF_MD);
+      }
+    }
+  }
+
   if (RemainderLoop) {
     Optional<MDNode *> RemainderLoopID =
         makeFollowupLoopID(OrigLoopID, {LLVMLoopUnrollFollowupAll,
