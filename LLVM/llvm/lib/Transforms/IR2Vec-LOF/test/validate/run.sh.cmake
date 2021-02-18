@@ -1,6 +1,8 @@
 DATA_SET=@TEST_DIR@
 DATA_SET_NAME=`echo ${DATA_SET} | rev | cut -d '/' -f 1,2  | rev`
 
+
+
 BUILD=@BUILD_LOC@
 CLANG='clang-10'
 OPT=${BUILD}/bin/opt
@@ -55,7 +57,7 @@ cd -
 # rm ${DOT}/*temp.txt 
 
 if [ -f ${DOT}/*SCC.txt ]; then
-    mv ${DOT}/SCC_* ${SCC}/
+    mv ${DOT}/S_* ${SCC}/
     mv ${DOT}/*SCC.txt ${SCC}/
 else
     echo -e "${RED}None of the tests generate SCC!${NC}"
@@ -74,4 +76,4 @@ echo -e "${PURPLE}Starting tests...${NC}"
 echo "Log files: ${LOG}"
 
 rm ${DATA_SET}/tmp.txt
-rm -rf ${DATA_SET}/outfiles ${DATA_SET}/llfiles ${DATA_SET}/inputd ${DATA_SET}/graphs ${DATA_SET}/val
+# rm -rf ${DATA_SET}/outfiles ${DATA_SET}/llfiles ${DATA_SET}/inputd ${DATA_SET}/graphs ${DATA_SET}/val

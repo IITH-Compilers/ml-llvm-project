@@ -18,6 +18,8 @@ LOOP_SEP = 'Loop'
 LL_DIR = 'llfiles'
 OUT_DIR = 'outfiles'
 INP_DIR = 'inputd'
+GRAPH_DIR_CONST='graphs'
+JSON_DIR_CONST='{}/json'.format(GRAPH_DIR_CONST)
 
 O3_DIR = 'level-O3'
 O0_DIR = 'level-O0'
@@ -31,6 +33,21 @@ POST_DIST_PASSES = ''  # '-branch-prob -block-freq -scalar-evolution -basicaa -a
 
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr)
+
+
+def getllFileAttributes(file):
+    record = {}
+    parts = file.split('/{graphs}/'.format(graphs=GRAPH_DIR_CONST))
+    home_dir = parts[0]
+    parts=parts[1].split('/')
+    file_name_parts = (parts[1].split('I_'))[1].split('.json')[0]
+    
+    file_name_parts =file_name_parts.split('_L')
+    record['HOME_DIR'] = home_dir
+    record['LOOP_ID'] = file_name_parts[-1]
+    record['FUN_ID'] = file_name_parts[0].split('_F')[-1]
+
+    return record
 
 
 def load_O3_runtimes(filepath):
@@ -56,18 +73,6 @@ def load_O3_runtimes(filepath):
 #     return os.path.join(O3_folder, file_name)
 
 
-def getllFileAttributes(file):
-    record = {}
-    parts = file.split('/graphs/')
-    home_dir = parts[0]
-    parts = parts[1].split('/')
-    file_name_parts = (parts[1].split('InputGraph_'))[1].split('.json')[0]
-
-    file_name_parts = file_name_parts.split('.llL')
-    record['HOME_DIR'] = home_dir
-    record['FILE_NAME'] = file_name_parts[0]
-    record['LOOP_ID'] = file_name_parts[1]
-    return record
 
 
 def getllfileNameFromJSON(jsonfile):

@@ -84,7 +84,7 @@ def run(config):
             decList = []
             distributions = []
             if N > 4:
-                print(colored('['+graph['graph'][1][1]['FileName']+']', 'blue') +
+                print(colored('['+graph['graph'][1][1]['FileName'].strip('\"')+']', 'blue') +
                       'Skipping the files with nodes more than 4\t' + colored('Case skipped', 'magenta'))
                 skipped += 1
                 continue
@@ -95,8 +95,8 @@ def run(config):
             # print(path)
             attr = utils.getllFileAttributes(path)
 
-            fileName = graph['graph'][1][1]['FileName']
-            method_name = graph['graph'][1][1]['Function']
+            fileName = graph['graph'][1][1]['FileName'].strip('\"')
+            method_name = graph['graph'][1][1]['Function'].strip('\"')
             loop_id = attr['LOOP_ID']
             home_dir = attr['HOME_DIR']
 
