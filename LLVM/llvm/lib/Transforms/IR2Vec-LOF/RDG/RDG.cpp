@@ -401,6 +401,74 @@ void RDG::SelectOnlyStoreNode(DataDependenceGraph &G) {
   G.totalSCCNodes = label;
 }
 
+void RDG::NodeMerge_nonStore(
+    NodeType &SI, Instruction &II, InstructionListType &MergedInstList) {
+      
+  for (auto i = II.op_begin(), e = II.op_end(); i != e; ++i) {
+    if (dyn_cast<Instruction>(&(**i))) {
+      Instruction *OP = dyn_cast<Instruction>(&(**i));
+      
+      InstructionListType InstList;
+      SI.collectInstructions([](const Instruction *I) { return true; },
+                                    InstList);
+
+      // Check if already present in STORE Node and append if not
+          // present
+      bool temp = 0;
+      for (Instruction *inst : InstList) {
+        if (inst == OP) {
+          temp = 1;
+          break;
+        }
+      }
+      if (temp == 0) {
+        // Append instructions of MergingNode into SI Node
+        // NodeType *MergingNode = IMap.find(OP)->second;
+        InstructionListType OP_List;
+        OP_List.push_back(OP);
+
+        cast<SimpleDDGNode>(SI).appendInstructionsStoreNode(OP_List);
+
+        // Update NodeDeletionList
+        bool ni = 0;
+        for (Instruction *inst : MergedInstList) {
+          if (inst == OP) {
+            ni = 1;
+            break;
+          }
+        }
+        if (ni == 0) {
+          MergedInstList.push_back(OP);
+          NodeMerge_nonStore(SI, *OP, MergedInstList);
+        }
+      }
+      
+    }
+  }
+}
+
+void RDG::Merge_NonLabel_Nodes(DataDependenceGraph &G, DependenceInfo &DI) {
+
+  NodeListType ListOfNonLabelNodes;
+  
+  for (NodeType *N : G) {
+    if(N->NodeLabel == ""){
+      ListOfNonLabelNodes.push_back(N);
+    }
+  }
+
+  for (NodeType *N : ListOfNonLabelNodes) {
+    InstructionListType InstList;
+    N->collectInstructions([](const Instruction *I) { return true; },
+                                    InstList);
+
+    for (Instruction *II : InstList) {
+      InstructionListType MergedInstList;
+      NodeMerge_nonStore(*N, *II, MergedInstList);
+    } 
+  }
+}
+
 DataDependenceGraph *RDG::computeRDGForInnerLoop(Loop &IL) {
   raw_ostream &operator<<(raw_ostream &OS, const DataDependenceGraph &G);
   /* errs() << LAI.getMaxSafeDepDistBytes() << " : " << LAI.canVectorizeMemory()
@@ -411,6 +479,11 @@ DataDependenceGraph *RDG::computeRDGForInnerLoop(Loop &IL) {
   //   LLVM_DEBUG(errs() << "No need to make RDG\n");
   //   return nullptr;
   // }
+if (auto report = LAI.getReport()) {
+            fail("NotAnalyzableByLAI", report->getMsg(), &IL);
+                return nullptr;
+  }
+
   if (!IL.isLoopSimplifyForm()) {
     fail("NotLoopSimplifyForm", "loop is not in loop-simplify form", &IL);
     return nullptr;
@@ -525,6 +598,8 @@ DataDependenceGraph *RDG::computeRDGForInnerLoop(Loop &IL) {
 
   // Assign Labels to the Store Nodes
   SelectOnlyStoreNode(*G2);
+
+  Merge_NonLabel_Nodes(*G2, DI);
 
   if (ORE) {
     // Report the success.

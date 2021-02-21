@@ -164,10 +164,8 @@ bool RDGWrapperPass::runOnFunction(Function &F) {
   for (LoopInfo::iterator i = LI->begin(), e = LI->end(); i != e; ++i) {
     Loop *L = *i;
     for (auto il = df_begin(L), el = df_end(L); il != el; ++il) {
-      errs() << "bbbbbbbbbbbbbbbbbbbbbbbbbbb\n";
       if (il->getSubLoops().size() > 0) {
         // if (il->getSubLoops().size() == 0) {
-        errs() << "aaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n";
         continue;
       }
 

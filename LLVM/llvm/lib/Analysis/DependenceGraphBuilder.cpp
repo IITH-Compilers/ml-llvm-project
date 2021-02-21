@@ -997,24 +997,13 @@ template <class G>
 void AbstractDependenceGraphBuilder<G>::NodeMergeRecursion(
     NodeType &SI, Instruction &II, NodeListType &NodeDeletionList) {
 
-  // List of edges present in graph
-  // SmallVector<EdgeType *, 10> EL;
-  // for(NodeType *N : Graph){
-  //   for(EdgeType *e : *N){
-  //     EL.push_back(e);
-  //   }
-  // }
-
   for (auto i = II.op_begin(), e = II.op_end(); i != e; ++i) {
-    // errs() << "Merging:" << II << "\nand:" << **i << "\n";
     if (dyn_cast<Instruction>(&(**i))) {
       Instruction *OP = dyn_cast<Instruction>(&(**i));
-      // errs() << "OP: " << *OP << "\n";
+
       // Should not be PHI Node
       if (!(OP->getOpcode() == Instruction::PHI)) {
-        // errs() << "bbbbbbbbb\n";
         if (IMap.find(OP) != IMap.end()) {
-          // errs() << "ccccccccccccccc\n";
           InstructionListType InstList;
           SI.collectInstructions([](const Instruction *I) { return true; },
                                  InstList);
@@ -1023,27 +1012,16 @@ void AbstractDependenceGraphBuilder<G>::NodeMergeRecursion(
           // present
           bool temp = 0;
           for (Instruction *inst : InstList) {
-            // errs() << "ddddddddddd: " << *inst << "\n";
-            // errs() << getOrdinal(*inst) << " ::::::::::: " <<
-            // getOrdinal(*OP)
-            // << "\n";
             if (inst == OP) {
               temp = 1;
               break;
             }
           }
           if (temp == 0) {
-            // llvm::sort(NL, [&](NodeType *LHS, NodeType *RHS) {
-            //   return getOrdinal(*LHS) < getOrdinal(*RHS);
-            // });
-
             // Append instructions of MergingNode into SI Node
             NodeType *MergingNode = IMap.find(OP)->second;
             cast<SimpleDDGNode>(SI).appendInstructionsStoreNode(
                 *cast<SimpleDDGNode>(MergingNode));
-
-            // Create new edges after node merging
-            // createDefUseEdgeMergedNode(SI, *MergingNode, NodeDeletionList);
 
             // Update NodeDeletionList
             bool ni = 0;
@@ -1072,10 +1050,7 @@ void AbstractDependenceGraphBuilder<G>::NodeMergeRecursion(
           // present
           bool temp = 0;
           for (Instruction *inst : InstList) {
-            // errs() << "ddddddddddd: " << *inst << "\n";
-            // errs() << getOrdinal(*inst) << " ::::::::::: " <<
-            // getOrdinal(*OP)
-            // << "\n";
+
             if (inst == OP) {
               temp = 1;
               break;
@@ -1098,14 +1073,9 @@ void AbstractDependenceGraphBuilder<G>::NodeMergeRecursion(
             }
             if (ni == 0) {
               NodeDeletionList.push_back(MergingNode);
-              // errs() << "nodeList: " << *MergingNode << "\n";
             }
-            // }
-            //////////////////////////////////////////////
-            ///////////////////////////////////////
 
             NodeType *PhiNode = IMap.find(OP)->second;
-            // errs() << "PHI Merging Node: " << *PhiNode << "\n";
             PhiNodeMerge(SI, *PhiNode, *OP, NodeDeletionList);
           }
         }
