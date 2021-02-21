@@ -61,6 +61,11 @@ public:
   void CreateSCC(DataDependenceGraph &G, DependenceInfo &DI);
 
   void SelectOnlyStoreNode(DataDependenceGraph &G);
+
+  void NodeMerge_nonStore(
+    NodeType &SI, Instruction &II, InstructionListType &MergedInstList);
+  
+  void Merge_NonLabel_Nodes(DataDependenceGraph &G, DependenceInfo &DI);
 };
 
 } // namespace llvm
