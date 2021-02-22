@@ -26,6 +26,7 @@
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <fstream>
 #include <string>
 
 #define DEBUG_Type "RDG"
@@ -33,7 +34,7 @@
 using namespace llvm;
 
 RDGWrapperPass::RDGWrapperPass() : FunctionPass(ID) {
-  // initializeRDGWrapperPassPass(*PassRegistry::getPassRegistry());
+  //  initializeRDGWrapperPassPass(*PassRegistry::getPassRegistry());
 }
 
 char RDGWrapperPass::ID = 0;
@@ -142,6 +143,16 @@ void RDGWrapperPass::setLoopID(Loop *L, MDNode *LoopID) const {
 }
 
 bool RDGWrapperPass::runOnFunction(Function &F) {
+  computeRDGForFunction(F);
+  return true;
+}
+
+// SmallVector<std::string, 2> RDG_StringList(RDGWrapperPass &R, Function &F) {
+//   SmallVector<std::string, 2> s = R.computeRDGForFunction(F);
+//   return s;
+// }
+
+RDGWrapperPass::StringList RDGWrapperPass::computeRDGForFunction(Function &F) {
   raw_ostream &operator<<(raw_ostream &OS, const DataDependenceGraph &G);
 
   // Collect IR2Vec encoding vector for each instruction in instVecMap
@@ -206,6 +217,13 @@ bool RDGWrapperPass::runOnFunction(Function &F) {
       errs() << "Writing " + SCC_Filename + "\n";
       RDGraph.PrintDotFile_LAI(SCCGraph, SCC_Filename, s1);
 
+      std::ifstream ifs(SCC_Filename);
+      std::string content;
+      content.assign( (std::istreambuf_iterator<char>(ifs) ),
+                       (std::istreambuf_iterator<char>()    ) );
+      DotFiles_List.push_back(content); 
+      errs() << "String: " << content << "\n";
+
       // Print Input File
       std::string Input_Filename = "I_" + s2 + "_F" +
                                    std::to_string(FunctionNumber) + "_L" +
@@ -214,6 +232,12 @@ bool RDGWrapperPass::runOnFunction(Function &F) {
 
       errs() << "Writing " + Input_Filename + "\n";
       Print_IR2Vec_File(SCCGraph, Input_Filename, s2, instVecMap);
+
+      std::ifstream ifs_inputfile(Input_Filename);
+      std::string content_input;
+      content_input.assign( (std::istreambuf_iterator<char>(ifs_inputfile) ),
+                       (std::istreambuf_iterator<char>()    ) );
+      DotFiles_List.push_back(content_input); 
 
       std::string totalSCC_Filename = "totalSCC.txt";
       std::error_code EC;
@@ -228,7 +252,7 @@ bool RDGWrapperPass::runOnFunction(Function &F) {
       }
     }
   }
-  return false;
+  return DotFiles_List;
 }
 
 void RDGWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {

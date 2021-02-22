@@ -54,6 +54,10 @@ private:
   using NodeToNumber = DenseMap<const DDGNode *, std::string>;
   NodeToNumber NodeNumber;
 
+  using StringList = SmallVector<std::string, 2>;
+  StringList DotFiles_List;
+  StringList InputFiles_List;
+
   int FunctionNumber = 0;
   OptimizationRemarkEmitter *ORE;
 
@@ -66,6 +70,10 @@ public:
   bool runOnFunction(Function &F) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
+
+  // friend StringList RDG_StringList(RDGWrapperPass &R, Function &F);
+
+  StringList computeRDGForFunction(Function &F);
 
   void Print_IR2Vec_File(
       DataDependenceGraph &G, std::string Filename, std::string ll_name,

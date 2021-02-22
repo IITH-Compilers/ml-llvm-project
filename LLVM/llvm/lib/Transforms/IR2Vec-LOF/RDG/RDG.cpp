@@ -584,7 +584,7 @@ if (auto report = LAI.getReport()) {
   // Make Data Dependence Graph for IR instructions with def-use edges
   // Merge nodes based on source code instructions
   DataDependenceGraph *G2 = new DataDependenceGraph(IL, LI, DI, &SE);
-  // errs() << "cccccccccccccccccccccccccc\n";
+
   // Append Memory Dependence Edges with weights into Graph
   auto res = BuildRDG_LAI(*G2, DI, LAI);
   if (!res) {
@@ -599,6 +599,7 @@ if (auto report = LAI.getReport()) {
   // Assign Labels to the Store Nodes
   SelectOnlyStoreNode(*G2);
 
+  // Merge the definition of uses in non-label nodes
   Merge_NonLabel_Nodes(*G2, DI);
 
   if (ORE) {
