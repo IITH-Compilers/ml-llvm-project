@@ -1,10 +1,12 @@
 #include "llvm/Transforms/IR2Vec-LOF/custom_loop_distribution.h"
+
 #include "llvm/Transforms/IR2Vec-LOF/RDG.h"
 
 #include "llvm/Transforms/IR2Vec-LOF/IR2Vec-SCC.h"
 
 #include "llvm/Analysis/DDG.h"
 #include "llvm/Analysis/DependenceGraphBuilder.h"
+
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/SmallVector.h"
@@ -45,6 +47,7 @@ for(auto &F : M) {
 SmallVector<const char*, 5> distributed_seqs;
 
 // const char *scriptDirectoryName = "/home/venkat/IF-DV/Rohit/IR2Vec-LoopOptimizationFramework/LLVM/llvm/lib/Transforms/IR2Vec-LOF/custom_loop_distribution/arbName.py";
+
   /* Py_Initialize();
   PyObject *sysPath = PySys_GetObject("path");
   PyObject *path = PyUnicode_FromString(scriptDirectoryName);
@@ -59,9 +62,11 @@ SmallVector<const char*, 5> distributed_seqs;
    Py_Initialize();
    PyRun_SimpleString("import sys");
    PyRun_SimpleString("import os");
+
    PyRun_SimpleString("sys.path.append(\"/home/venkat/IF-DV/Rohit/IR2Vec-LoopOptimizationFramework/model/ggnn_drl/static_v2/src\")");
    // Build the name object
    pName = PyUnicode_FromString((char*)"inference");
+
 
    errs() << "pName: " << pName << "............" << "\n";
 
@@ -83,6 +88,7 @@ SmallVector<const char*, 5> distributed_seqs;
 
    // pFunc is also a borrowed reference 
   //  pFunc = PyDict_GetItemString(pDict, (char*)"someFunction");
+
    pFunc = PyObject_GetAttrString(pModule, (char*)"predict_loop_distribution");
 
    if (pFunc == NULL) {
@@ -93,6 +99,7 @@ SmallVector<const char*, 5> distributed_seqs;
       
       if (PyCallable_Check(pFunc))
       {
+
 #if enable_rdg
           PyObject *my_list = PyList_New(0);
           for(auto rdg: rdgs){
@@ -111,6 +118,7 @@ SmallVector<const char*, 5> distributed_seqs;
            * }
            * PyObject *arglist = Py_BuildValue("(o)", mylist);
            */
+
           PyErr_Print();
           printf("Let's give this a shot!\n");
           presult=PyObject_CallObject(pFunc,pValue);
@@ -153,6 +161,7 @@ void custom_loop_distribution::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<LoopAccessLegacyAnalysis>();
   AU.addRequired<RDGWrapperPass>();
 // AU.setPreservesAll();
+
 }
 
 // Registering the pass
