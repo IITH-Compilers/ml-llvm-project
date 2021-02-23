@@ -1,5 +1,6 @@
-add_llvm_library(custom_loop_distribution MODULE BUILDTREE_ONLY
+add_llvm_component_library(custom_loop_distribution STATIC BUILDTREE_ONLY
         custom_loop_distribution.cpp arbName.py)
+        
 # add_dependencies(custom_loop_distribution intrinsics_gen)
 include_directories(/home/venkat/anaconda3/include/python3.7m /home/venkat/anaconda3/include/python3.7m)
 link_directories(/home/venkat/anaconda3/lib/python3.7/config-3.7m-x86_64-linux-gnu /home/venkat/anaconda3/lib)

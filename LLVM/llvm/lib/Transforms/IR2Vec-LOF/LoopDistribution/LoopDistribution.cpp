@@ -124,7 +124,7 @@ void LoopDistribution::mergePartitionsOfContainer(std::string srcID,
 // Eg: S1,S2|S3,S5|S4 ==> S1,S3,S4 will remain after merging S2 with S1 and S5
 // with S3.
 Ordering LoopDistribution::populatePartitions(DataDependenceGraph &SCCGraph,
-                                              Loop *il, DependenceInfo DI,
+                                              Loop *il,
                                               std::string partitionPattern) {
   Ordering order;
   // Parse partitions from string
@@ -363,77 +363,10 @@ bool LoopDistribution::fail(StringRef RemarkName, StringRef Message, Loop *L) {
   return false;
 }
 
-bool LoopDistribution::runOnFunction(Function &F) {
-  if (F.getName() != funcName)
-    return false;
 
-  AAResults *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
-  ScalarEvolution *SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
-  LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-  DependenceInfo DI = DependenceInfo(&F, AA, SE, LI);
-  ORE = &getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
-  auto *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  int loopNum = 0;
-
-  // Build up a worklist of inner-loops to vectorize. This is necessary as the
-  // act of distributing a loop creates new loops and can invalidate iterators
-  // across the loops.
-
-  Loop *il;
-  bool loopFound = false;
-
-  for (Loop *TopLevelLoop : *LI) {
-    for (Loop *L : depth_first(TopLevelLoop)) {
-      // We only handle inner-most loops.
-      if (L->empty()) {
-        auto MD = getLoopID(L);
-        if (!MD)
-          continue;
-        auto constVal =
-            dyn_cast<ConstantAsMetadata>(MD->getOperand(0))->getValue();
-        if (loopID == dyn_cast<ConstantInt>(constVal)->getZExtValue()) {
-          il = L;
-          loopFound = true;
-          changeLoopIDMetaData(il);
-          break;
-        }
-      }
-    }
-    if (loopFound)
-      break;
-  }
-
-  assert(loopFound && il && "Loop ID not found");
-
-  // Now walk the identified inner loops.
-  LLVM_DEBUG(errs() << "Processing " << il->getHeader()->getParent()->getName()
-                    << "\n");
-  if (!doSanityChecks(il)) {
-    return false;
-  }
-  loopNum++;
-
-  auto *LAA = &getAnalysis<LoopAccessLegacyAnalysis>();
-  auto *LAI = &LAA->getInfo(il);
-
-  auto RDGraph = RDG(*AA, *SE, *LI, DI, *LAI);
-  auto SCCGraph = RDGraph.computeRDGForInnerLoop(*il);
-
-  if (!SCCGraph)
-    return fail("EmptySCCGraph", "SCC Graph not generated", il);
-
-  LLVM_DEBUG(errs() << "writing RDG --> "
-                    << "SCC_" + std::to_string(loopNum) +
-                           il->getHeader()->getParent()->getName().str() +
-                           ".dot\n");
-  LLVM_DEBUG(RDGraph.PrintDotFile_LAI(
-      *SCCGraph,
-      "SCC_" + std::to_string(loopNum) +
-          il->getHeader()->getParent()->getName().str() + ".dot",
-      ""));
-
+bool LoopDistribution::computeDistributionOnLoop(DataDependenceGraph *SCCGraph, Loop *il, std::string partition){
   createContainer(*SCCGraph);
-  Ordering order = populatePartitions(*SCCGraph, il, DI, partitionPattern);
+  Ordering order = populatePartitions(*SCCGraph, il, partition);
 
   LLVM_DEBUG(errs() << "#nodes - container = " << container.size() << "\n");
 
@@ -467,9 +400,9 @@ bool LoopDistribution::runOnFunction(Function &F) {
     clonedLoops.push_back(L);
   }
 
-  LLVM_DEBUG(F.viewCFG());
+  // LLVM_DEBUG(F.viewCFG());
   removeUnwantedSlices(clonedLoops, loopInstVMap, workingLoopID, order);
-  LLVM_DEBUG(F.viewCFG());
+  // LLVM_DEBUG(F.viewCFG());
 
   // Report the success.
   ORE->emit([&]() {
@@ -480,6 +413,111 @@ bool LoopDistribution::runOnFunction(Function &F) {
   });
 
   return distributed;
+}
+
+/**
+ * To be checked, doubt regardinng the analysis function
+ *
+ */
+void LoopDistribution::computeDistribution(SmallVector<DataDependenceGraph*, 5> &SCCGraphs, SmallVector<Loop *, 5> &loops, SmallVector<std::string, 5> &dis_seqs){
+
+int size = loops.size();
+
+for(int i=0; i<size; i++){
+computeDistributionOnLoop(SCCGraphs[i], loops[i], dis_seqs[i]);
+}
+
+
+}
+/**
+ *
+ *
+ */
+
+Loop* LoopDistribution::findLoop(unsigned int lid){
+
+  // Build up a worklist of inner-loops to vectorize. This is necessary as the
+  // act of distributing a loop creates new loops and can invalidate iterators
+  // across the loops.
+
+  Loop *il;
+  bool loopFound = false;
+
+  for (Loop *TopLevelLoop : *LI) {
+    for (Loop *L : depth_first(TopLevelLoop)) {
+      // We only handle inner-most loops.
+      if (L->empty()) {
+        auto MD = getLoopID(L);
+        if (!MD)
+          continue;
+        auto constVal =
+            dyn_cast<ConstantAsMetadata>(MD->getOperand(0))->getValue();
+        if (lid == dyn_cast<ConstantInt>(constVal)->getZExtValue()) {
+          il = L;
+          loopFound = true;
+          changeLoopIDMetaData(il);
+          break;
+        }
+      }
+    }
+    if (loopFound)
+      break;
+  }
+
+  assert(loopFound && il && "Loop ID not found");
+ 
+  return il;
+
+}
+
+DataDependenceGraph* LoopDistribution::findSCCGraph(Loop *il, DependenceInfo DI){
+  
+  if (il == nullptr){
+  return nullptr;
+  }
+  auto *LAA = &getAnalysis<LoopAccessLegacyAnalysis>();
+  auto *LAI = &LAA->getInfo(il);
+
+  auto RDGraph = RDG(*AA, *SE, *LI, DI, *LAI, ORE);
+  auto SCCGraph = RDGraph.computeRDGForInnerLoop(*il);
+  
+  return SCCGraph;
+
+  /*LLVM_DEBUG(errs() << "writing RDG --> "
+                    << "SCC_" + std::to_string(loopNum) +
+                           il->getHeader()->getParent()->getName().str() +
+                           ".dot\n");
+  LLVM_DEBUG(RDGraph.PrintDotFile_LAI(
+      *SCCGraph,
+      "SCC_" + std::to_string(loopNum) +
+          il->getHeader()->getParent()->getName().str() + ".dot",
+      ""));
+*/
+
+}
+bool LoopDistribution::runOnFunction(Function &F) {
+  if (F.getName() != funcName)
+    return false;
+  AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
+  SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
+  LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+  DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+  ORE = &getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
+  DependenceInfo DI = DependenceInfo(&F, AA, SE, LI);
+
+  auto il= findLoop(loopID);
+   // Now walk the identified inner loops.
+  LLVM_DEBUG(errs() << "Processing " << il->getHeader()->getParent()->getName() << "\n");
+  
+  if (!doSanityChecks(il)) {
+    return false;
+  }
+
+  auto SCCGraph = findSCCGraph(il, DI);
+  if (!SCCGraph)
+    return fail("EmptySCCGraph", "SCC Graph not generated", il);
+
+   return computeDistributionOnLoop(SCCGraph, il, partitionPattern);
 }
 
 void LoopDistribution::getAnalysisUsage(AnalysisUsage &AU) const {

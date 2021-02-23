@@ -465,6 +465,8 @@ namespace llvm {
 
   /// Create IR Type Promotion pass. \see TypePromotion.cpp
   FunctionPass *createTypePromotionPass();
+  
+  ModulePass *createcustom_loop_distribution();
 
 } // End llvm namespace
 

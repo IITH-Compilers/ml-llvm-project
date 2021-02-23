@@ -8,8 +8,13 @@
 #include "llvm/Analysis/DependenceGraphBuilder.h"
 
 #include "llvm/ADT/DepthFirstIterator.h"
+#include "llvm/PassSupport.h"
 #include "llvm/ADT/SCCIterator.h"
+#include "llvm/CodeGen/Passes.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Pass.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/Instruction.h"
 // #include "llvm/Analysis/AliasAnalysis.h"
@@ -166,7 +171,20 @@ void custom_loop_distribution::getAnalysisUsage(AnalysisUsage &AU) const {
 
 // Registering the pass
 char custom_loop_distribution::ID = 0;
-static RegisterPass<custom_loop_distribution> X("custom_loop_distribution",
-                                                  "Distribute loop with predicted distribution sequence");
+
+INITIALIZE_PASS_BEGIN(custom_loop_distribution, "custom_loop_distribution",
+                      "Distribute loop with predicted distribution sequence",
+                      false, false)
+INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(LoopAccessLegacyAnalysis)
+// INITIALIZE_PASS_DEPENDENCY(RDGWrapperPass)
+INITIALIZE_PASS_END(custom_loop_distribution, "custom_loop_distribution",
+                    "Distribute loop with predicted distribution sequence",
+                    false, false)
+
+ModulePass *llvm::createcustom_loop_distribution() {return new custom_loop_distribution(); }
+
+// static RegisterPass<custom_loop_distribution> X("custom_loop_distribution",
+//                                                   "Distribute loop with predicted distribution sequence");
 
 #undef DEBUG_TYPE

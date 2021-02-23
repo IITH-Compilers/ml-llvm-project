@@ -33,7 +33,7 @@ class LoopDistribution : public FunctionPass {
 private:
   NodeList topologicalWalk(DataDependenceGraph &SCCGraph);
   Ordering populatePartitions(DataDependenceGraph &SCCGraph, Loop *il,
-                              DependenceInfo DI, std::string partition);
+                              std::string partition);
   Loop *cloneLoop(Loop *L, LoopInfo *LI, DominatorTree *DT,
                   ValueToValueMap &instVMap);
   void modifyCondBranch(BasicBlock *preheader, Loop *newLoop);
@@ -48,16 +48,25 @@ private:
 
   bool distributed;
   OptimizationRemarkEmitter *ORE;
-
+  AAResults *AA;
+  ScalarEvolution *SE;
+  LoopInfo *LI;
+  DominatorTree *DT;
   void createContainer(DataDependenceGraph &ddg);
   void addNodeToContainer(DDGNode *node, const std::string id);
   void mergePartitionsOfContainer(std::string srcID, std::string destID);
   Container container;
-
+  DataDependenceGraph* findSCCGraph(Loop *il, DependenceInfo DI);
+  bool computeDistributionOnLoop(DataDependenceGraph *SCCGraph, Loop *il, std::string partition);
+Loop* findLoop(unsigned int lid);
 public:
   static char ID;
   LoopDistribution() : FunctionPass(ID) { distributed = false; }
   bool runOnFunction(Function &F) override;
+  
+  void computeDistribution(SmallVector<DataDependenceGraph*, 5> &SCCGraphs, SmallVector<Loop *, 5> &loops, SmallVector<std::string, 5> &dis_seqs);
+   // void computeDistribution(Function &F, std::string fname, unsigned int lid, std::string partition);
+  
   void getAnalysisUsage(AnalysisUsage &AU) const;
 };
 
