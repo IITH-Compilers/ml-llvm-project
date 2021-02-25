@@ -19,6 +19,7 @@ def run(agent, config):
     
     # logging.info('slect the train120 instead and select 100 random samples from the total.')
     action_mask_flag=config.action_mask_flag
+    enable_lexographical_constraint = config.enable_lexographical_constraint
     
     n_episodes=500
     max_t=1000
@@ -91,6 +92,7 @@ def run(agent, config):
                 logging.info('done : {}'.format(done))
                 
                 state = next_state
+#                if reward > -10:
                 score += reward
                 score_tensor += reward
                 if done:

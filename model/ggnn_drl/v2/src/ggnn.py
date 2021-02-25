@@ -8,7 +8,9 @@ from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
 
 from typing import List, Tuple, Dict, Sequence, Any
 from topologicalSort import Graph
+import logging
 
+logger = logging.getLogger('ggnn.py') 
 
 class AdjacencyList:
     """represent the topology of a graph"""
@@ -90,10 +92,10 @@ class GatedGraphNeuralNetwork(nn.Module):
         # one entry per layer (final state of that layer), shape: number of nodes in batch v x D
 
         
-        # print('Annotaion shape {shape} and value {value} '.format(shape=annotations.shape, value=annotations))
-        # print(initial_node_representation.shape)
+        # logging.info('Annotaion shape {shape} and value {value} '.format(shape=annotations.shape, value=annotations))
+        # logging.info(initial_node_representation.shape)
         initial_node_representation = torch.cat([initial_node_representation, annotations], dim=1)
-        print('DLOOP H+A {}'.format(initial_node_representation.shape))
+        logging.info('DLOOP H+A {}'.format(initial_node_representation.shape))
         initial_node_representation = self.hidden_layer(initial_node_representation)
 
 
@@ -189,15 +191,13 @@ class GatedGraphNeuralNetwork(nn.Module):
         else:
             return torch.sum(node_states_per_layer[-1],dim=0)
 
-    def mpAfterDisplacement(self, v, startNode=False):
-        if startNode:
-            self.annotations[v][1] = 1
-        self.annotations[v][0] = 1
+    def updateAnnotation(self, action):
+        self.annotations[action[0]][0] = 1
+        self.annotations[action[0]][1] = action[1]
 
-    def addPairEdge(self, node1, node2):
 
-        self.unique_type_map['pair'].append((node1, node2))
-        # self.adjListweighsGraph['pair']+=0
+    # def addPairEdge(self, node1, node2):
+    #     self.unique_type_map['pair'].append((node1, node2))
     
     def propagate(self):
         adjacency_lists=[ AdjacencyList(node_num=self.num_nodes, adj_list=adjlist, device=self.device) for adjlist in self.unique_type_map.values()]
@@ -211,8 +211,8 @@ class GatedGraphNeuralNetwork(nn.Module):
             state = self.n_state
         
         state = state.cpu().detach().numpy()
-        print('DLOOP  return from propagate | state : {}'.format(state.shape))
-        print('DLOOP pair edges while new propagate : {}'.format(self.unique_type_map['pair']))
+        logging.info('DLOOP  return from propagate | state : {}'.format(state.shape))
+        logging.info('DLOOP pair edges while new propagate : {}'.format(self.unique_type_map['pair']))
         return state.copy()
   
    # input graph jsonnx
@@ -250,19 +250,19 @@ def constructGraph(graph):
             if i != neighId:
                 all_edges.append((i, neighId))
 
-    print("Shape of the hidden nodes matrix N X D : {}".format(np.array(initial_node_representation).shape)) 
+    logging.info("Shape of the hidden nodes matrix N X D : {}".format(np.array(initial_node_representation).shape)) 
     initial_node_representation = torch.FloatTensor(initial_node_representation)
     
     # Create aGraph obj for getting the Zero incoming egdes nodes
     graphObj = Graph(all_edges,  num_nodes)
-    print('All links : {}'.format(all_edges))
-    print("num_nodes : {}".format(num_nodes) )
+    logging.info('All links : {}'.format(all_edges))
+    logging.info("num_nodes : {}".format(num_nodes) )
     ggnn = GatedGraphNeuralNetwork(hidden_size=initial_node_representation.shape[1], annotation_size=2, num_edge_types= len(unique_type_map.keys()) + 1, layer_timesteps=[5], residual_connections={}, nodelevel=True)
 
     ggnn.annotations = torch.FloatTensor([[0]*2]*num_nodes)
     ggnn.num_nodes = num_nodes
     adjacency_lists=[ AdjacencyList(node_num=num_nodes, adj_list=adjlist, device=ggnn.device) for adjlist in unique_type_map.values()]
-    print("unique_type_map : {}".format(unique_type_map)) 
+    logging.info("unique_type_map : {}".format(unique_type_map)) 
     ggnn.unique_type_map = unique_type_map
     # TODO maps values have same behvior as append
     ggnn.n_state = ggnn.compute_node_representations(initial_node_representation=initial_node_representation, annotations=ggnn.annotations, adjacency_lists=adjacency_lists, return_all_states=False)
@@ -281,55 +281,6 @@ def constructGraph(graph):
 
 
 
-#     def constructGraphbk(self, graph):
-#         id = graph.key()
-#         nodes = graph[id]
-#         
-#         self.adjListedgesGraph = {}
-#         self.adjListweighsGraph = {}
-#         num_nodes = len(nodes)
-#         
-#         self.initial_node_representation = []
-#         
-#         for node in nodes:
-#             nodeId= node.key()
-#             nodeData = node[nodeId]
-#             edgesTypes = nodeData['adjlists']
-#             vector = nodeData['vec'] 
-#             self.initial_node_representation.append(vector)
-#             adjListweighs = {}
-#             adjListedges = {}
-#             for key, value in edgesTypes:
-#                 
-#                 dest = value.keys()
-#     
-#                 edges = zip([int(nodeId)]*len(dest), dest)
-#                 weight = value.values()
-# 
-#                 if adjListedgesGraph[key] is None:
-#                     self.adjListedgesGraph[key] = edges
-#                     self.adjListweighsGraph[key] = weights
-#                 else:
-#                     self.adjListedgesGraph[key].extend(edges)
-#                     self.adjListweighsGraph[key].extend(weights)
-#         
-#         self.initial_node_representation = torch.FloatTensor(initial_node_representation)
-#         
-#         # Create aGraph obj for getting the Zero incoming egdes nodes
-#         self.graphObj = Graph(adjListedgesGraph['dependence'], num_nodes)
-#         self.annotations = [[0]*10]*num_nodes
-#         self.adjacency_lists=[ AdjacencyList(node_num=num_nodes, adj_list=adjlist, device=self.device) for adjlist in self.adjListedgesGraph.values()]
-#         
-#         # TODO maps values have same behvior as append
-#         state = self.compute_node_representations(initial_node_representation=self.initial_node_representation, adjacency_lists=self.adjacency_lists, return_all_states=False)
-#         return  state, self.graphObj
-        
-    # mark the first bit of the annotation 1 : means select or focus on
-
-
-
-
-
 def main():
     # hidden 300
     # number o edges 3
@@ -337,14 +288,14 @@ def main():
                                   layer_timesteps=[3, 5, 7, 2], residual_connections={2: [0], 3: [0, 1]}, nodelevel=False)
     
 
-    print(torch.randn(1,2))
+    logging.info(torch.randn(1,2))
     adj_list_type1 = AdjacencyList(node_num=4, adj_list=[(0, 2), (2, 1), (1, 3)], device=gnn.device)
     adj_list_type2 = AdjacencyList(node_num=4, adj_list=[(0, 0), (0, 1)], device=gnn.device)
 
     representations = gnn.compute_node_representations(initial_node_representation=torch.randn(4, 64),
                                                             adjacency_lists=[adj_list_type1, adj_list_type2],return_all_states=False)
 
-    print(representations)
+    logging.info(representations)
 
 
 if __name__ == '__main__':

@@ -10,6 +10,7 @@ from collections import deque
 import os
 import utils
 from utils import get_parse_args
+import logging
 
 def run(agent, config):
     action_mask_flag=config.action_mask_flag
@@ -26,14 +27,12 @@ def run(agent, config):
     env = DistributeLoopEnv(config)    
     score = 0
     count = 1
-    print(glob.glob(os.path.join(dataset, 'graphs/test/*.json')))
+    # logging.info(glob.glob(os.path.join(dataset, 'graphs/test/*.json')))
     for path in glob.glob(os.path.join(dataset, 'graphs/test/*.json')): # Number of the iterations
-        if env.O3_runtimes[utils.getllfileNameFromJSON(path)] == utils.error_runtime:
-            print('!!!!!! Graph has runtime error ', path)
-            continue
+        
         with open(path) as f:
             graph = json.load(f)
-        print('New graph to the env. {} '.format(path))
+        logging.info('New graph to the env. {} '.format(path))
         # state, topology = env.reset_env(graph, path)
         # Updated 
         state, topology, focusNode = env.reset_env(graph, path)
@@ -43,7 +42,7 @@ def run(agent, config):
             # pass the state and  topology to get the action
             # action is 
             nextNodeIndex, merge_distribute = agent.act(state, topology, focusNode, eps)
-            print("action choosed : {} {} {}".format(nextNodeIndex, possibleNodes[nextNodeIndex],merge_distribute))
+            logging.info("action choosed : {} {} {}".format(nextNodeIndex, possibleNodes[nextNodeIndex],merge_distribute))
             # Get the next the next state from the action
             # reward is 0 till we reach the end node
             # reward will be -negative, maximize  the reward
@@ -52,21 +51,27 @@ def run(agent, config):
             next_state, reward, done, distribute, focusNode = env.step(action)
             next_possibleNodes_emb, next_possibleNodes = next_state
 
-            print('Distribution till now : {}'.format(distribute))
+            logging.info('Distribution till now : {}'.format(distribute))
             
             state = (next_possibleNodes_emb, next_possibleNodes)
-            # if  reward > -10:
             score += reward
  
-            print('DLOOP Goto to Next.................')
+            logging.info('DLOOP Goto to Next.................')
             scores_window.append(score)       # save most recent score
             scores.append(score)              # save most recent score
-            print('\n------------------------------------------------------------------------------------------------')
+            logging.info('\n------------------------------------------------------------------------------------------------')
             if done:
                break
  
         agent.writer.add_scalar('test/rewardStep', score, count)
         agent.writer.add_scalar('test/rewardWall', reward)
+
+        def speedup(reward):
+            if reward > 0:
+                return reward - 5
+            else:
+                return reward + 0.5
+        agent.writer.add_scalar('test/speedup', speedup(reward))
  
         count+=1
     utils.plot(range(1, len(scores_window)+1), scores_window, 'Last 100 rewards',location=config.distributed_data)
@@ -76,8 +81,10 @@ def run(agent, config):
 if __name__ == '__main__':
 
     config = get_parse_args()
-    
-    print(config)
+    logger = logging.getLogger('test.py') 
+    logging.basicConfig(filename=os.path.join(config.logdir, 'running.log'), format='%(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
+
+    logging.info(config)
     dqn_agent = Agent(config, seed=0)
 
     trained_model = config.trained_model
@@ -87,6 +94,7 @@ if __name__ == '__main__':
     if os.path.isdir(trained_model):
         trained_model = os.path.join(trained_model, 'final-model.pth')
 
+    logging.info('model selected for training :{}'.format(trained_model))
 
     dqn_agent.qnetwork_local.load_state_dict(torch.load(trained_model))
     # dqn_agent.writer.add_graph(dqn_agent.qnetwork_local)
@@ -96,5 +104,5 @@ if __name__ == '__main__':
     dqn_agent.writer.flush()
     dqn_agent.writer.close()
 
-    print('Testing Completed..... ')
+    logging.info('Testing Completed..... ')
     

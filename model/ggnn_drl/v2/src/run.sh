@@ -1,4 +1,4 @@
-# Taining - bash run.sh [train|trainInv] <dataset> <POST distribution passes choice: {0, 1, 2}> <rewardtype R or S> [<keys point if change some change is done in the model>]
+# Taining - bash run.sh [train|trainInv|supervised_trainInv] <dataset> <POST distribution passes choice: {0, 1, 2}> <rewardtype R or S> [<keys point if change some change is done in the model>]
 # Testing - bash run.sh test <path dataset> <path of model> <disable runtime calc:Y> <POST distribution passes choice: {0, 1, 2}> <rewardtype R or S>
 #
 
@@ -6,15 +6,16 @@ PWD=`pwd`
 # set the llvm Build and other paramter
 
 # REL or DEBUG 
-BUILD_TYPE=REL
+BUILD_TYPE=LoopCost_REL_AsrtON
 
-LLVM_BUILD=`realpath ${PWD}/../../../../build`
+# LLVM_BUILD=`realpath ${PWD}/../../../../build`
 
-if [ ${BUILD_TYPE} = "REL" ]
-then
-LLVM_BUILD=`realpath ${PWD}/../../../../build_release`
-fi
+# if [ ${BUILD_TYPE} = "REL" ]
+# then
+LLVM_BUILD=`realpath ${PWD}/../../../../build_${BUILD_TYPE}`
+# fi
 
+echo "LLVM build directory selected for training : ${LLVM_BUILD}"
 export LLVM=${LLVM_BUILD}
 export OPT=${LLVM_BUILD}/bin/opt
 export CLANG=${LLVM_BUILD}/bin/clang
@@ -51,11 +52,12 @@ then
     echo "Please enter the mode- train , trainInv or test"
     exit
 fi
-
+MODE_PROCESS=
 MODEL_PAR=
 PY_SPT=
-if [ $MODE = "train" ] || [ $MODE = "trainInv" ]
+if [ $MODE = "train" ] || [ $MODE = "trainInv" ] || [ $MODE = "supervised_trainInv" ]
 then 
+        MODE_PROCESS='train'
         DATA_SET=$2
         if [ -z ${DATA_SET} ] || [ ! -d ${DATA_SET} ]
         then 
@@ -92,7 +94,8 @@ then
         then
         RT="--rewardtype=runtime"
         elif [ ${REWARD_TYPE} = 'S' ]
-        RT="--rewardtype=static"
+        then
+                RT="--rewardtype=static"
         else
                 echo "Rewards type, runtime(R) or static(S)"
                exit
@@ -111,6 +114,7 @@ then
 
 elif [ $MODE = "test" ]
 then
+        MODE_PROCESS='test'
         echo "Run the testing........."
         PY_SPT=test.py
         TE_DATA_SET=$2
@@ -131,10 +135,12 @@ then
             exit
         fi
         
-       TRAINED_MODEL=`realpath ${TRAINED_MODEL}` 
+       TRAINED_MODEL=`realpath ${TRAINED_MODEL}`
+       CHECKPOINT=final
         if [ -f ${TRAINED_MODEL} ]
         then
            TRAINED_MODEL_DIR=`dirname ${TRAINED_MODEL}`
+           CHECKPOINT=`basename ${TRAINED_MODEL} .pth`
         elif [ -d ${TRAINED_MODEL} ]
         then
             TRAINED_MODEL_DIR=${TRAINED_MODEL}
@@ -143,7 +149,6 @@ then
             exit
         fi
         
-         DIST_GEN_DATA=${TRAINED_MODEL_DIR}/${MODE}/${TE_DATA_SET_NAME}
         
          DEB_FLAG=$4
          if [ -z ${DEB_FLAG} ]
@@ -181,17 +186,22 @@ then
         then
         RT="--rewardtype=runtime"
         elif [ ${REWARD_TYPE} = 'S' ]
-        RT="--rewardtype=static"
+                then
+                        RT="--rewardtype=static"
         else
                 echo "Rewards type, runtime(R) or static(S)"
                exit
         fi
 
-        # POST_DIS_PASSES_ARG=$5
-        # if [ ! -z ${POST_DIS_PASSES_ARG} ]
-        # then 
-        # PDP="--post_pass_key=$POST_DIS_PASSES_ARG"
-        # fi
+
+        KEY_POINT=$7
+        if [ -z ${KEY_POINT} ]
+        then 
+            KEY_POINT="Full"
+        fi
+
+        DIST_GEN_DATA=${TRAINED_MODEL_DIR}/${MODE}/${TE_DATA_SET_NAME}/${CHECKPOINT}/${KEY_POINT}
+
 else
         echo "Invalid  MODE:${MODE} [ train , trainInv or test]"
         exit
@@ -215,7 +225,7 @@ echo "Location of the trained model: ${TRAINED_MODEL}"
 echo "Location of the generated llfiles and outfiles : ${DIST_GEN_DATA}"
 echo "Logs files: ${LOG}"
 ## Call the py script 
-python ${PY_SPT} --dataset=${DATA_SET} ${AMF} ${ELC} ${DISABLE_EXEC_BIN} ${PDP} ${RT} --trained_model=${TRAINED_MODEL} --distributed_data=${DIST_GEN_DATA} > ${LOG}/run.log 2> ${LOG}/error.log
+python ${PY_SPT} --dataset=${DATA_SET} ${AMF} ${ELC} ${DISABLE_EXEC_BIN} ${PDP} ${RT} --trained_model=${TRAINED_MODEL} --distributed_data=${DIST_GEN_DATA}  --logdir ${LOG} --mode ${MODE_PROCESS}
 
 echo "Completed the process........."
 
@@ -225,7 +235,12 @@ then
         if [ -z "${DISABLE_EXEC_BIN}" ]
         then
             grep -ri "filename|O3runtime|Druntime|reward" ${LOG}/run.log &> ${LOG}/runtime_results.csv
+    else
+            grep -ri "ll_filename|OriginalLoopCost|distributedLoopCost|reward|speedup|distributeSeq|RDG" ${LOG}/running.log &> ${LOG}/loopcost_results.csv
         fi
    grep -ri "\-------------------------->" ${LOG}/run.log &> ${LOG}/distribution_results.csv
    echo "Results files generated in  ${LOG}"
+# else
+#         echo  "Delete the generated distirbuted files"
+#         rm -rf ${DIST_GEN_DATA}/llfiles
 fi

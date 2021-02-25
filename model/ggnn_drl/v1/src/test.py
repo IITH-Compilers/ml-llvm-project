@@ -8,87 +8,101 @@ import json
 import torch
 from collections import deque
 import os
-import argparse
+import utils
+from utils import get_parse_args
+import logging
 
 def run(agent, config):
     action_mask_flag=config.action_mask_flag
     enable_lexographical_constraint = config.enable_lexographical_constraint
 
+    eps=0
     max_t=1000
     scores = []                        # list containing scores from each episode
     scores_window = deque(maxlen=100)  # last 100 scores
-    eps = 0 
+   
 
     dataset= config.dataset
     #Load the envroinment
     env = DistributeLoopEnv(config)    
-    # count=0 
+    score = 0
+    count = 1
+    # logging.info(glob.glob(os.path.join(dataset, 'graphs/test/*.json')))
     for path in glob.glob(os.path.join(dataset, 'graphs/test/*.json')): # Number of the iterations
+        
         with open(path) as f:
             graph = json.load(f)
-        print('DLOOP New graph to the env. {} '.format(path))
-        # count=count+1
-        # if count < 1:
-        #     continue
-        # print('================================================================================================ ',count)
+        logging.info('New graph to the env. {} '.format(path))
+        # state, topology = env.reset_env(graph, path)
+        # Updated 
         state, topology, focusNode = env.reset_env(graph, path)
-        score = 0
         while(True):
+            possibleNodes_emb, possibleNodes = state
 
             # pass the state and  topology to get the action
-            action, _  = agent.act(state, topology, focusNode, eps)
-            print("action choosed : {}".format(action))
-
+            # action is 
+            nextNodeIndex, merge_distribute = agent.act(state, topology, focusNode, eps)
+            logging.info("action choosed : {} {} {}".format(nextNodeIndex, possibleNodes[nextNodeIndex],merge_distribute))
+            # Get the next the next state from the action
+            # reward is 0 till we reach the end node
+            # reward will be -negative, maximize  the reward
             #
+            action=(possibleNodes[nextNodeIndex], merge_distribute)
             next_state, reward, done, distribute, focusNode = env.step(action)
-            
-            # put the state transitionin memory buffer
-            # agent.step(state, action, reward, next_state, done)
-            
+            next_possibleNodes_emb, next_possibleNodes = next_state
 
-            # print('state : {}'.format(state))
-            print('action : {}'.format(action))
-            print('reward : {}'.format(reward))
-            # print('next_state : {}'.format(next_state))
-            print('done : {}'.format(done))
-            print('Distribution till now : {}'.format(distribute))
+            logging.info('Distribution till now : {}'.format(distribute))
             
-            state = next_state
+            state = (next_possibleNodes_emb, next_possibleNodes)
             score += reward
-            if done:
-                break
-            print('DLOOP Goto to Next.................')
+ 
+            logging.info('DLOOP Goto to Next.................')
             scores_window.append(score)       # save most recent score
-            # scores.append(score)              # save most recent score
-            print('\r\tAverage Score: {:.2f}'.format(np.mean(scores_window)), end="")
+            scores.append(score)              # save most recent score
+            logging.info('\n------------------------------------------------------------------------------------------------')
+            if done:
+               break
+ 
+        agent.writer.add_scalar('test/rewardStep', score, count)
+        agent.writer.add_scalar('test/rewardWall', reward)
 
-            print('\n------------------------------------------------------------------------------------------------')
-        
+        def speedup(reward):
+            if reward > 0:
+                return reward - 5
+            else:
+                return reward + 0.5
+        agent.writer.add_scalar('test/speedup', speedup(reward))
+ 
+        count+=1
+    utils.plot(range(1, len(scores_window)+1), scores_window, 'Last 100 rewards',location=config.distributed_data)
+    utils.plot(range(1, len(scores)+1), scores, 'Total Rewards per time instant',location=config.distributed_data)
+
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--dataset', dest='dataset', metavar='DIRECTORY', help='Location of the dataSet..')
-    parser.add_argument('--action_mask_flag', dest='action_mask_flag', required=False, type=bool, help='Mask the action for the learn fucntion.', default=False)
 
-    parser.add_argument('--lexographical_constraint', dest='enable_lexographical_constraint', required=False, type=bool, help='Enable lexograhical constraint on the model.', default=False)
-    parser.add_argument('--isInputRequired', dest='isInputRequired', required=False, type=bool, help='Input required for the binaries to run.', default=False)
-    
-    parser.add_argument('--state_size', dest='state_size', type=int, required=False, help='Size of the hidden input vector for the state.', default=300)
-    parser.add_argument('--action_space', dest='action_space', required=False, type=int, help='Size of the actiion space.', default=200)
-    
-    parser.add_argument('--trained_model', dest='trained_model', required=True,  help=' location ')
+    config = get_parse_args()
+    logger = logging.getLogger('test.py') 
+    logging.basicConfig(filename=os.path.join(config.logdir, 'running.log'), format='%(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
 
-    config = parser.parse_args()
-    
-    print(config)
-    
-    # episodes = 100
+    logging.info(config)
     dqn_agent = Agent(config, seed=0)
+
     trained_model = config.trained_model
     
-    dqn_agent.qnetwork_local.load_state_dict(torch.load(os.path.join(trained_model, 'final-model.pth')))
+    if not os.path.exists(trained_model):
+        raise Exception('Path Not Exists: {}'.format(trained_model))
+    if os.path.isdir(trained_model):
+        trained_model = os.path.join(trained_model, 'final-model.pth')
+
+    logging.info('model selected for training :{}'.format(trained_model))
+
+    dqn_agent.qnetwork_local.load_state_dict(torch.load(trained_model))
+    # dqn_agent.writer.add_graph(dqn_agent.qnetwork_local)
     run(dqn_agent, config)
 
-    print('Testing Completed..... See the results in the log file via grep')
+    # dqn_agent.writer.add_graph(dqn_agent.qnetwork_local)
+    dqn_agent.writer.flush()
+    dqn_agent.writer.close()
 
-
+    logging.info('Testing Completed..... ')
+    

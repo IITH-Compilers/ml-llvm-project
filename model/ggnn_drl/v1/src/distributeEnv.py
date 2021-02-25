@@ -3,153 +3,102 @@ from topologicalSort import Graph
 import random
 import utils
 import os
-
+import logging
+logger = logging.getLogger('distributeEnv.py') 
 class DistributeLoopEnv:
 
     def __init__(self, config):
         self.action_space = None
-        # self.obs = None
-        # self.cur_action_space = None
         self.ggnn = None
-        # self.obs = None
-        # self.next_obs = None
         self.graph = None
-        # self.hidden_size = 300
-        # self.n_steps = 10
-        # self.num_nodes = 40 # this value to estimate
         self.topology = None # Have the graph formed from adjency list using dependence edges only.
         self.cur_node = None
+        self.mode = config.mode
         
-        self.distribution = ""
-        self.startNode= None
-        # self.discovered = []
         
-        self.isInputRequired = config.isInputRequired
-        self.O3_runtimes = utils.get_O3_runtimes(config.dataset, self.isInputRequired)
-    
-    def getReward(self):
-       
-        # code to from the distribtuted ll file by caling distibrution pass
-         
-        # parts = self.path.split('/graphs/')
-        # file_dir = parts[0]
-        # 
-        # parts=parts[1].split('/')
-        # file_name_parts = (parts[1].split('InputGraph_'))[1].split('.json')[0]
-        # 
-        # file_name_parts =file_name_parts.split('_FUNCTION_')
-        # file_name = file_name_parts[0]
-        # 
-        # print('file name : {}'.format(file_name))
+        # self.loopcost_cache = utils.load_precomputed_loopcost() 
+        # self.second_loopcost_cache = set()
+        
+    # TODO
+    def reward_formula(self, value):
+        reward = 0
+        return reward
 
-        # file_name_parts = file_name_parts[1].split('_Loop')
-        
+
+    def getReward_Static(self, action):
+       
         home_dir = self.home_dir
         method_name = self.functionName
         loop_id = self.loopId
         ll_file_name = self.fileName
+        fun_id = self.fun_id
+        
+        logging.info('Get the value for distributed loop')
+        # ipc to llvm splill cost function for reward
+        spillcost = 0
+        reward = self.reward_formula(spillcost)  
 
-        meta_ssa_dir = os.path.join(home_dir, 'llfiles/meta_ssa')
-        meta_ssa_file_path = os.path.join(meta_ssa_dir, ll_file_name)
-        
-        O3_dir = os.path.join(home_dir, 'llfiles/level-O3')
-        O3_file_path = os.path.join(O3_dir, ll_file_name)
-        
-        input_file_path=None
-        if self.isInputRequired:
-            input_dir = os.path.join(home_dir, 'inputd')
-            input_file_path = os.path.join(input_dir, "{}.inputd".format(file_name))
-
-        
-        # call the Pass 
-        # dist_file_path_out = utils.call_distributionPass( meta_ssa_file_path, self.distribution, method_name, loop_id)
-
-        # Run the File 5 times on input. Davg
-        
-        # Druntime = utils.get_runtime_of_file(dist_file_path_out, inputd=input_file_path)
-        Druntime = utils.distribute_and_getRuntime( meta_ssa_file_path, self.distribution, method_name, loop_id,input_file_path=input_file_path )
-        # Run the O3 file 5 times, O3avg
-        if ll_file_name not in self.O3_runtimes.keys():
-            print('Warning!!!!!!!!!!!!!!!!!! O3 not prioily calculated.....')
-            O3runtime = utils.get_runtime_of_file(O3_file_path, inputd=input_file_path)
-        else:
-            O3runtime = self.O3_runtimes[ll_file_name] 
-
-        reward = (O3runtime - Druntime) / O3runtime
-        
-        print('filename|O3runtime|Druntime|reward,{},{},{},{}'.format(ll_file_name, O3runtime, Druntime, reward))
         return reward
 
-
+    def getReward(self, action):
+        return self.getReward_Static(action)
 
 
     def step(self, action):
         if self.ggnn is None:
             raise Exception()
         
-        nodeChoosen = action // 2
-        merge_distribute = action % 2
-        print('DLOOP nodeChoosen & Merge | Dis: {} & {}'.format(nodeChoosen, merge_distribute))
+        nodeChoosen, action_n, split_point, reg_allocated = action
+        self.cur_node = nodeChoosen
         
         # add the node to the visited list
         self.topology.UpdateVisitList(nodeChoosen)
-        self.ggnn.mpAfterDisplacement(nodeChoosen)
        
         
-        nxtloop =  self.ggnn.idx_nid[nodeChoosen]
+        # node_id =  self.ggnn.idx_nid[nodeChoosen]
         
-        if merge_distribute == 1:
-            self.distribution = "{},{}".format(self.distribution, nxtloop)
+        # logging.info('DLOOP merge {cur_node} with {nodeChoosen}'.format(cur_node=self.cur_node, nodeChoosen=nodeChoosen))
+        
 
-            # print('>>>>>>>>>>>>>>>> Lexographical changes:', self.cur_node, nodeChoosen, nxtloop)
-            self.ggnn.addPairEdge(self.cur_node, nodeChoosen)
-        else:
-            self.distribution = "{}|{}".format(self.distribution,nxtloop)
-       
-        self.cur_node = nodeChoosen
-        next_obs = self.ggnn.propagate()
+        self.ggnn.updateAnnotation(action)
+           
+        next_hidden_state = self.ggnn.propagate()
         reward = 0
         done = False
-        # all the nodes re visted the calculate the rewards by calling distribution pass
-        if len(self.topology.findAllVertaxWithZeroWeights()) == 0 :
-            reward = self.getReward()
+        
+        possible_next_nodes = self.topology.findAllVertaxWithZeroWeights()
+        
+        reward = self.getReward(action)
+  
+        if len(possible_next_nodes) == 0:
             done = True
-        return next_obs, reward, done, self.distribution, nodeChoosen 
+        
+        # next_hidden_state = next_hidden_state[possible_next_nodes]
+
+        
+        next_obs = next_hidden_state
+        return next_obs, reward, done 
     
     # input graph : jsonnx
+    # return the state of the graph, all the possible starting nodes
     def reset_env(self, graph, path):
         attr = utils.getllFileAttributes(path)
         self.path = path
-        self.distribution = ""
         self.graph = graph
-        self.fileName = graph['graph'][1][1]['FileName'] 
-        self.functionName = graph['graph'][1][1]['Function']
+        self.fileName = graph['graph'][1][1]['FileName'].strip('\"') 
+        self.functionName = graph['graph'][1][1]['Function'].strip('\"')
         self.loopId = attr['LOOP_ID']
         self.home_dir = attr['HOME_DIR']
+        self.fun_id = attr['FUN_ID']
         self.num_nodes = len(self.graph['nodes'])
         
-
-
-        obs, self.topology, self.ggnn = constructGraph(self.graph)
-        
-        # print("state : {}".format(obs))
-       
-
-        possibleStartNodes = self.topology.findAllVertaxWithZeroWeights()
-        # TODO Do somwhting here, it is randon as of now
-        print("possible start nodes : {}".format(possibleStartNodes))
-        self.startNode = random.choice(possibleStartNodes)
-        
-        print('start Node : {}'.format(self.startNode))
-        self.topology.UpdateVisitList(self.startNode)
+        self.cur_node = None
         
 
-        self.ggnn.mpAfterDisplacement(self.startNode, startNode=True)
-        self.cur_node = self.startNode
-        
-        self.distribution = self.ggnn.idx_nid[self.cur_node]
+        hidden_state, self.topology, self.ggnn = constructGraph(self.graph)
 
-        return obs, self.topology, self.startNode
+        obs= hidden_state
+        return obs, self.topology
 
 
 
