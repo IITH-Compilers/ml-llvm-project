@@ -1,9 +1,8 @@
 #include "llvm/Transforms/IR2Vec-LOF/IR2Vec-SCC.h"
-// #include "llvm/Transforms/IR2Vec-LOF/Locality.h"
 #include "llvm/Transforms/IR2Vec-LOF/RDG.h"
+// #include "IR2Vec.h"
 
-#include "./../../IR2Vec-Engine/include/IR2Vec-RD.h"
-
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/SmallVector.h"
@@ -33,17 +32,19 @@
 
 using namespace llvm;
 
+static std::string vocab_file =  "/home/venkat/IF-DV/Rohit/IR2Vec-LoopOptimizationFramework/IR2Vec/vocabulary/seedEmbeddingVocab-300-llvm10.txt";
+
 RDGWrapperPass::RDGWrapperPass() : FunctionPass(ID) {
-  //  initializeRDGWrapperPassPass(*PassRegistry::getPassRegistry());
+    initializeRDGWrapperPassPass(*PassRegistry::getPassRegistry());
 }
 
 char RDGWrapperPass::ID = 0;
-static RegisterPass<RDGWrapperPass> X("RDG", "Build ReducedDependenceGraph",
-                                      true, true);
+// static RegisterPass<RDGWrapperPass> X("RDG", "Build ReducedDependenceGraph",
+// true, true);
 
 void RDGWrapperPass::Print_IR2Vec_File(
     DataDependenceGraph &G, std::string Filename, std::string ll_name,
-    SmallDenseMap<const Instruction *, SmallVector<double, DIM>> instVecMap) {
+    llvm::SmallMapVector<const llvm::Instruction *, IR2Vec::Vector, 128> instVecMap) {
 
   // Code to generate Input File with IR2Vec Embedding as a node to an RDG
   std::error_code EC;
@@ -143,7 +144,7 @@ void RDGWrapperPass::setLoopID(Loop *L, MDNode *LoopID) const {
 }
 
 bool RDGWrapperPass::runOnFunction(Function &F) {
-  computeRDGForFunction(F);
+  rdgInfo = computeRDGForFunction(F);
   return true;
 }
 
@@ -152,15 +153,13 @@ bool RDGWrapperPass::runOnFunction(Function &F) {
 //   return s;
 // }
 
-RDGWrapperPass::StringList RDGWrapperPass::computeRDGForFunction(Function &F) {
+RDGData RDGWrapperPass::computeRDGForFunction(Function &F) {
   raw_ostream &operator<<(raw_ostream &OS, const DataDependenceGraph &G);
-
+    
+  RDGData data;
   // Collect IR2Vec encoding vector for each instruction in instVecMap
-  auto ir2vec = getAnalysis<IR2Vec_RD>().setConfig(fname, ofname, bprob, level,
-                                                   cls, c2v, WO, WT, WA);
-  ir2vec->computeVectors(*F.getParent());
-  SmallDenseMap<const Instruction *, SmallVector<double, DIM>> instVecMap;
-  instVecMap = ir2vec->getInstVecMap();
+  auto ir2vec = IR2Vec::IR2VecTy(*F.getParent(), IR2Vec::IR2VecMode::FlowAware, vocab_file);
+  auto instVecMap = ir2vec.getInstVecMap();
 
   // Compute necessary parameters for DataDependenceGraph
   AAResults *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
@@ -195,7 +194,8 @@ RDGWrapperPass::StringList RDGWrapperPass::computeRDGForFunction(Function &F) {
         continue;
       }
       DataDependenceGraph &SCCGraph = *SCC_Graph;
-
+      data.SCCGraphs.push_back(SCC_Graph);
+      data.loops.push_back(*il);
       SCCGraph.InsertFunctionName(F.getName());
       LLVMContext &Context = il->getHeader()->getContext();
 
@@ -221,7 +221,8 @@ RDGWrapperPass::StringList RDGWrapperPass::computeRDGForFunction(Function &F) {
       std::string content;
       content.assign( (std::istreambuf_iterator<char>(ifs) ),
                        (std::istreambuf_iterator<char>()    ) );
-      DotFiles_List.push_back(content); 
+      
+      // DotFiles_List.push_back(content); 
       errs() << "String: " << content << "\n";
 
       // Print Input File
@@ -237,8 +238,8 @@ RDGWrapperPass::StringList RDGWrapperPass::computeRDGForFunction(Function &F) {
       std::string content_input;
       content_input.assign( (std::istreambuf_iterator<char>(ifs_inputfile) ),
                        (std::istreambuf_iterator<char>()    ) );
-      DotFiles_List.push_back(content_input); 
-
+      // InputFiles_List.push_back(content_input); 
+      data.input_rdgs.push_back(content_input);
       std::string totalSCC_Filename = "totalSCC.txt";
       std::error_code EC;
       raw_fd_ostream File(totalSCC_Filename.c_str(), EC, sys::fs::F_Append);
@@ -252,15 +253,24 @@ RDGWrapperPass::StringList RDGWrapperPass::computeRDGForFunction(Function &F) {
       }
     }
   }
-  return DotFiles_List;
+  return data;
 }
+
+
+INITIALIZE_PASS_BEGIN(RDGWrapperPass, "rdg",
+                      "IR2vec SCC for RDG", true, true)
+INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(LoopAccessLegacyAnalysis)
+INITIALIZE_PASS_DEPENDENCY(OptimizationRemarkEmitterWrapperPass)
+INITIALIZE_PASS_END(RDGWrapperPass, "rdg",
+                    "IR2vec SCC for RDG", true, true)
 
 void RDGWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<LoopInfoWrapperPass>();
   AU.addRequired<ScalarEvolutionWrapperPass>();
-  // AU.addRequired<TargetTransformInfoWrapperPass>();
   AU.addRequired<AAResultsWrapperPass>();
   AU.addRequired<LoopAccessLegacyAnalysis>();
-  AU.addRequired<IR2Vec_RD>();
   AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
 }

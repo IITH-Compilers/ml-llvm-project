@@ -56,7 +56,7 @@
 #include "llvm/Transforms/Utils/UnifyFunctionExitNodes.h"
 #include "llvm/Transforms/Vectorize.h"
 #include <cstdlib>
-
+#include "llvm/Transforms/IR2Vec-LOF/custom_loop_distribution.h"
 namespace {
   struct ForcePassLinking {
     ForcePassLinking() {
