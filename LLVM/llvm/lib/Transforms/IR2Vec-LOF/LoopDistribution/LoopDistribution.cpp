@@ -5,11 +5,24 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
+// #include <llvm/IR/LegacyPassManager.h>
+#include "llvm/IR/PassManager.h"
+#include "llvm/Passes/PassBuilder.h"
 
 #define LDIST_NAME "ir2vec-loop-distribution"
 #define DEBUG_TYPE LDIST_NAME
 
 using namespace llvm;
+
+static cl::opt<std::string> funcName("function", cl::Hidden, cl::Optional,
+                                     cl::desc("Name of the function"));
+
+static cl::opt<unsigned int> loopID("lID", cl::Hidden, cl::Optional,
+                                    cl::desc("ID of the loop set by RDG pass"));
+
+static cl::opt<std::string>
+    partitionPattern("partition", cl::Hidden, cl::Optional,
+                     cl::desc("partition for loop distribution"));
 
 // For max distribution
 NodeList LoopDistribution::topologicalWalk(DataDependenceGraph &Graph) {
@@ -125,11 +138,11 @@ void LoopDistribution::mergePartitionsOfContainer(std::string srcID,
 // with S3.
 Ordering LoopDistribution::populatePartitions(DataDependenceGraph &SCCGraph,
                                               Loop *il,
-                                              std::string partitionPattern) {
+                                              std::string partitionp) {
   Ordering order;
   // Parse partitions from string
   // Eg: S1|S2,S3 ==> S1 S2,S3 ==> S1 S2 S3
-  std::string s = partitionPattern;
+  std::string s = partitionp;
   std::string delimiter = "|";
   size_t pos = 0;
   SmallVector<std::string, 5> tokens;
@@ -364,9 +377,10 @@ bool LoopDistribution::fail(StringRef RemarkName, StringRef Message, Loop *L) {
 }
 
 
-bool LoopDistribution::computeDistributionOnLoop(DataDependenceGraph *SCCGraph, Loop *il, std::string partition){
-  createContainer(*SCCGraph);
-  Ordering order = populatePartitions(*SCCGraph, il, partition);
+bool LoopDistribution::computeDistributionOnLoop(DataDependenceGraph *SCCGraph, Loop *il, std::string partitionp){
+  
+        createContainer(*SCCGraph);
+  Ordering order = populatePartitions(*SCCGraph, il, partitionp);
 
   LLVM_DEBUG(errs() << "#nodes - container = " << container.size() << "\n");
 
@@ -424,15 +438,29 @@ void LoopDistribution::computeDistribution(SmallVector<DataDependenceGraph*, 5> 
 int size = loops.size();
 
 for(int i=0; i<size; i++){
-computeDistributionOnLoop(SCCGraphs[i], loops[i], dis_seqs[i]);
-}
+  PassBuilder pb;
+  FunctionAnalysisManager fam;
+  pb.registerFunctionAnalyses(fam);
+  Function &F = *loops[i]->getHeader()->getParent();
+  AA = & fam.getResult<AAManager>(F);
+  SE = & fam.getResult<ScalarEvolutionAnalysis>(F);
+  LI = & fam.getResult<LoopAnalysis>(F);
+  DT = & fam.getResult<DominatorTreeAnalysis>(F);
+  ORE = & fam.getResult<OptimizationRemarkEmitterAnalysis>(F);
+  auto &AC = fam.getResult<AssumptionAnalysis>(F);
+  auto &TTI = fam.getResult<TargetIRAnalysis>(F);
+  auto &TLI = fam.getResult<TargetLibraryAnalysis>(F);
 
+  auto &LAM = fam.getResult<LoopAnalysisManagerFunctionProxy>(F).getManager();
+   GetLAA = [&](Loop &L) -> const LoopAccessInfo & {
+    LoopStandardAnalysisResults AR = {*AA, AC, *DT, *LI, *SE, TLI, TTI, nullptr};
+    return LAM.getResult<LoopAccessAnalysis>(L, AR);
+  };
+ 
 
+    computeDistributionOnLoop(SCCGraphs[i], loops[i], dis_seqs[i]);
 }
-/**
- *
- *
- */
+}
 
 Loop* LoopDistribution::findLoop(unsigned int lid){
 
@@ -467,18 +495,17 @@ Loop* LoopDistribution::findLoop(unsigned int lid){
   assert(loopFound && il && "Loop ID not found");
  
   return il;
-
 }
 
-DataDependenceGraph* LoopDistribution::findSCCGraph(Loop *il, DependenceInfo DI){
+DataDependenceGraph* LoopDistribution::findSCCGraph(Loop *il, DependenceInfo &DI){
   
   if (il == nullptr){
   return nullptr;
   }
-  auto *LAA = &getAnalysis<LoopAccessLegacyAnalysis>();
-  auto *LAI = &LAA->getInfo(il);
+  // const LoopAccessInfo &LAI = LAA->getInfo(il);
+  const LoopAccessInfo &LAI = GetLAA(*il);
 
-  auto RDGraph = RDG(*AA, *SE, *LI, DI, *LAI, ORE);
+  auto RDGraph = RDG(*AA, *SE, *LI, DI, LAI, ORE);
   auto SCCGraph = RDGraph.computeRDGForInnerLoop(*il);
   
   return SCCGraph;
@@ -493,19 +520,19 @@ DataDependenceGraph* LoopDistribution::findSCCGraph(Loop *il, DependenceInfo DI)
           il->getHeader()->getParent()->getName().str() + ".dot",
       ""));
 */
-
 }
-bool LoopDistribution::runOnFunction(Function &F) {
-  if (F.getName() != funcName)
-    return false;
-  AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
-  SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
-  LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-  DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  ORE = &getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
-  DependenceInfo DI = DependenceInfo(&F, AA, SE, LI);
+bool LoopDistribution::findLoopAndDistribute(Function &F, ScalarEvolution *SE_, LoopInfo *LI_, DominatorTree *DT_, AAResults *AA_, OptimizationRemarkEmitter *ORE_, std::function<const LoopAccessInfo &(Loop &)> GetLAA_, DependenceInfo &DI){
+  SE = SE_;
+  LI = LI_;
+  DT = DT_;
+  AA = AA_;
+  ORE = ORE_;
+  GetLAA = GetLAA_;
 
-  auto il= findLoop(loopID);
+  if (F.getName() != fname)
+    return false;
+  
+  auto il= findLoop(lid);
    // Now walk the identified inner loops.
   LLVM_DEBUG(errs() << "Processing " << il->getHeader()->getParent()->getName() << "\n");
   
@@ -514,13 +541,37 @@ bool LoopDistribution::runOnFunction(Function &F) {
   }
 
   auto SCCGraph = findSCCGraph(il, DI);
-  if (!SCCGraph)
+  
+  if (!SCCGraph){
     return fail("EmptySCCGraph", "SCC Graph not generated", il);
+  }
+  
+  bool isdis = computeDistributionOnLoop(SCCGraph, il,this->partition);
 
-   return computeDistributionOnLoop(SCCGraph, il, partitionPattern);
+  return isdis;
 }
 
-void LoopDistribution::getAnalysisUsage(AnalysisUsage &AU) const {
+void LoopDistribution::run(Function &F, FunctionAnalysisManager &AM){
+
+}
+
+
+bool LoopDistributionWrapperPass::runOnFunction(Function &F) {
+  auto AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
+  auto SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
+  auto LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+  auto DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+  auto ORE = &getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
+  auto LAA = &getAnalysis<LoopAccessLegacyAnalysis>();
+  std::function<const LoopAccessInfo &(Loop &)> GetLAA = [&](Loop &L) -> const LoopAccessInfo & { return LAA->getInfo(&L); };
+ 
+  
+  DependenceInfo DI = DependenceInfo(&F, AA, SE, LI);
+
+return dist_helper.findLoopAndDistribute(F, SE, LI, DT, AA, ORE, GetLAA, DI);
+}
+
+void LoopDistributionWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<LoopInfoWrapperPass>();
   AU.addRequired<ScalarEvolutionWrapperPass>();
   AU.addRequired<AAResultsWrapperPass>();
@@ -529,8 +580,13 @@ void LoopDistribution::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
 }
 
+LoopDistributionWrapperPass::LoopDistributionWrapperPass() : FunctionPass(ID) { 
+dist_helper = LoopDistribution(funcName, loopID, partitionPattern);
+}
+
 // Registering the pass
-char LoopDistribution::ID = 0;
-static RegisterPass<LoopDistribution> X("LoopDistribution", "LoopDistribution");
+char LoopDistributionWrapperPass::ID = 0;
+
+static RegisterPass<LoopDistributionWrapperPass> X("LoopDistribution", "LoopDistribution");
 
 #undef DEBUG_TYPE

@@ -1,3 +1,6 @@
+#ifndef __IR2Vec_RDG_H__
+#define __IR2Vec_RDG_H__
+
 #include "llvm/Analysis/DDG.h"
 #include "llvm/Analysis/DependenceGraphBuilder.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
@@ -69,3 +72,5 @@ public:
 };
 
 } // namespace llvm
+
+# endif
