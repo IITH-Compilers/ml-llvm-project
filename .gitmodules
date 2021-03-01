@@ -1,0 +1,4 @@
+[submodule "IR2Vec"]
+	path = IR2Vec
+	url = git@github.com:IITH-Compilers/IR2Vec.git
+	branch = main
