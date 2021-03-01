@@ -25,15 +25,15 @@ class DistributeLoopEnv:
         self.startNode= None
         # self.discovered = []
         
-        self.isInputRequired = config.isInputRequired
-        self.loopcost_cache = utils.load_precomputed_loopcost() 
-        self.distributed_data = config.distributed_data
         self.mode = config.mode
+        if self.mode != 'inference': 
+            self.loopcost_cache = utils.load_precomputed_loopcost() 
+            self.distributed_data = config.distributed_data
+            self.second_loopcost_cache = set()
         
         # cols = list(self.loopcost_cache.index.names) + list(self.loopcost_cache.columns)
         # lastrow = self.loopcost_cache.iloc[-1,:]
         # self.second_loopcost_cache = pd.DataFrame(data=[list(lastrow.name)+list(lastrow)], columns=cols)
-        self.second_loopcost_cache = set()
     
     def reward_formula(self, distributedLoopCost, OriginalLoopCost):
         reward = 0
@@ -157,7 +157,8 @@ class DistributeLoopEnv:
         # all the nodes re visted the calculate the rewards by calling distribution pass
         possibleStartNodes = self.topology.findAllVertaxWithZeroWeights()
         if len(possibleStartNodes) == 0 :
-            reward = self.getReward()
+            if self.mode != 'inference':
+                reward = self.getReward()
             done = True
             next_hidden_state = next_hidden_state[nodeChoosen]
         else:
@@ -170,16 +171,18 @@ class DistributeLoopEnv:
     
     # input graph : jsonnx
     # return the state of the graph, all the possible starting nodes
-    def reset_env(self, graph, path):
-        attr = utils.getllFileAttributes(path)
-        self.path = path
+    def reset_env(self, graph, path=None):
+        if self.mode != 'inference':
+            attr = utils.getllFileAttributes(path)
+            self.loopId = attr['LOOP_ID']
+            self.home_dir = attr['HOME_DIR']
+            self.fun_id = attr['FUN_ID']
+            self.path = path
+        
         self.distribution = ""
         self.graph = graph
         self.fileName = graph['graph'][1][1]['FileName'].strip('\"') 
         self.functionName = graph['graph'][1][1]['Function'].strip('\"')
-        self.loopId = attr['LOOP_ID']
-        self.home_dir = attr['HOME_DIR']
-        self.fun_id = attr['FUN_ID']
         self.num_nodes = len(self.graph['nodes'])
         
 

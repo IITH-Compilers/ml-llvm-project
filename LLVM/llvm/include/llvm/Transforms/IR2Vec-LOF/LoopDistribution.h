@@ -40,6 +40,14 @@ private:
   unsigned int lid;
   std::string partition;
   bool distributed;
+  
+  void createContainer(DataDependenceGraph &ddg);
+  void addNodeToContainer(DDGNode *node, const std::string id);
+  void mergePartitionsOfContainer(std::string srcID, std::string destID);
+  Container container;
+  DataDependenceGraph* findSCCGraph(Loop *il, DependenceInfo &DI);
+  Loop* findLoop(unsigned int lid);
+public:
   OptimizationRemarkEmitter *ORE;
   AAResults *AA;
   ScalarEvolution *SE;
@@ -47,15 +55,6 @@ private:
   DominatorTree *DT;
   // LoopAccessLegacyAnalysis *LAA;
   std::function<const LoopAccessInfo &(Loop &)> GetLAA;
-  
-  void createContainer(DataDependenceGraph &ddg);
-  void addNodeToContainer(DDGNode *node, const std::string id);
-  void mergePartitionsOfContainer(std::string srcID, std::string destID);
-  Container container;
-  DataDependenceGraph* findSCCGraph(Loop *il, DependenceInfo &DI);
-  bool computeDistributionOnLoop(DataDependenceGraph *SCCGraph, Loop *il, std::string  partitionp);
-  Loop* findLoop(unsigned int lid);
-public:
   
   LoopDistribution() { distributed = false; }
   LoopDistribution(std::string fname, unsigned int lid, std::string partition){
@@ -65,11 +64,14 @@ public:
   distributed = false;
   }
   void computeDistribution(SmallVector<DataDependenceGraph*, 5> &SCCGraphs, SmallVector<Loop *, 5> &loops, SmallVector<std::string, 5> &dis_seqs);
+  
+  void run(Function &F, FunctionAnalysisManager &fam, SmallVector<DataDependenceGraph*, 5> &SCCGraphs, SmallVector<Loop *, 5> &loops, SmallVector<std::string, 5> &dis_seqs);
 
    // PreservedAnalyses 
-void run(Function &F, FunctionAnalysisManager &AM);
+// void run(Function &F, FunctionAnalysisManager &AM);
 
   bool findLoopAndDistribute(Function &F, ScalarEvolution *SE_, LoopInfo *LI_, DominatorTree *DT_, AAResults *AA_, OptimizationRemarkEmitter *ORE_, std::function<const LoopAccessInfo &(Loop &)> GetLAA_, DependenceInfo &DI);
+  bool computeDistributionOnLoop(DataDependenceGraph *SCCGraph, Loop *il, std::string  partitionp);
  
 };
 
@@ -80,6 +82,9 @@ public:
   LoopDistribution dist_helper;
   LoopDistributionWrapperPass();
   bool runOnFunction(Function &F) override;
+  
+  void run(SmallVector<DataDependenceGraph*, 5> &SCCGraphs, SmallVector<Loop *, 5> &loops, SmallVector<std::string, 5> &dis_seqs);
+  
   void getAnalysisUsage(AnalysisUsage &AU) const;
 };
 

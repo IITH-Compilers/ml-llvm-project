@@ -223,7 +223,7 @@ RDGData RDGWrapperPass::computeRDGForFunction(Function &F) {
                        (std::istreambuf_iterator<char>()    ) );
       
       // DotFiles_List.push_back(content); 
-      errs() << "String: " << content << "\n";
+      // errs() << "String: " << content << "\n";
 
       // Print Input File
       std::string Input_Filename = "I_" + s2 + "_F" +

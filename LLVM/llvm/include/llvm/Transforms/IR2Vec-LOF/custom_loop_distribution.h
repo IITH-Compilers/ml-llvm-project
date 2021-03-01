@@ -14,22 +14,23 @@
 namespace llvm {
 
 
-class custom_loop_distribution : public ModulePass {
+class custom_loop_distribution : public FunctionPass {
 
 public:
   static char ID;
   
-  LoopDistribution dist_helper; 
-  custom_loop_distribution() : ModulePass(ID) {
+  // LoopDistributionWrapperPass distwp_helper; 
+  LoopDistribution dist_helper;
+  custom_loop_distribution() : FunctionPass(ID) {
   initializecustom_loop_distributionPass(*PassRegistry::getPassRegistry());
   }
 
-  bool runOnModule(Module &M) override;
+  bool runOnFunction(Function &F) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 };
 
-ModulePass *createcustom_loop_distributionPass();
+FunctionPass *createcustom_loop_distributionPass();
 } // namespace llvm
 
 #endif

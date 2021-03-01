@@ -58,7 +58,7 @@ class Agent():
         random.seed(seed)
         state_size = config.state_size
         action_size = config.action_space
-        self.enable_lexographical_constraint=config.enable_lexographical_constraint
+        # self.enable_lexographical_constraint=config.enable_lexographical_constraint
         # Q-Network
         self.qnetwork_local = QNetwork(state_size, action_size, seed).to(device)
  #        self.qnetwork_local = DDP(self.qnetwork_local) 
@@ -278,7 +278,7 @@ class ReplayBuffer:
         self.experience = namedtuple("Experience", field_names=["state", "action", "reward", "next_state", "done"])
         random.seed(seed)
         self.action_mask_flag = False
-        self.enable_lexographical_constraint = config.enable_lexographical_constraint
+        # self.enable_lexographical_constraint = config.enable_lexographical_constraint
     
     def add(self, state, action, reward, next_state, done):
         """Add a new experience to memory."""

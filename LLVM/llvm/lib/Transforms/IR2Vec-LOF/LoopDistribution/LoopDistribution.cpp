@@ -6,8 +6,10 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 // #include <llvm/IR/LegacyPassManager.h>
-#include "llvm/IR/PassManager.h"
+// #include "llvm/IR/PassManager.h"
 #include "llvm/Passes/PassBuilder.h"
+#include "llvm/Analysis/LoopAnalysisManager.h"
+#include "llvm/Analysis/LoopAccessAnalysis.h"
 
 #define LDIST_NAME "ir2vec-loop-distribution"
 #define DEBUG_TYPE LDIST_NAME
@@ -551,7 +553,64 @@ bool LoopDistribution::findLoopAndDistribute(Function &F, ScalarEvolution *SE_, 
   return isdis;
 }
 
-void LoopDistribution::run(Function &F, FunctionAnalysisManager &AM){
+void LoopDistribution::run(Function &F, FunctionAnalysisManager &fam, SmallVector<DataDependenceGraph*, 5> &SCCGraphs, SmallVector<Loop *, 5> &loops, SmallVector<std::string, 5> &dis_seqs){
+
+        int size = loops.size();
+   PassBuilder pb;
+   pb.registerFunctionAnalyses(fam);
+
+for(int i=0; i<size; i++){
+   errs ()  << i+1 << " iterationsn\n";  
+  // Function &F = *loops[i]->getHeader()->getParent();
+  AA = & fam.getResult<AAManager>(F);
+  SE = & fam.getResult<ScalarEvolutionAnalysis>(F);
+  LI = & fam.getResult<LoopAnalysis>(F);
+  DT = & fam.getResult<DominatorTreeAnalysis>(F);
+  ORE = & fam.getResult<OptimizationRemarkEmitterAnalysis>(F);
+  auto &AC = fam.getResult<AssumptionAnalysis>(F);
+  auto &TTI = fam.getResult<TargetIRAnalysis>(F);
+  auto &TLI = fam.getResult<TargetLibraryAnalysis>(F);
+ errs () << "Call to GETLAM..."; 
+
+  auto &LAM = fam.getResult<LoopAnalysisManagerFunctionProxy>(F).getManager();
+ errs () << "Call to GETLAA..."; 
+  GetLAA = [&](Loop &L) -> const LoopAccessInfo & {
+    LoopStandardAnalysisResults AR = {*AA, AC, *DT, *LI, *SE, TLI, TTI, nullptr};
+    return LAM.getResult<LoopAccessAnalysis>(L, AR);
+  };
+ 
+    computeDistributionOnLoop(SCCGraphs[i], loops[i], dis_seqs[i]);
+}
+
+}
+
+void LoopDistributionWrapperPass::run(SmallVector<DataDependenceGraph*, 5> &SCCGraphs, SmallVector<Loop *, 5> &loops, SmallVector<std::string, 5> &dis_seqs){
+
+        int size = loops.size();
+
+for(int i=0; i<size; i++){
+  PassBuilder pb;
+  FunctionAnalysisManager fam;
+  pb.registerFunctionAnalyses(fam);
+  Function &F = *loops[i]->getHeader()->getParent();
+  dist_helper.AA = & fam.getResult<AAManager>(F);
+  dist_helper.SE = & fam.getResult<ScalarEvolutionAnalysis>(F);
+  dist_helper.LI = & fam.getResult<LoopAnalysis>(F);
+  dist_helper.DT = & fam.getResult<DominatorTreeAnalysis>(F);
+  dist_helper.ORE = & fam.getResult<OptimizationRemarkEmitterAnalysis>(F);
+  auto &AC = fam.getResult<AssumptionAnalysis>(F);
+  auto &TTI = fam.getResult<TargetIRAnalysis>(F);
+  auto &TLI = fam.getResult<TargetLibraryAnalysis>(F);
+
+  auto &LAM = fam.getResult<LoopAnalysisManagerFunctionProxy>(F).getManager();
+  
+  dist_helper.GetLAA = [&](Loop &L) -> const LoopAccessInfo & {
+    LoopStandardAnalysisResults AR = {*(dist_helper.AA), AC, *(dist_helper.DT), *(dist_helper.LI), *(dist_helper.SE), TLI, TTI, nullptr};
+    return LAM.getResult<LoopAccessAnalysis>(L, AR);
+  };
+ 
+    dist_helper.computeDistributionOnLoop(SCCGraphs[i], loops[i], dis_seqs[i]);
+}
 
 }
 
@@ -563,8 +622,18 @@ bool LoopDistributionWrapperPass::runOnFunction(Function &F) {
   auto DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   auto ORE = &getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
   auto LAA = &getAnalysis<LoopAccessLegacyAnalysis>();
+/*auto AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
+  auto TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
+    auto *TLIP = getAnalysisIfAvailable<TargetLibraryInfoWrapperPass>();
+    auto *TLI = TLIP ? &TLIP->getTLI(F) : nullptr;
+
+  auto &LAM = &getAnalysis<LoopAnalysisManagerFunctionProxy>();
+  
+  std::function<const LoopAccessInfo &(Loop &)> GetLAA = [&](Loop &L) -> const LoopAccessInfo & {
+    LoopStandardAnalysisResults AR = {*AA, *AC, *DT, *LI, *SE, *TLI, *TTI, nullptr};
+    return LAM.getResult<LoopAccessAnalysis>(L, AR);
+  };*/
   std::function<const LoopAccessInfo &(Loop &)> GetLAA = [&](Loop &L) -> const LoopAccessInfo & { return LAA->getInfo(&L); };
- 
   
   DependenceInfo DI = DependenceInfo(&F, AA, SE, LI);
 
@@ -578,10 +647,15 @@ void LoopDistributionWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<LoopAccessLegacyAnalysis>();
   AU.addRequired<DominatorTreeWrapperPass>();
   AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
+  AU.addRequired<AssumptionCacheTracker>();
+  AU.addRequired<TargetLibraryInfoWrapperPass>();
+  AU.addRequired<TargetTransformInfoWrapperPass>();
+  //AU.addRequired<LoopAccessAnalysis>();*/
+
 }
 
 LoopDistributionWrapperPass::LoopDistributionWrapperPass() : FunctionPass(ID) { 
-dist_helper = LoopDistribution(funcName, loopID, partitionPattern);
+ dist_helper = LoopDistribution(funcName, loopID, partitionPattern);
 }
 
 // Registering the pass

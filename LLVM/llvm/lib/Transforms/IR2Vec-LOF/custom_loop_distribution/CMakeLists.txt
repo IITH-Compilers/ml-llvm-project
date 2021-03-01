@@ -1,5 +1,5 @@
 add_llvm_component_library(LLVMcustom_loop_distribution STATIC BUILDTREE_ONLY
-        custom_loop_distribution.cpp arbName.py)
+        custom_loop_distribution.cpp ../LoopDistribution/LoopDistribution.cpp)
         
 # add_dependencies(custom_loop_distribution intrinsics_gen)
 include_directories(/home/venkat/anaconda3/include/python3.7m)
