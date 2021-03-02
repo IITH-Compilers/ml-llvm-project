@@ -1,9 +1,9 @@
 #include "llvm/Transforms/IR2Vec-LOF/IR2Vec-SCC.h"
-#include "llvm/Transforms/IR2Vec-LOF/RDG.h"
 // #include "IR2Vec.h"
+#include "llvm/Transforms/IR2Vec-LOF/RDG.h"
 
-#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/DepthFirstIterator.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -32,10 +32,12 @@
 
 using namespace llvm;
 
-static std::string vocab_file =  "/home/venkat/IF-DV/Rohit/IR2Vec-LoopOptimizationFramework/IR2Vec/vocabulary/seedEmbeddingVocab-300-llvm10.txt";
+static std::string vocab_file =
+    "/home/venkat/IF-DV/Rohit/IR2Vec-LoopOptimizationFramework/IR2Vec/"
+    "vocabulary/seedEmbeddingVocab-300-llvm10.txt";
 
 RDGWrapperPass::RDGWrapperPass() : FunctionPass(ID) {
-    initializeRDGWrapperPassPass(*PassRegistry::getPassRegistry());
+  initializeRDGWrapperPassPass(*PassRegistry::getPassRegistry());
 }
 
 char RDGWrapperPass::ID = 0;
@@ -44,7 +46,8 @@ char RDGWrapperPass::ID = 0;
 
 void RDGWrapperPass::Print_IR2Vec_File(
     DataDependenceGraph &G, std::string Filename, std::string ll_name,
-    llvm::SmallMapVector<const llvm::Instruction *, IR2Vec::Vector, 128> instVecMap) {
+    llvm::SmallMapVector<const llvm::Instruction *, IR2Vec::Vector, 128>
+        instVecMap) {
 
   // Code to generate Input File with IR2Vec Embedding as a node to an RDG
   std::error_code EC;
@@ -155,10 +158,11 @@ bool RDGWrapperPass::runOnFunction(Function &F) {
 
 RDGData RDGWrapperPass::computeRDGForFunction(Function &F) {
   raw_ostream &operator<<(raw_ostream &OS, const DataDependenceGraph &G);
-    
+
   RDGData data;
   // Collect IR2Vec encoding vector for each instruction in instVecMap
-  auto ir2vec = IR2Vec::IR2VecTy(*F.getParent(), IR2Vec::IR2VecMode::FlowAware, vocab_file);
+  auto ir2vec = IR2Vec::IR2VecTy(*F.getParent(), IR2Vec::IR2VecMode::FlowAware,
+                                 vocab_file);
   auto instVecMap = ir2vec.getInstVecMap();
 
   // Compute necessary parameters for DataDependenceGraph
@@ -219,10 +223,10 @@ RDGData RDGWrapperPass::computeRDGForFunction(Function &F) {
 
       std::ifstream ifs(SCC_Filename);
       std::string content;
-      content.assign( (std::istreambuf_iterator<char>(ifs) ),
-                       (std::istreambuf_iterator<char>()    ) );
-      
-      // DotFiles_List.push_back(content); 
+      content.assign((std::istreambuf_iterator<char>(ifs)),
+                     (std::istreambuf_iterator<char>()));
+
+      // DotFiles_List.push_back(content);
       // errs() << "String: " << content << "\n";
 
       // Print Input File
@@ -236,9 +240,9 @@ RDGData RDGWrapperPass::computeRDGForFunction(Function &F) {
 
       std::ifstream ifs_inputfile(Input_Filename);
       std::string content_input;
-      content_input.assign( (std::istreambuf_iterator<char>(ifs_inputfile) ),
-                       (std::istreambuf_iterator<char>()    ) );
-      // InputFiles_List.push_back(content_input); 
+      content_input.assign((std::istreambuf_iterator<char>(ifs_inputfile)),
+                           (std::istreambuf_iterator<char>()));
+      // InputFiles_List.push_back(content_input);
       data.input_rdgs.push_back(content_input);
       std::string totalSCC_Filename = "totalSCC.txt";
       std::error_code EC;
@@ -256,16 +260,13 @@ RDGData RDGWrapperPass::computeRDGForFunction(Function &F) {
   return data;
 }
 
-
-INITIALIZE_PASS_BEGIN(RDGWrapperPass, "rdg",
-                      "IR2vec SCC for RDG", true, true)
+INITIALIZE_PASS_BEGIN(RDGWrapperPass, "rdg", "IR2vec SCC for RDG", true, true)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopAccessLegacyAnalysis)
 INITIALIZE_PASS_DEPENDENCY(OptimizationRemarkEmitterWrapperPass)
-INITIALIZE_PASS_END(RDGWrapperPass, "rdg",
-                    "IR2vec SCC for RDG", true, true)
+INITIALIZE_PASS_END(RDGWrapperPass, "rdg", "IR2vec SCC for RDG", true, true)
 
 void RDGWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<LoopInfoWrapperPass>();

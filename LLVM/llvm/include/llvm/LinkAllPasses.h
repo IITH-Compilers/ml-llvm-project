@@ -57,6 +57,7 @@
 #include "llvm/Transforms/Vectorize.h"
 #include <cstdlib>
 #include "llvm/Transforms/IR2Vec-LOF/custom_loop_distribution.h"
+#include "llvm/Transforms/IR2Vec-LOF/LoopDistribution.h"
 namespace {
   struct ForcePassLinking {
     ForcePassLinking() {
@@ -227,7 +228,8 @@ namespace {
       (void) llvm::createWarnMissedTransformationsPass();
       (void) llvm::createHardwareLoopsPass();
       (void)llvm::createInjectTLIMappingsLegacyPass();
-      (void) llvm::createcustom_loop_distributionPass();
+      // (void) llvm::createcustom_loop_distributionPass();
+      // (void) llvm::createLoopDistributionWrapperPassPass();
 
       (void)new llvm::IntervalPartition();
       (void)new llvm::ScalarEvolutionWrapperPass();

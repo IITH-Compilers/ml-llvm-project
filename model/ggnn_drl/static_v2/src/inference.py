@@ -71,7 +71,7 @@ def run_predict_multiple_loops(agent, config, rdgs):
     seqs = []
     for rdg in rdgs:
         
-        print(rdg)
+        # print(rdg)
         reward, distributed_seq = run_predict_single_loop(agent, config, rdg, env)
         seqs.append(distributed_seq)
  

@@ -32,7 +32,6 @@
 
 #define DEBUG_Type "custom_loop_distribution"
 
-#define enable_rdg 1
 using namespace llvm;
 
 bool custom_loop_distribution::runOnFunction(Function &F) {
@@ -59,7 +58,7 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
     errs () << "No RDGs";
     return false;
   }
-
+  errs () << "Number rdg generated : " << RDG_List.size();
   SmallVector<std::string, 5> distributed_seqs;
 
   // const char *scriptDirectoryName = "/home/venkat/IF-DV/Rohit/IR2Vec-LoopOptimizationFramework/LLVM/llvm/lib/Transforms/IR2Vec-LOF/custom_loop_distribution/arbName.py";
@@ -89,13 +88,16 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
     // Load the module object
   pModule = PyImport_Import(pName);
 
-  errs() << "pModule: " << pModule << "............" << "\n";
+  PyErr_Print();
+
 
   if (pModule == NULL) {
     printf("ERROR importing module\n");
     PyErr_Print();
 // exit(-1);
   } else {
+    errs() << "pModule: " << pModule << "............" << "\n";
+    Py_INCREF(pModule);
     //  PyObject* myFunction = PyObject_GetAttrString(myModule,(char*)"myabs");
     //  PyObject* args = PyTuple_Pack(1,PyFloat_FromDouble(2.0));
 
@@ -111,19 +113,22 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
       printf("ERROR getting Hello attribute");
       // exit(-1);
     PyErr_Print();
-} else {
+    } else {
+
+  Py_INCREF(pFunc);
   // PyObject* args = PyTuple_Pack(1,PyFloat_FromDouble(2.0));
       
       if (PyCallable_Check(pFunc)) {
-        #if enable_rdg
         int t =0;
-        errs () << t++ << " :aaaaaaaa" << "\n";
+        // errs () << t++ << " :aaaaaaaa" << "\n";
         PyObject *my_list = PyList_New(0);
-        errs () << t++ << " :bbbbbb" << "\n";
+        Py_INCREF(my_list);
+        // errs () << t++ << " :bbbbbb" << "\n";
         for(auto rdg: RDG_List){
           // errs () << t++ << rdg.c_str() << "\n";
           PyObject *py_rdg = PyUnicode_FromString(rdg.c_str());
           PyList_Append(my_list, py_rdg);
+          Py_INCREF(py_rdg);
         }
 
         if(my_list) {
@@ -136,11 +141,22 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
         PyObject* arglist = PyTuple_Pack(1, my_list);
         if(!arglist) {
           errs() << "no arglist\n";
+          PyErr_Print();
         }
+        Py_INCREF(arglist);
         // errs () << t++ << "\n";
+        presult=PyObject_CallObject(pFunc, arglist);
+        Py_INCREF(presult); 
+        /*try{
         presult=PyObject_CallObject(pFunc, arglist); 
-        errs () << t++ << ":135\n";
-        errs() << "11111111111111\n";
+        }
+        catch(...){
+        PyErr_Print();
+        }*/
+        
+        //PyErr_Print();
+
+        // errs () << t++ << ":135\n";
 
         if(!presult) {
           errs() << "no presult\n";
@@ -148,12 +164,10 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
         }
 
         if (!PyList_Check(presult)) {
-          errs() << "333333333333333\n";
           // PyErr_Format(PyExc_TypeError, "The argument must be of list or subtype of list");
           PyErr_BadArgument();
           return false;
         }
-        errs() << "222222222222222\n";
         
         int size = PyList_Size(presult);
         errs () << size << " size of list \n";
@@ -165,46 +179,52 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
           errs() << dis_seq <<"\n";
           distributed_seqs.push_back(dis_seq);
         }
-        #endif
-         /* pValue=Py_BuildValue("(z)",(char*)"something");
-          PyErr_Print();
-          printf("Let's give this a shot!\n");
-          presult=PyObject_CallObject(pFunc,pValue);
-          PyErr_Print();*/
+      Py_DECREF(presult);
+      Py_DECREF(my_list);
       Py_DECREF(arglist);
       } else 
       {
-        errs() << "yyyyyyyyyyyyyyyy\n";
         PyErr_Print();
       }
 
-      // printf("Result is %ld\n",PyLong_AsLong(presult));
 
       // Clean up
       Py_DECREF(pModule);
       Py_DECREF(pName);
 
   // Finish the Python Interpreter
-      Py_Finalize();
+//      Py_Finalize();
     }
   }
-
+      Py_Finalize();
+ 
   // LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   // LLVMContext &Context = F.getContext();
-  FunctionAnalysisManager fam;
-  errs () << "Call to run...\n";
-  dist_helper.run(F, fam, SCCGraphs, loops, distributed_seqs);
+  // FunctionAnalysisManager fam;
+  errs () << "Call to runwihAnalysis...\n";
+  auto AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
+  auto SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
+  auto LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+  auto DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+  auto ORE = &getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
+  auto LAA = &getAnalysis<LoopAccessLegacyAnalysis>();
+  std::function<const LoopAccessInfo &(Loop &)> GetLAA = [&](Loop &L) -> const LoopAccessInfo & { return LAA->getInfo(&L); };
+    
+  DependenceInfo DI = DependenceInfo(&F, AA, SE, LI);
+  dist_helper.runwithAnalysis(SCCGraphs, loops, distributed_seqs,SE, LI, DT, AA, ORE, GetLAA, DI );
 
   
   return false;
 }
 
 void custom_loop_distribution::getAnalysisUsage(AnalysisUsage &AU) const {
-//  AU.addRequired<LoopInfoWrapperPass>();
-//  AU.addRequired<LoopAccessLegacyAnalysis>();
   AU.addRequired<RDGWrapperPass>();
-// AU.setPreservesAll();
-
+  AU.addRequired<LoopInfoWrapperPass>();
+  AU.addRequired<ScalarEvolutionWrapperPass>();
+  AU.addRequired<AAResultsWrapperPass>();
+  AU.addRequired<LoopAccessLegacyAnalysis>();
+  AU.addRequired<DominatorTreeWrapperPass>();
+  AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
 }
 
 // Registering the pass
@@ -213,9 +233,13 @@ char custom_loop_distribution::ID = 0;
 INITIALIZE_PASS_BEGIN(custom_loop_distribution, "custom_loop_distribution",
                       "Distribute loop with predicted distribution sequence",
                       false, false)
-// INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
-// INITIALIZE_PASS_DEPENDENCY(LoopAccessLegacyAnalysis)
 INITIALIZE_PASS_DEPENDENCY(RDGWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(OptimizationRemarkEmitterWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(LoopAccessLegacyAnalysis)
 INITIALIZE_PASS_END(custom_loop_distribution, "custom_loop_distribution",
                     "Distribute loop with predicted distribution sequence",
                     false, false)

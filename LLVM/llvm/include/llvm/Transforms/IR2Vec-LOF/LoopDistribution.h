@@ -11,8 +11,13 @@
 #include "llvm/IR/Function.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/InitializePasses.h"
+namespace llvm {
 
-using namespace llvm;
+/*extern cl::opt<std::string> funcName;
+extern cl::opt<unsigned int> loopID;
+extern cl::opt<std::string> partitionPattern;
+*/
 using NodeList = SmallVector<DDGNode *, 64>;
 using InstList = SmallVector<Instruction *, 64>;
 using Container = StringMap<InstList>;
@@ -66,14 +71,16 @@ public:
   void computeDistribution(SmallVector<DataDependenceGraph*, 5> &SCCGraphs, SmallVector<Loop *, 5> &loops, SmallVector<std::string, 5> &dis_seqs);
   
   void run(Function &F, FunctionAnalysisManager &fam, SmallVector<DataDependenceGraph*, 5> &SCCGraphs, SmallVector<Loop *, 5> &loops, SmallVector<std::string, 5> &dis_seqs);
-
-   // PreservedAnalyses 
-// void run(Function &F, FunctionAnalysisManager &AM);
-
+  
   bool findLoopAndDistribute(Function &F, ScalarEvolution *SE_, LoopInfo *LI_, DominatorTree *DT_, AAResults *AA_, OptimizationRemarkEmitter *ORE_, std::function<const LoopAccessInfo &(Loop &)> GetLAA_, DependenceInfo &DI);
+  
   bool computeDistributionOnLoop(DataDependenceGraph *SCCGraph, Loop *il, std::string  partitionp);
- 
+
+  void runwithAnalysis(SmallVector<DataDependenceGraph*, 5> &SCCGraphs, SmallVector<Loop *, 5> &loops, SmallVector<std::string, 5> &dis_seqs,ScalarEvolution *SE_, LoopInfo *LI_, DominatorTree *DT_, AAResults *AA_, OptimizationRemarkEmitter *ORE_, std::function<const LoopAccessInfo &(Loop &)> GetLAA_, DependenceInfo &DI ); 
 };
+//}
+
+// namespace llvm {
 
 class LoopDistributionWrapperPass : public FunctionPass {
 
@@ -81,11 +88,16 @@ public:
   static char ID;
   LoopDistribution dist_helper;
   LoopDistributionWrapperPass();
+  /*LoopDistributionWrapperPass(): FunctionPass(ID) { 
+  initializeLoopDistributionWrapperPassPass(*PassRegistry::getPassRegistry()); 
+   dist_helper = LoopDistribution(funcName, loopID, partitionPattern);
+  }*/
   bool runOnFunction(Function &F) override;
   
   void run(SmallVector<DataDependenceGraph*, 5> &SCCGraphs, SmallVector<Loop *, 5> &loops, SmallVector<std::string, 5> &dis_seqs);
   
   void getAnalysisUsage(AnalysisUsage &AU) const;
 };
-
+  FunctionPass *createLoopDistributionWrapperPassPass();
+}
 #endif

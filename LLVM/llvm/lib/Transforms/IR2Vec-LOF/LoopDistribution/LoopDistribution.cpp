@@ -10,6 +10,7 @@
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
+#include "llvm/InitializePasses.h"
 
 #define LDIST_NAME "ir2vec-loop-distribution"
 #define DEBUG_TYPE LDIST_NAME
@@ -25,6 +26,11 @@ static cl::opt<unsigned int> loopID("lID", cl::Hidden, cl::Optional,
 static cl::opt<std::string>
     partitionPattern("partition", cl::Hidden, cl::Optional,
                      cl::desc("partition for loop distribution"));
+
+LoopDistributionWrapperPass::LoopDistributionWrapperPass() : FunctionPass(ID) { 
+        initializeLoopDistributionWrapperPassPass(*PassRegistry::getPassRegistry());
+    // dist_helper = LoopDistribution(funcName, loopID, partitionPattern);
+}
 
 // For max distribution
 NodeList LoopDistribution::topologicalWalk(DataDependenceGraph &Graph) {
@@ -530,7 +536,7 @@ bool LoopDistribution::findLoopAndDistribute(Function &F, ScalarEvolution *SE_, 
   AA = AA_;
   ORE = ORE_;
   GetLAA = GetLAA_;
-
+  errs  () << fname << "--------------\n";
   if (F.getName() != fname)
     return false;
   
@@ -553,12 +559,27 @@ bool LoopDistribution::findLoopAndDistribute(Function &F, ScalarEvolution *SE_, 
   return isdis;
 }
 
+
+void LoopDistribution::runwithAnalysis(SmallVector<DataDependenceGraph*, 5> &SCCGraphs, SmallVector<Loop *, 5> &loops, SmallVector<std::string, 5> &dis_seqs,ScalarEvolution *SE_, LoopInfo *LI_, DominatorTree *DT_, AAResults *AA_, OptimizationRemarkEmitter *ORE_, std::function<const LoopAccessInfo &(Loop &)> GetLAA_, DependenceInfo &DI ){
+  int size = loops.size();
+  SE = SE_;
+  LI = LI_;
+  DT = DT_;
+  AA = AA_;
+  ORE = ORE_;
+  GetLAA = GetLAA_;
+for(int i=0; i<size; i++){
+   errs ()  << i+1 << " iterationsn\n";  
+    computeDistributionOnLoop(SCCGraphs[i], loops[i], dis_seqs[i]);
+}
+
+}
+
 void LoopDistribution::run(Function &F, FunctionAnalysisManager &fam, SmallVector<DataDependenceGraph*, 5> &SCCGraphs, SmallVector<Loop *, 5> &loops, SmallVector<std::string, 5> &dis_seqs){
 
         int size = loops.size();
    PassBuilder pb;
    pb.registerFunctionAnalyses(fam);
-
 for(int i=0; i<size; i++){
    errs ()  << i+1 << " iterationsn\n";  
   // Function &F = *loops[i]->getHeader()->getParent();
@@ -573,6 +594,9 @@ for(int i=0; i<size; i++){
  errs () << "Call to GETLAM..."; 
 
   auto &LAM = fam.getResult<LoopAnalysisManagerFunctionProxy>(F).getManager();
+    
+ fam.registerPass([&] { return LoopAnalysisManagerFunctionProxy(LAM); });
+
  errs () << "Call to GETLAA..."; 
   GetLAA = [&](Loop &L) -> const LoopAccessInfo & {
     LoopStandardAnalysisResults AR = {*AA, AC, *DT, *LI, *SE, TLI, TTI, nullptr};
@@ -640,6 +664,15 @@ bool LoopDistributionWrapperPass::runOnFunction(Function &F) {
 return dist_helper.findLoopAndDistribute(F, SE, LI, DT, AA, ORE, GetLAA, DI);
 }
 
+INITIALIZE_PASS_BEGIN(LoopDistributionWrapperPass, "LoopDistribution", "Distribute loop with predicted distribution sequence",false, false)
+INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(OptimizationRemarkEmitterWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(LoopAccessLegacyAnalysis)
+INITIALIZE_PASS_END(LoopDistributionWrapperPass, "LoopDistribution", "Distribute loop with predicted distribution sequence",false, false)
+
 void LoopDistributionWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<LoopInfoWrapperPass>();
   AU.addRequired<ScalarEvolutionWrapperPass>();
@@ -647,20 +680,18 @@ void LoopDistributionWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<LoopAccessLegacyAnalysis>();
   AU.addRequired<DominatorTreeWrapperPass>();
   AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
-  AU.addRequired<AssumptionCacheTracker>();
+  /* AU.addRequired<AssumptionCacheTracker>();
   AU.addRequired<TargetLibraryInfoWrapperPass>();
   AU.addRequired<TargetTransformInfoWrapperPass>();
-  //AU.addRequired<LoopAccessAnalysis>();*/
+  AU.addRequired<LoopAccessAnalysis>();*/
 
 }
 
-LoopDistributionWrapperPass::LoopDistributionWrapperPass() : FunctionPass(ID) { 
- dist_helper = LoopDistribution(funcName, loopID, partitionPattern);
-}
 
 // Registering the pass
 char LoopDistributionWrapperPass::ID = 0;
+FunctionPass *llvm::createLoopDistributionWrapperPassPass() { return new LoopDistributionWrapperPass(); }
 
-static RegisterPass<LoopDistributionWrapperPass> X("LoopDistribution", "LoopDistribution");
+// static RegisterPass<LoopDistributionWrapperPass> X("LoopDistribution", "LoopDistribution");
 
 #undef DEBUG_TYPE

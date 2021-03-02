@@ -23,6 +23,7 @@ set(LLVM_LINK_COMPONENTS
   Vectorize
   Passes
   RDG
+  LoopDistribution
   custom_loop_distribution
   )
 
@@ -46,10 +47,11 @@ export_executable_symbols(opt)
 if(LLVM_BUILD_EXAMPLES)
     target_link_libraries(opt PRIVATE ExampleIRTransforms)
 endif(LLVM_BUILD_EXAMPLES)
-
+    
+# if(IR2VEC_INSTALL_DIR)
     set(IR2VEC_INSTALL_DIR "" CACHE PATH "IR2Vec installation directory")
     include_directories("${IR2VEC_INSTALL_DIR}/include")
     target_link_libraries(opt PUBLIC ${IR2VEC_INSTALL_DIR}/lib/libIR2Vec.a)
     add_library(libIR2Vec.a SHARED IMPORTED) 
     #     set_target_properties(libIR2Vec.a PROPERTIES IMPORTED_LOCATION ${IR2VEC_INSTALL_DIR}/lib/libIR2Vec.a)
-
+    # endif(IR2VEC_INSTALL_DIR)
