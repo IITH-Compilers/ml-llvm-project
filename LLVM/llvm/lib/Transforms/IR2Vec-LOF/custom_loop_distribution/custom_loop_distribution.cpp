@@ -33,7 +33,14 @@
 #define DEBUG_Type "custom_loop_distribution"
 
 using namespace llvm;
+custom_loop_distribution::custom_loop_distribution() : FunctionPass(ID) {
+  initializecustom_loop_distributionPass(*PassRegistry::getPassRegistry());
+  Py_Initialize();
+  }
 
+custom_loop_distribution::~custom_loop_distribution() {
+    Py_Finalize();
+}
 bool custom_loop_distribution::runOnFunction(Function &F) {
 // RDG Generation
 
@@ -46,35 +53,31 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
   //for(auto &F : M) {
   RDGWrapperPass &R = getAnalysis<RDGWrapperPass>() ;
   RDGData data = R.getRDGInfo();
-  errs () << "hello \n";
+  // errs () << "hello \n";
     
   RDG_List.insert(RDG_List.end(), data.input_rdgs.begin(), data.input_rdgs.end()); 
   SCCGraphs.insert(SCCGraphs.end(), data.SCCGraphs.begin(), data.SCCGraphs.end()); 
   loops.insert(loops.end(), data.loops.begin(), data.loops.end()); 
-    // for(auto s : str_list)
-      // RDG_List.push_back(s);
-  //}
+  
+  for(auto l : loops) { 
+  l->dump();
+  errs() << l << "\n";
+  }
+
   if (RDG_List.size() == 0){
-    errs () << "No RDGs";
+    errs () << "No RDGs\n";
     return false;
   }
-  errs () << "Number rdg generated : " << RDG_List.size();
+
+  assert(RDG_List.size() == SCCGraphs.size() && RDG_List.size() == loops.size() && "RDG_List, SCCgraphs and loops list should of same size.");
+
+  errs () << "Number rdg generated : " << RDG_List.size() << "\n";
   SmallVector<std::string, 5> distributed_seqs;
 
-  // const char *scriptDirectoryName = "/home/venkat/IF-DV/Rohit/IR2Vec-LoopOptimizationFramework/LLVM/llvm/lib/Transforms/IR2Vec-LOF/custom_loop_distribution/arbName.py";
-
-    /* Py_Initialize();
-    PyObject *sysPath = PySys_GetObject("path");
-    PyObject *path = PyUnicode_FromString(scriptDirectoryName);
-    errs() << "path: " << path << "............" << "\n";
-    int result = PyList_Insert(sysPath, 0, path);
-    PyObject *pModule = PyImport_ImportModule("arbName");
-    errs() << "pModule: " << pModule << "............" << "\n";
-    */
   PyObject *pName, *pModule, *pDict, *pFunc, *pValue, *presult;
 
   // Initialize the Python Interpreter
-  Py_Initialize();
+  // Py_Initialize();
   PyRun_SimpleString("import sys");
   PyRun_SimpleString("import os");
 
@@ -131,9 +134,10 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
           Py_INCREF(py_rdg);
         }
 
-        if(my_list) {
+        /* if(my_list) {
           errs() << "my_list present\n";
-        }
+        } */
+
         // errs () << t++ << "\n";
         // PyObject *arglist = Py_BuildValue("(o)", my_list);
 
@@ -147,13 +151,7 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
         // errs () << t++ << "\n";
         presult=PyObject_CallObject(pFunc, arglist);
         Py_INCREF(presult); 
-        /*try{
-        presult=PyObject_CallObject(pFunc, arglist); 
-        }
-        catch(...){
-        PyErr_Print();
-        }*/
-        
+                
         //PyErr_Print();
 
         // errs () << t++ << ":135\n";
@@ -165,7 +163,9 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
 
         if (!PyList_Check(presult)) {
           // PyErr_Format(PyExc_TypeError, "The argument must be of list or subtype of list");
+          errs () << "Result is not list";
           PyErr_BadArgument();
+          Py_Finalize();
           return false;
         }
         
@@ -196,7 +196,7 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
 //      Py_Finalize();
     }
   }
-      Py_Finalize();
+//  Py_Finalize();
  
   // LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   // LLVMContext &Context = F.getContext();
@@ -211,10 +211,13 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
   std::function<const LoopAccessInfo &(Loop &)> GetLAA = [&](Loop &L) -> const LoopAccessInfo & { return LAA->getInfo(&L); };
     
   DependenceInfo DI = DependenceInfo(&F, AA, SE, LI);
-  dist_helper.runwithAnalysis(SCCGraphs, loops, distributed_seqs,SE, LI, DT, AA, ORE, GetLAA, DI );
-
   
-  return false;
+  bool isdis = dist_helper.runwithAnalysis(SCCGraphs, loops, distributed_seqs,SE, LI, DT, AA, ORE, GetLAA, DI );
+ 
+ if (isdis){
+ errs () << "Code is distributed..\n";
+ } 
+  return isdis;
 }
 
 void custom_loop_distribution::getAnalysisUsage(AnalysisUsage &AU) const {

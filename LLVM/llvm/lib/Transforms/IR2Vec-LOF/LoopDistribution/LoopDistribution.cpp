@@ -29,7 +29,7 @@ static cl::opt<std::string>
 
 LoopDistributionWrapperPass::LoopDistributionWrapperPass() : FunctionPass(ID) { 
         initializeLoopDistributionWrapperPassPass(*PassRegistry::getPassRegistry());
-    // dist_helper = LoopDistribution(funcName, loopID, partitionPattern);
+    dist_helper = LoopDistribution(funcName, loopID, partitionPattern);
 }
 
 // For max distribution
@@ -387,6 +387,7 @@ bool LoopDistribution::fail(StringRef RemarkName, StringRef Message, Loop *L) {
 
 bool LoopDistribution::computeDistributionOnLoop(DataDependenceGraph *SCCGraph, Loop *il, std::string partitionp){
   
+errs () << "Partition pattern : " << partitionp << "\n";
         createContainer(*SCCGraph);
   Ordering order = populatePartitions(*SCCGraph, il, partitionp);
 
@@ -536,7 +537,7 @@ bool LoopDistribution::findLoopAndDistribute(Function &F, ScalarEvolution *SE_, 
   AA = AA_;
   ORE = ORE_;
   GetLAA = GetLAA_;
-  errs  () << fname << "--------------\n";
+  errs() << fname << " -- " << lid << " -- " << this->partition << "\n";
   if (F.getName() != fname)
     return false;
   
@@ -560,7 +561,8 @@ bool LoopDistribution::findLoopAndDistribute(Function &F, ScalarEvolution *SE_, 
 }
 
 
-void LoopDistribution::runwithAnalysis(SmallVector<DataDependenceGraph*, 5> &SCCGraphs, SmallVector<Loop *, 5> &loops, SmallVector<std::string, 5> &dis_seqs,ScalarEvolution *SE_, LoopInfo *LI_, DominatorTree *DT_, AAResults *AA_, OptimizationRemarkEmitter *ORE_, std::function<const LoopAccessInfo &(Loop &)> GetLAA_, DependenceInfo &DI ){
+bool LoopDistribution::runwithAnalysis(SmallVector<DataDependenceGraph*, 5> &SCCGraphs, SmallVector<Loop *, 5> &loops, SmallVector<std::string, 5> &dis_seqs,ScalarEvolution *SE_, LoopInfo *LI_, DominatorTree *DT_, AAResults *AA_, OptimizationRemarkEmitter *ORE_, std::function<const LoopAccessInfo &(Loop &)> GetLAA_, DependenceInfo &DI ){
+  bool isdis = false;
   int size = loops.size();
   SE = SE_;
   LI = LI_;
@@ -570,9 +572,12 @@ void LoopDistribution::runwithAnalysis(SmallVector<DataDependenceGraph*, 5> &SCC
   GetLAA = GetLAA_;
 for(int i=0; i<size; i++){
    errs ()  << i+1 << " iterationsn\n";  
-    computeDistributionOnLoop(SCCGraphs[i], loops[i], dis_seqs[i]);
+   loops[i]->dump();
+   errs () << loops[i]<< "\n";
+   isdis|=computeDistributionOnLoop(SCCGraphs[i], loops[i], dis_seqs[i]);
 }
 
+return isdis;
 }
 
 void LoopDistribution::run(Function &F, FunctionAnalysisManager &fam, SmallVector<DataDependenceGraph*, 5> &SCCGraphs, SmallVector<Loop *, 5> &loops, SmallVector<std::string, 5> &dis_seqs){

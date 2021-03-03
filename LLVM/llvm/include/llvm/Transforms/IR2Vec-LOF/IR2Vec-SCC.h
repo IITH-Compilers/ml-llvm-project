@@ -47,6 +47,10 @@ private:
   
   RDGData computeRDGForFunction(Function &F);
   RDGData rdgInfo;
+
+  using IR2VecInstMap = llvm::SmallMapVector<const llvm::Instruction *, IR2Vec::Vector, 128>;
+  IR2VecInstMap instVecMap;
+ 
 public:
   static char ID;
   RDGWrapperPass();
@@ -59,8 +63,7 @@ public:
     return rdgInfo;
   }
   void Print_IR2Vec_File(
-      DataDependenceGraph &G, std::string Filename, std::string ll_name,
-      llvm::SmallMapVector<const llvm::Instruction *, IR2Vec::Vector, 128> instVecMap);
+      DataDependenceGraph &G, std::string Filename, std::string ll_name);
 };
 
 } // namespace llvm

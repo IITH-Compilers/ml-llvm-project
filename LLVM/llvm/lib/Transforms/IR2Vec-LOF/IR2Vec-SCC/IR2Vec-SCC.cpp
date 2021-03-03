@@ -45,9 +45,7 @@ char RDGWrapperPass::ID = 0;
 // true, true);
 
 void RDGWrapperPass::Print_IR2Vec_File(
-    DataDependenceGraph &G, std::string Filename, std::string ll_name,
-    llvm::SmallMapVector<const llvm::Instruction *, IR2Vec::Vector, 128>
-        instVecMap) {
+    DataDependenceGraph &G, std::string Filename, std::string ll_name) {
 
   // Code to generate Input File with IR2Vec Embedding as a node to an RDG
   std::error_code EC;
@@ -161,9 +159,11 @@ RDGData RDGWrapperPass::computeRDGForFunction(Function &F) {
 
   RDGData data;
   // Collect IR2Vec encoding vector for each instruction in instVecMap
+  if (instVecMap.empty()){
   auto ir2vec = IR2Vec::IR2VecTy(*F.getParent(), IR2Vec::IR2VecMode::FlowAware,
                                  vocab_file);
-  auto instVecMap = ir2vec.getInstVecMap();
+  instVecMap = ir2vec.getInstVecMap();
+  }
 
   // Compute necessary parameters for DataDependenceGraph
   AAResults *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
@@ -198,8 +198,6 @@ RDGData RDGWrapperPass::computeRDGForFunction(Function &F) {
         continue;
       }
       DataDependenceGraph &SCCGraph = *SCC_Graph;
-      data.SCCGraphs.push_back(SCC_Graph);
-      data.loops.push_back(*il);
       SCCGraph.InsertFunctionName(F.getName());
       LLVMContext &Context = il->getHeader()->getContext();
 
@@ -236,13 +234,15 @@ RDGData RDGWrapperPass::computeRDGForFunction(Function &F) {
       // "I_" + s3 + "_F_" + s4 + "_L" + std::to_string(loopNum) + ".dot";
 
       errs() << "Writing " + Input_Filename + "\n";
-      Print_IR2Vec_File(SCCGraph, Input_Filename, s2, instVecMap);
+      Print_IR2Vec_File(SCCGraph, Input_Filename, s2);
 
       std::ifstream ifs_inputfile(Input_Filename);
       std::string content_input;
       content_input.assign((std::istreambuf_iterator<char>(ifs_inputfile)),
                            (std::istreambuf_iterator<char>()));
       // InputFiles_List.push_back(content_input);
+      data.SCCGraphs.push_back(SCC_Graph);
+      data.loops.push_back(*il);
       data.input_rdgs.push_back(content_input);
       std::string totalSCC_Filename = "totalSCC.txt";
       std::error_code EC;

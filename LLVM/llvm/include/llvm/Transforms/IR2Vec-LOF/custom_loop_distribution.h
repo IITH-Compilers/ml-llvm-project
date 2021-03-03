@@ -13,7 +13,6 @@
  #include "llvm/InitializePasses.h"
 namespace llvm {
 
-
 class custom_loop_distribution : public FunctionPass {
 
 public:
@@ -21,9 +20,11 @@ public:
   
   // LoopDistributionWrapperPass distwp_helper; 
   LoopDistribution dist_helper;
-  custom_loop_distribution() : FunctionPass(ID) {
+  custom_loop_distribution();
+  ~custom_loop_distribution();
+/*  custom_loop_distribution() : FunctionPass(ID) {
   initializecustom_loop_distributionPass(*PassRegistry::getPassRegistry());
-  }
+  }*/
 
   bool runOnFunction(Function &F) override;
 
