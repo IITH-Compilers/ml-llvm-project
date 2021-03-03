@@ -1,0 +1,9 @@
+#ifndef LOF_CONFIG_H
+#define LOF_CONFIG_H
+
+#define VOCAB_FILE "@IR2VEC_VOCAB_FILE@"
+#define DIST_INFERENCE_MODEL                                                   \
+  "@DISTRIBUTION_MODEL_DIR@/model/checkpoint-final.pth"
+#define DIST_MODEL_SRC "@DISTRIBUTION_MODEL_DIR@/src"
+
+#endif // LOF_CONFIG_H

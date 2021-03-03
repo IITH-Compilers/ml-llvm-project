@@ -1,5 +1,5 @@
 #include "llvm/Transforms/IR2Vec-LOF/IR2Vec-SCC.h"
-// #include "IR2Vec.h"
+#include "llvm/Transforms/IR2Vec-LOF/Config.h"
 #include "llvm/Transforms/IR2Vec-LOF/RDG.h"
 
 #include "llvm/ADT/DepthFirstIterator.h"
@@ -32,10 +32,6 @@
 
 using namespace llvm;
 
-static std::string vocab_file =
-    "/home/venkat/IF-DV/Rohit/IR2Vec-LoopOptimizationFramework/IR2Vec/"
-    "vocabulary/seedEmbeddingVocab-300-llvm10.txt";
-
 RDGWrapperPass::RDGWrapperPass() : FunctionPass(ID) {
   initializeRDGWrapperPassPass(*PassRegistry::getPassRegistry());
 }
@@ -44,8 +40,9 @@ char RDGWrapperPass::ID = 0;
 // static RegisterPass<RDGWrapperPass> X("RDG", "Build ReducedDependenceGraph",
 // true, true);
 
-void RDGWrapperPass::Print_IR2Vec_File(
-    DataDependenceGraph &G, std::string Filename, std::string ll_name) {
+void RDGWrapperPass::Print_IR2Vec_File(DataDependenceGraph &G,
+                                       std::string Filename,
+                                       std::string ll_name) {
 
   // Code to generate Input File with IR2Vec Embedding as a node to an RDG
   std::error_code EC;
@@ -158,11 +155,14 @@ RDGData RDGWrapperPass::computeRDGForFunction(Function &F) {
   raw_ostream &operator<<(raw_ostream &OS, const DataDependenceGraph &G);
 
   RDGData data;
-  // Collect IR2Vec encoding vector for each instruction in instVecMap
-  if (instVecMap.empty()){
-  auto ir2vec = IR2Vec::IR2VecTy(*F.getParent(), IR2Vec::IR2VecMode::FlowAware,
-                                 vocab_file);
-  instVecMap = ir2vec.getInstVecMap();
+  static bool collectVectors = true;
+
+  if (collectVectors) {
+    // Collect IR2Vec encoding vector for each instruction in instVecMap
+    auto ir2vec = IR2Vec::Embeddings(*F.getParent(),
+                                     IR2Vec::IR2VecMode::FlowAware, VOCAB_FILE);
+    instVecMap = ir2vec.getInstVecMap();
+    collectVectors = false;
   }
 
   // Compute necessary parameters for DataDependenceGraph

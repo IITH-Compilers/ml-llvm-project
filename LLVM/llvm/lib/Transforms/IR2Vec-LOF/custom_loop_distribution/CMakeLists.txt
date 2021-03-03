@@ -1,16 +1,18 @@
+find_package (Python3 REQUIRED COMPONENTS Interpreter Development)
+
 add_llvm_component_library(LLVMcustom_loop_distribution STATIC BUILDTREE_ONLY
         custom_loop_distribution.cpp)
         
 # add_dependencies(custom_loop_distribution intrinsics_gen)
-include_directories(/home/venkat/anaconda3/include/python3.7m)
-link_directories(/home/venkat/anaconda3/lib/python3.7/config-3.7m-x86_64-linux-gnu /home/venkat/anaconda3/lib)
 # target_link_libraries(python3.7m crypt pthread dl  util rt m)
-add_library(libpython3.7m SHARED IMPORTED) 
 
-set_target_properties(libpython3.7m PROPERTIES IMPORTED_LOCATION "/home/venkat/anaconda3/lib/libpython3.7m.so" INTERFACE_INCLUDE_DIRECTORIES "/home/venkat/anaconda3/include/python3.7m")
+message(STATUS "Found Python3_INCLUDE_DIRS ${Python3_INCLUDE_DIRS}")
+message(STATUS "Found Python3_LIBRARY_DIRS ${Python3_LIBRARY_DIRS}")
+message(STATUS "Found Python3_LIBRARIES ${Python3_LIBRARIES}")
 
-target_link_libraries(LLVMcustom_loop_distribution LLVMLoopDistribution libpython3.7m)
+include_directories(${Python3_INCLUDE_DIRS})
+link_directories(${Python3_LIBRARY_DIRS})
 
-set(IR2VEC_INSTALL_DIR "" CACHE PATH "IR2Vec installation directory")
-include_directories("${IR2VEC_INSTALL_DIR}/include")
-
+add_library(libpython3.6m SHARED IMPORTED) 
+set_target_properties(libpython3.6m PROPERTIES IMPORTED_LOCATION ${Python3_LIBRARIES} INTERFACE_INCLUDE_DIRECTORIES ${Python3_INCLUDE_DIRS})
+target_link_libraries(LLVMcustom_loop_distribution LLVMLoopDistribution libpython3.6m)

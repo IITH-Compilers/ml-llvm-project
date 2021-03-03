@@ -77,7 +77,7 @@ def run_predict_multiple_loops(agent, config, rdgs):
  
     return seqs
 
-def predict_loop_distribution(rdgs : list):
+def predict_loop_distribution(rdgs : list, trained_model : str):
     
     print('In python...')
     config = { 'mode' :'inference', 'state_size':300, 'action_space':200, 'distributed_data' : '/tmp'}
@@ -86,9 +86,9 @@ def predict_loop_distribution(rdgs : list):
     logger = logging.getLogger('inference.py')
     logging.basicConfig(filename=os.path.join(logdir, 'loop-distribution.log'), format='%(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
     
-    trained_model='/home/venkat/IF-DV/Rohit/temp/model/ggnn_drl/static_v2/trained_model/New_mutated_data/generated_final/ELC_False_AMF_False_LoopCost_REL_AsrtON_PDP_2_LR_1e-4/trainInv/checkpoint-graphs-24.pth' # Fix some model
+    # trained_model='/home/ubuntu/Desktop/pgmEncodingsWorkspace/IR2Vec-LoopOptimizationFramework/checkpoint-graphs-24.pth' # Fix some model
     agent = Agent(config, seed=0)
-    agent.qnetwork_local.load_state_dict(torch.load(trained_model))
+    agent.qnetwork_local.load_state_dict(torch.load(trained_model, map_location=torch.device("cuda" if torch.cuda.is_available() else "cpu")))
     
     logging.info('Start the inference....')
     seqs = run_predict_multiple_loops(agent, config, rdgs)
