@@ -274,4 +274,5 @@ void RDGWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<AAResultsWrapperPass>();
   AU.addRequired<LoopAccessLegacyAnalysis>();
   AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
+  AU.addPreserved<LoopInfoWrapperPass>();
 }

@@ -305,13 +305,15 @@ void LoopDistribution::removeUnwantedSlices(
         // Transitively update inst of topo nodes
         auto x = instVMap[I];
         auto L = workingLoopID[id];
-        while (!L->contains(dyn_cast<Instruction>(x))) {
+        while (x && !L->contains(dyn_cast<Instruction>(x))) {
           x = instVMap[x];
         }
         // LLVM_DEBUG(errs() << "value: ");
         // LLVM_DEBUG(x->dump());
         // newInstToRemove.push_back(dyn_cast<Instruction>(x));
+        if(x){
         newInstToRetain.push_back(dyn_cast<Instruction>(x));
+        }
       }
     } else {
       // Special case - original loop - will not have any vmap
