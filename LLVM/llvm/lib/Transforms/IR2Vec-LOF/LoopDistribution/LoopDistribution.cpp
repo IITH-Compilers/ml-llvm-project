@@ -299,21 +299,20 @@ void LoopDistribution::removeUnwantedSlices(
         // for (auto it = instToRemove.begin(); it != instToRemove.end(); it++)
         // {
         Instruction *I = *it;
-        // LLVM_DEBUG(errs() << "key: ");
-        // LLVM_DEBUG(I->dump());
-
+        errs() << "key: ";
+        I->dump();
+        errs () << "Function : " << I->getParent()->getParent()->getName() << "\n";
         // Transitively update inst of topo nodes
         auto x = instVMap[I];
         auto L = workingLoopID[id];
-        while (x && !L->contains(dyn_cast<Instruction>(x))) {
+        assert(x && "x should have value");
+        while (!L->contains(dyn_cast<Instruction>(x))) {
           x = instVMap[x];
         }
-        // LLVM_DEBUG(errs() << "value: ");
-        // LLVM_DEBUG(x->dump());
+        errs() << "value: ";
+        x->dump();
         // newInstToRemove.push_back(dyn_cast<Instruction>(x));
-        if(x){
         newInstToRetain.push_back(dyn_cast<Instruction>(x));
-        }
       }
     } else {
       // Special case - original loop - will not have any vmap
@@ -573,9 +572,11 @@ bool LoopDistribution::runwithAnalysis(SmallVector<DataDependenceGraph*, 5> &SCC
   ORE = ORE_;
   GetLAA = GetLAA_;
 for(int i=0; i<size; i++){
-   errs ()  << i+1 << " iterationsn\n";  
+   errs ()  << i+1 << " iteration\n";  
+  container.clear();
    loops[i]->dump();
-   errs () << loops[i]<< "\n";
+   errs () << "Function: " << loops[i]->getHeader()->getParent()->getName()<< " Loop : "<< loops[i]<< "\n";
+   changeLoopIDMetaData(loops[i]);
    isdis|=computeDistributionOnLoop(SCCGraphs[i], loops[i], dis_seqs[i]);
 }
 

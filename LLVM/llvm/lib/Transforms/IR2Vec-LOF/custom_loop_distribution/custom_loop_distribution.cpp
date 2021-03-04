@@ -73,7 +73,7 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
   errs() << "Number rdg generated : " << RDG_List.size() << "\n";
   SmallVector<std::string, 5> distributed_seqs;
 
-  PyObject *pName, *pModule, *pDict, *pFunc, *pValue, *presult;
+  PyObject *pName, *pModule, *pFunc, *presult;
 
   // Initialize the Python Interpreter
   // Py_Initialize();
@@ -85,7 +85,7 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
                          .append("\")")
                          .c_str());
   // Build the name object
-  pName = PyUnicode_FromString((char *)"inference");
+  pName = PyUnicode_FromString("inference");
 
   errs() << "pName: " << pName << "............"
          << "\n";
@@ -112,8 +112,7 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
     // pFunc is also a borrowed reference
     //  pFunc = PyDict_GetItemString(pDict, (char*)"someFunction");
 
-    pFunc =
-        PyObject_GetAttrString(pModule, (char *)"predict_loop_distribution");
+    pFunc = PyObject_GetAttrString(pModule, "predict_loop_distribution");
 
     if (pFunc == NULL) {
       printf("ERROR getting Hello attribute");
@@ -125,7 +124,7 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
       // PyObject* args = PyTuple_Pack(1,PyFloat_FromDouble(2.0));
 
       if (PyCallable_Check(pFunc)) {
-        int t = 0;
+        // int t =0;
         // errs () << t++ << " :aaaaaaaa" << "\n";
         PyObject *my_list = PyList_New(0);
         Py_INCREF(my_list);
@@ -158,10 +157,9 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
         }
         Py_INCREF(arglist);
         // errs () << t++ << "\n";
-        presult = PyObject_CallObject(pFunc, arglist);
-        Py_INCREF(presult);
-
-        // PyErr_Print();
+        presult=PyObject_CallObject(pFunc, arglist);
+                
+        //PyErr_Print();
 
         // errs () << t++ << ":135\n";
 
@@ -169,6 +167,7 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
           errs() << "no presult\n";
           PyErr_Print();
         }
+        Py_INCREF(presult); 
 
         if (!PyList_Check(presult)) {
           // PyErr_Format(PyExc_TypeError, "The argument must be of list or
@@ -220,13 +219,12 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
       [&](Loop &L) -> const LoopAccessInfo & { return LAA->getInfo(&L); };
 
   DependenceInfo DI = DependenceInfo(&F, AA, SE, LI);
-
-  bool isdis = dist_helper.runwithAnalysis(SCCGraphs, loops, distributed_seqs,
-                                           SE, LI, DT, AA, ORE, GetLAA, DI);
-
-  if (isdis) {
-    errs() << "Code is distributed..\n";
-  }
+ errs () << "llvmIR Funcriona name=" << F.getName() << "\n";
+  bool isdis = dist_helper.runwithAnalysis(SCCGraphs, loops, distributed_seqs,SE, LI, DT, AA, ORE, GetLAA, DI );
+ 
+ if (isdis){
+ errs () << "Code is distributed..\n";
+ } 
   return isdis;
 }
 
