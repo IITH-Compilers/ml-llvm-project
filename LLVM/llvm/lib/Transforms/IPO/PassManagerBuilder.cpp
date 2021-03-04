@@ -73,14 +73,14 @@ static cl::opt<bool> RunNewGVN("enable-newgvn", cl::init(false), cl::Hidden,
 
 static cl::opt<bool>
 Runcustom_loop_distribution("cld", cl::init(false), cl::Hidden,
-                    cl::desc("costomozed loop-distribution pass"));
+                    cl::desc("costomized loop-distribution pass"));
 
 static cl::opt<bool>
-RunPreDistributionPasses("PreDistributionPasses", cl::init(false), cl::Hidden,
+RunNoPreDistributionPasses("No-PreDistributionPasses", cl::init(false), cl::Hidden,
                     cl::desc("Apply pre-distribution passes"));
 
 static cl::opt<bool>
-RunPostDistributionPasses("PostDistributionPasses", cl::init(false), cl::Hidden,
+RunNoPostDistributionPasses("No-PostDistributionPasses", cl::init(false), cl::Hidden,
                     cl::desc("Apply post-distribution passes"));
 
 // Experimental option to use CFL-AA
@@ -484,7 +484,7 @@ void PassManagerBuilder::populateModulePassManager(
   // is handled separately, so just check this is not the ThinLTO post-link.
   bool DefaultOrPreLinkPipeline = !PerformThinLTO;
 
-  if(RunPreDistributionPasses){
+  if(!RunNoPreDistributionPasses){
   if (!PGOSampleUse.empty()) {
     MPM.add(createPruneEHPass());
     // In ThinLTO mode, when flattened profile is used, all the available
@@ -733,12 +733,15 @@ void PassManagerBuilder::populateModulePassManager(
   // into separate loop that would otherwise inhibit vectorization.  This is
   // currently only performed for loops marked with the metadata
   // llvm.loop.distribute=true or when -enable-loop-distribute is specified.
-  if(Runcustom_loop_distribution) {
+  if(!Runcustom_loop_distribution && !RunNoPreDistributionPasses && !RunNoPostDistributionPasses) {
   	MPM.add(createLoopDistributePass());
-  	 MPM.add(createcustom_loop_distributionPass());
+  } 
+  
+  if(Runcustom_loop_distribution) {
+    MPM.add(createcustom_loop_distributionPass());
   }
 
-  if(RunPostDistributionPasses) {
+  if(!RunNoPostDistributionPasses) {
   MPM.add(createLoopVectorizePass(!LoopsInterleaved, !LoopVectorize));
 
   // Eliminate loads by forwarding stores from the previous iteration to loads
