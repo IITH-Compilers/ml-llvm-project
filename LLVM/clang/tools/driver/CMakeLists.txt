@@ -15,6 +15,8 @@ set( LLVM_LINK_COMPONENTS
   Support
   TransformUtils
   Vectorize
+  custom_loop_distribution
+  RDG
   )
 
 option(CLANG_PLUGIN_SUPPORT "Build clang with plugin support" ON)
@@ -48,6 +50,13 @@ clang_target_link_libraries(clang
   clangFrontendTool
   clangSerialization
   )
+  
+    set(IR2VEC_INSTALL_DIR "" CACHE PATH "IR2Vec installation directory")
+    include_directories("${IR2VEC_INSTALL_DIR}/include")
+    target_link_libraries(clang PUBLIC ${IR2VEC_INSTALL_DIR}/lib/libIR2Vec.a)
+    add_library(libIR2Vec.a SHARED IMPORTED) 
+    #     set_target_properties(libIR2Vec.a PROPERTIES IMPORTED_LOCATION ${IR2VEC_INSTALL_DIR}/lib/libIR2Vec.a)
+    # endif(IR2VEC_INSTALL_DIR)
 
 if(WIN32 AND NOT CYGWIN)
   # Prevent versioning if the buildhost is targeting for Win32.
