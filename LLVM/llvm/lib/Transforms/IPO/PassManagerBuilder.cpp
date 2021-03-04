@@ -47,6 +47,7 @@
 #include "llvm/Transforms/Vectorize.h"
 #include "llvm/Transforms/Vectorize/LoopVectorize.h"
 #include "llvm/Transforms/Vectorize/SLPVectorizer.h"
+#include "llvm/Transforms/IR2Vec-LOF/custom_loop_distribution.h"
 
 using namespace llvm;
 
@@ -69,6 +70,18 @@ RunLoopRerolling("reroll-loops", cl::Hidden,
 
 static cl::opt<bool> RunNewGVN("enable-newgvn", cl::init(false), cl::Hidden,
                                cl::desc("Run the NewGVN pass"));
+
+static cl::opt<bool>
+Runcustom_loop_distribution("cld", cl::init(false), cl::Hidden,
+                    cl::desc("costomozed loop-distribution pass"));
+
+static cl::opt<bool>
+RunPreDistributionPasses("PreDistributionPasses", cl::init(false), cl::Hidden,
+                    cl::desc("Apply pre-distribution passes"));
+
+static cl::opt<bool>
+RunPostDistributionPasses("PostDistributionPasses", cl::init(false), cl::Hidden,
+                    cl::desc("Apply post-distribution passes"));
 
 // Experimental option to use CFL-AA
 enum class CFLAAType { None, Steensgaard, Andersen, Both };
@@ -471,6 +484,7 @@ void PassManagerBuilder::populateModulePassManager(
   // is handled separately, so just check this is not the ThinLTO post-link.
   bool DefaultOrPreLinkPipeline = !PerformThinLTO;
 
+  if(RunPreDistributionPasses){
   if (!PGOSampleUse.empty()) {
     MPM.add(createPruneEHPass());
     // In ThinLTO mode, when flattened profile is used, all the available
@@ -713,13 +727,18 @@ void PassManagerBuilder::populateModulePassManager(
   // rotated form due to GVN or other transformations, and the vectorizer relies
   // on the rotated form. Disable header duplication at -Oz.
   MPM.add(createLoopRotatePass(SizeLevel == 2 ? 0 : -1));
+  }
 
   // Distribute loops to allow partial vectorization.  I.e. isolate dependences
   // into separate loop that would otherwise inhibit vectorization.  This is
   // currently only performed for loops marked with the metadata
   // llvm.loop.distribute=true or when -enable-loop-distribute is specified.
-  MPM.add(createLoopDistributePass());
+  if(Runcustom_loop_distribution) {
+  	MPM.add(createLoopDistributePass());
+  	 MPM.add(createcustom_loop_distributionPass());
+  }
 
+  if(RunPostDistributionPasses) {
   MPM.add(createLoopVectorizePass(!LoopsInterleaved, !LoopVectorize));
 
   // Eliminate loads by forwarding stores from the previous iteration to loads
@@ -834,6 +853,7 @@ void PassManagerBuilder::populateModulePassManager(
     MPM.add(createCanonicalizeAliasesPass());
     // Rename anon globals to be able to handle them in the summary
     MPM.add(createNameAnonGlobalPass());
+  }
   }
 }
 
