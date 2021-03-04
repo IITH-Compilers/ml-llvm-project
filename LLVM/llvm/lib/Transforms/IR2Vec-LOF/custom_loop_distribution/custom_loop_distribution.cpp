@@ -27,7 +27,7 @@
 #include <algorithm>
 #include <string>
 
-#define DEBUG_Type "custom_loop_distribution"
+#define DEBUG_TYPE "custom_loop_distribution"
 
 using namespace llvm;
 custom_loop_distribution::custom_loop_distribution() : FunctionPass(ID) {
@@ -37,7 +37,6 @@ custom_loop_distribution::custom_loop_distribution() : FunctionPass(ID) {
 
 custom_loop_distribution::~custom_loop_distribution() { Py_Finalize(); }
 bool custom_loop_distribution::runOnFunction(Function &F) {
-  // RDG Generation
 
   // RDG_List: Contains list of all the string wrt to RDG
   SmallVector<std::string, 5> RDG_List;
@@ -45,10 +44,8 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
   SmallVector<DataDependenceGraph *, 5> SCCGraphs;
   SmallVector<Loop *, 5> loops;
 
-  // for(auto &F : M) {
   RDGWrapperPass &R = getAnalysis<RDGWrapperPass>();
   RDGData data = R.getRDGInfo();
-  // errs () << "hello \n";
 
   RDG_List.insert(RDG_List.end(), data.input_rdgs.begin(),
                   data.input_rdgs.end());
@@ -56,13 +53,13 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
                    data.SCCGraphs.end());
   loops.insert(loops.end(), data.loops.begin(), data.loops.end());
 
-  for (auto l : loops) {
+  LLVM_DEBUG(for (auto l : loops) {
     l->dump();
     errs() << l << "\n";
-  }
+  });
 
   if (RDG_List.size() == 0) {
-    errs() << "No RDGs\n";
+    LLVM_DEBUG(errs() << "No RDGs\n");
     return false;
   }
 
@@ -70,13 +67,11 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
          RDG_List.size() == loops.size() &&
          "RDG_List, SCCgraphs and loops list should of same size.");
 
-  errs() << "Number rdg generated : " << RDG_List.size() << "\n";
+  LLVM_DEBUG(errs() << "Number rdg generated : " << RDG_List.size() << "\n");
   SmallVector<std::string, 5> distributed_seqs;
 
   PyObject *pName, *pModule, *pFunc, *presult;
 
-  // Initialize the Python Interpreter
-  // Py_Initialize();
   PyRun_SimpleString("import sys");
   PyRun_SimpleString("import os");
 
@@ -87,8 +82,8 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
   // Build the name object
   pName = PyUnicode_FromString("inference");
 
-  errs() << "pName: " << pName << "............"
-         << "\n";
+  LLVM_DEBUG(errs() << "pName: " << pName << "............"
+         << "\n");
 
   // Load the module object
   pModule = PyImport_Import(pName);
@@ -100,8 +95,8 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
     PyErr_Print();
     // exit(-1);
   } else {
-    errs() << "pModule: " << pModule << "............"
-           << "\n";
+    LLVM_DEBUG(errs() << "pModule: " << pModule << "............"
+           << "\n");
     Py_INCREF(pModule);
     //  PyObject* myFunction = PyObject_GetAttrString(myModule,(char*)"myabs");
     //  PyObject* args = PyTuple_Pack(1,PyFloat_FromDouble(2.0));
@@ -115,53 +110,32 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
     pFunc = PyObject_GetAttrString(pModule, "predict_loop_distribution");
 
     if (pFunc == NULL) {
-      printf("ERROR getting Hello attribute");
+      errs() << "ERROR getting function attribute";
       // exit(-1);
       PyErr_Print();
     } else {
 
       Py_INCREF(pFunc);
-      // PyObject* args = PyTuple_Pack(1,PyFloat_FromDouble(2.0));
 
       if (PyCallable_Check(pFunc)) {
-        // int t =0;
-        // errs () << t++ << " :aaaaaaaa" << "\n";
         PyObject *my_list = PyList_New(0);
         Py_INCREF(my_list);
-        // errs () << t++ << " :bbbbbb" << "\n";
         for (auto rdg : RDG_List) {
-          // errs () << t++ << rdg.c_str() << "\n";
           PyObject *py_rdg = PyUnicode_FromString(rdg.c_str());
           PyList_Append(my_list, py_rdg);
           Py_INCREF(py_rdg);
         }
 
-        /* if(my_list) {
-          errs() << "my_list present\n";
-        } */
-
-        // errs () << t++ << "\n";
-        // PyObject *arglist = Py_BuildValue("(o)", my_list);
-
-        // PyObject *arglist = Py_BuildValue("s", my_list);
-        // //*****************************//
         PyObject *modelPath = PyUnicode_FromString(DIST_INFERENCE_MODEL);
-
-        // PyObject *modelPath = PyUnicode_FromString((
-        //     char *)"/home/ubuntu/Desktop/pgmEncodingsWorkspace/"
-        //            "IR2Vec-LoopOptimizationFramework/checkpoint-graphs-24.pth");
         PyObject *arglist = PyTuple_Pack(2, my_list, modelPath);
+        
         if (!arglist) {
           errs() << "no arglist\n";
           PyErr_Print();
         }
+        
         Py_INCREF(arglist);
-        // errs () << t++ << "\n";
         presult=PyObject_CallObject(pFunc, arglist);
-                
-        //PyErr_Print();
-
-        // errs () << t++ << ":135\n";
 
         if (!presult) {
           errs() << "no presult\n";
@@ -170,22 +144,18 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
         Py_INCREF(presult); 
 
         if (!PyList_Check(presult)) {
-          // PyErr_Format(PyExc_TypeError, "The argument must be of list or
-          // subtype of list");
           errs() << "Result is not list";
           PyErr_BadArgument();
-          Py_Finalize();
           return false;
         }
 
         int size = PyList_Size(presult);
-        errs() << size << " size of list \n";
+        LLVM_DEBUG(errs() << size << " is the size of result list.\n");
 
         for (int j = 0; j < size; j++) {
           PyObject *plobj = PyList_GetItem(presult, j);
-          errs() << "get result elemtsn\n";
           const char *dis_seq = PyUnicode_AsUTF8(plobj);
-          errs() << dis_seq << "\n";
+          LLVM_DEBUG(errs() << dis_seq << "\n");
           distributed_seqs.push_back(dis_seq);
         }
         Py_DECREF(presult);
@@ -199,16 +169,9 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
       Py_DECREF(pModule);
       Py_DECREF(pName);
 
-      // Finish the Python Interpreter
-      //      Py_Finalize();
     }
   }
-  //  Py_Finalize();
-
-  // LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-  // LLVMContext &Context = F.getContext();
-  // FunctionAnalysisManager fam;
-  errs() << "Call to runwihAnalysis...\n";
+  LLVM_DEBUG(errs() << "Call to runwihAnalysis...\n");
   auto AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
   auto SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
   auto LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
@@ -219,12 +182,12 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
       [&](Loop &L) -> const LoopAccessInfo & { return LAA->getInfo(&L); };
 
   DependenceInfo DI = DependenceInfo(&F, AA, SE, LI);
- errs () << "llvmIR Funcriona name=" << F.getName() << "\n";
+ LLVM_DEBUG(errs () << "Function name=" << F.getName() << "\n");
   bool isdis = dist_helper.runwithAnalysis(SCCGraphs, loops, distributed_seqs,SE, LI, DT, AA, ORE, GetLAA, DI );
  
- if (isdis){
+ LLVM_DEBUG(if (isdis){
  errs () << "Code is distributed..\n";
- } 
+ });
   return isdis;
 }
 

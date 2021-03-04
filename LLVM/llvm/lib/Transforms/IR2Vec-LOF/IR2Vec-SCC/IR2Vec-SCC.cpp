@@ -28,7 +28,7 @@
 #include <fstream>
 #include <string>
 
-#define DEBUG_Type "RDG"
+#define DEBUG_TYPE "RDG"
 
 using namespace llvm;
 
@@ -216,7 +216,7 @@ RDGData RDGWrapperPass::computeRDGForFunction(Function &F) {
                                  std::to_string(loopNum) + ".dot";
       // "S_" + s3 + "_F_" + s4 + "_L" + std::to_string(loopNum) + ".dot";
 
-      errs() << "Writing " + SCC_Filename + "\n";
+      LLVM_DEBUG(errs() << "Writing " + SCC_Filename + "\n");
       RDGraph.PrintDotFile_LAI(SCCGraph, SCC_Filename, s1);
 
       std::ifstream ifs(SCC_Filename);
@@ -224,7 +224,6 @@ RDGData RDGWrapperPass::computeRDGForFunction(Function &F) {
       content.assign((std::istreambuf_iterator<char>(ifs)),
                      (std::istreambuf_iterator<char>()));
 
-      // DotFiles_List.push_back(content);
       // errs() << "String: " << content << "\n";
 
       // Print Input File
@@ -233,14 +232,14 @@ RDGData RDGWrapperPass::computeRDGForFunction(Function &F) {
                                    std::to_string(loopNum) + ".dot";
       // "I_" + s3 + "_F_" + s4 + "_L" + std::to_string(loopNum) + ".dot";
 
-      errs() << "Writing " + Input_Filename + "\n";
+      LLVM_DEBUG(errs() << "Writing " + Input_Filename + "\n");
       Print_IR2Vec_File(SCCGraph, Input_Filename, s2);
 
       std::ifstream ifs_inputfile(Input_Filename);
       std::string content_input;
       content_input.assign((std::istreambuf_iterator<char>(ifs_inputfile)),
                            (std::istreambuf_iterator<char>()));
-      // InputFiles_List.push_back(content_input);
+      
       data.SCCGraphs.push_back(SCC_Graph);
       data.loops.push_back(*il);
       data.input_rdgs.push_back(content_input);
