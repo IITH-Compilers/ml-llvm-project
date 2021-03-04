@@ -1,4 +1,3 @@
-set(IR2VEC_INSTALL_DIR "" CACHE PATH "IR2Vec installation directory")
 set(IR2VEC_VOCAB_FILE "${IR2VEC_INSTALL_DIR}/seedEmbeddingVocab-300-llvm10.txt")
 include_directories("${IR2VEC_INSTALL_DIR}/include")
 

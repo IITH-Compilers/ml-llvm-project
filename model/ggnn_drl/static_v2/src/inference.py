@@ -5,6 +5,7 @@ import numpy as np
 import json
 from distributeEnv import DistributeLoopEnv
 from dqn_agent import Agent
+import dqn_agent
 import glob
 import json
 import torch
