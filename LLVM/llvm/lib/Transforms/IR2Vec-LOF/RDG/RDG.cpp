@@ -108,7 +108,8 @@ bool RDG::BuildRDG_LAI(DataDependenceGraph &G, DependenceInfo &DI,
 
   LLVM_DEBUG(errs() << "+++++++++++++++++++++++++++++ "
                     << alldependences->size() << "\n");
-  // errs() << "+++++++++++++++++++++++++++++ " << alldependences->size() << "\n";
+  // errs() << "+++++++++++++++++++++++++++++ " << alldependences->size() <<
+  // "\n";
 
   G.dependenceSize = alldependences->size();
   // for (auto di : DependenceDistances) {
@@ -401,19 +402,19 @@ void RDG::SelectOnlyStoreNode(DataDependenceGraph &G) {
   G.totalSCCNodes = label;
 }
 
-void RDG::NodeMerge_nonStore(
-    NodeType &SI, Instruction &II, InstructionListType &MergedInstList) {
-      
+void RDG::NodeMerge_nonStore(NodeType &SI, Instruction &II,
+                             InstructionListType &MergedInstList) {
+
   for (auto i = II.op_begin(), e = II.op_end(); i != e; ++i) {
     if (dyn_cast<Instruction>(&(**i))) {
       Instruction *OP = dyn_cast<Instruction>(&(**i));
-      
+
       InstructionListType InstList;
       SI.collectInstructions([](const Instruction *I) { return true; },
-                                    InstList);
+                             InstList);
 
       // Check if already present in STORE Node and append if not
-          // present
+      // present
       bool temp = 0;
       for (Instruction *inst : InstList) {
         if (inst == OP) {
@@ -442,7 +443,6 @@ void RDG::NodeMerge_nonStore(
           NodeMerge_nonStore(SI, *OP, MergedInstList);
         }
       }
-      
     }
   }
 }
@@ -450,22 +450,21 @@ void RDG::NodeMerge_nonStore(
 void RDG::Merge_NonLabel_Nodes(DataDependenceGraph &G, DependenceInfo &DI) {
 
   NodeListType ListOfNonLabelNodes;
-  
+
   for (NodeType *N : G) {
-    if(N->NodeLabel == ""){
+    if (N->NodeLabel == "") {
       ListOfNonLabelNodes.push_back(N);
     }
   }
 
   for (NodeType *N : ListOfNonLabelNodes) {
     InstructionListType InstList;
-    N->collectInstructions([](const Instruction *I) { return true; },
-                                    InstList);
+    N->collectInstructions([](const Instruction *I) { return true; }, InstList);
 
     for (Instruction *II : InstList) {
       InstructionListType MergedInstList;
       NodeMerge_nonStore(*N, *II, MergedInstList);
-    } 
+    }
   }
 }
 
@@ -474,14 +473,11 @@ DataDependenceGraph *RDG::computeRDGForInnerLoop(Loop &IL) {
   /* errs() << LAI.getMaxSafeDepDistBytes() << " : " << LAI.canVectorizeMemory()
          << "\n"; */
 
-  // if (LAI.getMaxSafeDepDistBytes() == -1ULL && !LAI.canVectorizeMemory()) {
-  //   errs() << "No need to make RDG\n";
-  //   LLVM_DEBUG(errs() << "No need to make RDG\n");
-  //   return nullptr;
-  // }
-if (auto report = LAI.getReport()) {
-            fail("NotAnalyzableByLAI", report->getMsg(), &IL);
-                return nullptr;
+  if (LAI.getDepChecker().getDependences()->size() == 0 &&
+      !LAI.canVectorizeMemory()) {
+    errs() << "No need to make RDG\n";
+    fail("CannotResolveDependences", "LAI cannot analyze dependences", &IL);
+    return nullptr;
   }
 
   if (!IL.isLoopSimplifyForm()) {
