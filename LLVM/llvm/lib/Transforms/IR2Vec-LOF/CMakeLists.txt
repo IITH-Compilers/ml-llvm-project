@@ -1,3 +1,5 @@
+cmake_minimum_required (VERSION 3.13...3.18)
+message("Found IR2Vec in: ${IR2VEC_INSTALL_DIR}")
 set(IR2VEC_VOCAB_FILE "${IR2VEC_INSTALL_DIR}/seedEmbeddingVocab-300-llvm10.txt")
 include_directories("${IR2VEC_INSTALL_DIR}/include")
 
