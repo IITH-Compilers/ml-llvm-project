@@ -53,7 +53,7 @@ static cl::opt<unsigned> CLS("cache-line-size", cl::init(64), cl::Hidden,
 #define DEBUG_TYPE "locality"
 
 class LoopCost : public FunctionPass {
-  DenseMap<Loop *, Loop*> ScalarToVecLoop;
+  DenseMap<Loop *, Loop *> ScalarToVecLoop;
   void collectScalarVectorLoops(SmallVectorImpl<Loop *> &);
   void GetInnerLoops(Loop *, SmallVectorImpl<Loop *> &);
 
@@ -166,7 +166,8 @@ public:
       if (VF != 1) {
         VecLoop = getVectorLoop(L);
         assert(VecLoop && "Could not find vector loop for a vectorized loop");
-        if (MDNode *IF_MD = VecLoop->getLoopLatch()->getTerminator()->getMetadata("IF")) {
+        if (MDNode *IF_MD =
+                VecLoop->getLoopLatch()->getTerminator()->getMetadata("IF")) {
           auto constVal =
               dyn_cast<ConstantAsMetadata>(IF_MD->getOperand(0))->getValue();
           unsigned UF = dyn_cast<ConstantInt>(constVal)->getZExtValue();
@@ -217,8 +218,10 @@ public:
       LoopCost = LoopCost * (TripCount / (VF * IF));
       dbgs() << "Loop cost with only instructions: " << LoopCost << "\n";
       uint64_t TotalMemAccess =
-          NumMemInsts * ((TripCount == 1000) ? TripCount : TripCount * (VF * IF));
-      dbgs() << "Total memory accesses : " << NumMemInsts << " * " << TripCount << " = " << TotalMemAccess << "\n";
+          NumMemInsts *
+          ((TripCount == 1000) ? TripCount : TripCount * (VF * IF));
+      dbgs() << "Total memory accesses : " << NumMemInsts << " * " << TripCount
+             << " = " << TotalMemAccess << "\n";
       uint64_t CacheCost =
           CacheMisses * (0.7 * MemoryInstCost) +
           (TotalMemAccess - CacheMisses) * (0.3 * MemoryInstCost);
@@ -242,8 +245,10 @@ void LoopCost::collectScalarVectorLoops(SmallVectorImpl<Loop *> &AllLoops) {
   for (auto L : AllLoops) {
     if (MDNode *MD = L->getLoopLatch()->getTerminator()->getMetadata("SLID")) {
       for (auto VL : AllLoops) {
-        if (L == VL) continue;
-        if (MDNode *VLMD = VL->getLoopLatch()->getTerminator()->getMetadata("VLID")) {
+        if (L == VL)
+          continue;
+        if (MDNode *VLMD =
+                VL->getLoopLatch()->getTerminator()->getMetadata("VLID")) {
           if (MD == VLMD) {
             ScalarToVecLoop[L] = VL;
             break;
@@ -278,91 +283,100 @@ void Locality::clearDS() {
   Locality_Cost = 0;
 }
 
-int64_t Locality::computeLocalityCost(Loop *L, unsigned TripCount, ScalarEvolution *SE) {
+int64_t Locality::computeLocalityCost(Loop *L, unsigned TripCount,
+                                      ScalarEvolution *SE) {
   clearDS();
   assert(TripCount > 0 && "Trip count expected to greater than zero");
   unsigned CLS = 64;
   assert(CLS > 0 && "Unknown cache line size");
 
   // Computing misses is equvilant to vertex cover problem
-  // Vertex cover of memory instructions + Num of independent instructions(not involved in dependence) is our total cache cost
+  // Vertex cover of memory instructions + Num of independent instructions(not
+  // involved in dependence) is our total cache cost
   //
   // Construct a adjacency graph with dependent instructions
   // Every vertex is a memory instruction
   // Edge is one of the following
   //      1. Memory dependence instruction with distance < Threshold
-  //      2. Memory instructions accessing same base arrays and with spatial distance < Threshold
-
+  //      2. Memory instructions accessing same base arrays and with spatial
+  //      distance < Threshold
 
   // Get memory instructions and dependences from LAI
-  const SmallVectorImpl<Instruction *> &MemroyInstuctions = LAI_WR.getDepChecker().getMemoryInstructions();
-  const SmallVectorImpl<llvm::MemoryDepChecker::Dependence> *WriteDependences = LAI_WR.getDepChecker().getDependences();
-  const SmallVectorImpl<llvm::MemoryDepChecker::Dependence> *ReadDependences = LAI_RAR.getDepChecker().getDependences();
-  const SmallVector<int64_t, 8> WriteDependenceDistances = LAI_WR.getDepChecker().getDDist();
-  const SmallVector<int64_t, 8> ReadDependenceDistances = LAI_RAR.getDepChecker().getDDist();
+  const SmallVectorImpl<Instruction *> &MemroyInstuctions =
+      LAI_WR.getDepChecker().getMemoryInstructions();
+  const SmallVectorImpl<llvm::MemoryDepChecker::Dependence> *WriteDependences =
+      LAI_WR.getDepChecker().getDependences();
+  const SmallVectorImpl<llvm::MemoryDepChecker::Dependence> *ReadDependences =
+      LAI_RAR.getDepChecker().getDependences();
+  const SmallVector<int64_t, 8> WriteDependenceDistances =
+      LAI_WR.getDepChecker().getDDist();
+  const SmallVector<int64_t, 8> ReadDependenceDistances =
+      LAI_RAR.getDepChecker().getDDist();
   assert(WriteDependences->size() == WriteDependenceDistances.size() &&
-                          "Dep Distances are not there??");
+         "Dep Distances are not there??");
   assert(ReadDependences->size() == ReadDependenceDistances.size() &&
-                          "Dep Distances are not there??");
+         "Dep Distances are not there??");
 
   // Insert MemoryInstruction in the Graph
   for (auto *I : MemroyInstuctions) {
-          MemGraph[I] = new SmallVector<Instruction*, 4>();
+    MemGraph[I] = new SmallVector<Instruction *, 4>();
   }
 
   // Insert the write memory dependences
   for (unsigned Ind = 0; Ind < WriteDependences->size(); Ind++) {
-      auto Dep = (*WriteDependences)[Ind];
-      unsigned Dist = WriteDependenceDistances[Ind];
-      Instruction *Src = Dep.getSource(LAI_WR), *Dst = Dep.getDestination(LAI_WR);
-      if (Dist <= TemporalThreshold) {
-          MemGraph[Src]->push_back(Dst);
-          MemGraph[Dst]->push_back(Src);
-      }
+    auto Dep = (*WriteDependences)[Ind];
+    unsigned Dist = WriteDependenceDistances[Ind];
+    Instruction *Src = Dep.getSource(LAI_WR), *Dst = Dep.getDestination(LAI_WR);
+    if (Dist <= TemporalThreshold) {
+      MemGraph[Src]->push_back(Dst);
+      MemGraph[Dst]->push_back(Src);
+    }
   }
 
   // Insert the read memory dependences
   for (unsigned Ind = 0; Ind < ReadDependences->size(); Ind++) {
-      auto Dep = (*ReadDependences)[Ind];
-      unsigned Dist = ReadDependenceDistances[Ind];
-      Instruction *Src = Dep.getSource(LAI_RAR), *Dst = Dep.getDestination(LAI_RAR);
-      if (Dist <= TemporalThreshold) {
-          MemGraph[Src]->push_back(Dst);
-          MemGraph[Dst]->push_back(Src);
-      }
+    auto Dep = (*ReadDependences)[Ind];
+    unsigned Dist = ReadDependenceDistances[Ind];
+    Instruction *Src = Dep.getSource(LAI_RAR),
+                *Dst = Dep.getDestination(LAI_RAR);
+    if (Dist <= TemporalThreshold) {
+      MemGraph[Src]->push_back(Dst);
+      MemGraph[Dst]->push_back(Src);
+    }
   }
 
   // Insert instructions that are spartially close
-  SmallVector<Instruction*, 4> IndependentInsts;
+  SmallVector<Instruction *, 4> IndependentInsts;
   for (auto Vertex : MemGraph) {
-      if (Vertex.second->size() == 0)
-          IndependentInsts.push_back(Vertex.first);
+    if (Vertex.second->size() == 0)
+      IndependentInsts.push_back(Vertex.first);
   }
 
   const DataLayout &DL = L->getHeader()->front().getModule()->getDataLayout();
   for (auto I1 : IndependentInsts) {
-      for (auto I2 : IndependentInsts) {
-          if (I1 == I2)
-              continue;
-          auto U1 = GetUnderlyingObject(I1, DL);
-          auto U2 = GetUnderlyingObject(I2, DL);
-          if (U1 != U2)
-              continue;
-          // NOTE: not checking the spatial distance, conservatily assuming they are close enough
-          MemGraph[I1]->push_back(I2);
-          MemGraph[I2]->push_back(I1);
-      }
+    for (auto I2 : IndependentInsts) {
+      if (I1 == I2)
+        continue;
+      auto U1 = GetUnderlyingObject(I1, DL);
+      auto U2 = GetUnderlyingObject(I2, DL);
+      if (U1 != U2)
+        continue;
+      // NOTE: not checking the spatial distance, conservatily assuming they are
+      // close enough
+      MemGraph[I1]->push_back(I2);
+      MemGraph[I2]->push_back(I1);
+    }
   }
 
   // Find the vertex cover of the graph + independent vertices
-  SmallVectorImpl<Instruction*> *VertexCover = findVertexCover(MemGraph);
+  SmallVectorImpl<Instruction *> *VertexCover = findVertexCover(MemGraph);
 
   // Iterate over vetexcover and compute the misses caused by each instruction
   for (auto Inst : *VertexCover) {
     Value *Ptr = getLoadStorePointerOperand(Inst);
     if (!Ptr) {
-        Locality_Cost += TripCount;
-        continue;
+      Locality_Cost += TripCount;
+      continue;
     }
     const SCEV *SCEVPtr = SE->getSCEV(Ptr);
     if (!isa<SCEVAddRecExpr>(SCEVPtr)) {
@@ -381,12 +395,13 @@ int64_t Locality::computeLocalityCost(Loop *L, unsigned TripCount, ScalarEvoluti
         Stride = (Stride < 0) ? -Stride : Stride;
         assert(Stride > 0 && "Stride is zero?");
         if (Stride < CLS) { // make sure Stride is in bytes
-        // auto miss = TripCount * Stride * dataType_Size / CLS;
-        int64_t Misses = (int64_t)(ceil(((float)TripCount * (float)Stride) / (float)CLS));
-        assert(Misses > 0 && "Zero misses?");
-        Locality_Cost += Misses;
+          // auto miss = TripCount * Stride * dataType_Size / CLS;
+          int64_t Misses =
+              (int64_t)(ceil(((float)TripCount * (float)Stride) / (float)CLS));
+          assert(Misses > 0 && "Zero misses?");
+          Locality_Cost += Misses;
         } else {
-        Locality_Cost += TripCount;
+          Locality_Cost += TripCount;
         }
       }
     }
@@ -395,9 +410,11 @@ int64_t Locality::computeLocalityCost(Loop *L, unsigned TripCount, ScalarEvoluti
   return Locality_Cost;
 }
 
-SmallVectorImpl<Instruction*> *Locality::findVertexCover(MemroyInstructionGraph &MemGraph) {
-  SmallVector<Instruction*, 8> *VertexCover = new SmallVector<Instruction*, 8>();
-  DenseMap<Instruction*, bool> Visited;
+SmallVectorImpl<Instruction *> *
+Locality::findVertexCover(MemroyInstructionGraph &MemGraph) {
+  SmallVector<Instruction *, 8> *VertexCover =
+      new SmallVector<Instruction *, 8>();
+  DenseMap<Instruction *, bool> Visited;
   for (auto Pair : MemGraph)
     Visited[Pair.first] = false;
 
@@ -405,19 +422,19 @@ SmallVectorImpl<Instruction*> *Locality::findVertexCover(MemroyInstructionGraph 
     Instruction *Src = Pair.first;
     SmallVectorImpl<Instruction *> *adjInsts = Pair.second;
     if (Visited[Src])
-        continue;
+      continue;
 
-    if  (adjInsts->size() == 0) {
-        Visited[Src] = true;
-        VertexCover->push_back(Src);
+    if (adjInsts->size() == 0) {
+      Visited[Src] = true;
+      VertexCover->push_back(Src);
     }
 
     for (auto AI : *adjInsts) {
-        if (Visited[AI])
-            continue;
-        Visited[Src] = Visited[AI] = true;
-        VertexCover->push_back(Src);
-        VertexCover->push_back(AI);
+      if (Visited[AI])
+        continue;
+      Visited[Src] = Visited[AI] = true;
+      VertexCover->push_back(Src);
+      VertexCover->push_back(AI);
     }
   }
   return VertexCover;

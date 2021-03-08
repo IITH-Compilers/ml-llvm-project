@@ -239,7 +239,7 @@ RDGData RDGWrapperPass::computeRDGForFunction(Function &F) {
       std::string content_input;
       content_input.assign((std::istreambuf_iterator<char>(ifs_inputfile)),
                            (std::istreambuf_iterator<char>()));
-      
+
       data.SCCGraphs.push_back(SCC_Graph);
       data.loops.push_back(*il);
       data.input_rdgs.push_back(content_input);

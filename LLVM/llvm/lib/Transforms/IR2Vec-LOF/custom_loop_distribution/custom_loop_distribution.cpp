@@ -53,7 +53,8 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
                    data.SCCGraphs.end());
   loops.insert(loops.end(), data.loops.begin(), data.loops.end());
 
-  LLVM_DEBUG(for (auto l : loops) {
+  LLVM_DEBUG(for (auto l
+                  : loops) {
     l->dump();
     errs() << l << "\n";
   });
@@ -83,7 +84,7 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
   pName = PyUnicode_FromString("inference");
 
   LLVM_DEBUG(errs() << "pName: " << pName << "............"
-         << "\n");
+                    << "\n");
 
   // Load the module object
   pModule = PyImport_Import(pName);
@@ -96,7 +97,7 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
     // exit(-1);
   } else {
     LLVM_DEBUG(errs() << "pModule: " << pModule << "............"
-           << "\n");
+                      << "\n");
     Py_INCREF(pModule);
     //  PyObject* myFunction = PyObject_GetAttrString(myModule,(char*)"myabs");
     //  PyObject* args = PyTuple_Pack(1,PyFloat_FromDouble(2.0));
@@ -128,20 +129,20 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
 
         PyObject *modelPath = PyUnicode_FromString(DIST_INFERENCE_MODEL);
         PyObject *arglist = PyTuple_Pack(2, my_list, modelPath);
-        
+
         if (!arglist) {
           errs() << "no arglist\n";
           PyErr_Print();
         }
-        
+
         Py_INCREF(arglist);
-        presult=PyObject_CallObject(pFunc, arglist);
+        presult = PyObject_CallObject(pFunc, arglist);
 
         if (!presult) {
           errs() << "no presult\n";
           PyErr_Print();
         }
-        Py_INCREF(presult); 
+        Py_INCREF(presult);
 
         if (!PyList_Check(presult)) {
           errs() << "Result is not list";
@@ -168,7 +169,6 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
       // Clean up
       Py_DECREF(pModule);
       Py_DECREF(pName);
-
     }
   }
   LLVM_DEBUG(errs() << "Call to runwihAnalysis...\n");
@@ -182,12 +182,11 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
       [&](Loop &L) -> const LoopAccessInfo & { return LAA->getInfo(&L); };
 
   DependenceInfo DI = DependenceInfo(&F, AA, SE, LI);
- LLVM_DEBUG(errs () << "Function name=" << F.getName() << "\n");
-  bool isdis = dist_helper.runwithAnalysis(SCCGraphs, loops, distributed_seqs,SE, LI, DT, AA, ORE, GetLAA, DI );
- 
- LLVM_DEBUG(if (isdis){
- errs () << "Code is distributed..\n";
- });
+  LLVM_DEBUG(errs() << "Function name=" << F.getName() << "\n");
+  bool isdis = dist_helper.runwithAnalysis(SCCGraphs, loops, distributed_seqs,
+                                           SE, LI, DT, AA, ORE, GetLAA, DI);
+
+  LLVM_DEBUG(if (isdis) { errs() << "Code is distributed..\n"; });
   return isdis;
 }
 

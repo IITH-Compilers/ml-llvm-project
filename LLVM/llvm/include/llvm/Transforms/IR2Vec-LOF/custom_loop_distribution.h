@@ -7,24 +7,24 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IR2Vec-LOF/LoopDistribution.h"
- #include "llvm/InitializePasses.h"
 namespace llvm {
 
 class custom_loop_distribution : public FunctionPass {
 
 public:
   static char ID;
-  
-  // LoopDistributionWrapperPass distwp_helper; 
+
+  // LoopDistributionWrapperPass distwp_helper;
   LoopDistribution dist_helper;
   custom_loop_distribution();
   ~custom_loop_distribution();
-/*  custom_loop_distribution() : FunctionPass(ID) {
-  initializecustom_loop_distributionPass(*PassRegistry::getPassRegistry());
-  }*/
+  /*  custom_loop_distribution() : FunctionPass(ID) {
+    initializecustom_loop_distributionPass(*PassRegistry::getPassRegistry());
+    }*/
 
   bool runOnFunction(Function &F) override;
 

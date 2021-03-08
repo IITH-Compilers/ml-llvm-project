@@ -12,7 +12,8 @@ class Locality {
 private:
   using ReferenceGroupTy = SmallVector<std::unique_ptr<IndexedReference>, 8>;
   using ReferenceGroupsTy = SmallVector<ReferenceGroupTy, 8>;
-  using MemroyInstructionGraph = DenseMap<Instruction*, SmallVector<Instruction*, 4>*>;
+  using MemroyInstructionGraph =
+      DenseMap<Instruction *, SmallVector<Instruction *, 4> *>;
 
   MemroyInstructionGraph MemGraph;
   SmallVectorImpl<Instruction *> *findVertexCover(MemroyInstructionGraph &);
