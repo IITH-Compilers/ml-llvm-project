@@ -19,8 +19,8 @@ extern cl::opt<unsigned int> loopID;
 extern cl::opt<std::string> partitionPattern;
 */
 using NodeList = SmallVector<DDGNode *, 64>;
-using InstList = SmallVector<Instruction *, 64>;
-using Container = StringMap<InstList>;
+using InstSet = SmallSetVector<Instruction *, 64>;
+using Container = StringMap<InstSet>;
 using Ordering = SmallVector<std::string, 10>;
 
 class LoopDistribution {

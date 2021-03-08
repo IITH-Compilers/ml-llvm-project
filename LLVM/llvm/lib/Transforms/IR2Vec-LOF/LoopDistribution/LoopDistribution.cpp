@@ -117,13 +117,15 @@ void LoopDistribution::createContainer(DataDependenceGraph &SCCGraph) {
 
 void LoopDistribution::addNodeToContainer(DDGNode *node, const std::string ID) {
   assert(node && "Node should not be nullptr");
-  InstList instList;
+  SmallVector<Instruction *, 64> instList;
   node->collectInstructions([](const Instruction *I) { return true; },
                             instList);
+  InstSet tmp =
+      SmallSetVector<Instruction *, 64>(instList.begin(), instList.end());
   if (container.find(ID) == container.end())
-    container.try_emplace(ID, instList);
+    container.try_emplace(ID, tmp);
   else {
-    container[ID].append(instList.begin(), instList.end());
+    container[ID].insert(instList.begin(), instList.end());
   }
 }
 
@@ -134,7 +136,7 @@ void LoopDistribution::mergePartitionsOfContainer(std::string srcID,
   assert(container.find(destID) != container.end() &&
          "destID should be present in container");
   auto destPartition = container[destID];
-  container[srcID].append(destPartition.begin(), destPartition.end());
+  container[srcID].insert(destPartition.begin(), destPartition.end());
   container.erase(destID);
 }
 
@@ -301,7 +303,12 @@ void LoopDistribution::removeUnwantedSlices(
         Instruction *I = *it;
         LLVM_DEBUG(errs() << "key: "; I->dump();
                    errs() << "Function : "
-                          << I->getParent()->getParent()->getName() << "\n");
+                          << I->getParent()->getParent()->getName() << "\n";);
+        // Check if the current instruction is a cloned instruction. If so, it
+        // would be present in instVmap. There can be uncloned instructions in
+        // the containers,
+        if (instVMap.find(I) == instVMap.end())
+          continue;
         // Transitively update inst of topo nodes
         auto x = instVMap[I];
         auto L = workingLoopID[id];
@@ -584,6 +591,7 @@ bool LoopDistribution::runwithAnalysis(
   ORE = ORE_;
   GetLAA = GetLAA_;
   for (int i = 0; i < size; i++) {
+    distributed = false;
     LLVM_DEBUG(errs() << i + 1 << " iteration\n");
     container.clear();
     LLVM_DEBUG(errs() << "Function: "

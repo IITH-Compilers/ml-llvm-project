@@ -472,7 +472,13 @@ DataDependenceGraph *RDG::computeRDGForInnerLoop(Loop &IL) {
   raw_ostream &operator<<(raw_ostream &OS, const DataDependenceGraph &G);
   /* errs() << LAI.getMaxSafeDepDistBytes() << " : " << LAI.canVectorizeMemory()
          << "\n"; */
-
+  if (LAI.getDepChecker().getDependences() == nullptr) {
+    LLVM_DEBUG(errs() << "LAI dependences is a nullptr.\n");
+    fail("CannotResolveDependences", "LAI dependences is a nullptr.", &IL);
+    return nullptr;
+  }
+  errs() << "LAI.getDepChecker().getDependences()->size() : "
+         << LAI.getDepChecker().getDependences()->size() << "\n";
   if (LAI.getDepChecker().getDependences()->size() == 0 &&
       !LAI.canVectorizeMemory()) {
     errs() << "No need to make RDG\n";
@@ -594,6 +600,10 @@ DataDependenceGraph *RDG::computeRDGForInnerLoop(Loop &IL) {
 
   // Assign Labels to the Store Nodes
   SelectOnlyStoreNode(*G2);
+
+  if (G2->totalSCCNodes <= 1) {
+    return nullptr;
+  }
 
   // Merge the definition of uses in non-label nodes
   Merge_NonLabel_Nodes(*G2, DI);

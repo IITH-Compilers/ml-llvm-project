@@ -89,12 +89,12 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
   // Load the module object
   pModule = PyImport_Import(pName);
 
-  PyErr_Print();
+  // PyErr_Print();
 
   if (pModule == NULL) {
     printf("ERROR importing module\n");
     PyErr_Print();
-    // exit(-1);
+    exit(-1);
   } else {
     LLVM_DEBUG(errs() << "pModule: " << pModule << "............"
                       << "\n");
