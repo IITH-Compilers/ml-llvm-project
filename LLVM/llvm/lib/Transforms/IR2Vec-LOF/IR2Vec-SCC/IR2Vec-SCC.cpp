@@ -67,7 +67,16 @@ void RDGWrapperPass::Print_IR2Vec_File(DataDependenceGraph &G,
       if (N->NodeLabel != "") {
         for (Instruction *II : IList) {
           tmp++;
-          if (tmp == 0) {
+          LLVM_DEBUG(
+              errs() << " tmp = " << tmp << " " << instVecMap.find(II) << "\n";
+              if (instVecMap.find(II) != instVecMap.end()) instVecMap.find(II)
+                  ->first->dump();
+              else {
+                errs() << "Not in Map\n";
+                II->dump();
+              });
+
+          if (tmp == 0 || instVecMap.find(II) == instVecMap.end()) {
             continue;
           } else if (tmp == 1) {
             NodeVec = instVecMap.find(II)->second;
