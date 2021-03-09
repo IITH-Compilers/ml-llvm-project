@@ -101,7 +101,7 @@ mkdir -p ${DOT} ${JSON_DIR} ${META_SSA} ${SCC} ${REMARKS_DIR}
 # Store the dots file
 
 for d in ${O0_LEVEL}/*.ll; do 
-        name=`basename ${d}` && oname=${name%.*} && rfile= && if [ ! -z "${REMARKS}" ]; then rfile="-pass-remarks-output=${oname}.yaml"; fi && cd ${DOT} && ${TIME_OUT} ${LLVM_BUILD}/bin/opt ${SSA_PASSES_SEQ} -S  -load ${IR2Vec_SO} -load ${LLVM_BUILD}/lib/RDG.so  -file ${SEED_FILE} -level p -of temp.txt -bpi 0 -RDG ${REMARKS} ${rfile}   ${d} -o ${META_SSA}/${oname}.ll & 
+        name=`basename ${d}` && oname=${name%.*} && rfile= && if [ ! -z "${REMARKS}" ]; then rfile="-pass-remarks-output=${oname}.yaml"; fi && cd ${DOT} && ${TIME_OUT} ${LLVM_BUILD}/bin/opt ${SSA_PASSES_SEQ} -S  -rdg ${REMARKS} ${rfile}   ${d} -o ${META_SSA}/${oname}.ll & 
 done 
  
 wait

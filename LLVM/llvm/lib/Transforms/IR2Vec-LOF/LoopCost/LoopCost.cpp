@@ -40,11 +40,11 @@ static cl::opt<unsigned>
     SpatialThreshold("cache-spatial-threshold-byte", cl::init(512), cl::Hidden,
                      cl::desc("Spatial cache locality distance"));
 
-static cl::opt<std::string> funcName("function", cl::Hidden, cl::Required,
+static cl::opt<std::string> funcName("lc-function", cl::Hidden, cl::Required,
                                      cl::desc("Name of the function"));
 
 static cl::opt<unsigned int>
-    loopID("lID", cl::Hidden, cl::Required,
+    loopID("lc-lID", cl::Hidden, cl::Required,
            cl::desc("ID of the loop set by RDG/loop distribution pass"));
 
 static cl::opt<unsigned> CLS("cache-line-size", cl::init(64), cl::Hidden,

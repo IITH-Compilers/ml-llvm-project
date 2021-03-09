@@ -171,6 +171,10 @@ RDGData RDGWrapperPass::computeRDGForFunction(Function &F) {
     auto ir2vec = IR2Vec::Embeddings(*F.getParent(),
                                      IR2Vec::IR2VecMode::FlowAware, VOCAB_FILE);
     instVecMap = ir2vec.getInstVecMap();
+
+    LLVM_DEBUG(for(auto II : instVecMap){
+                    II.first->dump();
+                    });
     collectVectors = false;
   }
 

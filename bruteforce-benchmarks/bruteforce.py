@@ -17,7 +17,7 @@ import re
 import csv
 
 
-no_of_threads=200
+no_of_threads=1
 # mutex=threading.Lock()
 # dataset=None
 

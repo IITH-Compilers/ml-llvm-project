@@ -1,6 +1,5 @@
 #!/bin/bash
 
-
 PWD=`pwd`
 HOME=`realpath ${PWD}/..`
 BUILD_TYPE="LoopCost_REL_AsrtON"
@@ -26,8 +25,6 @@ then
         echo "Enter Output file name like abc.csv ...."
         exit
 fi
-
-
 
 DATA_SET=`realpath ${DATA_SET}`
 

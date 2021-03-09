@@ -12,7 +12,7 @@ import subprocess
 from matplotlib import pyplot as plt
 import argparse
 
-error_runtime=100000000
+# error_runtime=100000000
 
 LL_DIR_CONST='llfiles'
 OUT_DIR_CONST='outfiles'
@@ -241,7 +241,7 @@ def call_distributionPass(filename, distributeSeq, method_name, loop_id, distrib
             os.makedirs(dist_ll_dir)
         dist_llfile = os.path.join(dist_ll_dir, dist_llfile)
         # print(parts[1],' --------------------------> ',distributeSeq) 
-        cmd = "{opt} -load {LLVM}/lib/LoopDistribution.so -LoopDistribution -lID={loop_id} -function {method_name} --partition=\"{dseq}\" -S {input_file} -o {dist_llfile}".format(opt=os.environ['OPT'], LLVM=os.environ['LLVM'], dseq=distributeSeq ,input_file=filename, dist_llfile=dist_llfile, method_name=method_name, loop_id=loop_id)
+        cmd = "{opt} -LoopDistribution -lID={loop_id} -function {method_name} --partition=\"{dseq}\" -S {input_file} -o {dist_llfile}".format(opt=os.environ['OPT'], LLVM=os.environ['LLVM'], dseq=distributeSeq ,input_file=filename, dist_llfile=dist_llfile, method_name=method_name, loop_id=loop_id)
 ## Use for replicate the O3
         
         # print('Call to LoopDistribute pass thru command line \n: ', cmd)
@@ -325,7 +325,7 @@ def getLoopCost(filepath, loopId, fname):
     this_function_name = sys._getframe().f_code.co_name
     loopCost = None     
     try:
-        cmd = "{opt} -S -load {llvm}/lib/LoopCost.so {post_distribution_passes} -lID {loopId} -function {fname} {input_file} -o /dev/null ".format(opt=os.environ['OPT'], llvm=os.environ['LLVM'], input_file=filepath, loopId=loopId,fname=fname, post_distribution_passes=POST_DIS_PASSES_MAP[config.post_pass_key])
+        cmd = "{opt} -S -load {llvm}/lib/LoopCost.so {post_distribution_passes} -lc-lID {loopId} -lc-function {fname} {input_file} -o /dev/null ".format(opt=os.environ['OPT'], llvm=os.environ['LLVM'], input_file=filepath, loopId=loopId,fname=fname, post_distribution_passes=POST_DIS_PASSES_MAP[config.post_pass_key])
         analysedInfo = subprocess.Popen(cmd, executable='/bin/bash', shell=True, stdout=subprocess.PIPE,stderr=subprocess.PIPE)
         stderr, stdout = analysedInfo.communicate()
         # print(stdout)       
