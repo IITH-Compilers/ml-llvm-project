@@ -17,7 +17,7 @@ import re
 import csv
 
 
-no_of_threads=1
+no_of_threads=200
 # mutex=threading.Lock()
 # dataset=None
 
@@ -67,6 +67,9 @@ skipped=0
 
 def extract_cost(filename,funcname,loopid,combination,factors, undistributed_loop_cost=None):
 
+    if len(re.findall("Stack dump:",factors)) != 0:
+        return None
+
     vf=re.findall("VF: \d+",factors)
     iff=re.findall("IF: \d+",factors)
     vecfac=[vf,iff]
@@ -98,7 +101,8 @@ def extract_cost(filename,funcname,loopid,combination,factors, undistributed_loo
     
     #checking if file has correct size of locality factors and total loop cost	
     count=combination.count("|")
-    if((count+1) > len(Lcosts) or (count+1) > len(TLcosts)):				 
+    # if((count+1) > len(Lcosts) or (count+1) > len(TLcosts)):				 
+    if  len(TLcosts) == 0:				 
           temp=[filename,funcname,loopid,combination,"size less than no of loops","size less than no of loops",sum_of_Lcost,sum_of_TLcosts,vecfac,undistributed_loop_cost,sum_of_TLcosts,speedup,"Failure"]
     elif  isinstance(undistributed_loop_cost,str) or  undistributed_loop_cost == 0:
           temp=[filename,funcname,loopid,combination,Lcosts,TLcosts,sum_of_Lcost,sum_of_TLcosts,vecfac,undistributed_loop_cost,sum_of_TLcosts,speedup,"Failure"]
@@ -160,6 +164,9 @@ def run(graphpathlist):
 
         un_row = extract_cost(fileName, method_name, loop_id, un_seq, undistributed_factors) 
         
+        if un_row is None:
+            continue
+
         if un_seq in distributions:
             distributions.remove(un_seq)
 

@@ -21,17 +21,15 @@ def run(agent, config):
     action_mask_flag=config.action_mask_flag
     enable_lexographical_constraint = config.enable_lexographical_constraint
     
-    n_episodes=500
+    n_episodes=100
     max_t=1000
     eps_start=1.0
     eps_end=0.01
-    eps_decay=0.000015
+    eps_decay=0.2 # 0.000015
     scores_window = deque(maxlen=100)  # last 100 scores
     eps = eps_start
     score_per_episode = []
     trained_model = config.trained_model
-#    if trained_model is None:
-#        trained_model = os.path.join(PWD, '../trained_model')
     
     if not os.path.exists(trained_model):
             os.makedirs(trained_model)
@@ -42,7 +40,10 @@ def run(agent, config):
     #Load the envroinment
     env = DistributeLoopEnv(config)    
     training_graphs=glob.glob(os.path.join(dataset, 'graphs/train/*.json'))
+
+    assert training_graphs is not None and len(training_graphs) > 0, "train dataset is empty."
     for episode in range(n_episodes):
+        logging.info('=====Starting  {}th episodes'.format(episode+1))
         scores = []                        # list containing scores from each episode
         score_tensor = 0
         selected_gs = training_graphs
@@ -110,9 +111,10 @@ def run(agent, config):
 
             scores_window.append(score)       # save most recent score
             scores.append(score)              # save most recent score
-            eps = max(eps_end, eps-eps_decay) # decrease epsilon
 
-            logging.info('\n------------------------------------------------------------------------------------------------')
+            # eps = max(eps_end, eps-eps_decay) # decrease epsilon
+            logging.info('------------------------------------------------------------------------------------------------')
+        eps = max(eps_end, eps-eps_decay) # decrease epsilon
         torch.save(agent.qnetwork_local.state_dict(), os.path.join(trained_model, 'checkpoint-graphs-{episode}.pth'.format(episode=episode)))
         score_per_episode.append(np.sum(scores))
         agent.writer.add_scalar('trainInv/total_score', np.sum(scores) ,episode) 

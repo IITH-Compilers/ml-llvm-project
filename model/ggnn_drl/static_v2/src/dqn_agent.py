@@ -8,16 +8,15 @@ import torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
 import os
 import logging
-# from torch.nn.parallel import DistributedDataParallel as DDP
 
 logger = logging.getLogger('dqn_agent.py') 
 
-BUFFER_SIZE = int(20000)  # replay buffer size
-BATCH_SIZE = 64         # minibatch size
+BUFFER_SIZE = int(10000)  # replay buffer size
+BATCH_SIZE = 64 # 256 # 64         # minibatch size
 GAMMA = 0.99            # discount factor
-TAU = 1e-3              # for soft update of target parameters
+TAU = 1e-3# 1e-1              # for soft update of target parameters
 LR = 5e-4               # learning rate 
-UPDATE_EVERY = 4 # 10 # 4        # how often to update the network
+UPDATE_EVERY = 4# 100 # 10 # 4        # how often to update the network
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -55,7 +54,7 @@ class Agent():
             action_size (int): dimension of each action
             seed (int): random seed
         """
-        random.seed(seed)
+        # random.seed(seed)
         state_size = config.state_size
         action_size = config.action_space
         # self.enable_lexographical_constraint=config.enable_lexographical_constraint
@@ -276,7 +275,7 @@ class ReplayBuffer:
         self.memory = deque(maxlen=buffer_size)  
         self.batch_size = batch_size
         self.experience = namedtuple("Experience", field_names=["state", "action", "reward", "next_state", "done"])
-        random.seed(seed)
+        # random.seed(seed)
         self.action_mask_flag = False
         # self.enable_lexographical_constraint = config.enable_lexographical_constraint
     

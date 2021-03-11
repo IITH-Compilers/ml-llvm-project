@@ -41,13 +41,13 @@ class DistributeLoopEnv:
         if distributedLoopCost !=0 and OriginalLoopCost != 0:
             speedup = (OriginalLoopCost - distributedLoopCost)/OriginalLoopCost
             reward = speedup
-            if reward <= 0:
-                reward = reward - 0.5
-            else:
-                reward = reward + 5
-            if reward < -5:
-                logging.warning('reward={} < -5 so rplace by -5'.format(reward))
-                reward=-5
+            # if reward <= 0:
+            #     reward = reward - 0.5
+            # else:
+            #     reward = reward + 5
+            # if reward < -5:
+            #     logging.warning('reward={} < -5 so rplace by -5'.format(reward))
+            #     reward=-5
         else:
             logging.warning('distributedLoopCost or Original LoopCost is Zero ....., reward={}'.format(reward))
 
@@ -172,6 +172,7 @@ class DistributeLoopEnv:
     # input graph : jsonnx
     # return the state of the graph, all the possible starting nodes
     def reset_env(self, graph, path=None):
+        self.cur_node = None
         if self.mode != 'inference':
             attr = utils.getllFileAttributes(path)
             self.loopId = attr['LOOP_ID']
