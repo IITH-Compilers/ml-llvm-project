@@ -89,6 +89,9 @@ void LoopDistribution::changeLoopIDMetaData(Loop *L) {
   SmallVector<BasicBlock *, 4> LoopLatches;
   L->getLoopLatches(LoopLatches);
   for (BasicBlock *BB : LoopLatches) {
+    if (loopID == 0 ){
+    LoopID = BB->getTerminator()->getMetadata("IR2Vec-SCC-LoopID");
+    }
     BB->getTerminator()->setMetadata("IR2Vec-Distributed-LoopID", LoopID);
     BB->getTerminator()->setMetadata("IR2Vec-SCC-LoopID", NULL);
   }
