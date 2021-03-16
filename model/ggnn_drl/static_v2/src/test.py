@@ -13,14 +13,11 @@ from utils import get_parse_args
 import logging
 
 def run(agent, config):
-    action_mask_flag=config.action_mask_flag
-    enable_lexographical_constraint = config.enable_lexographical_constraint
 
     eps=0
     max_t=1000
     scores = []                        # list containing scores from each episode
     scores_window = deque(maxlen=100)  # last 100 scores
-   
 
     dataset= config.dataset
     #Load the envroinment
@@ -28,7 +25,7 @@ def run(agent, config):
     score = 0
     count = 1
     # logging.info(glob.glob(os.path.join(dataset, 'graphs/test/*.json')))
-    for path in glob.glob(os.path.join(dataset, 'graphs/test/*.json')): # Number of the iterations
+    for path in glob.glob(os.path.join(dataset, 'graphs/json/I_520*.json')): # Number of the iterations
         
         with open(path) as f:
             graph = json.load(f)
@@ -67,15 +64,16 @@ def run(agent, config):
         agent.writer.add_scalar('test/rewardWall', reward)
 
         def speedup(reward):
-            if reward > 0:
-                return reward - 5
-            else:
-                return reward + 0.5
+            return reward
+            # if reward > 0:
+            #     return reward - 5
+            # else:
+            #     return reward + 0.5
         agent.writer.add_scalar('test/speedup', speedup(reward))
  
         count+=1
-    utils.plot(range(1, len(scores_window)+1), scores_window, 'Last 100 rewards',location=config.distributed_data)
-    utils.plot(range(1, len(scores)+1), scores, 'Total Rewards per time instant',location=config.distributed_data)
+    # utils.plot(range(1, len(scores_window)+1), scores_window, 'Last 100 rewards',location=config.distributed_data)
+    # utils.plot(range(1, len(scores)+1), scores, 'Total Rewards per time instant',location=config.distributed_data)
 
 
 if __name__ == '__main__':
@@ -96,7 +94,7 @@ if __name__ == '__main__':
 
     logging.info('model selected for training :{}'.format(trained_model))
 
-    dqn_agent.qnetwork_local.load_state_dict(torch.load(trained_model))
+    dqn_agent.qnetwork_local.load_state_dict(torch.load(trained_model, map_location=torch.device("cuda" if torch.cuda.is_available() else "cpu")))
     # dqn_agent.writer.add_graph(dqn_agent.qnetwork_local)
     run(dqn_agent, config)
 

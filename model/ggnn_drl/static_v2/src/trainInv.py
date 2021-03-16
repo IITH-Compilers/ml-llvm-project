@@ -21,11 +21,11 @@ def run(agent, config):
     action_mask_flag=config.action_mask_flag
     enable_lexographical_constraint = config.enable_lexographical_constraint
     
-    n_episodes=100
+    n_episodes=200
     max_t=1000
     eps_start=1.0
     eps_end=0.01
-    eps_decay=0.2 # 0.000015
+    eps_decay=0.01 # 0.000015
     scores_window = deque(maxlen=100)  # last 100 scores
     eps = eps_start
     score_per_episode = []

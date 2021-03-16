@@ -66,6 +66,7 @@ class DistributeLoopEnv:
         # key = "{filename}_{function_name}_{loopid}_{disSeq}".format(filename=ll_file_name, function_name=method_name, loopid=loop_id, disSeq=self.distribution)   
         key = (ll_file_name, method_name, int(loop_id), '|'.join([ ','.join(sorted(seqdis.split(','))) for seqdis in self.distribution.split('|')]))   
         
+        isFound = False
         try:
             if self.mode == 'train':
                 record = self.loopcost_cache.iloc[self.loopcost_cache.index.get_loc(key)]
@@ -77,7 +78,6 @@ class DistributeLoopEnv:
                 isFound=True
         except:
             logging.warning('Index not found in the cache.. key={}'.format(key))
-            isFound = False
         
         if not isFound:
             meta_ssa_dir = os.path.join(home_dir, 'llfiles/meta_ssa')

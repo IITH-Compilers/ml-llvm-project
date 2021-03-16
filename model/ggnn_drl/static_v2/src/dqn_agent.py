@@ -11,7 +11,7 @@ import logging
 
 logger = logging.getLogger('dqn_agent.py') 
 
-BUFFER_SIZE = int(10000)  # replay buffer size
+BUFFER_SIZE = int(20000)  # replay buffer size
 BATCH_SIZE = 64 # 256 # 64         # minibatch size
 GAMMA = 0.99            # discount factor
 TAU = 1e-3# 1e-1              # for soft update of target parameters
