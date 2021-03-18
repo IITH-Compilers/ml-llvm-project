@@ -44,6 +44,7 @@ private:
   OptimizationRemarkEmitter *ORE;
 
   void setLoopID(Loop *L, MDNode *LoopID) const;
+  void addMCACalls(Loop *L, int loopID) const;
 
   RDGData computeRDGForFunction(Function &F);
   RDGData rdgInfo;

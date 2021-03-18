@@ -10,6 +10,7 @@ echo "LLVM build directory selected for collecting data : ${LLVM_BUILD}"
 export LLVM=${LLVM_BUILD}
 export OPT=${LLVM_BUILD}/bin/opt
 export CLANG=${LLVM_BUILD}/bin/clang
+export MCA=${LLVM_BUILD}/bin/llvm-mca
 
 DATA_SET=$1
 
@@ -28,4 +29,22 @@ fi
 
 DATA_SET=`realpath ${DATA_SET}`
 
-python bruteforce.py --dataset=${DATA_SET}  --outfile ${OUT_FILE_NAME} --distributed=${DATA_SET}/brute-distributed --post_pass_key=2
+REWARD_TYPE=$3
+if [ -z ${REWARD_TYPE} ] 
+then
+        echo "Reward type should be either LC - LoopCost or MCA - llvm-mca"
+        exit 
+fi
+
+if [ ${REWARD_TYPE} = 'LC' ]
+then
+        RT="--loop_cost"
+elif [ ${REWARD_TYPE} = 'S' ]
+        then
+                RT="--mca_cost"
+else
+        echo "Reward type should be either LC - LoopCost or MCA - llvm-mca"
+        exit
+fi
+
+python bruteforce.py --dataset=${DATA_SET}  --outfile ${OUT_FILE_NAME} --distributed=${DATA_SET}/brute-distributed --post_pass_key=2 ${RT}

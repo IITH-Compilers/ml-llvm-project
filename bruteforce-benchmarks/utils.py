@@ -30,8 +30,8 @@ META_SSA_LL_DIR_CONST='{}/meta_ssa'.format(LL_DIR_CONST)
 
 # POST_DIST_O3_PASSES='-branch-prob -block-freq -scalar-evolution -basicaa -aa -loop-accesses -demanded-bits -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -loop-vectorize -loop-simplify -LoopCost -scalar-evolution -aa -loop-accesses -lazy-branch-prob -lazy-block-freq -loop-load-elim -basicaa -aa -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -instcombine -simplifycfg -domtree -loops -scalar-evolution -basicaa -aa -demanded-bits -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -slp-vectorizer -opt-remark-emitter -instcombine -loop-simplify -lcssa-verification -lcssa -scalar-evolution -loop-unroll -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -instcombine -memoryssa -loop-simplify -lcssa-verification -lcssa -scalar-evolution -licm -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -transform-warning -alignment-from-assumptions -strip-dead-prototypes -globaldce -constmerge -domtree -loops -branch-prob -block-freq -loop-simplify -lcssa-verification -lcssa -basicaa -aa -scalar-evolution -block-freq -loop-sink -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -instsimplify -div-rem-pairs -simplifycfg -verify' 
 
-POST_DIST_O3_PASSES='-branch-prob -block-freq -scalar-evolution -basicaa -aa -loop-accesses -demanded-bits -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -loop-vectorize -loop-simplify -scalar-evolution -aa -loop-accesses -lazy-branch-prob -lazy-block-freq -loop-load-elim -basicaa -aa -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -instcombine -simplifycfg -domtree -loops -scalar-evolution -basicaa -aa -demanded-bits -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -slp-vectorizer -opt-remark-emitter -instcombine -loop-simplify -lcssa-verification -lcssa -scalar-evolution         -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -instcombine -memoryssa -loop-simplify -lcssa-verification -lcssa -scalar-evolution -licm -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -transform-warning -alignment-from-assumptions -strip-dead-prototypes -globaldce -constmerge -domtree -loops -branch-prob -block-freq -loop-simplify -lcssa-verification -lcssa -basicaa -aa -scalar-evolution -block-freq -loop-sink -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -instsimplify -div-rem-pairs -simplifycfg -verify -LoopCost' 
-POST_DIS_PASSES_MAP= { 0 : "-LoopCost",  1 : "-loop-vectorize -LoopCost", 2 : POST_DIST_O3_PASSES }
+POST_DIST_O3_PASSES='-branch-prob -block-freq -scalar-evolution -basicaa -aa -loop-accesses -demanded-bits -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -loop-vectorize -loop-simplify -scalar-evolution -aa -loop-accesses -lazy-branch-prob -lazy-block-freq -loop-load-elim -basicaa -aa -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -instcombine -simplifycfg -domtree -loops -scalar-evolution -basicaa -aa -demanded-bits -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -slp-vectorizer -opt-remark-emitter -instcombine -loop-simplify -lcssa-verification -lcssa -scalar-evolution         -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -instcombine -memoryssa -loop-simplify -lcssa-verification -lcssa -scalar-evolution -licm -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -transform-warning -alignment-from-assumptions -strip-dead-prototypes -globaldce -constmerge -domtree -loops -branch-prob -block-freq -loop-simplify -lcssa-verification -lcssa -basicaa -aa -scalar-evolution -block-freq -loop-sink -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -instsimplify -div-rem-pairs -simplifycfg -verify' 
+POST_DIS_PASSES_MAP= { 0 : "",  1 : "-loop-vectorize", 2 : POST_DIST_O3_PASSES }
 
 config=None
 
@@ -315,11 +315,58 @@ def get_parse_args():
     
     parser.add_argument('--post_pass_key', dest='post_pass_key', required=False,  type=int, help='Key of the post distribution passes map.', default=2)
 
-    parser.add_argument('--outfile', dest='outfile',  help='Name of the output file..')
+    parser.add_argument('--outfile', dest='outfile', help='Name of the output file..')
+    parser.add_argument('--loop-cost', dest='loop_cost', required=False, default=False, type=bool, help='Cost model: loop-cost')
+    parser.add_argument('--mca-cost', dest='mca_cost', required=False, default=False, type=bool, help='Cost model: mca-cost')
 
     global config 
     config = parser.parse_args()
+
+    if config.mca_cost and config.loop_cost:
+        parser.error("Only one of loop-cost and mca-cost can be specified")
+        
+    if not config.mca_cost and not config.loop_cost:
+        parser.error("Atleast one of loop-cost and mca-cost should be specified")
+
     return config
+
+def getMCACost(filepath, loopId, fname):
+    this_function_name = sys._getframe().f_code.co_name
+    loopCost = None     
+    try:
+        cmd = "{clang} -S -o - < {opt} -S {post_distribution_passes} {input_file} | {llvm_mca} -lc-lID {loopId} -lc-function {fname}".\
+            format(opt=os.environ['OPT'], clang=os.environ['CLANG'], llvm_mca=os.environ['MCA'], input_file=filepath,
+            loopId=loopId, fname=fname, post_distribution_passes=POST_DIS_PASSES_MAP[config.post_pass_key])
+        pro = subprocess.Popen(cmd, executable='/bin/bash', shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        output = pro.stdout
+        line = output.readline()
+        
+        if pro.stderr is not None:
+            eprint('Error : {}'.format(pro.stderr))
+        
+        eprint('***Metric for the loop****')
+        while line:
+            line = line.decode('utf-8').rstrip("\n")
+            
+            pair = line.split(':')
+            if pair[0] == 'Block RThroughput':
+                lc = float(pair[1].strip(' '))
+                if lc > 0:
+                    loopCost += lc
+                else:
+                    eprint('loopcost <=0 : {}'.format(cmd))
+                    loopcost = 0
+                    break
+            eprint(line)
+            line = output.readline()
+    except Exception as inst :
+        eprint(sys.exc_info())
+        eprint(': Exception ocurred : {}'.format (inst))
+        eprint('{this_function_name}: Some error occured .. for {filename}'.format(this_function_name=this_function_name,filename=filepath))
+    except :
+        eprint(sys.exc_info())
+        eprint('{this_function_name}: Other Unknown Some error occured .. for {filename}'.format(this_function_name=this_function_name, filename=filename))
+    return loopCost
 
 def getLoopCost(filepath, loopId, fname):
     this_function_name = sys._getframe().f_code.co_name
@@ -348,4 +395,3 @@ def getLoopCost(filepath, loopId, fname):
         eprint(sys.exc_info())
         eprint('{this_function_name}: Other Unknown Some error occured .. for {filename}'.format(this_function_name=this_function_name, filename=filename))
     return loopCost
-

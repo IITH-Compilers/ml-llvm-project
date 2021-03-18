@@ -24,9 +24,8 @@ namespace mca {
 
 SummaryView::SummaryView(const MCSchedModel &Model, ArrayRef<MCInst> S,
                          unsigned Width)
-    : SM(Model), Source(S), DispatchWidth(Width?Width: Model.IssueWidth),
-      LastInstructionIdx(0),
-      TotalCycles(0), NumMicroOps(0),
+    : SM(Model), Source(S), DispatchWidth(Width ? Width : Model.IssueWidth),
+      LastInstructionIdx(0), TotalCycles(0), NumMicroOps(0),
       ProcResourceUsage(Model.getNumProcResourceKinds(), 0),
       ProcResourceMasks(Model.getNumProcResourceKinds()),
       ResIdx2ProcResID(Model.getNumProcResourceKinds(), 0) {
@@ -74,15 +73,15 @@ void SummaryView::printView(raw_ostream &OS) const {
 
   std::string Buffer;
   raw_string_ostream TempStream(Buffer);
-  TempStream << "Iterations:        " << Iterations;
-  TempStream << "\nInstructions:      " << TotalInstructions;
-  TempStream << "\nTotal Cycles:      " << TotalCycles;
-  TempStream << "\nTotal uOps:        " << TotalUOps << '\n';
-  TempStream << "\nDispatch Width:    " << DispatchWidth;
-  TempStream << "\nuOps Per Cycle:    "
-             << format("%.2f", floor((UOpsPerCycle * 100) + 0.5) / 100);
-  TempStream << "\nIPC:               "
-             << format("%.2f", floor((IPC * 100) + 0.5) / 100);
+  // TempStream << "Iterations:        " << Iterations;
+  // TempStream << "\nInstructions:      " << TotalInstructions;
+  // TempStream << "\nTotal Cycles:      " << TotalCycles;
+  // TempStream << "\nTotal uOps:        " << TotalUOps << '\n';
+  // TempStream << "\nDispatch Width:    " << DispatchWidth;
+  // TempStream << "\nuOps Per Cycle:    "
+  //            << format("%.2f", floor((UOpsPerCycle * 100) + 0.5) / 100);
+  // TempStream << "\nIPC:               "
+  //            << format("%.2f", floor((IPC * 100) + 0.5) / 100);
   TempStream << "\nBlock RThroughput: "
              << format("%.1f", floor((BlockRThroughput * 10) + 0.5) / 10)
              << '\n';

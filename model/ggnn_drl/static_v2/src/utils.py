@@ -30,9 +30,9 @@ META_SSA_LL_DIR_CONST='{}/meta_ssa'.format(LL_DIR_CONST)
 ## Use for replicate the O3
 # POST_DIST_O3_PASSES='-branch-prob -block-freq -scalar-evolution -basicaa -aa -loop-accesses -demanded-bits -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -loop-vectorize -loop-simplify -LoopCost -scalar-evolution -aa -loop-accesses -lazy-branch-prob -lazy-block-freq -loop-load-elim -basicaa -aa -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -instcombine -simplifycfg -domtree -loops -scalar-evolution -basicaa -aa -demanded-bits -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -slp-vectorizer -opt-remark-emitter -instcombine -loop-simplify -lcssa-verification -lcssa -scalar-evolution -loop-unroll -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -instcombine -memoryssa -loop-simplify -lcssa-verification -lcssa -scalar-evolution -licm -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -transform-warning -alignment-from-assumptions -strip-dead-prototypes -globaldce -constmerge -domtree -loops -branch-prob -block-freq -loop-simplify -lcssa-verification -lcssa -basicaa -aa -scalar-evolution -block-freq -loop-sink -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -instsimplify -div-rem-pairs -simplifycfg -verify'
 
-POST_DIST_O3_PASSES='-branch-prob -block-freq -scalar-evolution -basicaa -aa -loop-accesses -demanded-bits -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -loop-vectorize -loop-simplify -scalar-evolution -aa -loop-accesses -lazy-branch-prob -lazy-block-freq -loop-load-elim -basicaa -aa -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -instcombine -simplifycfg -domtree -loops -scalar-evolution -basicaa -aa -demanded-bits -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -slp-vectorizer -opt-remark-emitter -instcombine -loop-simplify -lcssa-verification -lcssa -scalar-evolution          -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -instcombine -memoryssa -loop-simplify -lcssa-verification -lcssa -scalar-evolution -licm -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -transform-warning -alignment-from-assumptions -strip-dead-prototypes -globaldce -constmerge -domtree -loops -branch-prob -block-freq -loop-simplify -lcssa-verification -lcssa -basicaa -aa -scalar-evolution -block-freq -loop-sink -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -instsimplify -div-rem-pairs -simplifycfg -verify -LoopCost'
+POST_DIST_O3_PASSES='-branch-prob -block-freq -scalar-evolution -basicaa -aa -loop-accesses -demanded-bits -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -loop-vectorize -loop-simplify -scalar-evolution -aa -loop-accesses -lazy-branch-prob -lazy-block-freq -loop-load-elim -basicaa -aa -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -instcombine -simplifycfg -domtree -loops -scalar-evolution -basicaa -aa -demanded-bits -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -slp-vectorizer -opt-remark-emitter -instcombine -loop-simplify -lcssa-verification -lcssa -scalar-evolution          -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -instcombine -memoryssa -loop-simplify -lcssa-verification -lcssa -scalar-evolution -licm -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -transform-warning -alignment-from-assumptions -strip-dead-prototypes -globaldce -constmerge -domtree -loops -branch-prob -block-freq -loop-simplify -lcssa-verification -lcssa -basicaa -aa -scalar-evolution -block-freq -loop-sink -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -instsimplify -div-rem-pairs -simplifycfg -verify'
 
-POST_DIS_PASSES_MAP= { 0 : "-LoopCost",  1 : "-loop-vectorize -LoopCost", 2 : POST_DIST_O3_PASSES }
+POST_DIS_PASSES_MAP= { 0 : "",  1 : "-loop-vectorize", 2 : POST_DIST_O3_PASSES }
 
 config=None
 
@@ -124,8 +124,18 @@ def get_parse_args():
     parser.add_argument('--rewardtype', dest='rewardtype', required=False,  help='Static or Runtime rewards..', default='runtime')
     global config 
     parser.add_argument('--logdir', dest='logdir', metavar='DIRECTORY', help='Location of the log directory.', required=True)
+    parser.add_argument('--loop-cost', dest='loop_cost', required=False, default=False, type=bool, help='Cost model: loop-cost')
+    parser.add_argument('--mca-cost', dest='mca_cost', required=False, default=False, type=bool, help='Cost model: mca-cost')
     config = parser.parse_args()
+
+    if config.mca_cost and config.loop_cost:
+        parser.error("Only one of loop-cost and mca-cost can be specified")
+        
+    if not config.mca_cost and not config.loop_cost:
+        parser.error("Atleast one of loop-cost and mca-cost should be specified")
+
     return config
+
 def log_subprocess_output(pipe):
     for line in iter(pipe.readline, b''): # b'\n'-separated lines
         logging.info('got line from subprocess: {}'.format(line))
@@ -135,7 +145,7 @@ def getLoopCost(filepath, loopId, fname):
     loopCost = 0 # []
     try:
        # TODO 
-        cmd = "{opt} -S -load {llvm}/lib/LoopCost.so {post_distribution_passes}  -lc-lID {loopId} -lc-function {fname}  {input_file} -o /dev/null ".format(opt=os.environ['OPT'], llvm=os.environ['LLVM'], input_file=filepath, loopId=loopId,fname=fname, post_distribution_passes=POST_DIS_PASSES_MAP[config.post_pass_key])
+        cmd = "{opt} -S -load {llvm}/lib/LoopCost.so {post_distribution_passes} -LoopCost -lc-lID {loopId} -lc-function {fname}  {input_file} -o /dev/null ".format(opt=os.environ['OPT'], llvm=os.environ['LLVM'], input_file=filepath, loopId=loopId,fname=fname, post_distribution_passes=POST_DIS_PASSES_MAP[config.post_pass_key])
         # analysedInfo = subprocess.Popen(cmd, executable='/bin/bash', shell=True, stdout=subprocess.PIPE).stdout.read()
         # logging.info(cmd)
         pro = subprocess.Popen(cmd, executable='/bin/bash', shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
@@ -172,14 +182,58 @@ def getLoopCost(filepath, loopId, fname):
         logging.critical('{this_function_name}: Some error occured .. for {filename}'.format(this_function_name=this_function_name,filename=filepath))
     except :
         logging.critical(sys.exc_info())
-        logging.critical('{this_function_name}: Other Unknown Some error occured .. for {filename}'.format(this_function_name=this_function_name, filename=filepath))
+        logging.critical('{this_function_name}: Some Other Unknown error occured .. for {filename}'.format(this_function_name=this_function_name, filename=filepath))
     return loopCost
 
 
-def load_precomputed_loopcost():
+def getMCACost(filepath, loopId, fname):
+    this_function_name = sys._getframe().f_code.co_name
+    loopCost = 0 # []
+    try:      
+        cmd = "{clang} -S -o - < {opt} -S {post_distribution_passes} {input_file} | {llvm_mca} -lc-lID {loopId} -lc-function {fname}".\
+            format(opt=os.environ['OPT'], clang=os.environ['CLANG'], llvm_mca=os.environ['MCA'], input_file=filepath,
+            loopId=loopId, fname=fname, post_distribution_passes=POST_DIS_PASSES_MAP[config.post_pass_key])
+        # analysedInfo = subprocess.Popen(cmd, executable='/bin/bash', shell=True, stdout=subprocess.PIPE).stdout.read()
+        # logging.info(cmd)
+        pro = subprocess.Popen(cmd, executable='/bin/bash', shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        output = pro.stdout
+        line = output.readline()
+        
+        if pro.stderr is not None:
+            logging.critical('Error : {}'.format(pro.stderr))
+        
+        logging.info('***Metric for the loop****')
+        while line:
+            line = line.decode('utf-8').rstrip("\n")
+            
+            pair = line.split(':')
+            if pair[0] == 'Block RThroughput':
+                lc = float(pair[1].strip(' '))
+                if lc > 0:
+                    loopCost += lc
+                else:
+                    logging.critical('loopcost <=0 : {}'.format(cmd))
+                    loopcost = 0
+                    break
+            logging.info(line)
+            line = output.readline()
+        # p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        # stdout_text, stderr_text = p.communicate()
+        # logging.info(' p ', stdout_text, stderr_text)
+        # logging.info('----|Analyze Info loopCost', loopCost)
+        # factors = analysedInfo.split(',')
+        # loopCost = analysedInfo
+    except Exception as inst :
+        logging.critical(sys.exc_info())
+        logging.critical(': Exception ocurred : {}'.format(inst))
+        logging.critical('{this_function_name}: Some error occured .. for {filename}'.format(this_function_name=this_function_name,filename=filepath))
+    except :
+        logging.critical(sys.exc_info())
+        logging.critical('{this_function_name}: Some Other Unknown error occured .. for {filename}'.format(this_function_name=this_function_name, filename=filepath))
+    return loopCost
+
+def load_precomputed_cost(filepath):
     logging.info('Load pre computed LoopCost..')
-    filename = 'loopcost_p{}.csv'.format(config.post_pass_key)
-    filepath = os.path.join(config.dataset, filename)
     df = pd.read_csv(filepath, sep=',')
     df = df.set_index(['Filename', 'Function Name', 'Loop ID', 'Combination'])
     df = df[['Distributed cost', 'Undsitributed Cost']]
@@ -187,10 +241,13 @@ def load_precomputed_loopcost():
     # logging.info(df.iloc[df.index.get_loc(('110_0pulgares.zip_2.ll','main','1', 'S1,S2,S3,S4'))])
     return df
 
-def save_precomputed_loopCost(df):
-     filename = 'updated_loopcost_p{}_{}.csv'.format(config.post_pass_key, datetime.datetime.now())
+def save_precomputed_loopCost(df, cost):
+     if config.loop_cost:
+        filename = 'updated_loopcost_p{}_{}.csv'.format(config.post_pass_key, datetime.datetime.now())
+     else:
+        filename = 'updated_mcacost_p{}_{}.csv'.format(config.post_pass_key, datetime.datetime.now())
      filepath = os.path.join(config.dataset, filename)
      df = df.reset_index()
      df.to_csv(filepath, index=False, sep=',')
-     logging.info('Save computed LoopCost for furture use at {}'.format(filepath))
+     logging.info('Save computed LoopCost for future use at {}'.format(filepath))
 

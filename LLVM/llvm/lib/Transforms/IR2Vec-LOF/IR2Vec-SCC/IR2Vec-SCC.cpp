@@ -16,6 +16,7 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Metadata.h"
@@ -31,6 +32,11 @@
 #define DEBUG_TYPE "RDG"
 
 using namespace llvm;
+
+static cl::opt<bool>
+    useMCA("use-mca", cl::Optional,
+           cl::desc("asm_inline calls to use llvm-mca as cost model"),
+           cl::init(false));
 
 RDGWrapperPass::RDGWrapperPass() : FunctionPass(ID) {
   initializeRDGWrapperPassPass(*PassRegistry::getPassRegistry());
@@ -150,6 +156,35 @@ void RDGWrapperPass::setLoopID(Loop *L, MDNode *LoopID) const {
     BB->getTerminator()->setMetadata("IR2Vec-SCC-LoopID", LoopID);
 }
 
+void RDGWrapperPass::addMCACalls(Loop *L, int loopID) const {
+  auto preheader = L->getLoopPreheader();
+  assert(preheader && "Loop should contain a preheader");
+
+  LLVMContext &Context = L->getHeader()->getContext();
+
+  std::string regionName =
+      preheader->getParent()->getName().str() + "-" + std::to_string(loopID);
+
+  std::vector<Type *> AsmArgTypes;
+  std::vector<Value *> AsmArgs;
+  std::string AsmText = "# LLVM-MCA-BEGIN " + regionName;
+  std::string constraints = "~{dirflag},~{fpsr},~{flags}";
+  FunctionType *AsmFTy =
+      FunctionType::get(Type::getVoidTy(Context), AsmArgTypes, false);
+  InlineAsm *IA = InlineAsm::get(AsmFTy, AsmText, constraints, true,
+                                 /* IsAlignStack */ false);
+  CallInst::Create(IA, AsmArgs, "", preheader->getTerminator())
+      ->setDoesNotThrow();
+
+  auto exitBlock = L->getExitBlock();
+  assert(exitBlock && "At this stage loop should have a single exit block");
+
+  AsmText = "# LLVM-MCA-END " + regionName;
+  InlineAsm *IE = InlineAsm::get(AsmFTy, AsmText, constraints, true,
+                                 /* IsAlignStack */ false);
+  CallInst::Create(IE, AsmArgs, "", &*(exitBlock->begin()))->setDoesNotThrow();
+}
+
 bool RDGWrapperPass::runOnFunction(Function &F) {
   rdgInfo = computeRDGForFunction(F);
   return true;
@@ -172,9 +207,7 @@ RDGData RDGWrapperPass::computeRDGForFunction(Function &F) {
                                      IR2Vec::IR2VecMode::FlowAware, VOCAB_FILE);
     instVecMap = ir2vec.getInstVecMap();
 
-    LLVM_DEBUG(for(auto II : instVecMap){
-                    II.first->dump();
-                    });
+    LLVM_DEBUG(for (auto II : instVecMap) { II.first->dump(); });
     collectVectors = false;
   }
 
@@ -218,6 +251,9 @@ RDGData RDGWrapperPass::computeRDGForFunction(Function &F) {
           MDNode::get(Context, ConstantAsMetadata::get(ConstantInt::get(
                                    Context, llvm::APInt(64, loopNum, false))));
       setLoopID(*il, LoopID);
+
+      if (useMCA)
+        addMCACalls(*il, loopNum);
 
       std::string s1 = F.getParent()->getName().str();
       std::string s2(s1.substr(s1.rfind('/') + 1));

@@ -26,8 +26,14 @@ class DistributeLoopEnv:
         # self.discovered = []
         
         self.mode = config.mode
-        if self.mode != 'inference': 
-            self.loopcost_cache = utils.load_precomputed_loopcost() 
+        self.config = config
+        if self.mode != 'inference':
+            if config.loop_cost:
+                filename = 'loopcost_p{}.csv'.format(config.post_pass_key)
+            else:
+                filename = 'mcacost_p{}.csv'.format(config.post_pass_key)
+            filepath = os.path.join(config.dataset, filename)
+            self.loopcost_cache = utils.load_precomputed_cost(filepath)
             self.distributed_data = config.distributed_data
             self.second_loopcost_cache = set()
         
@@ -100,10 +106,16 @@ class DistributeLoopEnv:
             if distributed_llfile is None:
                 logging.info('warning:distributed file  not generated...., reward={}'.format(reward))
             else:
-                logging.info('Get the metric for original loop')
-                OriginalLoopCost = utils.getLoopCost(meta_ssa_file_path, loop_id, method_name)
-                logging.info('Get the value for distributed loop')
-                distributedLoopCost = utils.getLoopCost(distributed_llfile, loop_id, method_name)
+                if self.config.loop_cost:
+                    logging.info('Get the loop_cost metric for original loop')
+                    OriginalLoopCost = utils.getLoopCost(meta_ssa_file_path, loop_id, method_name)
+                    logging.info('Get the loop_cost metric for distributed loop')
+                    distributedLoopCost = utils.getLoopCost(distributed_llfile, loop_id, method_name)
+                else:
+                    logging.info('Get the mca_cost metric for original loop')
+                    OriginalLoopCost = utils.getMCACost(meta_ssa_file_path, loop_id, method_name)
+                    logging.info('Get the mca_cost metric for distributed loop')
+                    distributedLoopCost = utils.getMCACost(distributed_llfile, loop_id, method_name)
                 reward, speedup = self.reward_formula(distributedLoopCost, OriginalLoopCost)  
                 # Remove, it is occupies a lot of space
                 if self.mode != 'test':

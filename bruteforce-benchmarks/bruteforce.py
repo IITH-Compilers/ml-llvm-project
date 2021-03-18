@@ -70,25 +70,29 @@ def extract_cost(filename,funcname,loopid,combination,factors, undistributed_loo
     if len(re.findall("Stack dump:",factors)) != 0:
         return None
 
-    vf=re.findall("VF: \d+",factors)
-    iff=re.findall("IF: \d+",factors)
-    vecfac=[vf,iff]
-    Lcostslist=re.findall("Cache cost: \d+",factors)
-    Lcosts=[]
-    for x in Lcostslist:
-        Lcosts.append(int(x.split(":")[1]))
-    # print(Lcosts) 	
-    sum_of_Lcost=0
-    for x in Lcosts:
-        sum_of_Lcost+=x
-    #getting all TLcosts and its sum		
-    TLcostsList=re.findall("TotalLoopCost for Loop: \d+",factors)
-    TLcosts=[]
-    for x in TLcostsList:
-        TLcosts.append(int(x.split(":")[1]))  	
-    sum_of_TLcosts=0
-    for x in TLcosts:
-        sum_of_TLcosts+=x
+    if config.loop_cost:
+        vf=re.findall("VF: \d+",factors)
+        iff=re.findall("IF: \d+",factors)
+        vecfac=[vf,iff]
+        Lcostslist=re.findall("Cache cost: \d+",factors)
+        Lcosts=[]
+        for x in Lcostslist:
+            Lcosts.append(int(x.split(":")[1]))
+        # print(Lcosts) 	
+        sum_of_Lcost=0
+        for x in Lcosts:
+            sum_of_Lcost+=x
+        #getting all TLcosts and its sum		
+        TLcostsList=re.findall("TotalLoopCost for Loop: \d+",factors)
+        TLcosts=[]
+        for x in TLcostsList:
+            TLcosts.append(int(x.split(":")[1]))  	
+        sum_of_TLcosts=0
+        for x in TLcosts:
+            sum_of_TLcosts += x
+    
+    else:
+        sum_of_TLcosts = factors
 
     #calculating speed up
     if undistributed_loop_cost is None:
@@ -158,7 +162,10 @@ def run(graphpathlist):
         un_seq = ','.join(["S{}".format(i+1) for i in range(N)])
         unll_file = utils.call_distributionPass(
             meta_ssa_file_path, un_seq, method_name, loop_id, config.distributed, fun_id)
-        undistributed_factors = utils.getLoopCost(unll_file, loop_id, method_name)
+        if config.loop_cost:
+            undistributed_factors = utils.getLoopCost(unll_file, loop_id, method_name)
+        else:
+            undistributed_factors = utils.getMCACost(unll_file, loop_id, method_name)
         if os.path.exists(unll_file):
             os.remove(unll_file)
 
@@ -173,7 +180,10 @@ def run(graphpathlist):
         for distribution in distributions:
             ll_file = utils.call_distributionPass(
                 meta_ssa_file_path, distribution, method_name, loop_id, config.distributed, fun_id)
-            distributed_factors=utils.getLoopCost(ll_file, loop_id, method_name)
+            if config.loop_cost:
+                distributed_factors = utils.getLoopCost(ll_file, loop_id, method_name)
+            else:
+                distributed_factors = utils.getMCACost(ll_file, loop_id, method_name)
             if os.path.exists(ll_file):
                 os.remove(ll_file)
 

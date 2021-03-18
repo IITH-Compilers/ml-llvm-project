@@ -89,10 +89,9 @@ static cl::opt<std::string>
          cl::desc("Target a specific cpu type (-mcpu=help for details)"),
          cl::value_desc("cpu-name"), cl::cat(ToolOptions), cl::init("native"));
 
-static cl::opt<std::string>
-    MATTR("mattr",
-          cl::desc("Additional target features."),
-          cl::cat(ToolOptions));
+static cl::opt<std::string> MATTR("mattr",
+                                  cl::desc("Additional target features."),
+                                  cl::cat(ToolOptions));
 
 static cl::opt<int>
     OutputAsmVariant("output-asm-variant",
@@ -154,7 +153,7 @@ static cl::opt<bool>
 static cl::opt<bool> PrintResourcePressureView(
     "resource-pressure",
     cl::desc("Print the resource pressure view (enabled by default)"),
-    cl::cat(ViewOptions), cl::init(true));
+    cl::cat(ViewOptions), cl::init(false));
 
 static cl::opt<bool> PrintTimelineView("timeline",
                                        cl::desc("Print the timeline view"),
@@ -192,7 +191,7 @@ static cl::opt<bool>
 static cl::opt<bool> PrintInstructionInfoView(
     "instruction-info",
     cl::desc("Print the instruction info view (enabled by default)"),
-    cl::cat(ViewOptions), cl::init(true));
+    cl::cat(ViewOptions), cl::init(false));
 
 static cl::opt<bool> EnableAllStats("all-stats",
                                     cl::desc("Print all hardware statistics"),
@@ -212,6 +211,13 @@ static cl::opt<bool> ShowEncoding(
     "show-encoding",
     cl::desc("Print encoding information in the instruction info view"),
     cl::cat(ViewOptions), cl::init(false));
+
+static cl::opt<std::string> funcName("lc-function", cl::Hidden, cl::Optional,
+                                     cl::desc("Name of the function"));
+
+static cl::opt<unsigned int>
+    loopID("lc-lID", cl::Hidden, cl::Optional,
+           cl::desc("ID of the loop set by RDG/loop distribution pass"));
 
 namespace {
 
@@ -453,8 +459,11 @@ int main(int argc, char **argv) {
     // Don't print the header of this region if it is the default region, and
     // it doesn't have an end location.
     if (Region->startLoc().isValid() || Region->endLoc().isValid()) {
-      TOF->os() << "\n[" << RegionIdx++ << "] Code Region";
       StringRef Desc = Region->getDescription();
+      StringRef DescToMatch = funcName + "-" + std::to_string(loopID);
+      if (!Desc.equals(DescToMatch))
+        continue;
+      TOF->os() << "\n[" << RegionIdx++ << "] Code Region";
       if (!Desc.empty())
         TOF->os() << " - " << Desc;
       TOF->os() << "\n\n";

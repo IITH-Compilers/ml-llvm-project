@@ -1,5 +1,5 @@
-# Taining - bash run.sh [train|trainInv|supervised_trainInv] <dataset> <POST distribution passes choice: {0, 1, 2}> <rewardtype R or S> [<keys point if change some change is done in the model>]
-# Testing - bash run.sh test <path dataset> <path of model> <disable runtime calc:Y> <POST distribution passes choice: {0, 1, 2}> <rewardtype R or S>
+# Taining - bash run.sh [train|trainInv|supervised_trainInv] <dataset> <POST distribution passes choice: {0, 1, 2}> <rewardtype LC or MCA> [<keys point if change some change is done in the model>]
+# Testing - bash run.sh test <path dataset> <path of model> <disable runtime calc:Y> <POST distribution passes choice: {0, 1, 2}> <rewardtype LC or MCA>
 #
 
 PWD=`pwd`
@@ -19,6 +19,8 @@ echo "LLVM build directory selected for training : ${LLVM_BUILD}"
 export LLVM=${LLVM_BUILD}
 export OPT=${LLVM_BUILD}/bin/opt
 export CLANG=${LLVM_BUILD}/bin/clang
+export MCA=${LLVM_BUILD}/bin/llvm-mca
+
 # Action mask flag
 SET_AMF="False"
 AMF=
@@ -86,19 +88,19 @@ then
         REWARD_TYPE=$4
         if [ -z ${REWARD_TYPE} ] 
         then
-                echo "Rewards type, runtime(R) or static(S)"
-               exit 
+                echo "Reward type should be either LC - LoopCost or MCA - llvm-mca"
+                exit 
         fi
         
-        if [ ${REWARD_TYPE} = 'R' ]
+        if [ ${REWARD_TYPE} = 'LC' ]
         then
-        RT="--rewardtype=runtime"
-        elif [ ${REWARD_TYPE} = 'S' ]
+        RT="--loop_cost"
+        elif [ ${REWARD_TYPE} = 'MCA' ]
         then
-                RT="--rewardtype=static"
+                RT="--mca_cost"
         else
-                echo "Rewards type, runtime(R) or static(S)"
-               exit
+                echo "Reward type should be either LC - LoopCost or MCA - llvm-mca"
+                exit
         fi
 
         KEY_POINT=$5
@@ -178,18 +180,18 @@ then
         REWARD_TYPE=$6
         if [ -z ${REWARD_TYPE} ] 
         then
-                echo "Rewards type, runtime(R) or static(S)"
+               echo "Reward type should be either LC - LoopCost or MCA - llvm-mca"
                exit 
         fi
         
-        if [ ${REWARD_TYPE} = 'R' ]
+        if [ ${REWARD_TYPE} = 'LC' ]
         then
-        RT="--rewardtype=runtime"
-        elif [ ${REWARD_TYPE} = 'S' ]
+                RT="--loop_cost"
+        elif [ ${REWARD_TYPE} = 'MCA' ]
                 then
-                        RT="--rewardtype=static"
+                        RT="--mca_cost"
         else
-                echo "Rewards type, runtime(R) or static(S)"
+               echo "Reward type should be either LC - LoopCost or MCA - llvm-mca"
                exit
         fi
 
