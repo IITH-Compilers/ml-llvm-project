@@ -232,7 +232,7 @@ def call_distributionPass(filename, distributeSeq, method_name, loop_id, distrib
     
 
     try:
-        print("loop id: {}".format(loop_id))
+        print("loop id: {}  and function: {}".format(loop_id, method_name))
         parts = os.path.split(filename)
         reMapDistributeSeq = distributeSeq.replace(',', 'm').replace('|', 'p')
         dist_llfile = "Distribute_{filename}_{remapdistributeSeq}_F{fun_id}_L{loop_id}.ll".format(filename=parts[1], remapdistributeSeq=reMapDistributeSeq, method_name=method_name, loop_id=loop_id, fun_id=fun_id)
@@ -332,14 +332,30 @@ def get_parse_args():
 
 def getMCACost(filepath, loopId, fname):
     this_function_name = sys._getframe().f_code.co_name
-    loopCost = None     
+    loopCost = 0.0
+    # assert filepath is not None, "Filepath should have a value."
+    print('Enter MCA cost....... ')
     try:
-        cmd = "{clang} -S -o - < {opt} -S {post_distribution_passes} {input_file} | {llvm_mca} -lc-lID {loopId} -lc-function {fname}".\
+        filename=os.path.split(filepath)[1]
+        print(filename, '-----------------------\n')
+        filename = "mca-{}".format(filename)
+        target = os.path.join("/tmp", filename)
+        cmd1 = "{opt} -S {post_distribution_passes} {input_file} -o {target}".format(opt=os.environ['OPT'], clang=os.environ['CLANG'], llvm_mca=os.environ['MCA'], input_file=filepath,
+            loopId=loopId, fname=fname, post_distribution_passes=POST_DIS_PASSES_MAP[config.post_pass_key], target=target)
+        
+        os.system(cmd1)
+        print('File created ...................')
+        cmd = "{clang} -S {target} -o - | {llvm_mca} -lc-lID {loopId} -lc-function {fname}".\
             format(opt=os.environ['OPT'], clang=os.environ['CLANG'], llvm_mca=os.environ['MCA'], input_file=filepath,
-            loopId=loopId, fname=fname, post_distribution_passes=POST_DIS_PASSES_MAP[config.post_pass_key])
+            loopId=loopId, fname=fname, post_distribution_passes=POST_DIS_PASSES_MAP[config.post_pass_key], target=target)
         pro = subprocess.Popen(cmd, executable='/bin/bash', shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        # print(cmd) 
+        
+        '''Important to delete the file.'''
+        os.remove(target)
         output = pro.stdout
         line = output.readline()
+        
         
         if pro.stderr is not None:
             eprint('Error : {}'.format(pro.stderr))
@@ -350,7 +366,7 @@ def getMCACost(filepath, loopId, fname):
             
             pair = line.split(':')
             if pair[0] == 'Block RThroughput':
-                lc = float(pair[1].strip(' '))
+                lc = float(pair[1].replace(' ',''))
                 if lc > 0:
                     loopCost += lc
                 else:

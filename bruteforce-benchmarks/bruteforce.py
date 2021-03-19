@@ -67,10 +67,10 @@ skipped=0
 
 def extract_cost(filename,funcname,loopid,combination,factors, undistributed_loop_cost=None):
 
-    if len(re.findall("Stack dump:",factors)) != 0:
-        return None
 
     if config.loop_cost:
+        if len(re.findall("Stack dump:",factors)) != 0:
+            return None
         vf=re.findall("VF: \d+",factors)
         iff=re.findall("IF: \d+",factors)
         vecfac=[vf,iff]
@@ -90,29 +90,38 @@ def extract_cost(filename,funcname,loopid,combination,factors, undistributed_loo
         sum_of_TLcosts=0
         for x in TLcosts:
             sum_of_TLcosts += x
-    
+        if undistributed_loop_cost is None:
+            undistributed_loop_cost=sum_of_TLcosts
+        
+        if isinstance(undistributed_loop_cost,str) or  undistributed_loop_cost==0:
+            speedup=-100
+        else:
+            speedup=(undistributed_loop_cost-sum_of_TLcosts)/undistributed_loop_cost
+        
+        #checking if file has correct size of locality factors and total loop cost	
+        count=combination.count("|")
+        # if((count+1) > len(Lcosts) or (count+1) > len(TLcosts)):				 
+        if  len(TLcosts) == 0:				 
+              temp=[filename,funcname,loopid,combination,"size less than no of loops","size less than no of loops",sum_of_Lcost,sum_of_TLcosts,vecfac,undistributed_loop_cost,sum_of_TLcosts,speedup,"Failure"]
+        elif  isinstance(undistributed_loop_cost,str) or  undistributed_loop_cost == 0:
+              temp=[filename,funcname,loopid,combination,Lcosts,TLcosts,sum_of_Lcost,sum_of_TLcosts,vecfac,undistributed_loop_cost,sum_of_TLcosts,speedup,"Failure"]
+
+        else: 
+              temp=[filename,funcname,loopid,combination,Lcosts,TLcosts,sum_of_Lcost,sum_of_TLcosts,vecfac,undistributed_loop_cost,sum_of_TLcosts,speedup,""]
+   
     else:
         sum_of_TLcosts = factors
+        if undistributed_loop_cost is None:
+            undistributed_loop_cost=sum_of_TLcosts
+        if isinstance(undistributed_loop_cost,str) or  undistributed_loop_cost==0:
+            speedup=-100
+        else:
+            print(undistributed_loop_cost, sum_of_TLcosts)
+            speedup=(undistributed_loop_cost-sum_of_TLcosts)/undistributed_loop_cost
+
+        temp=[filename,funcname,loopid,combination,undistributed_loop_cost,sum_of_TLcosts,speedup,""]
 
     #calculating speed up
-    if undistributed_loop_cost is None:
-        undistributed_loop_cost=sum_of_TLcosts
-    
-    if isinstance(undistributed_loop_cost,str) or  undistributed_loop_cost==0:
-        speedup=-100
-    else:
-        speedup=(undistributed_loop_cost-sum_of_TLcosts)/undistributed_loop_cost
-    
-    #checking if file has correct size of locality factors and total loop cost	
-    count=combination.count("|")
-    # if((count+1) > len(Lcosts) or (count+1) > len(TLcosts)):				 
-    if  len(TLcosts) == 0:				 
-          temp=[filename,funcname,loopid,combination,"size less than no of loops","size less than no of loops",sum_of_Lcost,sum_of_TLcosts,vecfac,undistributed_loop_cost,sum_of_TLcosts,speedup,"Failure"]
-    elif  isinstance(undistributed_loop_cost,str) or  undistributed_loop_cost == 0:
-          temp=[filename,funcname,loopid,combination,Lcosts,TLcosts,sum_of_Lcost,sum_of_TLcosts,vecfac,undistributed_loop_cost,sum_of_TLcosts,speedup,"Failure"]
-
-    else: 
-          temp=[filename,funcname,loopid,combination,Lcosts,TLcosts,sum_of_Lcost,sum_of_TLcosts,vecfac,undistributed_loop_cost,sum_of_TLcosts,speedup,""]
     #finally appending to row for CSV file
     writer.writerow(temp)
     return temp
@@ -182,12 +191,14 @@ def run(graphpathlist):
                 meta_ssa_file_path, distribution, method_name, loop_id, config.distributed, fun_id)
             if config.loop_cost:
                 distributed_factors = utils.getLoopCost(ll_file, loop_id, method_name)
+                ud_idx=7
             else:
                 distributed_factors = utils.getMCACost(ll_file, loop_id, method_name)
+                ud_idx=4
             if os.path.exists(ll_file):
                 os.remove(ll_file)
 
-            row = extract_cost(fileName, method_name, loop_id, distribution,distributed_factors, un_row[7])
+            row = extract_cost(fileName, method_name, loop_id, distribution,distributed_factors, un_row[ud_idx])
         # mutex.release()
 	
 def chunkify(lst,n):
@@ -205,7 +216,10 @@ if __name__ == '__main__':
     f= open(config.outfile, "w+")
     global writer
     writer = csv.writer(f)
-    field =['Filename','Function Name','Loop ID','Combination','Locality Factors','Total Loop Costs',"Sum of Locality Factors","Sum of Total Loop Costs","Vectorization Factors","Undsitributed Cost","Distributed cost","SpeedUp",'Remarks']
+    if config.loop_cost:
+        field =['Filename','Function Name','Loop ID','Combination','Locality Factors','Total Loop Costs',"Sum of Locality Factors","Sum of Total Loop Costs","Vectorization Factors","Undsitributed Cost","Distributed cost","SpeedUp",'Remarks']
+    else:
+        field =['Filename','Function Name','Loop ID','Combination',"Undsitributed Cost","Distributed cost","SpeedUp",'Remarks']
     writer.writerow(field)
     
     file_list=glob.glob(os.path.join(dataset,'graphs/json/I_*.json'))

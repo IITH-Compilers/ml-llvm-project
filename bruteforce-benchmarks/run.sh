@@ -38,10 +38,10 @@ fi
 
 if [ ${REWARD_TYPE} = 'LC' ]
 then
-        RT="--loop_cost"
-elif [ ${REWARD_TYPE} = 'S' ]
+        RT="--loop-cost=True"
+elif [ ${REWARD_TYPE} = 'MCA' ]
         then
-                RT="--mca_cost"
+                RT="--mca-cost=True"
 else
         echo "Reward type should be either LC - LoopCost or MCA - llvm-mca"
         exit
