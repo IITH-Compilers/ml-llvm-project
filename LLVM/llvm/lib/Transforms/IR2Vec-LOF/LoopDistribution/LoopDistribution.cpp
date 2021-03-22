@@ -597,6 +597,9 @@ bool LoopDistribution::runwithAnalysis(
     distributed = false;
     LLVM_DEBUG(errs() << i + 1 << " iteration\n");
     container.clear();
+    LLVM_DEBUG( std::string s1 = loops[i]->getHeader()->getParent()->getParent()->getName().str();
+    std::string filename(s1.substr(s1.rfind('/') + 1));
+    errs() <<"\nLoopDistribution Details-> " + filename + "\t" + loops[i]->getHeader()->getParent()->getName() + "\t" + std::to_string(dyn_cast<ConstantInt>(dyn_cast<ConstantAsMetadata>(loops[i]->getLoopLatch()->getTerminator()->getMetadata("IR2Vec-SCC-LoopID")->getOperand(0))->getValue())->getZExtValue()) + "\t" + dis_seqs[i] + "\n");
     LLVM_DEBUG(errs() << "Function: "
                       << loops[i]->getHeader()->getParent()->getName()
                       << " Loop : " << loops[i] << "\n";

@@ -99,20 +99,11 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
     LLVM_DEBUG(errs() << "pModule: " << pModule << "............"
                       << "\n");
     Py_INCREF(pModule);
-    //  PyObject* myFunction = PyObject_GetAttrString(myModule,(char*)"myabs");
-    //  PyObject* args = PyTuple_Pack(1,PyFloat_FromDouble(2.0));
-
-    // pDict is a borrowed reference
-    //  pDict = PyModule_GetDict(pModule);
-
-    // pFunc is also a borrowed reference
-    //  pFunc = PyDict_GetItemString(pDict, (char*)"someFunction");
 
     pFunc = PyObject_GetAttrString(pModule, "predict_loop_distribution");
 
     if (pFunc == NULL) {
       errs() << "ERROR getting function attribute";
-      // exit(-1);
       PyErr_Print();
     } else {
 

@@ -332,6 +332,7 @@ def get_parse_args():
 
 def getMCACost(filepath, loopId, fname):
     this_function_name = sys._getframe().f_code.co_name
+    target = None
     loopCost = 0.0
     # assert filepath is not None, "Filepath should have a value."
     print('Enter MCA cost....... ')
@@ -351,8 +352,6 @@ def getMCACost(filepath, loopId, fname):
         pro = subprocess.Popen(cmd, executable='/bin/bash', shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         # print(cmd) 
         
-        '''Important to delete the file.'''
-        os.remove(target)
         output = pro.stdout
         line = output.readline()
         
@@ -382,6 +381,11 @@ def getMCACost(filepath, loopId, fname):
     except :
         eprint(sys.exc_info())
         eprint('{this_function_name}: Other Unknown Some error occured .. for {filename}'.format(this_function_name=this_function_name, filename=filename))
+    
+    '''Important to delete the file.'''
+    
+    if target is not None:
+        os.remove(target)
     return loopCost
 
 def getLoopCost(filepath, loopId, fname):

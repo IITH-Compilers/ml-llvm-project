@@ -460,7 +460,9 @@ int main(int argc, char **argv) {
     // it doesn't have an end location.
     if (Region->startLoc().isValid() || Region->endLoc().isValid()) {
       StringRef Desc = Region->getDescription();
-      StringRef DescToMatch = funcName + "-" + std::to_string(loopID);
+      std::string DescToMatch = funcName + "-" + std::to_string(loopID);
+      // errs () << "funcName : " << funcName << " loop id : " << loopID << "\n"; 
+      // errs () << Desc << " " << DescToMatch << "\n";
       if (!Desc.equals(DescToMatch))
         continue;
       TOF->os() << "\n[" << RegionIdx++ << "] Code Region";
