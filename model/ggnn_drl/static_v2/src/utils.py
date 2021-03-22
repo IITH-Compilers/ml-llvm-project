@@ -189,13 +189,30 @@ def getLoopCost(filepath, loopId, fname):
 def getMCACost(filepath, loopId, fname):
     this_function_name = sys._getframe().f_code.co_name
     loopCost = 0 # []
+    mca_ll_dir=os.path.join(config.distributed_data, 'mcatemp')
+    if not os.path.exists(mca_ll_dir):
+        os.makedirs(mca_ll_dir)
     try:      
-        cmd = "{clang} -S -o - < {opt} -S {post_distribution_passes} {input_file} | {llvm_mca} -lc-lID {loopId} -lc-function {fname}".\
+        filename=os.path.split(filepath)[1]
+        filename = "mca-{}".format(filename)
+        target= os.path.join(mca_ll_dir, filename)
+        # target = os.path.join("/tmp", filename)
+        logging.info(filepath + 'source ----------    ' + target + ' target-----------------------\n')
+        cmd1 = "{opt} -S {post_distribution_passes} {input_file} -o {target}".format(opt=os.environ['OPT'], clang=os.environ['CLANG'], llvm_mca=os.environ['MCA'], input_file=filepath,
+            loopId=loopId, fname=fname, post_distribution_passes=POST_DIS_PASSES_MAP[config.post_pass_key], target=target)
+        
+        os.system(cmd1)
+        
+        assert os.path.exists(target), "target should ve present."
+        print('File created ...................')
+        cmd = "{clang} -S {target} -o - | {llvm_mca} -lc-lID {loopId} -lc-function {fname}".\
             format(opt=os.environ['OPT'], clang=os.environ['CLANG'], llvm_mca=os.environ['MCA'], input_file=filepath,
-            loopId=loopId, fname=fname, post_distribution_passes=POST_DIS_PASSES_MAP[config.post_pass_key])
-        # analysedInfo = subprocess.Popen(cmd, executable='/bin/bash', shell=True, stdout=subprocess.PIPE).stdout.read()
-        # logging.info(cmd)
+            loopId=loopId, fname=fname, post_distribution_passes=POST_DIS_PASSES_MAP[config.post_pass_key], target=target)
         pro = subprocess.Popen(cmd, executable='/bin/bash', shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        # print(cmd) 
+        
+        '''Important to delete the file.'''
+        # os.remove(target)
         output = pro.stdout
         line = output.readline()
         
@@ -241,7 +258,7 @@ def load_precomputed_cost(filepath):
     # logging.info(df.iloc[df.index.get_loc(('110_0pulgares.zip_2.ll','main','1', 'S1,S2,S3,S4'))])
     return df
 
-def save_precomputed_loopCost(df, cost):
+def save_precomputed_loopCost(df):
      if config.loop_cost:
         filename = 'updated_loopcost_p{}_{}.csv'.format(config.post_pass_key, datetime.datetime.now())
      else:
