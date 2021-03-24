@@ -22,6 +22,7 @@ set(LLVM_LINK_COMPONENTS
   TransformUtils
   Vectorize
   Passes
+  IML
   RDG
   LoopDistribution
   custom_loop_distribution
