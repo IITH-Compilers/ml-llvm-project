@@ -211,8 +211,6 @@ def getMCACost(filepath, loopId, fname):
         pro = subprocess.Popen(cmd, executable='/bin/bash', shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         # print(cmd) 
         
-        '''Important to delete the file.'''
-        # os.remove(target)
         output = pro.stdout
         line = output.readline()
         
@@ -247,6 +245,10 @@ def getMCACost(filepath, loopId, fname):
     except :
         logging.critical(sys.exc_info())
         logging.critical('{this_function_name}: Some Other Unknown error occured .. for {filename}'.format(this_function_name=this_function_name, filename=filepath))
+    '''Important to delete the file.'''
+    
+    if target is not None:
+        os.remove(target)
     return loopCost
 
 def load_precomputed_cost(filepath):
