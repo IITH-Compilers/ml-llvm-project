@@ -127,6 +127,7 @@ def maximal_multiple_loops(calculate_cost_cache, config, rdgs):
         selected_rows = calculate_cost_cache.loc[(calculate_cost_cache["Filename"] == fileName) & (calculate_cost_cache["Function Name"] == functionName) & (calculate_cost_cache["Loop ID"] == int(loopID)), "Distributed cost"]
         if not selected_rows.empty:
             distributed_seq = calculate_cost_cache.loc[selected_rows.idxmin()]['Combination']
+            logging.info('***********Entry found for {}, {}, {} --> {} ***********************'.format(fileName, functionName, loopID, distributed_seq))
         else:
             logging.warning('***********Entry not found for {}, {}, {} ***********************'.format(fileName, functionName, loopID))
             distributed_seq = ','.join([ 'S{}'.format(idx) for idx in range(1, num_nodes+1)])
