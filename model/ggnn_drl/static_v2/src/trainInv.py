@@ -39,7 +39,7 @@ def run(agent, config):
     count=0
     #Load the envroinment
     env = DistributeLoopEnv(config)    
-    training_graphs=glob.glob(os.path.join(dataset, 'graphs/train/*.json'))
+    training_graphs=glob.glob(os.path.join(dataset, 'graphs/json/*.json'))
 
     assert training_graphs is not None and len(training_graphs) > 0, "train dataset is empty."
     for episode in range(n_episodes):

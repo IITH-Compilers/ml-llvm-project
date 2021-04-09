@@ -63,7 +63,7 @@ public:
 
   RDGData getRDGInfo() { return rdgInfo; }
   void Print_IR2Vec_File(DataDependenceGraph &G, std::string Filename,
-                         std::string ll_name);
+                         std::string ll_name, int loopid);
 };
 
 } // namespace llvm

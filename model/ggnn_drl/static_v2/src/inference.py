@@ -84,6 +84,74 @@ def predict_loop_distribution(rdgs : list, trained_model : str):
     logging.info('Distrubuted seqs : {}'.format(seqs))
     return seqs
 
+def maximal_single_loop(agent, config, rdg, env=None):
+
+    if env is None:
+        logging.info('Create the env.')
+        env = DistributeLoopEnv(config)
+
+    graph = dot_to_json(rdg) 
+    state, topology, focusNode = env.reset_env(graph)
+    while(True):
+        possibleNodes_emb, possibleNodes = state
+
+        # pass the state and  topology to get the action
+        # action is 
+        nextNodeIndex, merge_distribute = agent.act(state, topology, focusNode, eps=0)
+        logging.info("action choosed : {} {} {}".format(nextNodeIndex, possibleNodes[nextNodeIndex],merge_distribute))
+        #
+        action=(possibleNodes[nextNodeIndex], merge_distribute)
+        next_state, reward, done, distributed_seq, focusNode = env.step(action)
+        next_possibleNodes_emb, next_possibleNodes = next_state
+
+        logging.info('Distribution till now : {}'.format(distributed_seq))
+        
+        state = (next_possibleNodes_emb, next_possibleNodes)
+
+        logging.info('DLOOP Goto to Next.................')
+        logging.info('\n------------------------------------------------------------------------------------------------')
+        if done:
+           break
+
+    return reward, distributed_seq
+
+def maximal_multiple_loops(calculate_cost_cache, config, rdgs):
+    seqs = []
+    for rdg in rdgs:
+        graph = dot_to_json(rdg) 
+        fileName = graph['graph'][1][1]['FileName'].strip('\"') 
+        functionName = graph['graph'][1][1]['Function'].strip('\"')
+        loopID = graph['graph'][1][1]['LoopID'].strip('\"')
+        distributed_seq = calculate_cost_cache.loc[calculate_cost_cache.loc[(calculate_cost_cache["FileNme"] == fileName) & (calculate_cost_cache["Function Name"] == functionName) & (calculate_cost_cache["Loop ID"] == int(loopID)), "Distributed cost"].idxmin()]['Combination']
+        
+        seqs.append(distributed_seq)
+ 
+    return seqs
+
+def maximal_loop_distribution(rdgs : list, data_set : str, cost_func='LC' : str):
+    
+    loop_cost = True if cost_func == 'LC' else False
+    mca_cost = True if cost_func == 'MCA' else False
+
+    # print('In python...')
+    config = { 'mode' :'inference', 'state_size':300, 'action_space':200, 'distributed_data' : '/tmp', 'dataset' : data_set, 'loop_cost' : loop_cost, 'mca_cost' : mca_cost }
+    config = Namespace(**config)
+    logdir='/tmp'
+    logger = logging.getLogger('inference.py')
+    logging.basicConfig(filename=os.path.join(logdir, 'loop-distribution.log'), format='%(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
+    
+    if config.loop_cost:
+        filename = 'loopcost_p{}.csv'.format(config.post_pass_key)
+    else:
+        filename = 'mcacost_p{}.csv'.format(config.post_pass_key)
+    filepath = os.path.join(config.dataset, filename)
+    calculate_cost_cache = utils.load_precomputed_cost(filepath)
+
+    logging.info('Start the maximal inference on the SPEC 2017 for benchmarking.')
+    seqs = maximal_multiple_loops(calculate_cost_cache, config, rdgs)
+    logging.info('Distrubuted seqs : {}'.format(seqs))
+    return seqs
+
 
 if __name__ == '__main__':
     dataset='' # Fix the dataset

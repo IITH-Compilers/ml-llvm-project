@@ -30,6 +30,12 @@
 #define DEBUG_TYPE "custom_loop_distribution"
 
 using namespace llvm;
+static cl::opt<bool> runMaximal("run-maximal", cl::Hidden, cl::Optional, cl::init(false),
+                                     cl::desc("Enable flag to run maximal distribution on SPEC 2017."));
+
+static cl::opt<std::string> cost_function("cost-function", cl::Hidden, cl::Optional, cl::init("LC"),
+                                     cl::desc("Set the Cost function to get the maximl distribution on SPEC 2017."));
+
 custom_loop_distribution::custom_loop_distribution() : FunctionPass(ID) {
   initializecustom_loop_distributionPass(*PassRegistry::getPassRegistry());
   Py_Initialize();
@@ -99,8 +105,13 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
     LLVM_DEBUG(errs() << "pModule: " << pModule << "............"
                       << "\n");
     Py_INCREF(pModule);
-
-    pFunc = PyObject_GetAttrString(pModule, "predict_loop_distribution");
+    if(runMaximal){
+	pFunc = PyObject_GetAttrString(pModule, "maximal_loop_distribution");
+	LLVM_DEBUG(errs() << " Run the maximal loop distribution function.\n");
+    }else{
+	pFunc = PyObject_GetAttrString(pModule, "predict_loop_distribution");
+        LLVM_DEBUG(errs() << " Run the model to predict the loop distribution.\n");
+    }
 
     if (pFunc == NULL) {
       errs() << "ERROR getting function attribute";
@@ -119,7 +130,17 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
         }
 
         PyObject *modelPath = PyUnicode_FromString(DIST_INFERENCE_MODEL);
-        PyObject *arglist = PyTuple_Pack(2, my_list, modelPath);
+	PyObject *arglist;
+	if (runMaximal){
+         /**
+	  * TODO: Place the loop_cost.csv in the model directory.
+	  */
+         PyObject *py_cost_function = PyUnicode_FromString(cost_function.c_str());
+         arglist = PyTuple_Pack(3, my_list, modelPath, py_cost_function);
+	} else {
+	 arglist = PyTuple_Pack(2, my_list, modelPath);
+        }
+
 
         if (!arglist) {
           errs() << "no arglist\n";

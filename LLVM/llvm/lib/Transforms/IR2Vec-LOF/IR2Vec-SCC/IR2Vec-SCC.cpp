@@ -48,7 +48,7 @@ char RDGWrapperPass::ID = 0;
 
 void RDGWrapperPass::Print_IR2Vec_File(DataDependenceGraph &G,
                                        std::string Filename,
-                                       std::string ll_name) {
+                                       std::string ll_name, int loopid) {
 
   // Code to generate Input File with IR2Vec Embedding as a node to an RDG
   std::error_code EC;
@@ -61,6 +61,7 @@ void RDGWrapperPass::Print_IR2Vec_File(DataDependenceGraph &G,
     File << "digraph G {\n";
     File << "FileName=\"" << ll_name << "\";\n";
     File << "Function=\"" << FunctionName << "\";\n";
+    File << "LoopID=\"" << loopid << "\";\n";
     // Append all the nodes with labels into DOT File
     for (auto *N : G) {
       InstructionListType IList;
@@ -282,7 +283,7 @@ RDGData RDGWrapperPass::computeRDGForFunction(Function &F) {
       // "I_" + s3 + "_F_" + s4 + "_L" + std::to_string(loopNum) + ".dot";
 
       LLVM_DEBUG(errs() << "Writing " + Input_Filename + "\n");
-      Print_IR2Vec_File(SCCGraph, Input_Filename, s2);
+      Print_IR2Vec_File(SCCGraph, Input_Filename, s2, loopNum);
 
       std::ifstream ifs_inputfile(Input_Filename);
       std::string content_input;
