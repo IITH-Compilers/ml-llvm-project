@@ -392,7 +392,7 @@ def getLoopCost(filepath, loopId, fname):
     this_function_name = sys._getframe().f_code.co_name
     loopCost = None     
     try:
-        cmd = "{opt} -S -load {llvm}/lib/LoopCost.so {post_distribution_passes} -lc-lID {loopId} -lc-function {fname} {input_file} -o /dev/null ".format(opt=os.environ['OPT'], llvm=os.environ['LLVM'], input_file=filepath, loopId=loopId,fname=fname, post_distribution_passes=POST_DIS_PASSES_MAP[config.post_pass_key])
+        cmd = "{opt} -S -load {llvm}/lib/LoopCost.so {post_distribution_passes} -LoopCost -lc-lID {loopId} -lc-function {fname} {input_file} -o /dev/null ".format(opt=os.environ['OPT'], llvm=os.environ['LLVM'], input_file=filepath, loopId=loopId,fname=fname, post_distribution_passes=POST_DIS_PASSES_MAP[config.post_pass_key])
         analysedInfo = subprocess.Popen(cmd, executable='/bin/bash', shell=True, stdout=subprocess.PIPE,stderr=subprocess.PIPE)
         stderr, stdout = analysedInfo.communicate()
         # print(stdout)       
