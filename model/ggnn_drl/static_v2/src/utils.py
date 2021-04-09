@@ -251,11 +251,12 @@ def getMCACost(filepath, loopId, fname):
         os.remove(target)
     return loopCost
 
-def load_precomputed_cost(filepath):
+def load_precomputed_cost(filepath, multi_index=True):
     logging.info('Load pre computed LoopCost..')
     df = pd.read_csv(filepath, sep=',')
-    df = df.set_index(['Filename', 'Function Name', 'Loop ID', 'Combination'])
-    df = df[['Distributed cost', 'Undsitributed Cost']]
+    if multi_index:
+        df = df.set_index(['Filename', 'Function Name', 'Loop ID', 'Combination'])
+        df = df[['Distributed cost', 'Undsitributed Cost']]
     # logging.info(df)
     # logging.info(df.iloc[df.index.get_loc(('110_0pulgares.zip_2.ll','main','1', 'S1,S2,S3,S4'))])
     return df

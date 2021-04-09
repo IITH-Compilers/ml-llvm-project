@@ -10,10 +10,11 @@ import glob
 import torch
 # from collections import deque
 import os
-# import utils
+import utils
 import logging
 from argparse import Namespace
 import pydot
+
 # from networkx.drawing import nx_agraph
 # import pygraphviz
 
@@ -122,30 +123,35 @@ def maximal_multiple_loops(calculate_cost_cache, config, rdgs):
         fileName = graph['graph'][1][1]['FileName'].strip('\"') 
         functionName = graph['graph'][1][1]['Function'].strip('\"')
         loopID = graph['graph'][1][1]['LoopID'].strip('\"')
-        distributed_seq = calculate_cost_cache.loc[calculate_cost_cache.loc[(calculate_cost_cache["FileNme"] == fileName) & (calculate_cost_cache["Function Name"] == functionName) & (calculate_cost_cache["Loop ID"] == int(loopID)), "Distributed cost"].idxmin()]['Combination']
-        
+        num_nodes = len(graph['nodes'])
+        selected_rows = calculate_cost_cache.loc[(calculate_cost_cache["Filename"] == fileName) & (calculate_cost_cache["Function Name"] == functionName) & (calculate_cost_cache["Loop ID"] == int(loopID)), "Distributed cost"]
+        if not selected_rows.empty:
+            distributed_seq = calculate_cost_cache.loc[selected_rows.idxmin()]['Combination']
+        else:
+            logging.warning('***********Entry not found for {}, {}, {} ***********************'.format(fileName, functionName, loopID))
+            distributed_seq = ','.join([ 'S{}'.format(idx) for idx in range(1, num_nodes+1)])
         seqs.append(distributed_seq)
  
     return seqs
 
-def maximal_loop_distribution(rdgs : list, data_set : str, cost_func='LC' : str):
+def maximal_loop_distribution(rdgs : list, trained_model : str, cost_func='LC'):
     
     loop_cost = True if cost_func == 'LC' else False
     mca_cost = True if cost_func == 'MCA' else False
-
+    data_set = os.path.dirname(trained_model)
     # print('In python...')
     config = { 'mode' :'inference', 'state_size':300, 'action_space':200, 'distributed_data' : '/tmp', 'dataset' : data_set, 'loop_cost' : loop_cost, 'mca_cost' : mca_cost }
     config = Namespace(**config)
     logdir='/tmp'
     logger = logging.getLogger('inference.py')
-    logging.basicConfig(filename=os.path.join(logdir, 'loop-distribution.log'), format='%(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
+    logging.basicConfig(filename=os.path.join(config.dataset, 'max-loop-distribution.log'), format='%(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
     
     if config.loop_cost:
-        filename = 'loopcost_p{}.csv'.format(config.post_pass_key)
+        filename = 'loopcost_p{}.csv'.format(2)
     else:
-        filename = 'mcacost_p{}.csv'.format(config.post_pass_key)
+        filename = 'mcacost_p{}.csv'.format(2)
     filepath = os.path.join(config.dataset, filename)
-    calculate_cost_cache = utils.load_precomputed_cost(filepath)
+    calculate_cost_cache = utils.load_precomputed_cost(filepath, multi_index=False)
 
     logging.info('Start the maximal inference on the SPEC 2017 for benchmarking.')
     seqs = maximal_multiple_loops(calculate_cost_cache, config, rdgs)
