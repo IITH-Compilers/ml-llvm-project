@@ -165,6 +165,10 @@ static cl::opt<bool>
     EnableMatrix("enable-matrix", cl::init(false), cl::Hidden,
                  cl::desc("Enable lowering of the matrix intrinsics"));
 
+static cl::opt<bool>
+    EnableFusion("enable-fusion", cl::init(false), cl::Hidden,
+                 cl::desc("LOF:Enable LLVM fusion"));
+
 PassManagerBuilder::PassManagerBuilder() {
     OptLevel = 2;
     SizeLevel = 0;
@@ -662,7 +666,9 @@ void PassManagerBuilder::populateModulePassManager(
   if (RunInliner) {
     MPM.add(createGlobalOptimizerPass());
     MPM.add(createGlobalDCEPass());
-    MPM.add(createLoopFusePass());
+    if(EnableFusion){
+	    MPM.add(createLoopFusePass());
+    }
   }
 
   // If we are planning to perform ThinLTO later, let's not bloat the code with
