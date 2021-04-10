@@ -477,11 +477,10 @@ DataDependenceGraph *RDG::computeRDGForInnerLoop(Loop &IL) {
     fail("CannotResolveDependences", "LAI dependences is a nullptr.", &IL);
     return nullptr;
   }
-  errs() << "LAI.getDepChecker().getDependences()->size() : "
-         << LAI.getDepChecker().getDependences()->size() << "\n";
+//   errs() << "LAI.getDepChecker().getDependences()->size() : "  << LAI.getDepChecker().getDependences()->size() << "\n";
   if (LAI.getDepChecker().getDependences()->size() == 0 &&
       !LAI.canVectorizeMemory()) {
-    errs() << "No need to make RDG\n";
+//    errs() << "No need to make RDG\n";
     fail("CannotResolveDependences", "LAI cannot analyze dependences", &IL);
     return nullptr;
   }

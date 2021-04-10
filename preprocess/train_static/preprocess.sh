@@ -1,9 +1,7 @@
 
 mkdir -p log
+timestamp=$(date +%s)
 echo "Start flow script."
-bash flow_O0_ll_given.sh &> log/flow_O0_ll_given.log
-
-# Split the json data into train and test.
-
-bash split_train_test.sh 
+echo "See log in log/flow-${timestamp}.log" 
+bash flow.sh &> log/flow-${timestamp}.log
 echo "Done preprocessing"
