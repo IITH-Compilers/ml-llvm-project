@@ -1,1 +1,0 @@
-add_library(IR2Vec-Symbolic SHARED  IR2Vec-Symbolic.cpp)
