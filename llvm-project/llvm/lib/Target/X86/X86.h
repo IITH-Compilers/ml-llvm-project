@@ -137,9 +137,8 @@ FunctionPass *createX86LoadValueInjectionLoadHardeningPass();
 FunctionPass *createX86LoadValueInjectionLoadHardeningUnoptimizedPass();
 FunctionPass *createX86LoadValueInjectionRetHardeningPass();
 FunctionPass *createX86SpeculativeLoadHardeningPass();
-FunctionPass *createX86RAPass();
+FunctionPass *createX86DumpInterferenceGraphsPass();
 
-void initializeRAPass(PassRegistry &);
 void initializeEvexToVexInstPassPass(PassRegistry &);
 void initializeFixupBWInstPassPass(PassRegistry &);
 void initializeFixupLEAPassPass(PassRegistry &);
@@ -158,6 +157,7 @@ void initializeX86LoadValueInjectionLoadHardeningPassPass(PassRegistry &);
 void initializeX86LoadValueInjectionRetHardeningPassPass(PassRegistry &);
 void initializeX86OptimizeLEAPassPass(PassRegistry &);
 void initializeX86SpeculativeLoadHardeningPassPass(PassRegistry &);
+void initializeDumpInterferenceGraphsPass(PassRegistry &);
 
 namespace X86AS {
 enum : unsigned {

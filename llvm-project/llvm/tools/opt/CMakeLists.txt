@@ -23,6 +23,7 @@ set(LLVM_LINK_COMPONENTS
   TransformUtils
   Vectorize
   Passes
+  DumpIG
   )
 
 add_llvm_tool(opt

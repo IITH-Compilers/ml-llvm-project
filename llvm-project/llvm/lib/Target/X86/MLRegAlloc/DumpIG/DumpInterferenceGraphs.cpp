@@ -8,6 +8,7 @@
 #include <sstream>
 #include "X86.h"
 #include "X86InstrInfo.h"
+
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -33,21 +34,18 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
-// #include <nlohmann/json.hpp>
 #include "llvm/Support/JSON.h"
 
 using namespace llvm;
 
-#define DEBUG_TYPE "vijay"
+#define DEBUG_TYPE "mlra-dump-ig-dot"
 
-#define RA_PASS_NAME "RA pass"
-
-// using json = nlohmann::json;
+#define RA_PASS_NAME "Dump Interfernce graphs in form of Dot."
 
 
 namespace {
 
-class RA : public MachineFunctionPass {
+class DumpInterferenceGraphs : public MachineFunctionPass {
 private:
     const TargetRegisterInfo *TRI = nullptr;
     MachineRegisterInfo *MRI = nullptr;
@@ -59,8 +57,8 @@ private:
 public:
     static char ID;
 
-    RA() : MachineFunctionPass(ID) {
-        initializeRAPass(*PassRegistry::getPassRegistry());
+    DumpInterferenceGraphs() : MachineFunctionPass(ID) {
+        initializeDumpInterferenceGraphsPass(*PassRegistry::getPassRegistry());
     }
 
     bool runOnMachineFunction(MachineFunction &MF) override;
@@ -106,9 +104,9 @@ public:
 } // end of anonymous namespace
 
 
-char RA::ID = 0;
+char DumpInterferenceGraphs::ID = 0;
 
-bool RA::runOnMachineFunction(MachineFunction &mf) {
+bool DumpInterferenceGraphs::runOnMachineFunction(MachineFunction &mf) {
 
     MF = &mf;
     // LLVM_DEBUG(MF->print(outs()));
@@ -221,12 +219,12 @@ bool RA::runOnMachineFunction(MachineFunction &mf) {
 
 
 
-INITIALIZE_PASS(RA, "regallocvijay",
+INITIALIZE_PASS(DumpInterferenceGraphs, "mlra-dump-ig-dot",
     RA_PASS_NAME,
     true, // is CFG only?
     true  // is analysis?
 )
 
 namespace llvm {
-FunctionPass *createX86RAPass() { return new RA(); }
+FunctionPass *createX86DumpInterferenceGraphsPass() { return new DumpInterferenceGraphs(); }
 }
