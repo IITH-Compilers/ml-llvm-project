@@ -3,7 +3,9 @@
 // ```
 // ./bin/llc <.ll file> --debug-only=vijay &> test.txt
 // ```
-
+#include <iostream>
+#include <ctime>
+#include <sstream>
 #include "X86.h"
 #include "X86InstrInfo.h"
 #include "llvm/ADT/Statistic.h"
@@ -31,12 +33,17 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
+// #include <nlohmann/json.hpp>
+#include "llvm/Support/JSON.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "vijay"
 
 #define RA_PASS_NAME "RA pass"
+
+// using json = nlohmann::json;
+
 
 namespace {
 
@@ -82,6 +89,19 @@ public:
         AU.addPreserved<LiveRegMatrix>();
         MachineFunctionPass::getAnalysisUsage(AU);
     }
+    static double * getRandom( ) {
+
+        static double  r[300];
+
+        // set the seed
+        srand( (unsigned)time( NULL ) );
+        
+        for (int i = 0; i < 5; ++i) {
+            r[i] = rand() / double(RAND_MAX);
+        }
+
+        return r;
+}
 };
 } // end of anonymous namespace
 
@@ -129,21 +149,57 @@ bool RA::runOnMachineFunction(MachineFunction &mf) {
         if (MRI->reg_nodbg_empty(Reg))
             continue;
         LiveInterval *VirtReg = &LIS->getInterval(Reg);
-        File << i << " [label=\"" << VirtReg->weight << " ";
+        File << i << " [label=\" {" << VirtReg->weight << "} ";
 
         LLVM_DEBUG(VirtReg->print(dbgs()));
         LLVM_DEBUG(dbgs() << "\n");
-
+        
+        llvm::json::Array root;   // will contains the root value after parsing.
+        int node_inx = 0;
+        std::string node_str = "[";
         for (auto &S : VirtReg->segments){
             for (SlotIndex I = S.start.getBaseIndex(), E = S.end.getBaseIndex();
             I != E; I = I.getNextIndex()) {
                 auto* MIR = LIS->getInstructionFromIndex(I);
                 if (!MIR)
                     continue;
-                MIR->print(File);
+                std::string s = "Instruction test";
+                // llvm::raw_string_ostream &output(std::string s);
+                // MIR->print(output);
+                //  << MIR->dump();
+                root.push_back(s);
+                double *p;
+                
+                p = getRandom();
+
+                std::ostringstream os;
+                for (int i = 0; i < 5; i++) {
+                    os << *(p + i);
+                    if(i < 4)
+                        os << ", ";
+                }
+ 
+                std::string str(os.str());
+
+                node_str = node_str + "[ " + str + " ]";
+                if(E != I.getNextIndex())
+                    node_str = node_str + ", " + "\n";
+                // root[node_inx++] = s;
+                // MIR->print(File);
             }
+            
         }
-        File << "\"];\n";
+        node_str = node_str + "]";
+
+
+        // Dumping MIR json arrray
+        // nodes_json_str->print(File);
+
+        // Json::StyledWriter writer;
+        // std::string nodes_json_str = writer.write( root );
+        // llvm::Optional< llvm::StringRef > nodes_json_str = nodes_json_value.getAsString();
+        
+        File << node_str << "\"];\n";
 
         for (unsigned j = i+1, e = MRI->getNumVirtRegs(); j < e; ++j) {
             unsigned Reg1 = Register::index2VirtReg(j);
@@ -160,6 +216,9 @@ bool RA::runOnMachineFunction(MachineFunction &mf) {
     LLVM_DEBUG(LIS->print(dbgs()));
     return false;
 }
+
+
+
 
 
 INITIALIZE_PASS(RA, "regallocvijay",
