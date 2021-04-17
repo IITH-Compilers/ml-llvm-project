@@ -17,7 +17,7 @@ set(LLVM_LINK_COMPONENTS
   Target
   TransformUtils
   Vectorize
-  DumpIG
+  DumpIGAndMapBack
   )
 
 add_llvm_tool(llc
