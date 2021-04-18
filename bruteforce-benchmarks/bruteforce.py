@@ -145,7 +145,7 @@ def run(graphpathlist):
         combs = []
         decList = []
         distributions = []
-        if N > 6:
+        if N > 10:
             # print(colored('['+graph['graph'][1][1]['FileName']+']', 'blue') +
             #       'Skipping the files with nodes more than 4\t' + colored('Case skipped', 'magenta'))
             skipped += 1
@@ -209,6 +209,7 @@ if __name__ == '__main__':
 
     config = utils.get_parse_args()
     
+    print(config)
     global dataset
     dataset=config.dataset
 

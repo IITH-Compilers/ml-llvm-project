@@ -124,8 +124,11 @@ def maximal_multiple_loops(calculate_cost_cache, config, rdgs):
         functionName = graph['graph'][1][1]['Function'].strip('\"')
         loopID = graph['graph'][1][1]['LoopID'].strip('\"')
         num_nodes = len(graph['nodes'])
-        selected_rows = calculate_cost_cache.loc[(calculate_cost_cache["Filename"] == fileName) & (calculate_cost_cache["Function Name"] == functionName) & (calculate_cost_cache["Loop ID"] == int(loopID)), "Distributed cost"]
+        selected_rows = calculate_cost_cache.loc[(calculate_cost_cache["Filename"] == fileName) & (calculate_cost_cache["Function Name"] == functionName) & (calculate_cost_cache["Loop ID"] == int(loopID))]
         if not selected_rows.empty:
+            # print(selected_rows)
+            selected_rows = selected_rows["Distributed cost"]
+            # print(calculate_cost_cache.loc[selected_rows.idxmin()])
             distributed_seq = calculate_cost_cache.loc[selected_rows.idxmin()]['Combination']
             logging.info('***********Entry found for {}, {}, {} --> {} ***********************'.format(fileName, functionName, loopID, distributed_seq))
         else:

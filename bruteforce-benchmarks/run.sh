@@ -29,7 +29,15 @@ fi
 
 DATA_SET=`realpath ${DATA_SET}`
 
-REWARD_TYPE=$3
+Post_PASSES=$3
+if [ -z ${Post_PASSES} ] 
+then
+        echo "Enter valid key"
+        exit 
+fi
+
+
+REWARD_TYPE=$4
 if [ -z ${REWARD_TYPE} ] 
 then
         echo "Reward type should be either LC - LoopCost or MCA - llvm-mca"
@@ -47,4 +55,4 @@ else
         exit
 fi
 
-python bruteforce.py --dataset=${DATA_SET}  --outfile ${OUT_FILE_NAME} --distributed=${DATA_SET}/brute-distributed --post_pass_key=2 ${RT}
+python bruteforce.py --dataset=${DATA_SET}  --outfile ${OUT_FILE_NAME} --distributed=${DATA_SET}/brute-distributed --post_pass_key=${Post_PASSES} ${RT}
