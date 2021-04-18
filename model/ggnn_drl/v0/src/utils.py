@@ -41,12 +41,12 @@ def getllFileAttributes(file):
     parts = file.split('/{graphs}/'.format(graphs=GRAPH_DIR_CONST))
     home_dir = parts[0]
     parts=parts[1].split('/')
-    file_name_parts = (parts[1].split('I_'))[1].split('.json')[0]
+    file_name_parts = parts[1].split('.json')[0]
     
-    file_name_parts =file_name_parts.split('_L')
     record['HOME_DIR'] = home_dir
-    record['LOOP_ID'] = file_name_parts[-1]
-    record['FUN_ID'] = file_name_parts[0].split('_F')[-1]
+    # record['LOOP_ID'] = file_name_parts[-1]
+    # record['FUN_ID'] = file_name_parts[0].split('_F')[-1]
+    record['FUN_ID'] = file_name_parts
 
     return record
 

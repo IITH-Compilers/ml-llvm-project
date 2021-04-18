@@ -3255,6 +3255,7 @@ bool MLRA::runOnMachineFunction(MachineFunction &mf) {
   raw_fd_ostream File(MF->getName().str() + ".dot", EC, sys::fs::F_Text);
 
   File << "graph G {\n";
+  File << "FileName=\"" << MF->getFunction().getParent()->getName() << "\";\n";
   File << "Function=\"" << MF->getName() << "\";\n";
   
   // TODO: Fix no of Registers
