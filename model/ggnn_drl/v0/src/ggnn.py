@@ -231,10 +231,23 @@ def constructGraph(graph):
     nid_idx = {}
     unique_type_map = {'pair' : []}
     all_edges = []
+    annotations_list = []
     for idx, node in enumerate(nodes):
         
         nodeId = node['id']
-        nodeVec = list(map(float, node['label'].strip("\"").split(', ')))
+        # nodeVec = list(map(float, node['label'].strip("\"").split(', ')))
+        spill_cost = re.search("{.*}", node['label']).group()
+        spill_cost = spill_cost[1: len(spill_cost) - 1]
+        if spill_cost != "INF":
+            spill_cost = eval(spill_cost)
+            annotations_list.append(spill_cost)
+        else:
+            spill_cost = float('inf')
+            annotations_list.append(spill_cost)
+        node['label'] = re.sub(" {.*} ", '', node['label'])
+        node_mat = eval(node['label'].replace("\"",""))
+        node_tansor_matrix = torch.FloatTensor(node_mat)
+        nodeVec = constructVectorFromMatrix(node_tansor_matrix)
         
         initial_node_representation.append(nodeVec)
         nid_idx[nodeId] = idx
@@ -243,17 +256,19 @@ def constructGraph(graph):
     for i, adj in enumerate(adjlist):
 
         for nlink in adj:
-            label = nlink['label'].strip("\" ")
+            # label = nlink['label'].strip("\" ")
             neighId = nid_idx[nlink['id']]
-            if label in unique_type_map.keys():
-                unique_type_map[label].append((i, neighId))
-            else:
-                unique_type_map[label] = [(i, neighId)]
+            # if label in unique_type_map.keys():
+            #     unique_type_map[label].append((i, neighId))
+            # else:
+            #     unique_type_map[label] = [(i, neighId)]
             if i != neighId:
                 all_edges.append((i, neighId))
 
     logging.info("Shape of the hidden nodes matrix N X D : {}".format(np.array(initial_node_representation).shape)) 
-    initial_node_representation = torch.FloatTensor(initial_node_representation)
+    # initial_node_representation = torch.FloatTensor(initial_node_representation)
+    
+    initial_node_representation = torch.stack(initial_node_representation, dim=0)
     
     # Create aGraph obj for getting the Zero incoming egdes nodes
     graphObj = Graph(all_edges,  num_nodes)
@@ -261,11 +276,15 @@ def constructGraph(graph):
     logging.info("num_nodes : {}".format(num_nodes) )
     ggnn = GatedGraphNeuralNetwork(hidden_size=initial_node_representation.shape[1], annotation_size=2, num_edge_types= len(unique_type_map.keys()) + 1, layer_timesteps=[5], residual_connections={}, nodelevel=True)
 
-    ggnn.annotations = torch.FloatTensor([[0]*3]*num_nodes)
+    # ggnn.annotations = torch.FloatTensor([[0]*3]*num_nodes)
+    
+    ggnn.annotations = torch.FloatTensor(annotations_list)
+    ggnn.annotations = ggnn.annotations.reshape((ggnn.annotations.shape[0], 1))
     ggnn.num_nodes = num_nodes
-    adjacency_lists=[ AdjacencyList(node_num=num_nodes, adj_list=adjlist, device=ggnn.device) for adjlist in unique_type_map.values()]
-    logging.info("unique_type_map : {}".format(unique_type_map)) 
-    ggnn.unique_type_map = unique_type_map
+    adjacency_lists=[ AdjacencyList(node_num=num_nodes, adj_list=all_edges, device=ggnn.device)]
+    # adjacency_lists=[ AdjacencyList(node_num=num_nodes, adj_list=adjlist, device=ggnn.device) for adjlist in unique_type_map.values()]
+    # logging.info("unique_type_map : {}".format(unique_type_map)) 
+    # ggnn.unique_type_map = unique_type_map
     # TODO maps values have same behvior as append
     ggnn.n_state = ggnn.compute_node_representations(initial_node_representation=initial_node_representation, annotations=ggnn.annotations, adjacency_lists=adjacency_lists, return_all_states=False)
     
@@ -281,7 +300,9 @@ def constructGraph(graph):
     state = ggnn.n_state.cpu().detach().numpy()
     return  state, graphObj, ggnn
 
-
+def constructVectorFromMatrix(node_tansor_matrix):
+    vector = torch.mean(node_tansor_matrix, 0)
+    return vector
 
 def main():
     # hidden 300
