@@ -79,6 +79,8 @@
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/raw_ostream.h"
 #include <sstream>
+//#include <filesystem>
+#include <iostream>
 
 using namespace llvm;
 
@@ -158,7 +160,7 @@ class MLRA : public MachineFunctionPass,
 
   // context
   MachineFunction *MF;
-
+  int FuntionCounter = 0;
   // Shortcuts to some useful interface.
   const TargetInstrInfo *TII;
   const TargetRegisterInfo *TRI;
@@ -3233,7 +3235,7 @@ void MLRA::reportNumberOfSplillsReloads(MachineLoop *L, unsigned &Reloads,
 bool MLRA::runOnMachineFunction(MachineFunction &mf) {
   dbgs() << "********** ML REGISTER ALLOCATION **********\n"
                     << "********** Function: " << mf.getName() << '\n';
-
+  FuntionCounter++;
   MF = &mf;
   VirtRegMap &vrm = getAnalysis<VirtRegMap>(); 
   LiveIntervals &lis = getAnalysis<LiveIntervals>(); 
@@ -3250,12 +3252,22 @@ bool MLRA::runOnMachineFunction(MachineFunction &mf) {
       getAnalysis<MachineLoopInfo>(),
       getAnalysis<MachineBlockFrequencyInfo>());
   
+  StringRef moduleName = MF->getFunction().getParent()->getName();
+  if (llvm::sys::path::is_relative(moduleName)){
+	  SmallString<1024> temp= moduleName;
+	   llvm::sys::fs::make_absolute(temp);
+	   moduleName = StringRef(temp);
+  }
+  std::string absmoduleName = moduleName.str();
+// errs () << absmoduleName << "\n";
+  std::string input_fileName = absmoduleName.substr(absmoduleName.rfind('/') + 1);
+  
   std::error_code EC;
   // TODO: Name mangling
-  raw_fd_ostream File(MF->getName().str() + ".dot", EC, sys::fs::F_Text);
+  raw_fd_ostream File( input_fileName + "_F" + std::to_string(FuntionCounter) + ".dot", EC, sys::fs::F_Text);
 
   File << "graph G {\n";
-  File << "FileName=\"" << MF->getFunction().getParent()->getName() << "\";\n";
+  File << "FileName=\"" << absmoduleName << "\";\n";
   File << "Function=\"" << MF->getName() << "\";\n";
   
   // TODO: Fix no of Registers
