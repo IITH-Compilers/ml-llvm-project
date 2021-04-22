@@ -3233,8 +3233,8 @@ void MLRA::reportNumberOfSplillsReloads(MachineLoop *L, unsigned &Reloads,
 }
 
 bool MLRA::runOnMachineFunction(MachineFunction &mf) {
-  dbgs() << "********** ML REGISTER ALLOCATION **********\n"
-                    << "********** Function: " << mf.getName() << '\n';
+  LLVM_DEBUG(dbgs() << "********** ML REGISTER ALLOCATION **********\n"
+                    << "********** Function: " << mf.getName() << '\n');
   FuntionCounter++;
   MF = &mf;
   VirtRegMap &vrm = getAnalysis<VirtRegMap>(); 
@@ -3280,7 +3280,7 @@ bool MLRA::runOnMachineFunction(MachineFunction &mf) {
       LiveInterval *VirtReg = &LIS->getInterval(Reg);
       bool is_atleastoneinstruction = false;
 
-       std::string node_str = std::to_string(i) + " [label=\" {" + std::to_string(VirtReg->weight) + "} ";
+      std::string node_str = std::to_string(i) + " [label=\" {" + std::to_string(VirtReg->weight) + "} ";
 
       LLVM_DEBUG(VirtReg->print(dbgs()));
       LLVM_DEBUG(dbgs() << "\n");
@@ -3300,7 +3300,6 @@ bool MLRA::runOnMachineFunction(MachineFunction &mf) {
               //  << MIR->dump();
               // root.push_back(s);
               double *p;
-              is_atleastoneinstruction = true; 
               p = getRandom();
 
               std::ostringstream os;
@@ -3312,11 +3311,14 @@ bool MLRA::runOnMachineFunction(MachineFunction &mf) {
  
               std::string str(os.str());
 
+              //if(E != I.getNextIndex())
+              // node_str = node_str + ", " + "\n";
+              if (!is_atleastoneinstruction) {
               node_str = node_str + "[ " + str + " ]";
-              if(E != I.getNextIndex())
-                  node_str = node_str + ", " + "\n";
-              // root[node_inx++] = s;
-              // MIR->print(File);
+              } else{
+              node_str = node_str + ", \n[ " + str + " ]";
+              }
+              is_atleastoneinstruction = true; 
           }
           
       }
