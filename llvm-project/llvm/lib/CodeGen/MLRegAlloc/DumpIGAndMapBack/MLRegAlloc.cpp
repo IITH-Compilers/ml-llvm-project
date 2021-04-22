@@ -3278,27 +3278,29 @@ bool MLRA::runOnMachineFunction(MachineFunction &mf) {
       if (MRI->reg_nodbg_empty(Reg))
           continue;
       LiveInterval *VirtReg = &LIS->getInterval(Reg);
-      File << i << " [label=\" {" << VirtReg->weight << "} ";
+      bool is_atleastoneinstruction = false;
+
+       std::string node_str = std::to_string(i) + " [label=\" {" + std::to_string(VirtReg->weight) + "} ";
 
       LLVM_DEBUG(VirtReg->print(dbgs()));
       LLVM_DEBUG(dbgs() << "\n");
       
-      llvm::json::Array root;   // will contains the root value after parsing.
+      // llvm::json::Array root;   // will contains the root value after parsing.
       int node_inx = 0;
-      std::string node_str = "[";
+      node_str = node_str + "[";
       for (auto &S : VirtReg->segments){
           for (SlotIndex I = S.start.getBaseIndex(), E = S.end.getBaseIndex();
           I != E; I = I.getNextIndex()) {
               auto* MIR = LIS->getInstructionFromIndex(I);
               if (!MIR)
                   continue;
-              std::string s = "Instruction test";
+              // std::string s = "Instruction test";
               // llvm::raw_string_ostream &output(std::string s);
               // MIR->print(output);
               //  << MIR->dump();
-              root.push_back(s);
+              // root.push_back(s);
               double *p;
-              
+              is_atleastoneinstruction = true; 
               p = getRandom();
 
               std::ostringstream os;
@@ -3318,17 +3320,11 @@ bool MLRA::runOnMachineFunction(MachineFunction &mf) {
           }
           
       }
-      node_str = node_str + "]";
+      node_str = node_str + "]\"];\n";
 
-
-      // Dumping MIR json arrray
-      // nodes_json_str->print(File);
-
-      // Json::StyledWriter writer;
-      // std::string nodes_json_str = writer.write( root );
-      // llvm::Optional< llvm::StringRef > nodes_json_str = nodes_json_value.getAsString();
-      
-      File << node_str << "\"];\n";
+      if (is_atleastoneinstruction){
+      File << node_str;
+      }
 
       for (unsigned j = i+1, e = MRI->getNumVirtRegs(); j < e; ++j) {
           unsigned Reg1 = Register::index2VirtReg(j);

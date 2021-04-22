@@ -81,7 +81,7 @@ class Agent():
                 experiences = self.memory.sample()
                 self.learn(experiences, GAMMA)
 
-    def act(self, state, topology,eps=0.):
+    def act(self, state, eps=0.):
         """Returns actions for given state as per current policy.
         
         Params
@@ -120,19 +120,24 @@ class Agent():
         return actions
 
     def getMaxQvalueAndActions(self, out):
-        color_out = out
-        
-        action, action_Qvalue = torch.argmax(action_out, dim=1), torch.max(action_out, dim=1)
+        action_out = out
+        # print(action_out.shape) 
+        # action, action_Qvalue = torch.argmax(action_out, dim=0), torch.max(action_out, dim=0)
+        action_Qvalue , action = torch.max(action_out, dim=0)
 
         QMax = action_Qvalue
 
         return QMax, action
  
     def getMaxQvalue(self, next_state):
+        # print(next_state)
         next_state = torch.from_numpy(next_state).float().to(device)
+        # print('Hi', next_state)
         out = self.qnetwork_target(next_state)
         # TODO:: Add a check for masking
+        # print('out', out)
         QMax, _ = self.getMaxQvalueAndActions(out)
+        # print('Qmax', QMax)
         return QMax
  
  
@@ -145,7 +150,7 @@ class Agent():
             
             out = self.qnetwork_local(state)
             Qvalue = out[action]
-
+            # print(Qvalue)
             return Qvalue
         except:
             logging.error('Error int getQvalueForAction')
@@ -167,17 +172,21 @@ class Agent():
         # Q_targets_next = self.qnetwork_target(next_states, start).detach().max(1)[0].unsqueeze(1)
         # Q_targets_next = self.qnetwork_target(next_states, start)[0].detach().unsqueeze(1)
         
+        # print(next_states)
 
         Q_targets_next = torch.stack([self.getMaxQvalue(next_state) for next_state in next_states]).detach().unsqueeze(1)
         # logging.info('V2: Q_targets_shape : ', Q_targets_next.shape)
         # Compute Q targets for current states 
         Q_targets = rewards + (gamma * Q_targets_next * (1 - dones))
 
+        # print('Q_targets_shape : ', Q_targets_next.shape)
+        # print('Q_targets', Q_targets.shape)
         # Get expected Q values from local model
         # Q_expected = self.qnetwork_local(states, start).gather(1, actions)
 
-        Q_expected = torch.stack([ self.getQvalueForAction(state,  action) for state, action in zip(states, actions)]).squeeze(2)
+        Q_expected = torch.stack([ self.getQvalueForAction(state,  action) for state, action in zip(states, actions)])
  
+        # print('Q_expected', Q_expected.shape)
         # Trans_Qvalue,_ = self.qnetwork_local.transitionNet(states)
         # Qvalue1 = Trans_Qvalue.gather(1, actions1)
         
@@ -191,7 +200,6 @@ class Agent():
 
         # Compute loss
         # logging.info('Q_expected', Q_expected.shape)
-        # logging.info('Q_targets', Q_targets.shape)
         loss = F.mse_loss(Q_expected, Q_targets)
         self.updateDone = self.updateDone +1
         self.writer.add_scalar("Loss/train", loss, self.updateDone)
@@ -266,7 +274,8 @@ class ReplayBuffer:
 
         #  Fix the fix for the dimension miss match....
         # next_states = torch.from_numpy(np.vstack([e.next_state for e in experiences if e is not None])).float().to(device)
-        next_states = [e.next_state for e in experiences if e is not None]
+         
+        next_states = [e.next_state[0] for e in experiences if e is not None]
         
         dones = torch.from_numpy(np.vstack([e.done for e in experiences if e is not None]).astype(np.uint8)).float().to(device)
   

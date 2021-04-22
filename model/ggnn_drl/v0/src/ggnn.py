@@ -9,6 +9,7 @@ from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
 from typing import List, Tuple, Dict, Sequence, Any
 from topologicalSort import Graph
 import logging
+import re
 
 logger = logging.getLogger('ggnn.py') 
 
@@ -191,20 +192,22 @@ class GatedGraphNeuralNetwork(nn.Module):
         else:
             return torch.sum(node_states_per_layer[-1],dim=0)
 
-    def updateAnnotation(self, action):
+    def updateAnnotation(self, nodeChoosen, action):
         # update as visted
-        self.annotations[action[0]][0] = 1
         # update the color as signed
-        self.annotations[action[0]][1] = action[1]
+
+        # set spill cost to zero if visited
+        self.annotations[nodeChoosen][0] = 0
+        self.annotations[nodeChoosen][1] = action
 
 
     # def addPairEdge(self, node1, node2):
     #     self.unique_type_map['pair'].append((node1, node2))
     
     def propagate(self):
-        adjacency_lists=[ AdjacencyList(node_num=self.num_nodes, adj_list=adjlist, device=self.device) for adjlist in self.unique_type_map.values()]
+        # adjacency_lists=[ AdjacencyList(node_num=self.num_nodes, adj_list=adjlist, device=self.device) for adjlist in self.unique_type_map.values()]
 
-        self.n_state = self.compute_node_representations(initial_node_representation=self.n_state,  annotations=self.annotations, adjacency_lists=adjacency_lists, return_all_states=False)
+        self.n_state = self.compute_node_representations(initial_node_representation=self.n_state,  annotations=self.annotations, adjacency_lists=self.adjacency_lists, return_all_states=False)
         
         
         if not self.nodelevel:
@@ -214,7 +217,6 @@ class GatedGraphNeuralNetwork(nn.Module):
         
         state = state.cpu().detach().numpy()
         logging.info('DLOOP  return from propagate | state : {}'.format(state.shape))
-        logging.info('DLOOP pair edges while new propagate : {}'.format(self.unique_type_map['pair']))
         return state.copy()
   
    # input graph jsonnx
@@ -229,21 +231,21 @@ def constructGraph(graph):
     
     idx_nid = {}
     nid_idx = {}
-    unique_type_map = {'pair' : []}
+    # self.unique_type_map = {'pair' : []}
     all_edges = []
-    annotations_list = []
+    spill_cost_list = []
     for idx, node in enumerate(nodes):
         
         nodeId = node['id']
         # nodeVec = list(map(float, node['label'].strip("\"").split(', ')))
         spill_cost = re.search("{.*}", node['label']).group()
         spill_cost = spill_cost[1: len(spill_cost) - 1]
-        if spill_cost != "INF":
+        if spill_cost not in ["inf", "INF"]:
             spill_cost = eval(spill_cost)
-            annotations_list.append(spill_cost)
+            spill_cost_list.append(spill_cost)
         else:
-            spill_cost = float('inf')
-            annotations_list.append(spill_cost)
+            spill_cost = float(1000)
+            spill_cost_list.append(spill_cost)
         node['label'] = re.sub(" {.*} ", '', node['label'])
         node_mat = eval(node['label'].replace("\"",""))
         node_tansor_matrix = torch.FloatTensor(node_mat)
@@ -256,38 +258,39 @@ def constructGraph(graph):
     for i, adj in enumerate(adjlist):
 
         for nlink in adj:
-            # label = nlink['label'].strip("\" ")
             neighId = nid_idx[nlink['id']]
-            # if label in unique_type_map.keys():
-            #     unique_type_map[label].append((i, neighId))
-            # else:
-            #     unique_type_map[label] = [(i, neighId)]
             if i != neighId:
                 all_edges.append((i, neighId))
 
-    logging.info("Shape of the hidden nodes matrix N X D : {}".format(np.array(initial_node_representation).shape)) 
     # initial_node_representation = torch.FloatTensor(initial_node_representation)
-    
     initial_node_representation = torch.stack(initial_node_representation, dim=0)
     
+    # print(initial_node_representation)
+    logging.info("Shape of the hidden nodes matrix N X D : {}".format(initial_node_representation.shape)) 
     # Create aGraph obj for getting the Zero incoming egdes nodes
     graphObj = Graph(all_edges,  num_nodes)
     logging.info('All links : {}'.format(all_edges))
     logging.info("num_nodes : {}".format(num_nodes) )
-    ggnn = GatedGraphNeuralNetwork(hidden_size=initial_node_representation.shape[1], annotation_size=2, num_edge_types= len(unique_type_map.keys()) + 1, layer_timesteps=[5], residual_connections={}, nodelevel=True)
-
-    # ggnn.annotations = torch.FloatTensor([[0]*3]*num_nodes)
+    ggnn = GatedGraphNeuralNetwork(hidden_size=initial_node_representation.shape[1], annotation_size=2, num_edge_types=1, layer_timesteps=[5], residual_connections={}, nodelevel=True)
+    annotation_zero = np.zeros((num_nodes, 2))
+    annotation_zero[:, 0] = spill_cost_list
+    ggnn.annotations = torch.FloatTensor(annotation_zero)
     
-    ggnn.annotations = torch.FloatTensor(annotations_list)
-    ggnn.annotations = ggnn.annotations.reshape((ggnn.annotations.shape[0], 1))
+    # ggnn.annotations = torch.FloatTensor(annotations_list)
+    # ggnn.annotations = ggnn.annotations.reshape((ggnn.annotations.shape[0], 1))
+    
     ggnn.num_nodes = num_nodes
-    adjacency_lists=[ AdjacencyList(node_num=num_nodes, adj_list=all_edges, device=ggnn.device)]
+    ggnn.adjacency_lists=[ AdjacencyList(node_num=num_nodes, adj_list=all_edges, device=ggnn.device)]
     # adjacency_lists=[ AdjacencyList(node_num=num_nodes, adj_list=adjlist, device=ggnn.device) for adjlist in unique_type_map.values()]
     # logging.info("unique_type_map : {}".format(unique_type_map)) 
     # ggnn.unique_type_map = unique_type_map
     # TODO maps values have same behvior as append
-    ggnn.n_state = ggnn.compute_node_representations(initial_node_representation=initial_node_representation, annotations=ggnn.annotations, adjacency_lists=adjacency_lists, return_all_states=False)
-    
+
+    # print(ggnn.annotations)
+    # print(ggnn.adjacency_lists)
+    ggnn.n_state = ggnn.compute_node_representations(initial_node_representation=initial_node_representation, annotations=ggnn.annotations, adjacency_lists=ggnn.adjacency_lists, return_all_states=False)
+    ggnn.spill_cost_list  = spill_cost_list 
+    # print(ggnn.n_state)
     
     
     # state = torch.sum(ggnn.n_state, dim=0)

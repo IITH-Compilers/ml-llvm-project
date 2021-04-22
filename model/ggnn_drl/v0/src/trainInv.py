@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import json
-from distributeEnv import DistributeLoopEnv
+from graphColorEnv import GraphColorEnv
 from dqn_agent import Agent
 import glob
 import json
@@ -21,7 +21,7 @@ def run(agent, config):
     action_mask_flag=config.action_mask_flag
     enable_lexographical_constraint = config.enable_lexographical_constraint
     
-    n_episodes=500
+    n_episodes=2
     max_t=1000
     eps_start=1.0
     eps_end=0.01
@@ -38,7 +38,7 @@ def run(agent, config):
 
     count=0
     #Load the envroinment
-    env = DistributeLoopEnv(config)    
+    env = GraphColorEnv(config)    
     training_graphs=glob.glob(os.path.join(dataset, 'graphs/json/*.json'))
     for episode in range(n_episodes):
         scores = []                        # list containing scores from each episode
@@ -54,7 +54,7 @@ def run(agent, config):
             logging.info('DLOOP New graph to the env. {} '.format(path))
             count=count+1
 
-            state, topology = env.reset_env(graph, path)
+            state = env.reset_env(graph, path)
             score = 0
             while(True):
                 # possibleNodes_emb, possibleNodes = state

@@ -31,7 +31,7 @@ class Graph:
         return list(set([self.colored[u] for u in interfering_nodes if self.discovered[u]]))
     
     def UpdateVisitList(self, v, color):
-        if self.indegree[v] == 0 and not self.discovered[v]:
+        if not self.discovered[v]:
 
             # for every adjacent vertex u of v, reduce in-degree of u by 1
             for u in self.adjList[v]:
