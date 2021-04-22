@@ -89,9 +89,10 @@ class Agent():
             state (array_like): current state
             eps (float): epsilon, for epsilon-greedy action selection
         """
-        state, nodeChoosen,adj_colors = state
-
-        logging.info("DLOOP state type : {}, {}".format(type(state), state.shape))
+        state, nodeChoosen, adj_colors = state
+        
+        logging.info('Adj colors : {}'.format(adj_colors))
+        logging.info("state type : {}, {}".format(type(state), state.shape))
         state = torch.from_numpy(state).float() # .unsqueeze(0)
         logging.info("shape={} and type={}".format(state.shape, type(state)))
         
@@ -104,9 +105,10 @@ class Agent():
                 # assign a color to the node
                 out = self.qnetwork_local(state)
                 if len(adj_colors) > 0:
+                    print(adj_colors)
                     out = out[adj_colors]
+
                 _, actions = self.getMaxQvalueAndActions(out)
-                # action_values = masked_action_space
             self.qnetwork_local.train()
 
         else:

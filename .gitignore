@@ -3,3 +3,4 @@ __pycache__/
 data/
 scratch/
 trained_model/
+log/

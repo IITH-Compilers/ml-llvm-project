@@ -4,7 +4,7 @@ import random
 import utils
 import os
 import logging
-logger = logging.getLogger('distributeEnv.py') 
+logger = logging.getLogger('graphColorEnv.py') 
 class GraphColorEnv:
 
     def __init__(self, config):
@@ -40,6 +40,7 @@ class GraphColorEnv:
 
 
     def step(self, action):
+        logging.info('Step apply action on env.')
         if self.ggnn is None:
             raise Exception()
         
@@ -49,9 +50,9 @@ class GraphColorEnv:
         self.topology.UpdateVisitList(nodeChoosen, action)
        
         
-        # node_id =  self.ggnn.idx_nid[nodeChoosen]
+        node_id =  self.ggnn.idx_nid[nodeChoosen]
         
-        # logging.info('DLOOP merge {cur_node} with {nodeChoosen}'.format(cur_node=self.cur_node, nodeChoosen=nodeChoosen))
+        logging.info('Color id={cur_node}, node_id={node_id} with color={action}'.format(cur_node=nodeChoosen, node_id=node_id, action=action))
         
 
         self.ggnn.updateAnnotation(nodeChoosen, action)
@@ -82,6 +83,7 @@ class GraphColorEnv:
     # input graph : jsonnx
     # return the state of the graph, all the possible starting nodes
     def reset_env(self, graph, path):
+        logging.info('reset the env.')
         attr = utils.getllFileAttributes(path)
         self.path = path
         self.graph = graph
@@ -98,6 +100,7 @@ class GraphColorEnv:
         self.cur_node = 0
         obs= hidden_state[self.cur_node]
         adj_colors = self.topology.getColorOfVisitedAdjNodes(self.cur_node)
+
         return ( obs, self.cur_node, adj_colors)
 
 

@@ -39,7 +39,7 @@ def run(agent, config):
     count=0
     #Load the envroinment
     env = GraphColorEnv(config)    
-    training_graphs=glob.glob(os.path.join(dataset, 'graphs/json/*.json'))
+    training_graphs=glob.glob(os.path.join(dataset, 'graphs/IG/json/*.json'))
     for episode in range(n_episodes):
         scores = []                        # list containing scores from each episode
         score_tensor = 0
