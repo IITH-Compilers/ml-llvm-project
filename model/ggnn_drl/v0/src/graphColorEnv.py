@@ -8,6 +8,7 @@ logger = logging.getLogger('graphColorEnv.py')
 class GraphColorEnv:
 
     def __init__(self, config):
+        self.spill_color_idx = 0
         self.action_space = None
         self.ggnn = None
         self.graph = None
@@ -16,8 +17,11 @@ class GraphColorEnv:
         self.mode = config.mode
         
         
-    def reward_formula(self, value):
+    def reward_formula(self, value, action):
         reward = value
+
+        if action == self.spill_color_idx:
+            reward = -1
         return reward
 
 
@@ -30,8 +34,9 @@ class GraphColorEnv:
         # fun_id = self.fun_id
         
         # ipc to llvm splill cost function for reward
+
         spillcost = self.spill_cost_list[self.cur_node]
-        reward = self.reward_formula(spillcost)
+        reward = self.reward_formula(spillcost, action)
 
         return reward
 

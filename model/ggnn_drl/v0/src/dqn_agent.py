@@ -55,6 +55,8 @@ class Agent():
             seed (int): random seed
         """
         # random.seed(seed)
+        self.spill_color_idx = 0 
+        self.action_space = np.arange(25)
         state_size = config.state_size
         # Q-Network
         self.qnetwork_local = QNetwork(state_size,  seed=seed).to(device)
@@ -104,21 +106,36 @@ class Agent():
             with torch.no_grad():
                 # assign a color to the node
                 out = self.qnetwork_local(state)
+                action_space = self.action_space
                 if len(adj_colors) > 0:
-                    print(adj_colors)
-                    out = out[adj_colors]
-
-                _, actions = self.getMaxQvalueAndActions(out)
+                    action_space = np.delete(self.action_space, adj_colors)
+                
+                if action_space is None or len(action_space) ==0:
+                    actions = self.spill_color_idx
+                else:
+                    out = out[action_space]
+                    _, actions = self.getMaxQvalueAndActions(out)
+                    actions = actions.cpu().numpy()
+                # print(actions , type(actions)) 
+                # print(actions , type(actions)) 
             self.qnetwork_local.train()
 
         else:
             logging.info('EXP: Random ')
-            action_space = np.arange(25)
+            action_space = self.action_space
             if len(adj_colors) > 0:
-                action_space = action_space[adj_colors]
-            
-            actions = random.choice(action_space)
-            
+                # action_space = filter(lambda i: i not in adj_colors, action_space)
+                masked_action_space = np.delete(action_space, adj_colors)
+                if masked_action_space is None or len(masked_action_space) ==0:
+                    actions = self.spill_color_idx
+                else:
+                    actions = random.choice(masked_action_space)
+            else:
+                actions = random.choice(action_space)
+        # print(actions , type(actions)) 
+        actions = int(actions)
+        # print(actions , type(actions))
+        # print('=================================')
         return actions
 
     def getMaxQvalueAndActions(self, out):

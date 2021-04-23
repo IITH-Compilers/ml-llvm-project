@@ -37,6 +37,7 @@ class GatedGraphNeuralNetwork(nn.Module):
         
         super(GatedGraphNeuralNetwork, self).__init__()
         self.seed = torch.manual_seed(seed)
+        self.spill_color_idx = 0
 
         self.nodelevel = nodelevel
         self.hidden_size = hidden_size
@@ -197,8 +198,11 @@ class GatedGraphNeuralNetwork(nn.Module):
         # update the color as signed
 
         # set spill cost to zero if visited
-        self.annotations[nodeChoosen][0] = 0
-        self.annotations[nodeChoosen][1] = action
+        if action != self.spill_color_idx:
+            self.annotations[nodeChoosen][0] = torch.tensor(0).to(self.device)
+
+        # set the color assigned to the node
+        self.annotations[nodeChoosen][1] = torch.tensor(action).to(self.device)
 
 
     # def addPairEdge(self, node1, node2):
@@ -244,7 +248,7 @@ def constructGraph(graph):
             spill_cost = eval(spill_cost)
             spill_cost_list.append(spill_cost)
         else:
-            spill_cost = float(1000)
+            spill_cost = float(10)
             spill_cost_list.append(spill_cost)
         node['label'] = re.sub(" {.*} ", '', node['label'])
         node_mat = eval(node['label'].replace("\"",""))

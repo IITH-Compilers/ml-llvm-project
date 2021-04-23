@@ -27,5 +27,9 @@ REMARKS=
 OPT_PASSES_SEQ="-O3 "
 
 echo "Pass seq used to generate data : ${SSA_PASSES_SEQ}"
-
+${LLVM_BUILD}/bin/llvm-as < /dev/null | ${LLVM_BUILD}/bin/clang ${OPT_PASSES_SEQ}  -mllvm -regalloc=mlra -debug-pass=Arguments ../../sample/bublesort.c
+echo "\n"
+${LLVM_BUILD}/bin/llvm-as < /dev/null | ${LLVM_BUILD}/bin/opt ${OPT_PASSES_SEQ}  -regalloc=mlra -debug-pass=Arguments
+echo "\n"
 ${LLVM_BUILD}/bin/llvm-as < /dev/null | ${LLVM_BUILD}/bin/llc ${OPT_PASSES_SEQ}  -regalloc=mlra -debug-pass=Arguments
+
