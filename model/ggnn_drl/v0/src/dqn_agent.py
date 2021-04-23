@@ -69,7 +69,7 @@ class Agent():
         # Initialize time step (for updating every UPDATE_EVERY steps)
         self.t_step = 0
         self.updateDone = 0
-        self.writer = SummaryWriter(os.path.join(config.distributed_data, 'log/tensorboard'))    
+        self.writer = SummaryWriter(os.path.join(config.intermediate_data, 'log/tensorboard'))    
 
     def step(self, state, action, reward, next_state, done):
         # Save experience in replay memory
@@ -93,14 +93,14 @@ class Agent():
         """
         state, nodeChoosen, adj_colors = state
         
-        logging.info('Adj colors : {}'.format(adj_colors))
-        logging.info("state type : {}, {}".format(type(state), state.shape))
+        logging.debug('Adj colors : {}'.format(adj_colors))
+        logging.debug("state type : {}, {}".format(type(state), state.shape))
         state = torch.from_numpy(state).float() # .unsqueeze(0)
-        logging.info("shape={} and type={}".format(state.shape, type(state)))
+        logging.debug("shape={} and type={}".format(state.shape, type(state)))
         
         # Epsilon-greedy action selection
         if random.random() > eps:
-            logging.info('EXP: Model decision')
+            logging.debug('EXP: Model decision')
             state = state.to(device)
             self.qnetwork_local.eval()
             with torch.no_grad():
@@ -121,7 +121,7 @@ class Agent():
             self.qnetwork_local.train()
 
         else:
-            logging.info('EXP: Random ')
+            logging.debug('EXP: Random ')
             action_space = self.action_space
             if len(adj_colors) > 0:
                 # action_space = filter(lambda i: i not in adj_colors, action_space)
@@ -163,7 +163,7 @@ class Agent():
     def getQvalueForAction(self, state, action):
         try:
             
-            # logging.info(state.shape, type(state))
+            # logging.debug(state.shape, type(state))
 
             state = torch.from_numpy(state).float().to(device)
             
@@ -194,7 +194,7 @@ class Agent():
         # print(next_states)
 
         Q_targets_next = torch.stack([self.getMaxQvalue(next_state) for next_state in next_states]).detach().unsqueeze(1)
-        # logging.info('V2: Q_targets_shape : ', Q_targets_next.shape)
+        # logging.debug('V2: Q_targets_shape : ', Q_targets_next.shape)
         # Compute Q targets for current states 
         Q_targets = rewards + (gamma * Q_targets_next * (1 - dones))
 
@@ -218,7 +218,7 @@ class Agent():
 
 
         # Compute loss
-        # logging.info('Q_expected', Q_expected.shape)
+        # logging.debug('Q_expected', Q_expected.shape)
         loss = F.mse_loss(Q_expected, Q_targets)
         self.updateDone = self.updateDone +1
         self.writer.add_scalar("Loss/train", loss, self.updateDone)
@@ -282,11 +282,11 @@ class ReplayBuffer:
         states = [e.state[0] for e in experiences if e is not None]
         
         # focusNodes = torch.from_numpy(np.vstack([e.state[1] if e.state[0] is not None else -1 for e in experiences if e is not None])).float().to(device)
-        # logging.info([e.state[1] for e in experiences if e is not None]) 
+        # logging.debug([e.state[1] for e in experiences if e is not None]) 
         # action1 has the node index selected
         # action2 corresponds to merge or distribute decision.
-        # logging.info([e.action[0] for e in experiences if e is not None]) 
-        # logging.info([e.action[1] for e in experiences if e is not None]) 
+        # logging.debug([e.action[0] for e in experiences if e is not None]) 
+        # logging.debug([e.action[1] for e in experiences if e is not None]) 
         actions = torch.from_numpy(np.vstack([e.action for e in experiences if e is not None])).long().to(device)
 
         rewards = torch.from_numpy(np.vstack([e.reward for e in experiences if e is not None])).float().to(device)

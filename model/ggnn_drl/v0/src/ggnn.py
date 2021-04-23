@@ -94,10 +94,10 @@ class GatedGraphNeuralNetwork(nn.Module):
         # one entry per layer (final state of that layer), shape: number of nodes in batch v x D
 
         
-        # logging.info('Annotaion shape {shape} and value {value} '.format(shape=annotations.shape, value=annotations))
-        # logging.info(initial_node_representation.shape)
+        # logging.debug('Annotaion shape {shape} and value {value} '.format(shape=annotations.shape, value=annotations))
+        # logging.debug(initial_node_representation.shape)
         initial_node_representation = torch.cat([initial_node_representation, annotations], dim=1)
-        logging.info('DLOOP H+A {}'.format(initial_node_representation.shape))
+        logging.debug('DLOOP H+A {}'.format(initial_node_representation.shape))
         initial_node_representation = self.hidden_layer(initial_node_representation)
 
 
@@ -220,7 +220,7 @@ class GatedGraphNeuralNetwork(nn.Module):
             state = self.n_state
         
         state = state.cpu().detach().numpy()
-        logging.info('DLOOP  return from propagate | state : {}'.format(state.shape))
+        logging.debug('DLOOP  return from propagate | state : {}'.format(state.shape))
         return state.copy()
   
    # input graph jsonnx
@@ -270,11 +270,11 @@ def constructGraph(graph):
     initial_node_representation = torch.stack(initial_node_representation, dim=0)
     
     # print(initial_node_representation)
-    logging.info("Shape of the hidden nodes matrix N X D : {}".format(initial_node_representation.shape)) 
+    logging.debug("Shape of the hidden nodes matrix N X D : {}".format(initial_node_representation.shape)) 
     # Create aGraph obj for getting the Zero incoming egdes nodes
     graphObj = Graph(all_edges,  num_nodes)
-    logging.info('All links : {}'.format(all_edges))
-    logging.info("num_nodes : {}".format(num_nodes) )
+    logging.debug('All links : {}'.format(all_edges))
+    logging.debug("num_nodes : {}".format(num_nodes) )
     ggnn = GatedGraphNeuralNetwork(hidden_size=initial_node_representation.shape[1], annotation_size=2, num_edge_types=1, layer_timesteps=[5], residual_connections={}, nodelevel=True)
     annotation_zero = np.zeros((num_nodes, 2))
     annotation_zero[:, 0] = spill_cost_list
@@ -286,7 +286,7 @@ def constructGraph(graph):
     ggnn.num_nodes = num_nodes
     ggnn.adjacency_lists=[ AdjacencyList(node_num=num_nodes, adj_list=all_edges, device=ggnn.device)]
     # adjacency_lists=[ AdjacencyList(node_num=num_nodes, adj_list=adjlist, device=ggnn.device) for adjlist in unique_type_map.values()]
-    # logging.info("unique_type_map : {}".format(unique_type_map)) 
+    # logging.debug("unique_type_map : {}".format(unique_type_map)) 
     # ggnn.unique_type_map = unique_type_map
     # TODO maps values have same behvior as append
 
@@ -318,14 +318,14 @@ def main():
                                   layer_timesteps=[3, 5, 7, 2], residual_connections={2: [0], 3: [0, 1]}, nodelevel=False)
     
 
-    logging.info(torch.randn(1,2))
+    logging.debug(torch.randn(1,2))
     adj_list_type1 = AdjacencyList(node_num=4, adj_list=[(0, 2), (2, 1), (1, 3)], device=gnn.device)
     adj_list_type2 = AdjacencyList(node_num=4, adj_list=[(0, 0), (0, 1)], device=gnn.device)
 
     representations = gnn.compute_node_representations(initial_node_representation=torch.randn(4, 64),
                                                             adjacency_lists=[adj_list_type1, adj_list_type2],return_all_states=False)
 
-    logging.info(representations)
+    logging.debug(representations)
 
 
 if __name__ == '__main__':

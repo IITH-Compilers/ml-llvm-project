@@ -51,7 +51,7 @@ class QNetwork(nn.Module):
 
     def forward(self, state):
         """Build a network that maps state -> action values."""
-        # logging.info('MODEL: forward : ', state.shape, type(state) , state)
+        # logging.debug('MODEL: forward : ', state.shape, type(state) , state)
         
         color_out = self.colorNet(state)
         

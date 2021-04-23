@@ -23,8 +23,9 @@ class Dot2Json:
         return json_graph.adjacency_data(networkx.drawing.nx_pydot.read_dot(file_in))
 
 def mapfiles(files):
-    if not os.path.exists(os.path.join(GRAPH_DIR, 'json')):
-        os.makedirs(os.path.join(GRAPH_DIR, 'json'))
+    JSON_DIR=os.path.join(GRAPH_DIR, 'json-1000')
+    if not os.path.exists(JSON_DIR):
+        os.makedirs(JSON_DIR)
     for dotPath in  files:
 #         print(dotPath) 
         try:
@@ -32,12 +33,12 @@ def mapfiles(files):
             d2j = Dot2Json()
             graph = d2j.dot_to_json(dotPath)
             #mutex.release()
-            if len(graph['nodes']) < 2:
+            if len(graph['nodes']) ==0 or  len(graph['nodes']) > 1000:
                 # print('File not included for json : {}'.format(dotPath))
                 continue
             name = (dotPath.split('/')[-1]).split('.dot')[0]
 #           print(name)
-            with open(os.path.join(GRAPH_DIR, 'json/{}.json'.format(name)), 'w') as f:
+            with open(os.path.join(JSON_DIR, '{}.json'.format(name)), 'w') as f:
                 json.dump(graph,  f)
         except Exception as ex:
             print('Not able to parse {} '.format(dotPath), ex)

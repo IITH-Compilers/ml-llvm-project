@@ -45,7 +45,7 @@ class GraphColorEnv:
 
 
     def step(self, action):
-        logging.info('Step apply action on env.')
+        logging.debug('Step apply action on env.')
         if self.ggnn is None:
             raise Exception()
         
@@ -57,7 +57,7 @@ class GraphColorEnv:
         
         node_id =  self.ggnn.idx_nid[nodeChoosen]
         
-        logging.info('Color id={cur_node}, node_id={node_id} with color={action}'.format(cur_node=nodeChoosen, node_id=node_id, action=action))
+        logging.debug('Color id={cur_node}, node_id={node_id} with color={action}'.format(cur_node=nodeChoosen, node_id=node_id, action=action))
         
 
         self.ggnn.updateAnnotation(nodeChoosen, action)
@@ -88,7 +88,7 @@ class GraphColorEnv:
     # input graph : jsonnx
     # return the state of the graph, all the possible starting nodes
     def reset_env(self, graph, path):
-        logging.info('reset the env.')
+        logging.debug('reset the env.')
         attr = utils.getllFileAttributes(path)
         self.path = path
         self.graph = graph

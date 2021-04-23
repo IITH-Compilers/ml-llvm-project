@@ -27,12 +27,12 @@ def run(agent, config):
     env = DistributeLoopEnv(config)    
     score = 0
     count = 1
-    # logging.info(glob.glob(os.path.join(dataset, 'graphs/test/*.json')))
+    # logging.debug(glob.glob(os.path.join(dataset, 'graphs/test/*.json')))
     for path in glob.glob(os.path.join(dataset, 'graphs/test/*.json')): # Number of the iterations
         
         with open(path) as f:
             graph = json.load(f)
-        logging.info('New graph to the env. {} '.format(path))
+        logging.debug('New graph to the env. {} '.format(path))
         # state, topology = env.reset_env(graph, path)
         # Updated 
         state, topology, focusNode = env.reset_env(graph, path)
@@ -42,7 +42,7 @@ def run(agent, config):
             # pass the state and  topology to get the action
             # action is 
             nextNodeIndex, merge_distribute = agent.act(state, topology, focusNode, eps)
-            logging.info("action choosed : {} {} {}".format(nextNodeIndex, possibleNodes[nextNodeIndex],merge_distribute))
+            logging.debug("action choosed : {} {} {}".format(nextNodeIndex, possibleNodes[nextNodeIndex],merge_distribute))
             # Get the next the next state from the action
             # reward is 0 till we reach the end node
             # reward will be -negative, maximize  the reward
@@ -51,15 +51,15 @@ def run(agent, config):
             next_state, reward, done, distribute, focusNode = env.step(action)
             next_possibleNodes_emb, next_possibleNodes = next_state
 
-            logging.info('Distribution till now : {}'.format(distribute))
+            logging.debug('Distribution till now : {}'.format(distribute))
             
             state = (next_possibleNodes_emb, next_possibleNodes)
             score += reward
  
-            logging.info('DLOOP Goto to Next.................')
+            logging.debug('DLOOP Goto to Next.................')
             scores_window.append(score)       # save most recent score
             scores.append(score)              # save most recent score
-            logging.info('\n------------------------------------------------------------------------------------------------')
+            logging.debug('\n------------------------------------------------------------------------------------------------')
             if done:
                break
  
@@ -84,7 +84,7 @@ if __name__ == '__main__':
     logger = logging.getLogger('test.py') 
     logging.basicConfig(filename=os.path.join(config.logdir, 'running.log'), format='%(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
 
-    logging.info(config)
+    logging.debug(config)
     dqn_agent = Agent(config, seed=0)
 
     trained_model = config.trained_model
@@ -94,7 +94,7 @@ if __name__ == '__main__':
     if os.path.isdir(trained_model):
         trained_model = os.path.join(trained_model, 'final-model.pth')
 
-    logging.info('model selected for training :{}'.format(trained_model))
+    logging.debug('model selected for training :{}'.format(trained_model))
 
     dqn_agent.qnetwork_local.load_state_dict(torch.load(trained_model))
     # dqn_agent.writer.add_graph(dqn_agent.qnetwork_local)
@@ -104,5 +104,5 @@ if __name__ == '__main__':
     dqn_agent.writer.flush()
     dqn_agent.writer.close()
 
-    logging.info('Testing Completed..... ')
+    logging.debug('Testing Completed..... ')
     

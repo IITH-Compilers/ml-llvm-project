@@ -1,48 +1,26 @@
-# Taining - bash run.sh [train|trainInv|supervised_trainInv] <dataset> <POST distribution passes choice: {0, 1, 2}> <rewardtype R or S> [<keys point if change some change is done in the model>]
+# Taining - bash run.sh [train|trainInv|supervised_trainInv] <dataset> [<keys point if change some change is done in the model>]
 # Testing - bash run.sh test <path dataset> <path of model> <disable runtime calc:Y> <POST distribution passes choice: {0, 1, 2}> <rewardtype R or S>
 #
+
+EPOCHS=50
 
 PWD=`pwd`
 # set the llvm Build and other paramter
 
 # REL or DEBUG 
-BUILD_TYPE=LoopCost_REL_AsrtON
+BUILD_TYPE=release
 
 # LLVM_BUILD=`realpath ${PWD}/../../../../build`
 
 # if [ ${BUILD_TYPE} = "REL" ]
 # then
-LLVM_BUILD=`realpath ${PWD}/../../../../build_${BUILD_TYPE}`
+LLVM_BUILD=`realpath ${PWD}/../../../../llvm-project/build_${BUILD_TYPE}`
 # fi
 
 echo "LLVM build directory selected for training : ${LLVM_BUILD}"
 export LLVM=${LLVM_BUILD}
 export OPT=${LLVM_BUILD}/bin/opt
 export CLANG=${LLVM_BUILD}/bin/clang
-# Action mask flag
-SET_AMF="False"
-AMF=
-if [ ${SET_AMF} = "True" ]
-then
-        AMF='--action_mask_flag True'
-fi
-
-# Lexograhical constraint 
-SET_ELC="False"
-ELC=
-if [ ${SET_ELC} = "True" ]
-then
-   ELC='--lexographical_constraint True'
-fi
-
-# Disable the calculation od the binaries for some test scenario. work for test phase only
-DISABLE_EXEC_BIN=
-
-# Post distributions passes key. work for test phase only
-PDP=
-
-# Reward type fot the gettng the rewards 
-RT=
 
 # Input from the user for the mode
 MODE=$1
@@ -71,43 +49,14 @@ then
         echo "Running the training using ${PY_SPT}..................."
         MODEL_PAR=`realpath ${PWD}/../trained_model`
 
-        POST_DIS_PASSES_ARG=$3
-        if [ -z ${POST_DIS_PASSES_ARG} ]
-        then
-               echo "key of the pass seq map is not mentioned. Enter valid key or -1 for default"
-               exit 
-        fi
-        
-        if [ $POST_DIS_PASSES_ARG -ne -1 ]
-        then
-        PDP="--post_pass_key=$POST_DIS_PASSES_ARG"
-        fi
 
-        REWARD_TYPE=$4
-        if [ -z ${REWARD_TYPE} ] 
-        then
-                echo "Rewards type, runtime(R) or static(S)"
-               exit 
-        fi
-        
-        if [ ${REWARD_TYPE} = 'R' ]
-        then
-        RT="--rewardtype=runtime"
-        elif [ ${REWARD_TYPE} = 'S' ]
-        then
-                RT="--rewardtype=static"
-        else
-                echo "Rewards type, runtime(R) or static(S)"
-               exit
-        fi
-
-        KEY_POINT=$5
+        KEY_POINT=$3
         if [ -z ${KEY_POINT} ]
         then 
             KEY_POINT="Regular"
         fi
 
-        TRAINED_MODEL=${MODEL_PAR}/${DATA_SET_NAME}/ELC_${SET_ELC}_AMF_${SET_AMF}_${BUILD_TYPE}_PDP_${POST_DIS_PASSES_ARG}_${KEY_POINT}/${MODE}
+        TRAINED_MODEL=${MODEL_PAR}/${DATA_SET_NAME}/EP_${EPOCHS}_${KEY_POINT}/${MODE}
 
         DIST_GEN_DATA=${TRAINED_MODEL}
          
@@ -149,52 +98,7 @@ then
             exit
         fi
         
-        
-         DEB_FLAG=$4
-         if [ -z ${DEB_FLAG} ]
-         then
-                echo "Enter Y to disable runtime calculation else N"
-                exit 
-         fi
-         if [ ${DEB_FLAG} = "Y" ]
-         then
-                 echo "!!!!!Runtime will not be calculated for this run as DEB_FLAG is Y !!!!!"
-         DISABLE_EXEC_BIN="--disable_execute_binaries True"
-         fi
-
-
-        POST_DIS_PASSES_ARG=$5
-        if [ -z ${POST_DIS_PASSES_ARG} ]
-        then
-               echo "key of the pass seq map is not mentioned. Enter valid key or -1 for default"
-               exit 
-        fi
-        
-        if [ $POST_DIS_PASSES_ARG -ne -1 ]
-        then
-        PDP="--post_pass_key=$POST_DIS_PASSES_ARG"
-        fi
-
-        REWARD_TYPE=$6
-        if [ -z ${REWARD_TYPE} ] 
-        then
-                echo "Rewards type, runtime(R) or static(S)"
-               exit 
-        fi
-        
-        if [ ${REWARD_TYPE} = 'R' ]
-        then
-        RT="--rewardtype=runtime"
-        elif [ ${REWARD_TYPE} = 'S' ]
-                then
-                        RT="--rewardtype=static"
-        else
-                echo "Rewards type, runtime(R) or static(S)"
-               exit
-        fi
-
-
-        KEY_POINT=$7
+        KEY_POINT=$4
         if [ -z ${KEY_POINT} ]
         then 
             KEY_POINT="Full"
@@ -220,12 +124,12 @@ LOG=${DIST_GEN_DATA}/log
 mkdir -p ${LOG}
 DIST_GEN_DATA=`realpath ${DIST_GEN_DATA}`
 
-
+LOG_LEVEL='INFO'
 echo "Location of the trained model: ${TRAINED_MODEL}"
 echo "Location of the generated llfiles and outfiles : ${DIST_GEN_DATA}"
 echo "Logs files: ${LOG}"
 ## Call the py script 
-python ${PY_SPT} --dataset=${DATA_SET} ${AMF} ${ELC} ${DISABLE_EXEC_BIN} ${PDP} ${RT} --trained_model=${TRAINED_MODEL} --distributed_data=${DIST_GEN_DATA}  --logdir ${LOG} --mode ${MODE_PROCESS}
+python ${PY_SPT} --dataset=${DATA_SET} --trained_model=${TRAINED_MODEL} --intermediate_data=${DIST_GEN_DATA}  --logdir ${LOG} --mode ${MODE_PROCESS} --epochs=${EPOCHS} --log-level ${LOG_LEVEL}
 
 echo "Completed the process........."
 
@@ -240,7 +144,4 @@ then
         fi
    grep -ri "\-------------------------->" ${LOG}/run.log &> ${LOG}/distribution_results.csv
    echo "Results files generated in  ${LOG}"
-# else
-#         echo  "Delete the generated distirbuted files"
-#         rm -rf ${DIST_GEN_DATA}/llfiles
 fi

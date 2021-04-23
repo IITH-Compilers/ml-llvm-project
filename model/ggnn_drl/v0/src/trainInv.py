@@ -17,15 +17,11 @@ import datetime
 
 def run(agent, config):
     
-    # logging.info('slect the train120 instead and select 100 random samples from the total.')
-    action_mask_flag=config.action_mask_flag
-    enable_lexographical_constraint = config.enable_lexographical_constraint
-    
-    n_episodes=2
+    n_episodes=config.epochs
     max_t=1000
     eps_start=1.0
     eps_end=0.01
-    eps_decay=0.000015
+    eps_decay=0.0015
     scores_window = deque(maxlen=100)  # last 100 scores
     eps = eps_start
     score_per_episode = []
@@ -39,7 +35,7 @@ def run(agent, config):
     count=0
     #Load the envroinment
     env = GraphColorEnv(config)    
-    training_graphs=glob.glob(os.path.join(dataset, 'graphs/IG/json/*.json'))
+    training_graphs=glob.glob(os.path.join(dataset, 'graphs/IG/json-1000/*.json'))
     for episode in range(n_episodes):
         scores = []                        # list containing scores from each episode
         score_tensor = 0
@@ -51,10 +47,13 @@ def run(agent, config):
 
             with open(path) as f:
                 graph = json.load(f)
-            logging.info('DLOOP New graph to the env. {} '.format(path))
+            logging.debug('DLOOP New graph to the env. {} '.format(path))
             count=count+1
-
-            state = env.reset_env(graph, path)
+            try:
+                state = env.reset_env(graph, path)
+            except Exception as ex:
+                print(ex)
+                continue
             score = 0
             while(True):
                 # possibleNodes_emb, possibleNodes = state
@@ -73,23 +72,23 @@ def run(agent, config):
                 #next_possibleNodes_emb, next_possibleNodes = next_state
                 # next_action_mask = topology.findAllVertaxWithZeroWeights()
 
-                # logging.info('possibleNodes_emb : type={} and shape={}'.format(type(possibleNodes_emb)  , possibleNodes_emb.shape))
-                # logging.info('nextNodeIndex : type={} and shape={}'.format(type(nextNodeIndex), nextNodeIndex))
+                # logging.debug('possibleNodes_emb : type={} and shape={}'.format(type(possibleNodes_emb)  , possibleNodes_emb.shape))
+                # logging.debug('nextNodeIndex : type={} and shape={}'.format(type(nextNodeIndex), nextNodeIndex))
                
-                # logging.info('type of possibleNodes_emb : ', type(possibleNodes_emb))
-                # logging.info('type of nextNodeIndex : ', type(nextNodeIndex))
-                # logging.info('type of merge_distribute : ', type(merge_distribute))
+                # logging.debug('type of possibleNodes_emb : ', type(possibleNodes_emb))
+                # logging.debug('type of nextNodeIndex : ', type(nextNodeIndex))
+                # logging.debug('type of merge_distribute : ', type(merge_distribute))
                 # put the state transitionin memory buffer
                 
                 # changes of AMF latter toe addedd
                 agent.step(state, action, reward, next_state, done)
                 
 
-                # logging.info('state : {}'.format(state))
-                # logging.info('stored in memoey action tuple: {}'.format((nextNodeIndex, merge_distribute)))
-                logging.info('reward : {}'.format(reward))
-                # logging.info('next_state : {}'.format(next_state))
-                logging.info('done : {}'.format(done))
+                # logging.debug('state : {}'.format(state))
+                # logging.debug('stored in memoey action tuple: {}'.format((nextNodeIndex, merge_distribute)))
+                logging.debug('reward : {}'.format(reward))
+                # logging.debug('next_state : {}'.format(next_state))
+                logging.debug('done : {}'.format(done))
                 
                 state = next_state
 #                if reward > -10:
@@ -97,7 +96,7 @@ def run(agent, config):
                 score_tensor += reward
                 if done:
                     break
-                logging.info('DLOOP Goto to Next.................')
+                logging.debug('DLOOP Goto to Next.................')
             agent.writer.add_scalar('trainInv/rewardStep', score_tensor, count)
             agent.writer.add_scalar('trainInv/rewardWall', score)
 
@@ -105,13 +104,13 @@ def run(agent, config):
             scores.append(score)              # save most recent score
             eps = max(eps_end, eps-eps_decay) # decrease epsilon
 
-            logging.info('\n------------------------------------------------------------------------------------------------')
+            logging.debug('\n------------------------------------------------------------------------------------------------')
         torch.save(agent.qnetwork_local.state_dict(), os.path.join(trained_model, 'checkpoint-graphs-{episode}.pth'.format(episode=episode)))
         score_per_episode.append(np.sum(scores))
         agent.writer.add_scalar('trainInv/total_score', np.sum(scores) ,episode) 
         
         # if len(env.second_loopcost_cache) > 500:
-        #     logging.info('Cache get updated by {} new entries'.format(len(env.second_loopcost_cache)))
+        #     logging.debug('Cache get updated by {} new entries'.format(len(env.second_loopcost_cache)))
         #     cols = list(env.loopcost_cache.index.names) + list(env.loopcost_cache.columns)
         #     sec_df =  pd.DataFrame(data=env.second_loopcost_cache, columns=cols)
         #     sec_df = sec_df.set_index(env.loopcost_cache.index.names)
@@ -129,8 +128,15 @@ def run(agent, config):
 if __name__ == '__main__':
 
     config = get_parse_args()
-    logger = logging.getLogger('trainInv.py') 
-    logging.basicConfig(filename=os.path.join(config.logdir, 'running.log'), format='%(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
+    logger = logging.getLogger('trainInv.py')
+    log_level=logging.DEBUG
+    if config.log_level == 'WARN':
+        log_level=logging.WARNING
+    elif config.log_level == 'INFO':
+        log_level=logging.INFO
+
+
+    logging.basicConfig(filename=os.path.join(config.logdir, 'running.log'), format='%(levelname)s - %(filename)s - %(message)s', level=log_level)
     logging.info('Starting training')
     logging.info(config)
     dqn_agent = Agent(config=config, seed=0)
@@ -139,4 +145,4 @@ if __name__ == '__main__':
     dqn_agent.writer.flush()
     dqn_agent.writer.close()
     
-    logging.info('Training Finished') 
+    logging.info('Training Finished')
