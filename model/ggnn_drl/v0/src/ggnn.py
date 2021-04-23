@@ -97,7 +97,7 @@ class GatedGraphNeuralNetwork(nn.Module):
         # logging.debug('Annotaion shape {shape} and value {value} '.format(shape=annotations.shape, value=annotations))
         # logging.debug(initial_node_representation.shape)
         initial_node_representation = torch.cat([initial_node_representation, annotations], dim=1)
-        logging.debug('DLOOP H+A {}'.format(initial_node_representation.shape))
+        # logging.debug('DLOOP H+A {}'.format(initial_node_representation.shape))
         initial_node_representation = self.hidden_layer(initial_node_representation)
 
 
@@ -220,7 +220,7 @@ class GatedGraphNeuralNetwork(nn.Module):
             state = self.n_state
         
         state = state.cpu().detach().numpy()
-        logging.debug('DLOOP  return from propagate | state : {}'.format(state.shape))
+        # logging.debug('DLOOP  return from propagate | state : {}'.format(state.shape))
         return state.copy()
   
    # input graph jsonnx

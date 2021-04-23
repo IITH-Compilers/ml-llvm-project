@@ -45,7 +45,6 @@ class GraphColorEnv:
 
 
     def step(self, action):
-        logging.debug('Step apply action on env.')
         if self.ggnn is None:
             raise Exception()
         
@@ -57,7 +56,7 @@ class GraphColorEnv:
         
         node_id =  self.ggnn.idx_nid[nodeChoosen]
         
-        logging.debug('Color id={cur_node}, node_id={node_id} with color={action}'.format(cur_node=nodeChoosen, node_id=node_id, action=action))
+        logging.debug('Color the node with index={cur_node}, node_id={node_id} with color={action}'.format(cur_node=nodeChoosen, node_id=node_id, action=action))
         
 
         self.ggnn.updateAnnotation(nodeChoosen, action)

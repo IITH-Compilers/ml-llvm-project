@@ -94,9 +94,9 @@ class Agent():
         state, nodeChoosen, adj_colors = state
         
         logging.debug('Adj colors : {}'.format(adj_colors))
-        logging.debug("state type : {}, {}".format(type(state), state.shape))
+        # logging.debug("state type : {}, {}".format(type(state), state.shape))
         state = torch.from_numpy(state).float() # .unsqueeze(0)
-        logging.debug("shape={} and type={}".format(state.shape, type(state)))
+        # logging.debug("shape={} and type={}".format(state.shape, type(state)))
         
         # Epsilon-greedy action selection
         if random.random() > eps:
