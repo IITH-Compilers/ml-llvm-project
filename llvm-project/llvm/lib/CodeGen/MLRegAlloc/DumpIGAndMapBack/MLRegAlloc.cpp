@@ -3326,14 +3326,14 @@ bool MLRA::runOnMachineFunction(MachineFunction &mf) {
 
       if (is_atleastoneinstruction){
       File << node_str;
-      }
 
-      for (unsigned j = i+1, e = MRI->getNumVirtRegs(); j < e; ++j) {
+      for (unsigned j = i+1; j < MRI->getNumVirtRegs(); ++j) {
           unsigned Reg1 = Register::index2VirtReg(j);
           if (MRI->reg_nodbg_empty(Reg1))
               continue;
           if(VirtReg->overlaps(LIS->getInterval(Reg1)))
               File << i << " -- " << j << ";\n";
+      }
       }
   }
   File << "}";
