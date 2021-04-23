@@ -14,7 +14,7 @@ import random
 # os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 import logging
 import datetime
-
+from tqdm import tqdm
 def run(agent, config):
     
     n_episodes=config.epochs
@@ -43,7 +43,7 @@ def run(agent, config):
         
         # TODO
         # selected_gs = random.sample(training_graphs, 500)
-        for path in training_graphs: # Number of the iterations
+        for path in tqdm (training_graphs, desc="Running..."): # Number of the iterations
 
             with open(path) as f:
                 graph = json.load(f)
