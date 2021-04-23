@@ -15,6 +15,9 @@ import random
 import logging
 import datetime
 from tqdm import tqdm
+import traceback
+import sys
+
 def run(agent, config):
     
     n_episodes=config.epochs
@@ -52,7 +55,11 @@ def run(agent, config):
             try:
                 state = env.reset_env(graph, path)
             except Exception as ex:
-                print(ex)
+                print(traceback.format_exc())
+                logging.error(path)
+                logging.error(traceback.format_exc())
+                traceback.print_exc()
+                traceback.print_exception(*sys.exc_info())
                 continue
             score = 0
             while(True):

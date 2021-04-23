@@ -125,6 +125,7 @@ mkdir -p ${LOG}
 DIST_GEN_DATA=`realpath ${DIST_GEN_DATA}`
 
 LOG_LEVEL='INFO'
+# LOG_LEVEL='DEBUG'
 echo "Location of the trained model: ${TRAINED_MODEL}"
 echo "Location of the generated llfiles and outfiles : ${DIST_GEN_DATA}"
 echo "Logs files: ${LOG}"

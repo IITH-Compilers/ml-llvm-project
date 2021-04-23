@@ -248,7 +248,7 @@ def constructGraph(graph):
             spill_cost = eval(spill_cost)
             spill_cost_list.append(spill_cost)
         else:
-            spill_cost = float(10)
+            spill_cost = float(1000)
             spill_cost_list.append(spill_cost)
         node['label'] = re.sub(" {.*} ", '', node['label'])
         node_mat = eval(node['label'].replace("\"",""))

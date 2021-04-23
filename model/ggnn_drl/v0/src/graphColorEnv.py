@@ -21,7 +21,7 @@ class GraphColorEnv:
         reward = value
 
         if action == self.spill_color_idx:
-            reward = -1
+            reward = -1000
         return reward
 
 
