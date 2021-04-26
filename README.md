@@ -16,14 +16,14 @@
 * `Activate the conda env. - conda activate `_`mlra`_
 * `Make changes to `[`config.sh`](./preprocessing/v0/config.sh)` as per needed`
 * `Run the` [`preprocess.sh`](./preprocessing/v0/preprocess.sh)
-*  `Example - bash preprocess.sh`
+  *  `Example - bash preprocess.sh`
 
 ## Training
 * `Create conda environment using ` [`requirement.yaml`](https://github.com/rohitaggarwal007/ML-Register-Allocation/blob/main/requirement.yaml)
 * `Activate the conda env. - conda activate `_`mlra`_
 * `Goto model's src directory`[`model/ggnn_drl/v0/src`](https://github.com/rohitaggarwal007/ML-Register-Allocation/tree/main/model/ggnn_drl/v0/src)
 * `Run the Command - bash run.sh trainInv <Data_set> [Optional Remarks]`
-* `Example - bash run.sh trainInv ../../../../data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/G_O3_1/ first`
+  * `Example - bash run.sh trainInv ../../../../data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/G_O3_1/ first`
 * `Note- Update ` [`utils.py`](./preprocessing/v0/utils.py) or [`run.sh`](./preprocessing/v0/run.sh)` to set the hyperparameters and others`
 
 ### Dump color graphs
