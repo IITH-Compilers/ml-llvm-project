@@ -26,8 +26,13 @@
   * `Example - bash run.sh trainInv ../../../../data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/G_O3_1/ first`
 * `Note- Update ` [`utils.py`](./preprocessing/v0/utils.py) or [`run.sh`](./preprocessing/v0/run.sh)` to set the hyperparameters and others`
 
+### Traning Performance check
+* `Run the tensorboard to view the graphs`
+  * `Example - tensorboard --logdir=${REPO}/model/ggnn_drl/v0/trained_model --host 0.0.0.0` 
+
 ### Dump color graphs
 * `Pass the argument `**`--dump-color-graph`**` by updating run.sh`
+
 
 ## CodeGen
 > UnderConstruction :construction:
