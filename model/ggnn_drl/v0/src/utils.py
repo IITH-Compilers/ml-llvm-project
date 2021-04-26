@@ -12,8 +12,9 @@ import argparse
 import datetime
 import pandas as pd
 import logging
+import json
 
-logger = logging.getLogger('utils.py') 
+logger = logging.getLogger(__file__) 
 
 LL_DIR_CONST='llfiles'
 OUT_DIR_CONST='outfiles'
@@ -31,10 +32,11 @@ def getllFileAttributes(file):
     record = {}
     parts = file.split('/{graphs}/'.format(graphs=GRAPH_DIR_CONST))
     home_dir = parts[0]
-    parts=parts[1].split('/')
-    file_name_parts = parts[1].split('.json')[0]
+    parts=parts[-1].split('/')
+    file_name_parts = parts[-1].split('.json')[0]
     record['HOME_DIR'] = home_dir
     record['FUN_ID'] = file_name_parts
+    
     return record
 
 def plot(x,y,title, **args):
@@ -54,24 +56,37 @@ def plot(x,y,title, **args):
         logging.debug('Error while plotting the graph for {}'.format(title))
         logging.debug(ex)
 
+
+def dump_colored_graph(file_id, fileName, funcName, color_assignment_map):
+    logging.debug(' Dumping graph is {}'.format(config.dump_color_graph))
+    if config.dump_color_graph:
+        payload = {'FileName' : fileName, 'Function' : funcName, 'mapping' : color_assignment_map}
+        coloredGraphDir = os.path.join(config.intermediate_data, 'coloredGraphs')
+        if not os.path.exists(coloredGraphDir):
+            os.makedirs(coloredGraphDir)
+        coloredfile = os.path.join(coloredGraphDir, 'predColor-{}.json'.format(file_id))
+        try:
+           with open(coloredfile, 'w') as f:
+               json.dump(payload,  f)
+        except Exception as ex:
+            print('Not able to dump the file at {} '.format(coloredfile), ex)
+            print("Unexpected error:", sys.exc_info()[0])
+
 def get_parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset', dest='dataset', metavar='DIRECTORY', help='Location of the dataSet..')
-    
     parser.add_argument('--epochs', dest='epochs', type=int, required=False, help='Epochs to run.', default=100)
     parser.add_argument('--state_size', dest='state_size', required=False, type=int, help='Embedding of each instruction.', default=5)
     parser.add_argument('--action_space', dest='action_space', required=False, type=int, help='Size of the actiion space.', default=25)
-    
     parser.add_argument('--trained_model', dest='trained_model', required=True,  help=' location ')
     parser.add_argument('--intermediate_data', dest='intermediate_data', required=True,  help=' location of temp data generated during model execution')
     parser.add_argument('--mode', dest='mode', required=True,  help='Train or test Mode')
-    
     parser.add_argument('--spill_color_idx', dest='spill_color_idx', type=int, required=False, help='Color for spill Node', default=0)
-    global config 
     parser.add_argument('--logdir', dest='logdir', metavar='DIRECTORY', help='Location of the log directory.', required=True)
-
-
     parser.add_argument('--log-level', dest='log_level', type=str, required=False, help='Color for spill Node', default='DEBUG')
+    parser.add_argument('--dump-color-graph', dest='dump_color_graph', action='store_true')
+
+    global config 
     config = parser.parse_args()
     return config
 

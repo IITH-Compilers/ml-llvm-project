@@ -11,7 +11,6 @@ import os
 import utils
 from utils import get_parse_args
 import random
-# os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 import logging
 import datetime
 from tqdm import tqdm
@@ -37,7 +36,7 @@ def run(agent, config):
 
     count=0
     #Load the envroinment
-    env = GraphColorEnv(config)    
+    env = GraphColorEnv(config)
     training_graphs=glob.glob(os.path.join(dataset, 'graphs/IG/json-1000/*.json'))
     for episode in range(n_episodes):
         scores = []                        # list containing scores from each episode
@@ -48,11 +47,10 @@ def run(agent, config):
         # selected_gs = random.sample(training_graphs, 500)
         for path in tqdm (training_graphs, desc="Running..."): # Number of the iterations
 
-            with open(path) as f:
-                graph = json.load(f)
-            logging.debug('DLOOP New graph to the env. {} '.format(path))
-            count=count+1
+            logging.info('Loading new graph into the env --> {} '.format(os.path.split(path)[1]))
             try:
+                with open(path) as f:
+                   graph = json.load(f)
                 state = env.reset_env(graph, path)
             except Exception as ex:
                 # print(traceback.format_exc())
@@ -61,6 +59,7 @@ def run(agent, config):
                 # traceback.print_exc()
                 # traceback.print_exception(*sys.exc_info())
                 continue
+            count=count+1
             score = 0
             while(True):
                 logging.debug('-^_^-^_^-^_^-^_^-^_^-^_^-^_^-^_^-^_^-^_^-^_^-^_^-^_^-')

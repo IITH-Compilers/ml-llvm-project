@@ -128,7 +128,7 @@ LOG_LEVEL='INFO'
 # LOG_LEVEL='DEBUG'
 echo "Location of the trained model: ${TRAINED_MODEL}"
 echo "Location of the generated llfiles and outfiles : ${DIST_GEN_DATA}"
-echo "Logs files: ${LOG}"
+echo "Logs files with LEVEL ${LOG_LEVEL} : ${LOG}"
 ## Call the py script 
 python ${PY_SPT} --dataset=${DATA_SET} --trained_model=${TRAINED_MODEL} --intermediate_data=${DIST_GEN_DATA}  --logdir ${LOG} --mode ${MODE_PROCESS} --epochs=${EPOCHS} --log-level ${LOG_LEVEL}
 

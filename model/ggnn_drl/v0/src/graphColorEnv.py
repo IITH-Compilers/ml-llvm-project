@@ -4,7 +4,7 @@ import random
 import utils
 import os
 import logging
-logger = logging.getLogger('graphColorEnv.py') 
+logger = logging.getLogger(__file__) 
 class GraphColorEnv:
 
     def __init__(self, config):
@@ -15,6 +15,7 @@ class GraphColorEnv:
         self.topology = None # Have the graph formed from adjency list using dependence edges only.
         self.cur_node = None
         self.mode = config.mode
+        self.color_assignment_map = {}
         
         
     def reward_formula(self, value, action):
@@ -22,6 +23,7 @@ class GraphColorEnv:
 
         if action == self.spill_color_idx:
             reward = -1000
+            logging.info('Spill is choosen so rewarded {} to node_id={} with spillcost={}'.format(reward, self.ggnn.idx_nid[self.cur_node], value))
         return reward
 
 
@@ -51,15 +53,17 @@ class GraphColorEnv:
         reg_allocated = action
         nodeChoosen = self.cur_node
         # add the node to the visited list
-        self.topology.UpdateVisitList(nodeChoosen, action)
+        self.topology.UpdateVisitList(nodeChoosen, reg_allocated)
        
         
         node_id =  self.ggnn.idx_nid[nodeChoosen]
         
-        logging.debug('Color the node with index={cur_node}, node_id={node_id} with color={action}'.format(cur_node=nodeChoosen, node_id=node_id, action=action))
+        self.color_assignment_map[node_id] = reg_allocated
+
+        logging.debug('Color the node with index={cur_node}, node_id={node_id} with color={action}'.format(cur_node=nodeChoosen, node_id=node_id, action=reg_allocated))
         
 
-        self.ggnn.updateAnnotation(nodeChoosen, action)
+        self.ggnn.updateAnnotation(nodeChoosen, reg_allocated)
         
         # update the graph representations
         next_hidden_state = self.ggnn.propagate()
@@ -68,10 +72,12 @@ class GraphColorEnv:
         
         # possible_next_nodes = self.topology.findAllVertaxWithZeroWeights()
         
-        reward = self.getReward(action)
+        reward = self.getReward(reg_allocated)
   
         if False not in self.topology.discovered:
+            utils.dump_colored_graph(self.fun_id, self.fileName, self.functionName, self.color_assignment_map)
             done = True
+
             return (next_hidden_state[nodeChoosen], nodeChoosen), reward, done
 
         # next_hidden_state = next_hidden_state[possible_next_nodes]
@@ -87,6 +93,8 @@ class GraphColorEnv:
     # input graph : jsonnx
     # return the state of the graph, all the possible starting nodes
     def reset_env(self, graph, path):
+        self.color_assignment_map = {}
+        
         logging.debug('reset the env.')
         attr = utils.getllFileAttributes(path)
         self.path = path
@@ -94,11 +102,10 @@ class GraphColorEnv:
         self.fileName = graph['graph'][1][1]['FileName'].strip('\"') 
         self.functionName = graph['graph'][1][1]['Function'].strip('\"')
         self.home_dir = attr['HOME_DIR']
-        # self.fun_id = attr['FUN_ID']
+        self.fun_id = attr['FUN_ID']
         self.num_nodes = len(self.graph['nodes'])
-        # print(graph) 
         hidden_state, self.topology, self.ggnn = constructGraph(self.graph)
-        # print(hidden_state)
+        
         # Consider Node with index with node with index 0
         self.spill_cost_list = self.ggnn.spill_cost_list
         self.cur_node = 0
