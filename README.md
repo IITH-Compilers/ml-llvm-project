@@ -1,7 +1,13 @@
 # ML-Register-Allocation
-> Support - llvm 10 release on X86 architecture
+> Support - LLVM 10.0.1 release on **X86** architecture
 
-## Build Command
+## Shared Drive
+* [`GDrive to MLRA`](https://drive.google.com/drive/folders/1wVRZZ2qyLUrX8fv4AeZ2VF5FofanqJbv)
+* `Design Diagram`
+* `Preprocessed Data`
+* `Result, sheets and documents`
+
+## Build LLVM
 * `mkdir -p build_release && cd build_release`
 * `cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="clang" -DLLVM_TARGETS_TO_BUILD="X86" -DLLVM_ENABLE_ASSERTIONS=ON ../llvm-project/llvm`
 * `ninja clang opt llc`
