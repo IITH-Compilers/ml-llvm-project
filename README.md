@@ -48,5 +48,8 @@
 ### Dump color graphs
 * `Pass the argument `**`--dump-color-graph`**` by updating run.sh`
 
+### Registers X86
+![Registers](./Registers%20X86.png)
+
 ## CodeGen
 > UnderConstruction :construction:
