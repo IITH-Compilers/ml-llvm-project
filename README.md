@@ -12,10 +12,17 @@
 * `cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="clang" -DLLVM_TARGETS_TO_BUILD="X86" -DLLVM_ENABLE_ASSERTIONS=ON ../llvm-project/llvm`
 * `ninja clang opt llc`
 
-## Generate dot file or Run MLRegAlloc Pass
-* `{BUILD}/bin/clang -03 -mllvm -regalloc=mlra <Input_file>`
+## Run MLRegAlloc Pass
+*  _`mlra`_` flag to choice our pass`
+* `{BUILD}/bin/clang -03 -mllvm -regalloc=mlra  <Input_file>`
 * `{BUILD}/bin/llc -03 -regalloc=mlra <Input_file>`
 * `{BUILD}/bin/llc -regalloc=mlra <Input_file>`
+
+## Dump Interference Graph as dot file
+*  _`-mlra-dump-ig-dot`_` to enable the dot file dump.`
+* `{BUILD}/bin/clang -03 -mllvm -regalloc=mlra -mllvm -mlra-dump-ig-dot <Input_file>`
+* `{BUILD}/bin/llc -03 -regalloc=mlra -mlra-dump-ig-dot <Input_file>`
+* `{BUILD}/bin/llc -regalloc=mlra -mlra-dump-ig-dot <Input_file>`
 * `File name format - <LL_file_name>_F<Function_id>.dot`
 
 ## Data Generation
