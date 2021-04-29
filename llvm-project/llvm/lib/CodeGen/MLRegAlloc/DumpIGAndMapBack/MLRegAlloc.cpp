@@ -81,7 +81,8 @@
 #include <sstream>
 #include <iostream>
 #include "llvm/CodeGen/MachineModuleInfo.h"
-
+#include <fstream>
+#include <map>
 using namespace llvm;
 
 #define DEBUG_TYPE "regalloc"
@@ -649,6 +650,32 @@ static RegisterRegAlloc mlraRegAlloc("mlra", "machine learning based register al
 MLRA::MLRA(): MachineFunctionPass(ID) {
 
   errs() << pred_file << "\n";
+      std::ifstream predColorFile(pred_file);
+      std::string jsonString;
+      jsonString.assign((std::istreambuf_iterator<char>(predColorFile)),(std::istreambuf_iterator<char>()));
+      errs() << jsonString << "\n";
+      if (Expected<json::Value> E = json::parse(jsonString)){
+      // json::toJSON()
+    	// Expected<Value> E = parse(R"( {"options": {"font": "sans-serif"}} )");
+   	if (json::Object* O = E->getAsObject()){
+
+     	     /*if (json::Object* Opts = O->getObject("mapping")){
+       		if (Optional<int64_t> color = Opts->getInteger("0")){
+		errs () << color << "\n";
+		}
+	     }*/
+	     if (json::Value* omap = O->get("mapping")){
+		std::map<std::string, int> colormap;
+		json::fromJSON(*omap, colormap);
+		    for(auto entry: colormap)
+			    errs () << entry.first << " " << entry.second << "\n";
+	     }
+errs () << O->getString("Function")<< "\n";
+	}
+      }
+//  auto jsonObj = *getObject(StringRef(jsonString));
+      // mapper = json::ObjectMapper(json::parse(jsonString));
+
 }
 
 MLRA::MLRA(DenseMap<unsigned, unsigned> VirtRegToColor): MachineFunctionPass(ID) {
@@ -3313,7 +3340,7 @@ void MLRA::dumpInterferenceGraph(MachineFunction &mf){
           LiveInterval *VirtReg = &LIS->getInterval(Reg);
           bool is_atleastoneinstruction = false;
 
-          std::string node_str = std::to_string(i) + " [label=\" {" + std::to_string(VirtReg->weight) + "} ";
+          std::string node_str = std::to_string(i) + " [label=\" {"+ TRI->getRegClassName(MRI->getRegClass(VirtReg->reg))+"} {" + std::to_string(VirtReg->weight) + "} ";
 
           LLVM_DEBUG(VirtReg->print(dbgs()));
           LLVM_DEBUG(dbgs() << "\n");
@@ -3612,10 +3639,11 @@ case 0:
 default:
 	errs() << "No register found for color " << color << "\n";
       	dbgs() << "spilling: " << VirtReg << '\n';
-        // if (!VirtReg.isSpillable())
-        //  return ~0u;
-        // LiveRangeEdit LRE(&VirtReg, SplitVRegs, *MF, *LIS, VRM, this, &DeadRemats);
-        // spiller().spill(LRE);
+        if (!VirtReg.isSpillable())
+         return ~0u;
+         // return 0;
+        LiveRangeEdit LRE(&VirtReg, SplitVRegs, *MF, *LIS, VRM, this, &DeadRemats);
+        spiller().spill(LRE);
         return 0;
 #endif
   }
@@ -3796,7 +3824,7 @@ bool MLRA::runOnMachineFunction(MachineFunction &mf) {
       
       postOptimization();
       
-      LLVM_DEBUG(dbgs() << "Post alloc VirtRegMap:\n" << *VRM << "\n");
+      dbgs() << "Post alloc VirtRegMap:\n" << *VRM << "\n";
       
       reportNumberOfSplillsReloads();
   

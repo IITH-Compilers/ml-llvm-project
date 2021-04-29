@@ -224,6 +224,8 @@ class GatedGraphNeuralNetwork(nn.Module):
         return state.copy()
   
    # input graph jsonnx
+def praseProp(val):
+    return val[1: len(val) - 1]
 
 def constructGraph(graph):
     nodes = graph['nodes']
@@ -238,23 +240,27 @@ def constructGraph(graph):
     # self.unique_type_map = {'pair' : []}
     all_edges = []
     spill_cost_list = []
+    reg_class_list = []
     for idx, node in enumerate(nodes):
         
         nodeId = node['id']
         # nodeVec = list(map(float, node['label'].strip("\"").split(', ')))
-        spill_cost = re.search("{.*}", node['label']).group()
-        spill_cost = spill_cost[1: len(spill_cost) - 1]
+        properties = re.search("{.*}", node['label']).group()
+        # print(spill_cost)
+        properties = properties.split(' ')
+        regClass = praseProp(properties[0]) 
+        spill_cost = praseProp(properties[1])
         if spill_cost not in ["inf", "INF"]:
             spill_cost = eval(spill_cost)
             spill_cost_list.append(spill_cost)
         else:
             spill_cost = float(1000)
             spill_cost_list.append(spill_cost)
-        node['label'] = re.sub(" {.*} ", '', node['label'])
+        node['label'] = re.sub(" {.*} {.*} ", '', node['label'])
         node_mat = eval(node['label'].replace("\"",""))
         node_tansor_matrix = torch.FloatTensor(node_mat)
         nodeVec = constructVectorFromMatrix(node_tansor_matrix)
-        
+        reg_class_list.append(regClass)
         initial_node_representation.append(nodeVec)
         nid_idx[nodeId] = idx
         idx_nid[idx] = nodeId
