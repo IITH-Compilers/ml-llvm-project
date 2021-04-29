@@ -590,7 +590,7 @@ private:
   // like 8 bit, 16 bit, 32 bit, 64 bits and other more
   // For our reference see the X86RegisterInfo.td
   //
-  unsigned getPhyRegForColor(LiveInterval &VirtReg, unsigned color, SmallVector<unsigned, 4> SplitVRegs);
+  unsigned getPhyRegForColor(LiveInterval &VirtReg, int color, SmallVector<unsigned, 4> SplitVRegs);
 
 };
 FunctionPass* createMLRegisterAllocator(); 
@@ -647,6 +647,8 @@ static RegisterRegAlloc mlraRegAlloc("mlra", "machine learning based register al
                                        createMLRegisterAllocator);
 
 MLRA::MLRA(): MachineFunctionPass(ID) {
+
+  errs() << pred_file << "\n";
 }
 
 MLRA::MLRA(DenseMap<unsigned, unsigned> VirtRegToColor): MachineFunctionPass(ID) {
@@ -3373,136 +3375,254 @@ void MLRA::dumpInterferenceGraph(MachineFunction &mf){
       LLVM_DEBUG(LIS->print(dbgs()));
 }
 
-unsigned MLRA::getPhyRegForColor(LiveInterval &VirtReg, unsigned color, SmallVector<unsigned, 4> SplitVRegs){
-
+unsigned MLRA::getPhyRegForColor(LiveInterval &VirtReg, int color, SmallVector<unsigned, 4> SplitVRegs){
+  unsigned phyReg;
+  errs () <<"huge_valf " << huge_valf << "\n";
   switch(color){
-    case 0:
-        // No other spill candidates were found, so spill the current VirtReg.
-        LLVM_DEBUG(dbgs() << "spilling: " << VirtReg << '\n');
-        if (!VirtReg.isSpillable())
-          return ~0u;
-        LiveRangeEdit LRE(&VirtReg, SplitVRegs, *MF, *LIS, VRM, this, &DeadRemats);
-        spiller().spill(LRE);
-        return 0;
-#if 0    // 1-14 GR64 
+#if 1    // 1-14 GR64 
     case 1:
-	$rax=49 
+	//// $rax=49 
+	phyReg=49;
+	break;
      case 2:
-	$rbx=51 
+	//// $rbx=51 
+	phyReg=51;
+	break;
      case 3:
-	$rcx=52 
+	// $rcx=52
+	phyReg=52;
+	break;	
      case 4:
-	$rdi=53 
+	// $rdi=53
+	phyReg=53;
+	break;	
      case 5:
-	$rdx=54 
+	// $rdx=54
+	phyReg=54;
+	break;
      case 6:
-	$rsi=57 
+	// $rsi=57 
+	phyReg=57;
+	break;
      case 7:
-	$r8=127 
+	// $r8=127
+	phyReg=127;
+	break;
      case 8:
-      $r9=128 
+      // $r9=128
+      phyReg=128;
+      break;
       case 9:
-	$r10=129 
+	// $r10=129
+	phyReg=129;
+	break;	
 case 10:
-	$r11=130 
+	// $r11=130
+	phyReg=130;
+	break;
 case 11:
-	$r12=131 
+	// $r12=131 
+	phyReg=131;
+	break;
 case 12:
-	$r13=132
+	// $r13=132
+	phyReg=132;
+	break;
 case 13:
-	$r14=133 
+	// $r14=133 
+	phyReg=133;
+	break;
 case 14:
-	$r15=134
+	// $r15=134
+	phyReg=134;
+	break;
 // case 15-28 GR32
 case 15:
-	$eax=22 
+	// $eax=22
+        phyReg=22;
+	break;
 case 16:
-	$ecx=25 
+	// $ecx=25 
+        phyReg=25;
+	break;
 case 17:
-	$edi=26
+	// $edi=26
+        phyReg=26;
+	break;
 case 18:
-	$edx=27 
+	// $edx=27 
+        phyReg=27;
+	break;
 case 19:
-	$esi=32 
+	// $esi=32 
+        phyReg=32;
+	break;
 case 20:
-	$r8d=255
+	// $r8d=255
+        phyReg=225;
+	break;
 case 21:
-	$r9d=256
+	// $r9d=256
+        phyReg=256;
+	break;
 case 22:
-	$r10d=257
+	// $r10d=257
+        phyReg=257;
+	break;
 case 23:
-	$r11d=258 
+	// $r11d=258 
+        phyReg=258;
+	break;
 case 24:
-	$ebx=24 
+	// $ebx=24 
+        phyReg=24;
+	break;
 case 25:
-	$r14d=261
+	// $r14d=261
+        phyReg=261;
+	break;
 case 26:
-	$r15d=262
+	// $r15d=262
+        phyReg=262;
+	break;
 case 27:
-	$r12d=259 
+	// $r12d=259 
+        phyReg=259;
+	break;
 case 28:
-	$r13d=260
+	// $r13d=260
+        phyReg=260;
+	break;
 // case 29-42 GR16
 case 29:
-	$ax=3 
+	// $ax=3 
+        phyReg=3;
+	break;
 case 30:
-	$cx=13 
+	// $cx=13 
+        phyReg=13;
+	break;
 case 31:
-	$dx=21 
+	// $dx=21 
+        phyReg=21;
+	break;
 case 32:
-	$si=59 
+	// $si=59 
+        phyReg=59;
+	break;
 case 33:
-	$di=16
+	// $di=16
+        phyReg=16;
+	break;
 case 34:
-	$r8w=263 
+	// $r8w=263 
+        phyReg=263;
+	break;
 case 35:
-	$r9w=264 
+	// $r9w=264 
+        phyReg=264;
+	break;
 case 36:
-	$r10w=265 
+	// $r10w=265 
+        phyReg=265;
+	break;
 case 37:
-	$r11w=266 
+	// $r11w=266 
+        phyReg=266;
+	break;
 case 38:
-	$bx=9 
+	// $bx=9 
+        phyReg=9;
+	break;
 case 39:
-	$r14w=269 
+	// $r14w=269 
+        phyReg=269;
+	break;
 case 40:
-	$r15w=270 
+	// $r15w=270 
+        phyReg=270;
+	break;
 case 41:
-	$r12w=267
+	// $r12w=267
+        phyReg=267;
+	break;
 case 42:
-	$r13w=268
+	// $r13w=268
+        phyReg=268;
+	break;
 // case 43 - 56 GR8(Low)
 case 43:
-	$al=2 
+	// $al=2 
+        phyReg=2;
+	break;
 case 44:
-	$cl=11 
+	// $cl=11 
+        phyReg=11;
+	break;
 case 45:
-	$dl=19 
+	// $dl=19 
+        phyReg=19;
+	break;
 case 46:
-	$sil=61 
+	// $sil=61 
+        phyReg=61;
+	break;
 case 47:
-	$dil=18 
+	// $dil=18 
+        phyReg=18;
+	break;
 case 48:
-	$r8b=239
+	// $r8b=239
+        phyReg=239;
+	break;
 case 49:
-	$r9b=240 
+	// $r9b=240 
+        phyReg=240;
+	break;
 case 50:
-	$r10b=241 
+	// $r10b=241 
+        phyReg=241;
+	break;
 case 51:
-	$r11b=242 
+	// $r11b=242 
+        phyReg=242;
+	break;
 case 52:
-	$bl=5 
+	// $bl=5 
+        phyReg=5;
+	break;
 case 53:
-	$r14b=245 
+	// $r14b=245 
+        phyReg=245;
+	break;
 case 54:
-	$r15b=246 
+	// $r15b=246 
+        phyReg=246;
+	break;
 case 55:
-	$r12b=243 
+	// $r12b=243 
+        phyReg=243;
+	break;
 case 56:
-	$r13b=244
+	// $r13b=244
+        phyReg=244;
+	break;
+case 0:
+      errs() <<"Spilling is predicted..\n";
 default:
+	errs() << "No register found for color " << color << "\n";
+      	dbgs() << "spilling: " << VirtReg << '\n';
+        // if (!VirtReg.isSpillable())
+        //  return ~0u;
+        // LiveRangeEdit LRE(&VirtReg, SplitVRegs, *MF, *LIS, VRM, this, &DeadRemats);
+        // spiller().spill(LRE);
+        return 0;
 #endif
   }
+
+  return phyReg;
+
+  #if 0
   // Populate a list of physical register spill candidates.
   SmallVector<unsigned, 8> PhysRegSpillCands;
   
@@ -3526,7 +3646,6 @@ default:
       continue;
     }
   }
-  #if 0
   // Try to spill another interfering reg with less spill weight.
   for (SmallVectorImpl<unsigned>::iterator PhysRegI = PhysRegSpillCands.begin(),
        PhysRegE = PhysRegSpillCands.end(); PhysRegI != PhysRegE; ++PhysRegI) {
@@ -3543,8 +3662,8 @@ default:
   LLVM_DEBUG(dbgs() << "spilling: " << VirtReg << '\n');
   if (!VirtReg.isSpillable())
     return ~0u;
-  LiveRangeEdit LRE(&VirtReg, SplitVRegs, *MF, *LIS, VRM, this, &DeadRemats);
-  spiller().spill(LRE);
+  // LiveRangeEdit LRE(&VirtReg, SplitVRegs, *MF, *LIS, VRM, this, &DeadRemats);
+  // spiller().spill(LRE);
  #endif
   // The live virtual register requesting allocation was spilled, so tell
   // the caller not to allocate anything during this round.
@@ -3568,11 +3687,10 @@ void MLRA::allocatePhysRegsViaRL() {
     // selectOrSplit requests the allocator to return an available physical
     // register if possible and populate a list of new live intervals that
     // result from splitting.
-    LLVM_DEBUG(dbgs() << "\nselectOrSplit "
+    dbgs() << "\ngetPhyRegForColor "
                       << TRI->getRegClassName(MRI->getRegClass(VirtReg->reg))
-                      << ':' << *VirtReg << " w=" << VirtReg->weight << '\n');
-    using VirtRegVec = SmallVector<unsigned, 4>;
-   
+                      << ':' << *VirtReg << " w=" << VirtReg->weight << '\n';
+    #if 0 
     // 164 
     errs() << "getNumRegUnits  Registers=" << TRI->getNumRegUnits() << ";\n";
     // 118
@@ -3588,13 +3706,14 @@ void MLRA::allocatePhysRegsViaRL() {
     errs() << "\n";
     }
     // errs () << "Register Count " << reg_count << "\n";
-
+    #endif
      
 
+    using VirtRegVec = SmallVector<unsigned, 4>;
     VirtRegVec SplitVRegs;
 
     // TODO selectOrSplit
-    unsigned color = 0;
+    int color = 0;
     unsigned AvailablePhysReg = getPhyRegForColor(*VirtReg, color, SplitVRegs); //
     
     /* Handle the case when we want to spill but can't due to 
@@ -3631,7 +3750,6 @@ void MLRA::allocatePhysRegsViaRL() {
 bool MLRA::runOnMachineFunction(MachineFunction &mf) {
   LLVM_DEBUG(dbgs() << "********** ML REGISTER ALLOCATION **********\n"
                     << "********** Function: " << mf.getName() << '\n');
-  errs() << pred_file << "\n";
   FuntionCounter++;
   // ---------------------- Dump Dot -----------------------------//
   if (enable_dump_ig_dot){
