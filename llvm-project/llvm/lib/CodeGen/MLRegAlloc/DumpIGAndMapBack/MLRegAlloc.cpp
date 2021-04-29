@@ -151,6 +151,9 @@ static cl::opt<bool> enable_dump_ig_dot("mlra-dump-ig-dot", cl::Hidden, cl::desc
 			cl::init(false));
 static cl::opt<bool> enable_experimental_mlra("mlra-experimental", cl::Hidden, cl::desc("Turn on MLRA ."),
 			cl::init(false));
+static cl::opt<std::string> pred_file("mlra-pred-file", cl::Hidden, cl::desc("File Path of color-target map."),
+			cl::init(""));
+
 namespace llvm {
 
 class MLRA : public MachineFunctionPass,
@@ -417,8 +420,11 @@ class MLRA : public MachineFunctionPass,
   /// Set of broken hints that may be reconciled later because of eviction.
   SmallSetVector<LiveInterval *, 8> SetOfBrokenHints;
 
+  DenseMap<unsigned, unsigned> VirtRegToColor;
+
 public:
   MLRA();
+  MLRA(DenseMap<unsigned, unsigned> VirtRegToColor);
 
   /// Return the pass name.
   StringRef getPassName() const override { return "Greedy Register Allocator"; }
@@ -588,6 +594,8 @@ private:
 
 };
 FunctionPass* createMLRegisterAllocator(); 
+FunctionPass* createMLRegisterAllocator(DenseMap<unsigned, unsigned> VirtRegToColor); 
+
 } // end anonymous namespace
 
 char MLRA::ID = 0;
@@ -631,10 +639,18 @@ FunctionPass* llvm::createMLRegisterAllocator() {
   return new MLRA();
 }
 
+FunctionPass* llvm::createMLRegisterAllocator(DenseMap<unsigned, unsigned> VirtRegToColor) {
+  return new MLRA(VirtRegToColor);
+}
+
 static RegisterRegAlloc mlraRegAlloc("mlra", "machine learning based register allocator",
                                        createMLRegisterAllocator);
 
 MLRA::MLRA(): MachineFunctionPass(ID) {
+}
+
+MLRA::MLRA(DenseMap<unsigned, unsigned> VirtRegToColor): MachineFunctionPass(ID) {
+this->VirtRegToColor =VirtRegToColor;
 }
 
 void MLRA::getAnalysisUsage(AnalysisUsage &AU) const {
@@ -3259,7 +3275,8 @@ void MLRA::dumpInterferenceGraph(MachineFunction &mf){
       LIS = &lis;
       Matrix = &mat;
       MRI->freezeReservedRegs(vrm.getMachineFunction());
-      RegClassInfo.runOnMachineFunction(vrm.getMachineFunction());
+      
+      RCI.runOnMachineFunction(vrm.getMachineFunction());
 
       calculateSpillWeightsAndHints(*LIS, *MF, VRM,
           getAnalysis<MachineLoopInfo>(),
@@ -3285,8 +3302,9 @@ void MLRA::dumpInterferenceGraph(MachineFunction &mf){
       
       // TODO: Fix no of Registers
       File << "Registers=" << TRI->getNumRegUnits() << ";\n";
-
-      for (unsigned i = 0, e = MRI->getNumVirtRegs(); i < e; ++i) {
+       
+	
+    	for (unsigned i = 0, e = MRI->getNumVirtRegs(); i < e; ++i) {
           unsigned Reg = Register::index2VirtReg(i);
           if (MRI->reg_nodbg_empty(Reg))
               continue;
@@ -3366,6 +3384,124 @@ unsigned MLRA::getPhyRegForColor(LiveInterval &VirtReg, unsigned color, SmallVec
         LiveRangeEdit LRE(&VirtReg, SplitVRegs, *MF, *LIS, VRM, this, &DeadRemats);
         spiller().spill(LRE);
         return 0;
+#if 0    // 1-14 GR64 
+    case 1:
+	$rax=49 
+     case 2:
+	$rbx=51 
+     case 3:
+	$rcx=52 
+     case 4:
+	$rdi=53 
+     case 5:
+	$rdx=54 
+     case 6:
+	$rsi=57 
+     case 7:
+	$r8=127 
+     case 8:
+      $r9=128 
+      case 9:
+	$r10=129 
+case 10:
+	$r11=130 
+case 11:
+	$r12=131 
+case 12:
+	$r13=132
+case 13:
+	$r14=133 
+case 14:
+	$r15=134
+// case 15-28 GR32
+case 15:
+	$eax=22 
+case 16:
+	$ecx=25 
+case 17:
+	$edi=26
+case 18:
+	$edx=27 
+case 19:
+	$esi=32 
+case 20:
+	$r8d=255
+case 21:
+	$r9d=256
+case 22:
+	$r10d=257
+case 23:
+	$r11d=258 
+case 24:
+	$ebx=24 
+case 25:
+	$r14d=261
+case 26:
+	$r15d=262
+case 27:
+	$r12d=259 
+case 28:
+	$r13d=260
+// case 29-42 GR16
+case 29:
+	$ax=3 
+case 30:
+	$cx=13 
+case 31:
+	$dx=21 
+case 32:
+	$si=59 
+case 33:
+	$di=16
+case 34:
+	$r8w=263 
+case 35:
+	$r9w=264 
+case 36:
+	$r10w=265 
+case 37:
+	$r11w=266 
+case 38:
+	$bx=9 
+case 39:
+	$r14w=269 
+case 40:
+	$r15w=270 
+case 41:
+	$r12w=267
+case 42:
+	$r13w=268
+// case 43 - 56 GR8(Low)
+case 43:
+	$al=2 
+case 44:
+	$cl=11 
+case 45:
+	$dl=19 
+case 46:
+	$sil=61 
+case 47:
+	$dil=18 
+case 48:
+	$r8b=239
+case 49:
+	$r9b=240 
+case 50:
+	$r10b=241 
+case 51:
+	$r11b=242 
+case 52:
+	$bl=5 
+case 53:
+	$r14b=245 
+case 54:
+	$r15b=246 
+case 55:
+	$r12b=243 
+case 56:
+	$r13b=244
+default:
+#endif
   }
   // Populate a list of physical register spill candidates.
   SmallVector<unsigned, 8> PhysRegSpillCands;
@@ -3436,6 +3572,24 @@ void MLRA::allocatePhysRegsViaRL() {
                       << TRI->getRegClassName(MRI->getRegClass(VirtReg->reg))
                       << ':' << *VirtReg << " w=" << VirtReg->weight << '\n');
     using VirtRegVec = SmallVector<unsigned, 4>;
+   
+    // 164 
+    errs() << "getNumRegUnits  Registers=" << TRI->getNumRegUnits() << ";\n";
+    // 118
+    errs() << "getNumRegClasses() " << TRI->getNumRegClasses() << " \n";
+    int reg_count =0;
+    for(auto rc : TRI->regclasses()){
+	    errs () << "RegClassName " << TRI->getRegClassName(rc) << "\n";
+    auto rci_order = RCI.getOrder(rc);
+    for (auto O:rci_order){
+          errs() << ' ' << printReg(O, TRI) << "="<<O;
+	reg_count++;	
+    }
+    errs() << "\n";
+    }
+    // errs () << "Register Count " << reg_count << "\n";
+
+     
 
     VirtRegVec SplitVRegs;
 
@@ -3477,6 +3631,7 @@ void MLRA::allocatePhysRegsViaRL() {
 bool MLRA::runOnMachineFunction(MachineFunction &mf) {
   LLVM_DEBUG(dbgs() << "********** ML REGISTER ALLOCATION **********\n"
                     << "********** Function: " << mf.getName() << '\n');
+  errs() << pred_file << "\n";
   FuntionCounter++;
   // ---------------------- Dump Dot -----------------------------//
   if (enable_dump_ig_dot){
