@@ -8,7 +8,7 @@ import torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
 import os
 import logging
-# from torch.nn.parallel import DistributedDataParallel as DDP
+from register_action_space import RegisterActionSpace 
 
 logger = logging.getLogger('dqn_agent.py') 
 
@@ -56,7 +56,8 @@ class Agent():
         """
         # random.seed(seed)
         self.spill_color_idx = 0 
-        self.action_space = np.arange(25)
+        self.action_space = np.arange(57)
+        print(self.action_space)
         state_size = config.state_size
         # Q-Network
         self.qnetwork_local = QNetwork(state_size,  seed=seed).to(device)
@@ -91,8 +92,9 @@ class Agent():
             state (array_like): current state
             eps (float): epsilon, for epsilon-greedy action selection
         """
-        state, nodeChoosen, adj_colors = state
+        state, nodeChoosen, adj_colors, regClass = state
         
+        logging.debug('Reg Class : {}'.format(regClass))
         logging.debug('Adj colors : {}'.format(adj_colors))
         # logging.debug("state type : {}, {}".format(type(state), state.shape))
         state = torch.from_numpy(state).float() # .unsqueeze(0)
@@ -107,15 +109,26 @@ class Agent():
                 # assign a color to the node
                 out = self.qnetwork_local(state)
                 action_space = self.action_space
-                if len(adj_colors) > 0:
-                    action_space = np.delete(self.action_space, adj_colors)
+                # Choose a register from regClass only
+                if regClass in RegisterActionSpace.regMask.keys():
+                    selectedInterval = RegisterActionSpace.regMask[regClass]
+                    action_space = action_space[selectedInterval]
+                    if len(adj_colors) > 0:
+                        adj_colors = RegisterActionSpace.adj_color_mask(adj_colors, regClass)
+                        action_space = np.delete(action_space, adj_colors)
+                else:
+                    logging.warning('RegClass not present in the map = {}'.format(regClass))
+                    action_space = action_space[RegisterActionSpace.regMask['spill']]
                 
+                logging.debug('colors in action space after masking : {}'.format(action_space))
+
                 if action_space is None or len(action_space) ==0:
                     actions = self.spill_color_idx
                 else:
                     out = out[action_space]
                     _, actions = self.getMaxQvalueAndActions(out)
                     actions = actions.cpu().numpy()
+                    actions = action_space[actions]
                 # print(actions , type(actions)) 
                 # print(actions , type(actions)) 
             self.qnetwork_local.train()
@@ -123,13 +136,19 @@ class Agent():
         else:
             logging.debug('EXP: Random ')
             action_space = self.action_space
-            if len(adj_colors) > 0:
-                # action_space = filter(lambda i: i not in adj_colors, action_space)
-                masked_action_space = np.delete(action_space, adj_colors)
-                if masked_action_space is None or len(masked_action_space) ==0:
-                    actions = self.spill_color_idx
-                else:
-                    actions = random.choice(masked_action_space)
+            if regClass in RegisterActionSpace.regMask.keys():
+                selectedInterval = RegisterActionSpace.regMask[regClass]
+                action_space = action_space[selectedInterval]
+                if len(adj_colors) > 0:
+                    adj_colors = RegisterActionSpace.adj_color_mask(adj_colors, regClass)
+                    action_space = np.delete(action_space, adj_colors)
+            else:
+                logging.warning('RegClass not present in the map = {}'.format(regClass))
+                action_space = action_space[RegisterActionSpace.regMask['spill']]
+            
+            logging.debug('action space after msking : {}'.format(action_space))
+            if action_space is None or len(action_space) ==0:
+                actions = self.spill_color_idx
             else:
                 actions = random.choice(action_space)
         # print(actions , type(actions)) 

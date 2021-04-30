@@ -301,7 +301,7 @@ def constructGraph(graph):
     ggnn.n_state = ggnn.compute_node_representations(initial_node_representation=initial_node_representation, annotations=ggnn.annotations, adjacency_lists=ggnn.adjacency_lists, return_all_states=False)
     ggnn.spill_cost_list  = spill_cost_list 
     # print(ggnn.n_state)
-    
+    ggnn.reg_class_list = reg_class_list
     
     # state = torch.sum(ggnn.n_state, dim=0)
     

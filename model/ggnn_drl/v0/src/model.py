@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import logging
 
-logger = logging.getLogger('model.py') 
+logger = logging.getLogger(__file__) 
 
 class ColorNetwork(nn.Module):
     """Actor (Policy) Model."""
@@ -21,7 +21,7 @@ class ColorNetwork(nn.Module):
         self.seed = torch.manual_seed(seed)
         self.fc1 = nn.Linear(state_size, fc1_units)
         self.fc2 = nn.Linear(fc1_units, fc2_units)
-        self.fc3 = nn.Linear(fc2_units, 25)
+        self.fc3 = nn.Linear(fc2_units, 57)
         
     def forward(self, state):
         """Build a network that maps state -> action values."""

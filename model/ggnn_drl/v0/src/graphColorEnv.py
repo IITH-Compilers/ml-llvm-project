@@ -60,7 +60,7 @@ class GraphColorEnv:
         
         self.color_assignment_map[node_id] = reg_allocated
 
-        logging.debug('Color the node with index={cur_node}, node_id={node_id} with color={action}'.format(cur_node=nodeChoosen, node_id=node_id, action=reg_allocated))
+        logging.debug('Color the node with index={cur_node}, node_id={node_id} with color={action} in RegClass={regclass}'.format(cur_node=nodeChoosen, node_id=node_id, action=reg_allocated, regclass=self.reg_class_list[self.cur_node]))
         
 
         self.ggnn.updateAnnotation(nodeChoosen, reg_allocated)
@@ -88,7 +88,8 @@ class GraphColorEnv:
         # print(next_hidden_state)
         
         adj_colors = self.topology.getColorOfVisitedAdjNodes(next_node)
-        return (next_obs, next_node, adj_colors), reward, done 
+        regClass = self.reg_class_list[self.cur_node]
+        return (next_obs, next_node, adj_colors, regClass), reward, done 
     
     # input graph : jsonnx
     # return the state of the graph, all the possible starting nodes
@@ -108,11 +109,12 @@ class GraphColorEnv:
         
         # Consider Node with index with node with index 0
         self.spill_cost_list = self.ggnn.spill_cost_list
+        self.reg_class_list = self.ggnn.reg_class_list
         self.cur_node = 0
         obs= hidden_state[self.cur_node]
         adj_colors = self.topology.getColorOfVisitedAdjNodes(self.cur_node)
-
-        return ( obs, self.cur_node, adj_colors)
+        self.regClass = self.reg_class_list[self.cur_node]
+        return ( obs, self.cur_node, adj_colors, self.regClass)
 
 
 

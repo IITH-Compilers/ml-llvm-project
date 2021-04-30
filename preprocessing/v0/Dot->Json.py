@@ -23,7 +23,7 @@ class Dot2Json:
         return json_graph.adjacency_data(networkx.drawing.nx_pydot.read_dot(file_in))
 
 def mapfiles(files):
-    JSON_DIR=os.path.join(GRAPH_DIR, 'json-1000')
+    JSON_DIR=os.path.join(GRAPH_DIR, 'json')
     if not os.path.exists(JSON_DIR):
         os.makedirs(JSON_DIR)
     for dotPath in  files:

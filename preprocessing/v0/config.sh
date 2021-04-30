@@ -14,7 +14,7 @@ echo "Input data directory path: ${INP_DIR}"
 LL_FLR_NAME=level-O0-llfiles
 INP_TYPE=llfiles
 
-WD=${INP_DIR}/G_O3_1
+WD=${INP_DIR}/G_O3_2
 echo "${WD}: Run to check the effect of added new ID if loopid not found in rdg on data"
 
 USE_MCA=

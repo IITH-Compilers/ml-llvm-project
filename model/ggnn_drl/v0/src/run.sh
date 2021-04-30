@@ -2,7 +2,7 @@
 # Testing - bash run.sh test <path dataset> <path of model> <disable runtime calc:Y> <POST distribution passes choice: {0, 1, 2}> <rewardtype R or S>
 #
 
-EPOCHS=50
+EPOCHS=100
 
 PWD=`pwd`
 # set the llvm Build and other paramter
@@ -123,14 +123,15 @@ fi
 LOG=${DIST_GEN_DATA}/log
 mkdir -p ${LOG}
 DIST_GEN_DATA=`realpath ${DIST_GEN_DATA}`
+DUMP_PRED_DOT="--dump-color-graph"
 
-LOG_LEVEL='INFO'
-# LOG_LEVEL='DEBUG'
+# LOG_LEVEL='INFO'
+LOG_LEVEL='DEBUG'
 echo "Location of the trained model: ${TRAINED_MODEL}"
 echo "Location of the generated llfiles and outfiles : ${DIST_GEN_DATA}"
 echo "Logs files with LEVEL ${LOG_LEVEL} : ${LOG}"
 ## Call the py script 
-python ${PY_SPT} --dataset=${DATA_SET} --trained_model=${TRAINED_MODEL} --intermediate_data=${DIST_GEN_DATA}  --logdir ${LOG} --mode ${MODE_PROCESS} --epochs=${EPOCHS} --log-level ${LOG_LEVEL}
+python ${PY_SPT} --dataset=${DATA_SET} --trained_model=${TRAINED_MODEL} --intermediate_data=${DIST_GEN_DATA}  --logdir ${LOG} --mode ${MODE_PROCESS} --epochs=${EPOCHS} --log-level ${LOG_LEVEL} ${DUMP_PRED_DOT}
 
 echo "Completed the process........."
 
