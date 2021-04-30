@@ -422,6 +422,8 @@ class MLRA : public MachineFunctionPass,
   SmallSetVector<LiveInterval *, 8> SetOfBrokenHints;
 
   DenseMap<unsigned, unsigned> VirtRegToColor;
+  
+  std::map<std::string, std::map<std::string, int64_t>> FunctionVirtRegToColorMap;
 
 public:
   MLRA();
@@ -591,7 +593,7 @@ private:
   // like 8 bit, 16 bit, 32 bit, 64 bits and other more
   // For our reference see the X86RegisterInfo.td
   //
-  unsigned getPhyRegForColor(LiveInterval &VirtReg, int color, SmallVector<unsigned, 4> SplitVRegs);
+  unsigned getPhyRegForColor(LiveInterval &VirtReg, unsigned color, SmallVector<unsigned, 4> SplitVRegs);
 
 };
 FunctionPass* createMLRegisterAllocator(); 
@@ -648,34 +650,51 @@ static RegisterRegAlloc mlraRegAlloc("mlra", "machine learning based register al
                                        createMLRegisterAllocator);
 
 MLRA::MLRA(): MachineFunctionPass(ID) {
-
-  errs() << pred_file << "\n";
+  
+  if (pred_file != ""){
+      errs() << pred_file << "\n";
       std::ifstream predColorFile(pred_file);
       std::string jsonString;
       jsonString.assign((std::istreambuf_iterator<char>(predColorFile)),(std::istreambuf_iterator<char>()));
       errs() << jsonString << "\n";
       if (Expected<json::Value> E = json::parse(jsonString)){
-      // json::toJSON()
-    	// Expected<Value> E = parse(R"( {"options": {"font": "sans-serif"}} )");
-   	if (json::Object* O = E->getAsObject()){
-
-     	     /*if (json::Object* Opts = O->getObject("mapping")){
-       		if (Optional<int64_t> color = Opts->getInteger("0")){
-		errs () << color << "\n";
-		}
-	     }*/
+	
+	/*std:vector<json::Object> array;
+	fromJSON(*E, array);
+	for(auto entry: array){
+	     std::map<std::string, int64_t> colormap;
 	     if (json::Value* omap = O->get("mapping")){
-		std::map<std::string, int> colormap;
 		json::fromJSON(*omap, colormap);
 		    for(auto entry: colormap)
 			    errs () << entry.first << " " << entry.second << "\n";
 	     }
-errs () << O->getString("Function")<< "\n";
+	     if(colormap.size() > 0){
+	         if(json::Value* S = O->get("Function")){
+	              std::string funcName_key;
+	              json::fromJSON(*S, funcName_key);
+	              this->FunctionVirtRegToColorMap[funcName_key] = colormap;
+		 errs () << "Function Name : " << funcName_key << "\n";
+		 }
+	     }    
+	}*/
+	if (json::Object* O = E->getAsObject()){
+	     std::map<std::string, int64_t> colormap;
+	     if (json::Value* omap = O->get("mapping")){
+		json::fromJSON(*omap, colormap);
+		    for(auto entry: colormap)
+			    errs () << entry.first << " " << entry.second << "\n";
+	     }
+	     if(colormap.size() > 0){
+	         if(json::Value* S = O->get("Function")){
+	              std::string funcName_key;
+	              json::fromJSON(*S, funcName_key);
+	              this->FunctionVirtRegToColorMap[funcName_key] = colormap;
+		 errs () << "Function Name : " << funcName_key << "\n";
+		 }
+	     }
 	}
       }
-//  auto jsonObj = *getObject(StringRef(jsonString));
-      // mapper = json::ObjectMapper(json::parse(jsonString));
-
+  }
 }
 
 MLRA::MLRA(DenseMap<unsigned, unsigned> VirtRegToColor): MachineFunctionPass(ID) {
@@ -3402,9 +3421,9 @@ void MLRA::dumpInterferenceGraph(MachineFunction &mf){
       LLVM_DEBUG(LIS->print(dbgs()));
 }
 
-unsigned MLRA::getPhyRegForColor(LiveInterval &VirtReg, int color, SmallVector<unsigned, 4> SplitVRegs){
+unsigned MLRA::getPhyRegForColor(LiveInterval &VirtReg, unsigned color, SmallVector<unsigned, 4> SplitVRegs){
   unsigned phyReg;
-  errs () <<"huge_valf " << huge_valf << "\n";
+  // errs () <<"huge_valf " << huge_valf << "\n";
   switch(color){
 #if 1    // 1-14 GR64 
     case 1:
@@ -3486,7 +3505,7 @@ case 19:
 	break;
 case 20:
 	// $r8d=255
-        phyReg=225;
+        phyReg=255;
 	break;
 case 21:
 	// $r9d=256
@@ -3647,7 +3666,8 @@ default:
         return 0;
 #endif
   }
-
+  
+  errs () << "\ngetPhyRegForColor " << color << "===>" << phyReg << " " <<printReg(phyReg, TRI)<<"\n";
   return phyReg;
 
   #if 0
@@ -3699,7 +3719,8 @@ default:
 }
 
 void MLRA::allocatePhysRegsViaRL() {
-
+  
+  assert(this->FunctionVirtRegToColorMap.find(MF->getName()) != this->FunctionVirtRegToColorMap.end() && "Function does not have the register allocation through MLRA");
   for (unsigned i = 0, e = MRI->getNumVirtRegs(); i < e; ++i) {
     unsigned Reg = Register::index2VirtReg(i);
     LiveInterval *VirtReg = &LIS->getInterval(Reg);
@@ -3709,16 +3730,21 @@ void MLRA::allocatePhysRegsViaRL() {
       LIS->removeInterval(VirtReg->reg);
       continue;
     }
+    unsigned color = this->FunctionVirtRegToColorMap[MF->getName()][std::to_string(i)];
     assert(!VRM->hasPhys(VirtReg->reg) && "Register already assigned");
 	
     Matrix->invalidateVirtRegs(); // Don't know why it is used
     // selectOrSplit requests the allocator to return an available physical
     // register if possible and populate a list of new live intervals that
     // result from splitting.
-    dbgs() << "\ngetPhyRegForColor "
+    errs() << "\ngetPhyRegForColor "
                       << TRI->getRegClassName(MRI->getRegClass(VirtReg->reg))
                       << ':' << *VirtReg << " w=" << VirtReg->weight << '\n';
-    #if 0 
+    auto rci_order = RCI.getOrder(MRI->getRegClass(VirtReg->reg));
+    for (auto O:rci_order){
+          errs() << ' ' << printReg(O, TRI) << "="<<O;
+    }
+#if 0 
     // 164 
     errs() << "getNumRegUnits  Registers=" << TRI->getNumRegUnits() << ";\n";
     // 118
@@ -3741,7 +3767,6 @@ void MLRA::allocatePhysRegsViaRL() {
     VirtRegVec SplitVRegs;
 
     // TODO selectOrSplit
-    int color = 0;
     unsigned AvailablePhysReg = getPhyRegForColor(*VirtReg, color, SplitVRegs); //
     
     /* Handle the case when we want to spill but can't due to 
@@ -3784,8 +3809,10 @@ bool MLRA::runOnMachineFunction(MachineFunction &mf) {
 	  dumpInterferenceGraph(mf);
   }
   // ---------------------- Dump Dot Finished -----------------------------//
-  if (enable_experimental_mlra){
-      // --------------------------- Map c to p Kickstart ---------------------//
+  
+  // --------------------------- Map c to p Kickstart ---------------------//
+  if (enable_experimental_mlra && 
+		  this->FunctionVirtRegToColorMap.find(mf.getName()) != this->FunctionVirtRegToColorMap.end()){
       MF = &mf;
       // Get the information regarding intruction in targert machine
       // ie. X86 register
@@ -3824,7 +3851,7 @@ bool MLRA::runOnMachineFunction(MachineFunction &mf) {
       
       postOptimization();
       
-      dbgs() << "Post alloc VirtRegMap:\n" << *VRM << "\n";
+      errs() << "Post alloc VirtRegMap:\n" << *VRM << "\n";
       
       reportNumberOfSplillsReloads();
   
@@ -3834,7 +3861,7 @@ bool MLRA::runOnMachineFunction(MachineFunction &mf) {
   }
 // --------------------------- Map c to p Goal Acheived ---------------------//
   
-  
+  errs () << "Running LLVM Greedy as Function not present or MLRA is not enabled.\n";
   
   // Code for greedy ra is below in case of 
   // some egdes use-case and for the sake of compleleness
