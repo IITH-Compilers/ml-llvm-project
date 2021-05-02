@@ -81,6 +81,44 @@ Registers=164;
 
 ### Dump color graphs
 * `Pass the argument `**`--dump-color-graph`**` by updating run.sh`
+**Schema**
+```
+{
+    "Predictions" : ArrayOf(Prediction4function)
+}
+Prediction4function = {
+                       "FileName": string,
+                       "Function": string,
+                       "mapping": Vir2ColorMap
+                      }    
+Vir2ColorMap        = { 
+                       ListOf("VIR_REG_ID": COLOR_ID)
+                      }
+```
+
+**Prediction Colored Json Dump**
+```
+{
+    "Predictions": [
+        {
+            "FileName": "/home/venkat/IF-DV/Rohit/regAlloc/ML-Register-Allocation/sample/data/fibonaccidevS/level-O0-llfiles/fib.ll",
+            "Function": "fib",
+            "mapping": {
+                "2": 24,
+                "3": 24,
+                "6": 15
+            }
+        },
+        {
+            "FileName": "/home/venkat/IF-DV/Rohit/regAlloc/ML-Register-Allocation/sample/data/fibonaccidevS/level-O0-llfiles/fib.ll",
+            "Function": "main",
+            "mapping": {
+                "1": 20
+            }
+        }
+    ]
+}
+```
 
 ### Registers X86
 ![Registers](./Registers%20X86.png)
