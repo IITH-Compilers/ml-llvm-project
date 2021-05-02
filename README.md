@@ -81,6 +81,7 @@ Registers=164;
 
 ### Dump color graphs
 * `Pass the argument `**`--dump-color-graph`**` by updating run.sh`
+
 **Schema**
 ```
 {
@@ -124,7 +125,7 @@ Vir2ColorMap        = {
 ![Registers](./Registers%20X86.png)
 
 ## CodeGen
-> Still UnderConstruction :construction:
+> Initial version is ready to be tested.
 * `Initial version is pushed`
 * `{BUILD}/bin/clang -03 -mllvm -regalloc=mlra -mllvm `_`-mlra-experimental`_` -mllvm `_`-mlra-pred-file=<PredFileDump>`_ `<Input_file>`
  * `{BUILD}/clang -O3 -S -mllvm -regalloc=mlra  -mllvm -mlra-experimental -mllvm -mlra-dump-ig-dot -mllvm -mlra-pred-file=../sample/predictedColorMap/predColor-526.blender_r_910.ll_F105.json ../data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles/526.blender_r_910.ll`
