@@ -83,9 +83,12 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include <fstream>
 #include <map>
+#include <set>
 using namespace llvm;
 
 #define DEBUG_TYPE "regalloc"
+
+#define PRINT_MRI_INST 0
 
 STATISTIC(NumGlobalSplits, "Number of split global live ranges");
 STATISTIC(NumLocalSplits,  "Number of split local live ranges");
@@ -160,6 +163,8 @@ namespace llvm {
 class MLRA : public MachineFunctionPass,
                  public RegAllocBase,
                  private LiveRangeEdit::Delegate {
+
+  
   // Convenient shortcuts.
   using PQueue = std::priority_queue<std::pair<unsigned, unsigned>>;
   using SmallLISet = SmallPtrSet<LiveInterval *, 4>;
@@ -595,6 +600,7 @@ private:
   //
   unsigned getPhyRegForColor(LiveInterval &VirtReg, unsigned color, SmallVector<unsigned, 4> SplitVRegs);
 
+  std::set<std::string> regClassSupported4_MLRA = {"GR8", "GR16", "GR32", "GR64"};
 };
 FunctionPass* createMLRegisterAllocator(); 
 FunctionPass* createMLRegisterAllocator(DenseMap<unsigned, unsigned> VirtRegToColor); 
@@ -3349,21 +3355,35 @@ void MLRA::dumpInterferenceGraph(MachineFunction &mf){
       File << "Function=\"" << MF->getName() << "\";\n";
       
       // TODO: Fix no of Registers
-      File << "Registers=" << TRI->getNumRegUnits() << ";\n";
+      // File << "Registers=" << TRI->getNumRegUnits() << ";\n";
        
 	
     	for (unsigned i = 0, e = MRI->getNumVirtRegs(); i < e; ++i) {
           unsigned Reg = Register::index2VirtReg(i);
+          LiveInterval *VirtReg = &LIS->getInterval(Reg);
           if (MRI->reg_nodbg_empty(Reg))
               continue;
-          LiveInterval *VirtReg = &LIS->getInterval(Reg);
+          // Check for already allocated register
+          if (Register::isPhysicalRegister(Reg)){
+            errs () << "Already physical register assigned to Live interval of virtual reg " << i <<  " to "<< printReg(Reg, TRI) << "\n";
+            continue;
+          }
+          // Check for the supported register class.
+          std::string regClass = TRI->getRegClassName(MRI->getRegClass(VirtReg->reg));
+          if (this->regClassSupported4_MLRA.find(regClass) == regClassSupported4_MLRA.end()){
+            errs () << "Register class("<< regClass << ") is not supported.\n";
+                  continue;
+          }
           bool is_atleastoneinstruction = false;
 
-          std::string node_str = std::to_string(i) + " [label=\" {"+ TRI->getRegClassName(MRI->getRegClass(VirtReg->reg))+"} {" + std::to_string(VirtReg->weight) + "} ";
+          std::string node_str = std::to_string(i) + " [label=\" {"+ regClass +"} {" + std::to_string(VirtReg->weight) + "} ";
 
           LLVM_DEBUG(VirtReg->print(dbgs()));
           LLVM_DEBUG(dbgs() << "\n");
-          
+          #if PRINT_MRI_INST
+              VirtReg->print(File);
+              File << VirtReg->overlaps(LIS->getInterval(Reg));
+          #endif
           int node_inx = 0;
           node_str = node_str + "[";
           for (auto &S : VirtReg->segments){
@@ -3372,11 +3392,9 @@ void MLRA::dumpInterferenceGraph(MachineFunction &mf){
                   auto* MIR = LIS->getInstructionFromIndex(I);
                   if (!MIR)
                       continue;
-                  // std::string s = "Instruction test";
-                  // llvm::raw_string_ostream &output(std::string s);
-                  // MIR->print(output);
-                  //  << MIR->dump();
-                  // root.push_back(s);
+                 #if PRINT_MRI_INST
+                  MIR->print(File);
+                 #endif
                   double *p;
                   p = getRandom();
 
@@ -3409,7 +3427,12 @@ void MLRA::dumpInterferenceGraph(MachineFunction &mf){
               unsigned Reg1 = Register::index2VirtReg(j);
               if (MRI->reg_nodbg_empty(Reg1))
                   continue;
-              if(VirtReg->overlaps(LIS->getInterval(Reg1)))
+              // Support for interference for supportedRegister Only
+              std::string regClass_j = TRI->getRegClassName(MRI->getRegClass(Reg1));
+              if (this->regClassSupported4_MLRA.find(regClass_j) == regClassSupported4_MLRA.end()){
+                continue;
+              }
+             if(VirtReg->overlaps(LIS->getInterval(Reg1)))
                   File << i << " -- " << j << ";\n";
           }
           }
@@ -3654,7 +3677,7 @@ case 56:
         phyReg=244;
 	break;
 case 0:
-      errs() <<"Spilling is predicted..\n";
+      errs() <<"\nSpilling is predicted..\n";
 default:
 	errs() << "No register found for color " << color << "\n";
       	dbgs() << "spilling: " << VirtReg << '\n';
@@ -3733,18 +3756,18 @@ void MLRA::allocatePhysRegsViaRL() {
     unsigned color = this->FunctionVirtRegToColorMap[MF->getName()][std::to_string(i)];
     assert(!VRM->hasPhys(VirtReg->reg) && "Register already assigned");
 	
+    // Check for already allocated register
+    if (Register::isPhysicalRegister(Reg)){
+      errs () << "Already physical register assigned to Live interval of virtual reg " << i <<  " to "<< printReg(Reg, TRI) << "\n";
+      continue;
+    }
+
     Matrix->invalidateVirtRegs(); // Don't know why it is used
     // selectOrSplit requests the allocator to return an available physical
     // register if possible and populate a list of new live intervals that
     // result from splitting.
-    errs() << "\ngetPhyRegForColor "
-                      << TRI->getRegClassName(MRI->getRegClass(VirtReg->reg))
-                      << ':' << *VirtReg << " w=" << VirtReg->weight << '\n';
-    auto rci_order = RCI.getOrder(MRI->getRegClass(VirtReg->reg));
-    for (auto O:rci_order){
-          errs() << ' ' << printReg(O, TRI) << "="<<O;
-    }
-#if 0 
+    
+    #if 0 
     // 164 
     errs() << "getNumRegUnits  Registers=" << TRI->getNumRegUnits() << ";\n";
     // 118
@@ -3767,7 +3790,23 @@ void MLRA::allocatePhysRegsViaRL() {
     VirtRegVec SplitVRegs;
 
     // TODO selectOrSplit
-    unsigned AvailablePhysReg = getPhyRegForColor(*VirtReg, color, SplitVRegs); //
+    // Check for the supported register class. if not supported class then call Greedy
+    // selectOrsplit
+    std::string regClass = TRI->getRegClassName(MRI->getRegClass(VirtReg->reg));
+    unsigned AvailablePhysReg;
+    if (this->regClassSupported4_MLRA.find(regClass) == regClassSupported4_MLRA.end()){
+        errs () << "Register class("<< regClass << ") is not supported by MLRA so calling Greedy.\n";
+        AvailablePhysReg = selectOrSplit(*VirtReg, SplitVRegs);
+    } else{
+        errs() << "\ngetPhyRegForColor "
+                          << TRI->getRegClassName(MRI->getRegClass(VirtReg->reg))
+                          << ':' << *VirtReg << " w=" << VirtReg->weight << '\n';
+        auto rci_order = RCI.getOrder(MRI->getRegClass(VirtReg->reg));
+        for (auto O:rci_order){
+              errs() << ' ' << printReg(O, TRI) << "="<<O;
+        }
+        AvailablePhysReg = getPhyRegForColor(*VirtReg, color, SplitVRegs); //
+    }
     
     /* Handle the case when we want to spill but can't due to 
     system constraints*/
@@ -3846,7 +3885,7 @@ bool MLRA::runOnMachineFunction(MachineFunction &mf) {
       LLVM_DEBUG(LIS->dump());
   
       SpillerInstance.reset(createInlineSpiller(*this, *MF, *VRM));
-      
+       // Point of change    
       allocatePhysRegsViaRL();
       
       postOptimization();

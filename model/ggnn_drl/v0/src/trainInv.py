@@ -37,7 +37,7 @@ def run(agent, config):
     count=0
     #Load the envroinment
     env = GraphColorEnv(config)
-    training_graphs=glob.glob(os.path.join(dataset, 'graphs/IG/json/557.xz_r_69.ll_F1*.json'))
+    training_graphs=glob.glob(os.path.join(dataset, 'graphs/IG/json/*.json'))
     assert len(training_graphs)> 0, 'training set is empty' 
     for episode in range(n_episodes):
         scores = []                        # list containing scores from each episode
