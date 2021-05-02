@@ -3448,7 +3448,265 @@ unsigned MLRA::getPhyRegForColor(LiveInterval &VirtReg, unsigned color, SmallVec
   unsigned phyReg;
   // errs () <<"huge_valf " << huge_valf << "\n";
   switch(color){
-#if 1    // 1-14 GR64 
+    /* GR64 1-14*/
+     case 1:      
+	// $rax=49 
+	phyReg=49;   
+	break;       
+    case 2:     
+	// $rbx=51 
+	phyReg=51;   
+	break;       
+    case 3:     
+	// $rcx=52   
+	phyReg=52;   
+	break;	     
+    case 4:     
+	// $rdi=53   
+	phyReg=53;   
+	break;	     
+    case 5:     
+	// $rdx=54   
+	phyReg=54;   
+	break;       
+    case 6:     
+	// $rsi=57   
+	phyReg=57;   
+	break;       
+    case 7:     
+	// $r8=127   
+	phyReg=127;  
+	break;       
+    case 8:     
+    // $r9=128 
+    phyReg=128;
+    break;     
+    case 9:    
+	// $r10=129  
+	phyReg=129;  
+	break;	     
+    case 10:         
+	// $r11=130  
+	phyReg=130;  
+	break;       
+    case 11:         
+	// $r12=131  
+	phyReg=131;  
+	break;       
+    case 12:         
+	// $r13=132  
+	phyReg=132;  
+	break;       
+    case 13:         
+	// $r14=133  
+	phyReg=133;  
+	break;       
+    case 14:         
+	// $r15=134  
+	phyReg=134;  
+	break;       
+   /* GR32 15-28 */
+    case 15:              
+  	// $eax=22           
+    phyReg=22;    
+  	break;               
+    case 16:              
+  	// $ebx=24          
+    phyReg=24;   
+  	break;               
+    case 17:              
+  	// $ecx=25           
+    phyReg=25;    
+  	break;               
+    case 18:            
+    // $edi=26       
+    phyReg=26;  
+    break;           
+    case 19:             
+   	// $edx=27       
+    phyReg=27;   
+   	break;           
+    case 20:             
+   	// $esi=32       
+    phyReg=32;   
+   	break;           
+    case 21:             
+   	// $r8d=255      
+    phyReg=255;  
+   	break;           
+    case 22:             
+   	// $r9d=256      
+    phyReg=256;  
+   	break;           
+    case 23:             
+   	// $r10d=257     
+    phyReg=257;  
+   	break;           
+    case 24:             
+   	// $r11d=258     
+    phyReg=258;  
+   	break;           
+    case 25:            
+    // $r12d=259     
+    phyReg=259; 
+    break;           
+    case 26:            
+    // $r13d=260     
+    phyReg=260; 
+    break;       
+    case 27:            
+    // $r14d=261     
+    phyReg=261; 
+    break;           
+    case 28:            
+    // $r15d=262     
+    phyReg=262; 
+    break;   
+  case 29:             
+  	// $ax=3           	
+     phyReg=3;    
+  	break;             	
+  case 30:             
+     	// $bx=9        
+         phyReg=9;     
+     	break;          
+  case 31:             
+ 	// $cx=13           
+         phyReg=13;    
+  	break;             	
+  case 32:             
+     	// $di=16       
+          phyReg=16;   
+     	break;          
+  case 33:             
+  // $dx=21            
+        phyReg=21;     
+  	break;              
+ case 34:              
+  // $si=59            
+         phyReg=59;    
+  break;               
+  case 35:             
+     	// $r8w=263     
+          phyReg=263;  
+     	break;          
+  case 36:             
+     	// $r9w=264     
+          phyReg=264;  
+     	break;          
+  case 37:             
+     	// $r10w=265    
+          phyReg=265;  
+     	break;          
+  case 38:             
+     	// $r11w=266    
+          phyReg=266;  
+     	break;          
+  case 39:             
+    	// $r12w=267    
+          phyReg=267;  
+    	break;          
+  case 40:             
+  // $r13w=268         
+      phyReg=268;      
+       break;          
+  case 41:             
+     	// $r14w=269    
+           phyReg=269; 
+     	break;          
+  case 42:             
+        // $r15w=270   
+          phyReg=270;  
+          break;       
+    case 43:
+ 	// $al=2 
+            phyReg=2;
+ 	break;
+    case 44:
+  	// $cl=11 
+           phyReg=11;
+  	break;
+    case 45:
+  // $dl=19 
+          phyReg=19;
+ 	break;
+   case 46:
+  // $sil=61 
+           phyReg=61;
+  break;
+    case 47:
+        	// $dil=18 
+            phyReg=18;
+     	break;
+    case 48:
+        	// $r8b=239
+            phyReg=239;
+        	break;
+    case 49:
+      	// $r9b=240 
+            phyReg=240;
+      	break;
+    case 50:
+      	// $r10b=241 
+            phyReg=241;
+      	break;
+    case 51:
+      	// $r11b=242 
+            phyReg=242;
+      	break;
+    case 52:
+      	// $bl=5 
+               phyReg=5;
+      	break;
+     case 53:
+         	// $r14b=245 
+             phyReg=245;
+         	break;
+    case 54:
+        	// $r15b=246 
+            phyReg=246;
+            	break;   
+    case 55:
+  	// $r12b=243 
+          phyReg=243;
+  	break;
+    case 56:
+        // $r13b=244
+        phyReg=244;
+        break;
+case 0:
+      errs() <<"\nSpilling is predicted..\n";
+default:
+	errs() << "No register found for color " << color << "\n";
+      	dbgs() << "spilling: " << VirtReg << '\n';
+        if (!VirtReg.isSpillable())
+         return ~0u;
+         // return 0;
+        LiveRangeEdit LRE(&VirtReg, SplitVRegs, *MF, *LIS, VRM, this, &DeadRemats);
+        spiller().spill(LRE);
+        return 0;
+  }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#if 0    // 1-14 GR64 
     case 1:
 	//// $rax=49 
 	phyReg=49;
@@ -3688,7 +3946,7 @@ default:
         spiller().spill(LRE);
         return 0;
 #endif
-  }
+  
   
   errs () << "\ngetPhyRegForColor " << color << "===>" << phyReg << " " <<printReg(phyReg, TRI)<<"\n";
   return phyReg;
