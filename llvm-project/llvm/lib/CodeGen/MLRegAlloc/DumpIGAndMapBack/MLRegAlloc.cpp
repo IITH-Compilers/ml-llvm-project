@@ -84,6 +84,7 @@
 #include <fstream>
 #include <map>
 #include <set>
+#include <vector>
 using namespace llvm;
 
 #define DEBUG_TYPE "regalloc"
@@ -663,42 +664,51 @@ MLRA::MLRA(): MachineFunctionPass(ID) {
       std::string jsonString;
       jsonString.assign((std::istreambuf_iterator<char>(predColorFile)),(std::istreambuf_iterator<char>()));
       errs() << jsonString << "\n";
-      if (Expected<json::Value> E = json::parse(jsonString)){
-	
-	/*std:vector<json::Object> array;
-	fromJSON(*E, array);
-	for(auto entry: array){
-	     std::map<std::string, int64_t> colormap;
-	     if (json::Value* omap = O->get("mapping")){
-		json::fromJSON(*omap, colormap);
-		    for(auto entry: colormap)
-			    errs () << entry.first << " " << entry.second << "\n";
-	     }
-	     if(colormap.size() > 0){
-	         if(json::Value* S = O->get("Function")){
-	              std::string funcName_key;
-	              json::fromJSON(*S, funcName_key);
-	              this->FunctionVirtRegToColorMap[funcName_key] = colormap;
-		 errs () << "Function Name : " << funcName_key << "\n";
-		 }
-	     }    
-	}*/
-	if (json::Object* O = E->getAsObject()){
-	     std::map<std::string, int64_t> colormap;
-	     if (json::Value* omap = O->get("mapping")){
-		json::fromJSON(*omap, colormap);
-		    for(auto entry: colormap)
-			    errs () << entry.first << " " << entry.second << "\n";
-	     }
-	     if(colormap.size() > 0){
-	         if(json::Value* S = O->get("Function")){
-	              std::string funcName_key;
-	              json::fromJSON(*S, funcName_key);
-	              this->FunctionVirtRegToColorMap[funcName_key] = colormap;
-		 errs () << "Function Name : " << funcName_key << "\n";
-		 }
-	     }
-	}
+    if (Expected<json::Value> E = json::parse(jsonString)){
+    
+       if (json::Object* J = E->getAsObject()){
+          if(json::Array* S = J->getArray("Predictions")){ 
+	         // if (json::Array* A = S->getAsArray()){
+                  //std::vector<json::Object> array;
+                  //json::fromJSON(*S, array);
+	              for(auto V: *S){
+                
+                    if (json::Object* O = V.getAsObject()){
+	                   std::map<std::string, int64_t> colormap;
+	                  if (json::Value* omap = O->get("mapping")){
+	              	json::fromJSON(*omap, colormap);
+	              	    for(auto entry: colormap)
+	              		    errs () << entry.first << " " << entry.second << "\n";
+	                   }
+	                   if(colormap.size() > 0){
+	                       if(json::Value* S = O->get("Function")){
+	                            std::string funcName_key;
+	                            json::fromJSON(*S, funcName_key);
+	                            this->FunctionVirtRegToColorMap[funcName_key] = colormap;
+	              	 errs () << "Function Name : " << funcName_key << "\n";
+	              	 }
+	                   }    
+	              }
+          }
+                  //}
+          }
+       }
+	    /*if (json::Object* O = E->getAsObject()){
+	         std::map<std::string, int64_t> colormap;
+	         if (json::Value* omap = O->get("mapping")){
+	    	json::fromJSON(*omap, colormap);
+	    	    for(auto entry: colormap)
+	    		    errs () << entry.first << " " << entry.second << "\n";
+	         }
+	         if(colormap.size() > 0){
+	             if(json::Value* S = O->get("Function")){
+	                  std::string funcName_key;
+	                  json::fromJSON(*S, funcName_key);
+	                  this->FunctionVirtRegToColorMap[funcName_key] = colormap;
+	    	 errs () << "Function Name : " << funcName_key << "\n";
+	    	 }
+	         }
+	    }*/
       }
   }
 }

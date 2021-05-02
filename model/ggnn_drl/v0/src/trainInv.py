@@ -108,7 +108,7 @@ def run(agent, config):
 if __name__ == '__main__':
 
     config = get_parse_args()
-    logger = logging.getLogger('trainInv.py')
+    logger = logging.getLogger('__file__')
     log_level=logging.DEBUG
     if config.log_level == 'WARN':
         log_level=logging.WARNING

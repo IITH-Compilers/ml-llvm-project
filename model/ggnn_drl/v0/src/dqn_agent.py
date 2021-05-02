@@ -21,28 +21,6 @@ UPDATE_EVERY = 4        # how often to update the network
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-# def generate_actions(next_loops):
-#     mask = []
-#     for a in next_loops:
-#         mask.append(a*2)
-#         mask.append(a*2+1)
-#     return mask
-# 
-# def lexographic_actions(focusNode, valid_actions):
-#     mask=[]
-#     for node in valid_actions:
-#         if  node % 2== 1 and node > 2*focusNode:
-#             mask.append(node)
-#         elif node % 2 == 0:
-#             mask.append(node)
-#     return mask
-# 
-# def applymask(focusNode, next_loops, enable_lexographical_constraint):
-#     masked_action = generate_actions(next_loops)
-#     if enable_lexographical_constraint:
-#         masked_action = lexographic_actions(focusNode, masked_action)
-#     return masked_action
-
 class Agent():
     """Interacts with and learns from the environment."""
 
@@ -64,7 +42,8 @@ class Agent():
         self.qnetwork_target = QNetwork(state_size, seed=seed).to(device)
         
         self.optimizer = optim.Adam(self.qnetwork_local.parameters(), lr=LR)
-
+        
+        self.mode = config.mode # test, train , inference
         # Replay memory
         self.memory = ReplayBuffer(BUFFER_SIZE, BATCH_SIZE, seed, config)
         # Initialize time step (for updating every UPDATE_EVERY steps)
@@ -130,8 +109,9 @@ class Agent():
                     actions = actions.cpu().numpy()
                     actions = action_space[actions]
                 # print(actions , type(actions)) 
-                # print(actions , type(actions)) 
-            self.qnetwork_local.train()
+                # print(actions , type(actions))
+            if self.mode in ['train']:
+                self.qnetwork_local.train()
 
         else:
             logging.debug('EXP: Random ')

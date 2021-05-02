@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import json
-from distributeEnv import DistributeLoopEnv
+from graphColorEnv import GraphColorEnv
 from dqn_agent import Agent
 import glob
 import json
@@ -11,10 +11,12 @@ import os
 import utils
 from utils import get_parse_args
 import logging
+import datetime
+from tqdm import tqdm
+import traceback
+import sys
 
 def run(agent, config):
-    action_mask_flag=config.action_mask_flag
-    enable_lexographical_constraint = config.enable_lexographical_constraint
 
     eps=0
     max_t=1000
@@ -24,67 +26,52 @@ def run(agent, config):
 
     dataset= config.dataset
     #Load the envroinment
-    env = DistributeLoopEnv(config)    
+    env = GraphColorEnv(config)    
     score = 0
     count = 1
-    # logging.debug(glob.glob(os.path.join(dataset, 'graphs/test/*.json')))
-    for path in glob.glob(os.path.join(dataset, 'graphs/test/*.json')): # Number of the iterations
-        
-        with open(path) as f:
-            graph = json.load(f)
-        logging.debug('New graph to the env. {} '.format(path))
-        # state, topology = env.reset_env(graph, path)
-        # Updated 
-        state, topology, focusNode = env.reset_env(graph, path)
+    testing_set = glob.glob(os.path.join(dataset, 'graphs/IG/json/*.json'))
+
+    for path in tqdm(testing_set, 'Validating......'): # Number of the iterations
+        logging.info('Loading new graph datapoint into the env ---------> {} '.format(os.path.split(path)[1]))
+        try:
+            with open(path) as f:
+               graph = json.load(f)
+            state = env.reset_env(graph, path)
+        except Exception as ex:
+            # print(traceback.format_exc())
+            logging.error(path)
+            logging.error(traceback.format_exc())
+            # traceback.print_exc()
+            # traceback.print_exception(*sys.exc_info())
+            continue
+       
         while(True):
-            possibleNodes_emb, possibleNodes = state
+           logging.debug('-^_^-^_^-^_^-^_^-^_^-^_^-^_^-^_^-^_^-^_^-^_^-^_^-^_^-')
 
-            # pass the state and  topology to get the action
-            # action is 
-            nextNodeIndex, merge_distribute = agent.act(state, topology, focusNode, eps)
-            logging.debug("action choosed : {} {} {}".format(nextNodeIndex, possibleNodes[nextNodeIndex],merge_distribute))
-            # Get the next the next state from the action
-            # reward is 0 till we reach the end node
-            # reward will be -negative, maximize  the reward
-            #
-            action=(possibleNodes[nextNodeIndex], merge_distribute)
-            next_state, reward, done, distribute, focusNode = env.step(action)
-            next_possibleNodes_emb, next_possibleNodes = next_state
-
-            logging.debug('Distribution till now : {}'.format(distribute))
-            
-            state = (next_possibleNodes_emb, next_possibleNodes)
-            score += reward
- 
-            logging.debug('DLOOP Goto to Next.................')
-            scores_window.append(score)       # save most recent score
-            scores.append(score)              # save most recent score
-            logging.debug('\n------------------------------------------------------------------------------------------------')
-            if done:
+           action = agent.act(state, eps)
+           
+           next_state, reward, done  = env.step(action)
+          
+           logging.debug('reward : {}'.format(reward))
+           
+           state = next_state
+           score += reward
+           if done:
                break
  
         agent.writer.add_scalar('test/rewardStep', score, count)
         agent.writer.add_scalar('test/rewardWall', reward)
 
-        def speedup(reward):
-            if reward > 0:
-                return reward - 5
-            else:
-                return reward + 0.5
-        agent.writer.add_scalar('test/speedup', speedup(reward))
- 
         count+=1
-    utils.plot(range(1, len(scores_window)+1), scores_window, 'Last 100 rewards',location=config.distributed_data)
-    utils.plot(range(1, len(scores)+1), scores, 'Total Rewards per time instant',location=config.distributed_data)
-
 
 if __name__ == '__main__':
 
     config = get_parse_args()
-    logger = logging.getLogger('test.py') 
+    logger = logging.getLogger(__file__) 
     logging.basicConfig(filename=os.path.join(config.logdir, 'running.log'), format='%(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
-
-    logging.debug(config)
+    logging.debug('***********Arguments value*****************')
+    [logging.debug('{}={}'.format(key,  value)) for key, value in config.__dict__.items()]
+    logging.debug('***********Arguments value*****************')
     dqn_agent = Agent(config, seed=0)
 
     trained_model = config.trained_model
@@ -97,10 +84,8 @@ if __name__ == '__main__':
     logging.debug('model selected for training :{}'.format(trained_model))
 
     dqn_agent.qnetwork_local.load_state_dict(torch.load(trained_model))
-    # dqn_agent.writer.add_graph(dqn_agent.qnetwork_local)
     run(dqn_agent, config)
 
-    # dqn_agent.writer.add_graph(dqn_agent.qnetwork_local)
     dqn_agent.writer.flush()
     dqn_agent.writer.close()
 

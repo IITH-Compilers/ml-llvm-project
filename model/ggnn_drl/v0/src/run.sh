@@ -1,12 +1,11 @@
-# Taining - bash run.sh [train|trainInv|supervised_trainInv] <dataset> [<keys point if change some change is done in the model>]
-# Testing - bash run.sh test <path dataset> <path of model> <disable runtime calc:Y> <POST distribution passes choice: {0, 1, 2}> <rewardtype R or S>
-#
-
-EPOCHS=100
+# Taining - bash run.sh <[train|trainInv|supervised_trainInv]> <dataset> [<keys point if change some change is done in the model>]
+# Testing - bash run.sh <[test]> <dataset-path> <path of trained-model> [<keys point if change some change is done in the model>]
+ 
 
 PWD=`pwd`
-# set the llvm Build and other paramter
 
+EPOCHS=100
+# set the llvm Build and other paramter
 # REL or DEBUG 
 BUILD_TYPE=release
 
@@ -21,9 +20,13 @@ echo "LLVM build directory selected for training : ${LLVM_BUILD}"
 export LLVM=${LLVM_BUILD}
 export OPT=${LLVM_BUILD}/bin/opt
 export CLANG=${LLVM_BUILD}/bin/clang
+export LLC=${LLVM_BUILD}/bin/llc
 
 # Input from the user for the mode
 MODE=$1
+
+# should only activate in case of testing or inference
+DUMP_PRED_DOT=
 
 if [ -z ${MODE} ]
 then 
@@ -58,7 +61,7 @@ then
 
         TRAINED_MODEL=${MODEL_PAR}/${DATA_SET_NAME}/EP_${EPOCHS}_${KEY_POINT}/${MODE}
 
-        DIST_GEN_DATA=${TRAINED_MODEL}
+        GEN_DATA=${TRAINED_MODEL}
          
 
 elif [ $MODE = "test" ]
@@ -104,46 +107,36 @@ then
             KEY_POINT="Full"
         fi
 
-        DIST_GEN_DATA=${TRAINED_MODEL_DIR}/${MODE}/${TE_DATA_SET_NAME}/${CHECKPOINT}/${KEY_POINT}
+        GEN_DATA=${TRAINED_MODEL_DIR}/${MODE}/${TE_DATA_SET_NAME}/${CHECKPOINT}/${KEY_POINT}
 
+        DUMP_PRED_DOT="--dump-color-graph"
 else
         echo "Invalid  MODE:${MODE} [ train , trainInv or test]"
         exit
 fi
 
-
-
-
-
-if [ -d ${DIST_GEN_DATA} ]
+if [ -d ${GEN_DATA} ]
 then 
-        rm -rf ${DIST_GEN_DATA}/*
+        rm -rf ${GEN_DATA}/*
 fi
 
-LOG=${DIST_GEN_DATA}/log
+LOG=${GEN_DATA}/log
 mkdir -p ${LOG}
-DIST_GEN_DATA=`realpath ${DIST_GEN_DATA}`
-DUMP_PRED_DOT="--dump-color-graph"
+GEN_DATA=`realpath ${GEN_DATA}`
 
+DUMP_TYPE="--dump-type=sep"
 # LOG_LEVEL='INFO'
 LOG_LEVEL='DEBUG'
 echo "Location of the trained model: ${TRAINED_MODEL}"
-echo "Location of the generated llfiles and outfiles : ${DIST_GEN_DATA}"
+echo "Location of the generated llfiles and outfiles : ${GEN_DATA}"
 echo "Logs files with LEVEL ${LOG_LEVEL} : ${LOG}"
 ## Call the py script 
-python ${PY_SPT} --dataset=${DATA_SET} --trained_model=${TRAINED_MODEL} --intermediate_data=${DIST_GEN_DATA}  --logdir ${LOG} --mode ${MODE_PROCESS} --epochs=${EPOCHS} --log-level ${LOG_LEVEL} ${DUMP_PRED_DOT}
+python ${PY_SPT} --dataset=${DATA_SET} --trained_model=${TRAINED_MODEL} --intermediate_data=${GEN_DATA}  --logdir ${LOG} --mode ${MODE_PROCESS} --epochs=${EPOCHS} --log-level ${LOG_LEVEL} ${DUMP_PRED_DOT}  
 
 echo "Completed the process........."
 
 
 if [ $MODE = "test" ]
 then
-        if [ -z "${DISABLE_EXEC_BIN}" ]
-        then
-            grep -ri "filename|O3runtime|Druntime|reward" ${LOG}/run.log &> ${LOG}/runtime_results.csv
-    else
-            grep -ri "ll_filename|OriginalLoopCost|distributedLoopCost|reward|speedup|distributeSeq|RDG" ${LOG}/running.log &> ${LOG}/loopcost_results.csv
-        fi
-   grep -ri "\-------------------------->" ${LOG}/run.log &> ${LOG}/distribution_results.csv
-   echo "Results files generated in  ${LOG}"
+   echo "Predicted json are  generated in  ${GEN_DATA}"
 fi
