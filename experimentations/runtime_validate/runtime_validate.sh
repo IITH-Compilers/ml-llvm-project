@@ -51,3 +51,6 @@ done
 wait
 
 echo "Out and S file are generated."
+
+bash execute_generated_binaries.sh ${BIN_DIR}
+

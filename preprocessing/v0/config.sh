@@ -7,7 +7,7 @@ LLVM_BUILD="${HOME}/llvm-project/build${BUILD_TYPE}"
 echo "LLVM Build used for the data generation: ${LLVM_BUILD}"
 [[ ! -d ${LLVM_BUILD} ]] && echo "LLVM build directory does not exist" && exit
 
-INP_DIR=${HOME}/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON
+INP_DIR=${HOME}/data/PE-benchmarks
 echo "Input data directory path: ${INP_DIR}"
 [[ ! -d ${INP_DIR} ]] && echo "Input directory does not exist" && exit
 
