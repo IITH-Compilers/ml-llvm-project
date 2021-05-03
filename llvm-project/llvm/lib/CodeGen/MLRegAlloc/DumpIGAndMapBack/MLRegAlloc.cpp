@@ -4061,7 +4061,8 @@ void MLRA::allocatePhysRegsViaRL() {
     if (this->regClassSupported4_MLRA.find(regClass) == regClassSupported4_MLRA.end()){
         errs () << "Register class("<< regClass << ") is not supported by MLRA so calling will be processed Later by Greedy\n";
         //AvailablePhysReg = selectOrSplit(*VirtReg, SplitVRegs);
-        NonSupporttedVirRegs.push_back(VirtReg);
+        // NonSupporttedVirRegs.push_back(VirtReg);
+        enqueue(&LIS->getInterval(Reg));
         continue;
     } else{
         errs() << "\ngetPhyRegForColor "
@@ -4105,7 +4106,8 @@ void MLRA::allocatePhysRegsViaRL() {
   }
   
   // Assign register to the Non supported RegClass
-  for(auto VirtReg : NonSupporttedVirRegs){
+  //for(auto VirtReg : NonSupporttedVirRegs){
+  while (LiveInterval *VirtReg = dequeue()) { 
     std::string regClass = TRI->getRegClassName(MRI->getRegClass(VirtReg->reg));
     errs () << "Register class("<< regClass << ") is not supported by MLRA so calling Greedy.\n";
     using VirtRegVec = SmallVector<unsigned, 4>;
@@ -4139,7 +4141,24 @@ void MLRA::allocatePhysRegsViaRL() {
     }
     if (AvailablePhysReg)
       Matrix->assign(*VirtReg, AvailablePhysReg);
-  
+  for (unsigned Reg : SplitVRegs) {
+      assert(LIS->hasInterval(Reg));
+
+      LiveInterval *SplitVirtReg = &LIS->getInterval(Reg);
+      assert(!VRM->hasPhys(SplitVirtReg->reg) && "Register already assigned");
+      if (MRI->reg_nodbg_empty(SplitVirtReg->reg)) {
+        assert(SplitVirtReg->empty() && "Non-empty but used interval");
+        LLVM_DEBUG(dbgs() << "not queueing unused  " << *SplitVirtReg << '\n');
+        aboutToRemoveInterval(*SplitVirtReg);
+        LIS->removeInterval(SplitVirtReg->reg);
+        continue;
+      }
+      LLVM_DEBUG(dbgs() << "queuing new interval: " << *SplitVirtReg << "\n");
+      assert(Register::isVirtualRegister(SplitVirtReg->reg) &&
+             "expect split value in virtual register");
+      enqueue(SplitVirtReg);
+      //++NumNewQueued;
+    }
   }
 }
 
@@ -4189,6 +4208,20 @@ bool MLRA::runOnMachineFunction(MachineFunction &mf) {
       LLVM_DEBUG(LIS->dump());
   
       SpillerInstance.reset(createInlineSpiller(*this, *MF, *VRM));
+      // Support for Greedy 
+      #if 1
+      SA.reset(new SplitAnalysis(*VRM, *LIS, *Loops));
+      SE.reset(new SplitEditor(*SA, *AA, *LIS, *VRM, *DomTree, *MBFI));
+      ExtraRegInfo.clear();
+      ExtraRegInfo.resize(MRI->getNumVirtRegs());
+      NextCascade = 1;
+      IntfCache.init(MF, Matrix->getLiveUnions(), Indexes, LIS, TRI);
+      GlobalCand.resize(32);  // This will grow as needed.
+      SetOfBrokenHints.clear();
+      LastEvicted.clear();
+      #endif
+      // Support for Greedy 
+
        // Point of change    
       allocatePhysRegsViaRL();
       
