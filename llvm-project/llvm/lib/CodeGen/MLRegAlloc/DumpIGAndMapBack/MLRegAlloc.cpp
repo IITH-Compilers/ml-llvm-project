@@ -663,34 +663,29 @@ MLRA::MLRA(): MachineFunctionPass(ID) {
       std::ifstream predColorFile(pred_file);
       std::string jsonString;
       jsonString.assign((std::istreambuf_iterator<char>(predColorFile)),(std::istreambuf_iterator<char>()));
-      errs() << jsonString << "\n";
+      LLVM_DEBUG(errs() << jsonString << "\n");
     if (Expected<json::Value> E = json::parse(jsonString)){
     
        if (json::Object* J = E->getAsObject()){
           if(json::Array* S = J->getArray("Predictions")){ 
-	         // if (json::Array* A = S->getAsArray()){
-                  //std::vector<json::Object> array;
-                  //json::fromJSON(*S, array);
 	              for(auto V: *S){
-                
                     if (json::Object* O = V.getAsObject()){
 	                   std::map<std::string, int64_t> colormap;
 	                  if (json::Value* omap = O->get("mapping")){
-	              	json::fromJSON(*omap, colormap);
-	              	    for(auto entry: colormap)
-	              		    errs () << entry.first << " " << entry.second << "\n";
-	                   }
+	              	    json::fromJSON(*omap, colormap);
+	              	    LLVM_DEBUG(for(auto entry: colormap)
+	              		    errs () << entry.first << " " << entry.second << "\n");
+                      }
 	                   if(colormap.size() > 0){
 	                       if(json::Value* S = O->get("Function")){
 	                            std::string funcName_key;
 	                            json::fromJSON(*S, funcName_key);
 	                            this->FunctionVirtRegToColorMap[funcName_key] = colormap;
-	              	 errs () << "Function Name : " << funcName_key << "\n";
+	              	 LLVM_DEBUG(errs () << "Function Name : " << funcName_key << "\n");
 	              	 }
 	                   }    
 	              }
           }
-                  //}
           }
        }
 	    /*if (json::Object* O = E->getAsObject()){
@@ -3628,62 +3623,62 @@ unsigned MLRA::getPhyRegForColor(LiveInterval &VirtReg, unsigned color, SmallVec
         // $r15w=270   
           phyReg=270;  
           break;       
-    case 43:
+   case 43:
  	// $al=2 
-            phyReg=2;
+    phyReg=2;
  	break;
-    case 44:
-  	// $cl=11 
-           phyReg=11;
-  	break;
+   case 44:
+    // $bl=5 
+    phyReg=5;
+    break;
     case 45:
-  // $dl=19 
-          phyReg=19;
- 	break;
-   case 46:
-  // $sil=61 
-           phyReg=61;
-  break;
+  	 // $cl=11 
+     phyReg=11;
+   	 break;
+    case 46:
+     // $dil=18 
+     phyReg=18;
+     break;
     case 47:
-        	// $dil=18 
-            phyReg=18;
-     	break;
+     // $dl=19 
+     phyReg=19;
+ 	 break;
     case 48:
-        	// $r8b=239
-            phyReg=239;
-        	break;
+     // $sil=61 
+     phyReg=61;
+     break;
     case 49:
-      	// $r9b=240 
-            phyReg=240;
-      	break;
+     // $r8b=239
+     phyReg=239;
+     break;
     case 50:
-      	// $r10b=241 
-            phyReg=241;
-      	break;
+     // $r9b=240 
+     phyReg=240;
+     break;
     case 51:
-      	// $r11b=242 
-            phyReg=242;
-      	break;
+     // $r10b=241 
+     phyReg=241;
+     break;
     case 52:
-      	// $bl=5 
-               phyReg=5;
-      	break;
-     case 53:
-         	// $r14b=245 
-             phyReg=245;
-         	break;
+     // $r11b=242 
+     phyReg=242;
+     break;
+    case 53:
+  	 // $r12b=243 
+     phyReg=243;
+  	  break;
     case 54:
-        	// $r15b=246 
-            phyReg=246;
-            	break;   
+     // $r13b=244
+     phyReg=244;
+     break;
     case 55:
-  	// $r12b=243 
-          phyReg=243;
-  	break;
+     // $r14b=245 
+     phyReg=245;
+     break;
     case 56:
-        // $r13b=244
-        phyReg=244;
-        break;
+     // $r15b=246 
+     phyReg=246;
+     break;   
 case 0:
       errs() <<"\nSpilling is predicted..\n";
 default:
@@ -4012,6 +4007,7 @@ default:
 void MLRA::allocatePhysRegsViaRL() {
   
   assert(this->FunctionVirtRegToColorMap.find(MF->getName()) != this->FunctionVirtRegToColorMap.end() && "Function does not have the register allocation through MLRA");
+  std::vector<LiveInterval*> NonSupporttedVirRegs;
   for (unsigned i = 0, e = MRI->getNumVirtRegs(); i < e; ++i) {
     unsigned Reg = Register::index2VirtReg(i);
     LiveInterval *VirtReg = &LIS->getInterval(Reg);
@@ -4063,8 +4059,10 @@ void MLRA::allocatePhysRegsViaRL() {
     std::string regClass = TRI->getRegClassName(MRI->getRegClass(VirtReg->reg));
     unsigned AvailablePhysReg;
     if (this->regClassSupported4_MLRA.find(regClass) == regClassSupported4_MLRA.end()){
-        errs () << "Register class("<< regClass << ") is not supported by MLRA so calling Greedy.\n";
-        AvailablePhysReg = selectOrSplit(*VirtReg, SplitVRegs);
+        errs () << "Register class("<< regClass << ") is not supported by MLRA so calling will be processed Later by Greedy\n";
+        //AvailablePhysReg = selectOrSplit(*VirtReg, SplitVRegs);
+        NonSupporttedVirRegs.push_back(VirtReg);
+        continue;
     } else{
         errs() << "\ngetPhyRegForColor "
                           << TRI->getRegClassName(MRI->getRegClass(VirtReg->reg))
@@ -4104,6 +4102,44 @@ void MLRA::allocatePhysRegsViaRL() {
     }
     if (AvailablePhysReg)
       Matrix->assign(*VirtReg, AvailablePhysReg);
+  }
+  
+  // Assign register to the Non supported RegClass
+  for(auto VirtReg : NonSupporttedVirRegs){
+    std::string regClass = TRI->getRegClassName(MRI->getRegClass(VirtReg->reg));
+    errs () << "Register class("<< regClass << ") is not supported by MLRA so calling Greedy.\n";
+    using VirtRegVec = SmallVector<unsigned, 4>;
+    VirtRegVec SplitVRegs;
+    unsigned AvailablePhysReg = selectOrSplit(*VirtReg, SplitVRegs);
+     /* Handle the case when we want to spill but can't due to 
+    system constraints*/
+    if (AvailablePhysReg == ~0u) {
+      // selectOrSplit failed to find a register!
+      // Probably caused by an inline asm.
+      MachineInstr *MI = nullptr;
+      for (MachineRegisterInfo::reg_instr_iterator
+           I = MRI->reg_instr_begin(VirtReg->reg), E = MRI->reg_instr_end();
+           I != E; ) {
+        MI = &*(I++);
+        if (MI->isInlineAsm())
+          break;
+      }
+      if (MI && MI->isInlineAsm()) {
+        MI->emitError("inline assembly requires more registers than available");
+      } else if (MI) {
+        LLVMContext &Context = MI->getParent()->getParent()->getMMI().getModule()->getContext();
+        Context.emitError("ran out of registers during register allocation");
+      } else {
+        report_fatal_error("ran out of registers during register allocation");
+      }
+      // Keep going after reporting the error.
+      VRM->assignVirt2Phys(VirtReg->reg,
+                 RegClassInfo.getOrder(MRI->getRegClass(VirtReg->reg)).front());
+      continue;
+    }
+    if (AvailablePhysReg)
+      Matrix->assign(*VirtReg, AvailablePhysReg);
+  
   }
 }
 
