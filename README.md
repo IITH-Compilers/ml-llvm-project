@@ -12,6 +12,10 @@
 * `cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="clang" -DLLVM_TARGETS_TO_BUILD="X86" -DLLVM_ENABLE_ASSERTIONS=ON ../llvm-project/llvm`
 * `ninja clang opt llc`
 
+## GRPC Support
+* `C-Python bindings or vice-versa`
+* `Prove a seamless way of cross platform communication`
+
 ## Run MLRegAlloc Pass
 *  _`mlra`_` flag to choice our pass`
 * `{BUILD}/bin/clang -03 -mllvm -regalloc=mlra  <Input_file>`
