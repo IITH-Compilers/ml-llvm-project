@@ -697,7 +697,7 @@ void LiveIntervals::addKillFlags(const VirtRegMap *VRM) {
   // Keep track of subregister ranges.
   SmallVector<std::pair<const LiveInterval::SubRange*,
                         LiveRange::const_iterator>, 4> SRs;
-
+  
   for (unsigned i = 0, e = MRI->getNumVirtRegs(); i != e; ++i) {
     unsigned Reg = Register::index2VirtReg(i);
     if (MRI->reg_nodbg_empty(Reg))
@@ -710,10 +710,7 @@ void LiveIntervals::addKillFlags(const VirtRegMap *VRM) {
     // the virtual register live range, cancelling any kills.
     RU.clear();
     auto mcReg = VRM->getPhys(Reg);
-    if (!mcReg){
-    errs () << "MC reg Null \n";
-    continue;
-    }
+    LLVM_DEBUG(errs () <<"LiveIntervals.cpp addkillFlags - VirReg:" << printReg(Reg, TRI) << " Reg:" << Reg << " mcReg:" << mcReg << "\n");
     for (MCRegUnitIterator Unit(mcReg, TRI); Unit.isValid();
          ++Unit) {
       const LiveRange &RURange = getRegUnit(*Unit);
