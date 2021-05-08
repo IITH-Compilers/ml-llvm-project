@@ -33,6 +33,7 @@ REMARKS=
 BENCHMARK_NAME=$3
 [[ -z ${BENCHMARK_NAME} ]] && echo "Benchmark is not specified." && exit
 
+BENCHMARK_NAME=benchmarks/${BENCHMARK_NAME}
 ASM_DIR=${BENCHMARK_NAME}/assembly
 BIN_DIR=${BENCHMARK_NAME}/Binaries
 REMARKS_DIR=${BENCHMARK_NAME}/remarks
@@ -50,7 +51,7 @@ done
  
 wait
 
-echo "Out and S file are generated."
+echo "Out and S file are generated in ${BENCHMARK_NAME}"
 
 bash execute_generated_binaries.sh ${BIN_DIR}
 
