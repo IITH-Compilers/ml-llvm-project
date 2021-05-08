@@ -615,6 +615,16 @@ private:
       }
     }
   }
+  
+  /**
+   * set the prediction map
+   * { FunNme = {Reg : color }}
+   * 
+   * */
+  void setPrediction(std::map<std::string, std::map<std::string, int64_t>>
+      FunctionVirtRegToColorMap){
+          this->FunctionVirtRegToColorMap = FunctionVirtRegToColorMap;
+  }
 
 };
 
