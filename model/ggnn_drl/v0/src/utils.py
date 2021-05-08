@@ -57,38 +57,42 @@ def plot(x,y,title, **args):
         logging.debug(ex)
 
 
-def dump_colored_graph(file_id, fileName, funcName, color_assignment_map):
-    logging.debug(' Dumping graph is {}'.format(config.dump_color_graph))
-    if config.dump_color_graph:
-        # payload = { 'Predictions' : [{'FileName' : fileName, 'Function' : funcName, 'mapping' : color_assignment_map}] }
-        payload = {'FileName' : fileName, 'Function' : funcName, 'mapping' : color_assignment_map}
-        coloredGraphDir = os.path.join(config.intermediate_data, 'coloredGraphs')
-        if not os.path.exists(coloredGraphDir):
-            os.makedirs(coloredGraphDir)
-        
-        if config.dump_type == 'One':
-            basefilename = os.path.split(fileName)[-1]
-            coloredfile = os.path.join(coloredGraphDir, 'predColor-{}.json'.format(basefilename))
-            if os.path.exists(coloredfile):
-                with open(coloredfile) as f:
-                    data = json.load(f)
-                    temp = data['Predictions']
-                    temp.append(payload)
-            else:
-                data = { 'Predictions' : [payload]}
+def composeData(payload):
+    return { 'Predictions' : [payload]}
+
+def get_colored_graph(file_id, fileName, funcName, color_assignment_map):
+    payload = {'FileName' : fileName, 'Function' : funcName, 'mapping' : color_assignment_map}
+    
+    if config.inference:
+        return composeData(payload) 
+    coloredGraphDir = os.path.join(config.intermediate_data, 'coloredGraphs')
+    if not os.path.exists(coloredGraphDir):
+        os.makedirs(coloredGraphDir)
+    
+    if config.dump_type == 'One':
+        basefilename = os.path.split(fileName)[-1]
+        coloredfile = os.path.join(coloredGraphDir, 'predColor-{}.json'.format(basefilename))
+        if os.path.exists(coloredfile):
+            with open(coloredfile) as f:
+                data = json.load(f)
+                temp = data['Predictions']
+                temp.append(payload)
         else:
-            coloredfile = os.path.join(coloredGraphDir, 'predColor-{}.json'.format(file_id))
-            data = { 'Predictions' : [payload]}
-            # data = payload
+            data = composeData(payload)
+    else:
+        coloredfile = os.path.join(coloredGraphDir, 'predColor-{}.json'.format(file_id))
+        data = composeData(payload)
         
+    if config.dump_color_graph:
         try:
            with open(coloredfile, 'w') as f:
                json.dump(data,  f, indent=4)
         except Exception as ex:
             print('Not able to dump the file at {} '.format(coloredfile), ex)
             print("Unexpected error:", sys.exc_info()[0])
+    return data
 
-def get_parse_args():
+def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset', dest='dataset', metavar='DIRECTORY', help='Location of the dataSet..')
     parser.add_argument('--epochs', dest='epochs', type=int, required=False, help='Epochs to run.', default=100)
@@ -102,7 +106,8 @@ def get_parse_args():
     parser.add_argument('--log-level', dest='log_level', type=str, required=False, help='Color for spill Node', default='DEBUG')
     parser.add_argument('--dump-color-graph', dest='dump_color_graph', action='store_true')
     parser.add_argument('--dump-type', dest='dump_type', type=str, required=False, default='One', help="Dumping predicted file format i.e. one for each function or only one for whole file.")
-    
+    parser.add_argument('--inference', dest='inference', action='store_true')
+
     global config 
     config = parser.parse_args()
     return config

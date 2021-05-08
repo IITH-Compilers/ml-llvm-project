@@ -73,12 +73,12 @@ class GraphColorEnv:
         # possible_next_nodes = self.topology.findAllVertaxWithZeroWeights()
         
         reward = self.getReward(reg_allocated)
-  
+        response = None 
         if False not in self.topology.discovered:
-            utils.dump_colored_graph(self.fun_id, self.fileName, self.functionName, self.color_assignment_map)
+            response = utils.get_colored_graph(self.fun_id, self.fileName, self.functionName, self.color_assignment_map)
             done = True
 
-            return (next_hidden_state[nodeChoosen], nodeChoosen), reward, done
+            return (next_hidden_state[nodeChoosen], nodeChoosen), reward, done, response
 
         # next_hidden_state = next_hidden_state[possible_next_nodes]
 
