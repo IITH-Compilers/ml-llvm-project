@@ -8,7 +8,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MLRegAlloc.h"
+#include "llvm/CodeGen/MLRegAlloc.h"
 #include "AllocationOrder.h"
 #include "InterferenceCache.h"
 #include "LiveDebugVariables.h"
