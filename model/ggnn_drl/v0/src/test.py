@@ -50,7 +50,7 @@ def run(agent, config):
 
            action = agent.act(state, eps)
            
-           next_state, reward, done  = env.step(action)
+           next_state, reward, done, response  = env.step(action)
           
            logging.debug('reward : {}'.format(reward))
            

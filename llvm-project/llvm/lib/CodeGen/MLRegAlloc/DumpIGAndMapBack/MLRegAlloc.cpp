@@ -83,7 +83,7 @@
 #include <utility>
 #include <vector>
 
-
+#define DIS_SANITY_CHECK 1
 using namespace llvm;
 
 STATISTIC(NumGlobalSplits, "Number of split global live ranges");
@@ -3252,9 +3252,6 @@ unsigned MLRA::getPhyRegForColor(LiveInterval &VirtReg, unsigned color,
     LiveRangeEdit LRE(&VirtReg, SplitVRegs, *MF, *LIS, VRM, this, &DeadRemats);
     spiller().spill(LRE);
     LLVM_DEBUG(errs() << "LRE splitvar size :: " << SplitVRegs.size() << "\n");
-    // LIS->dump();
-    // errs () << *LIS << "\n";
-    // SplitVRegs.push_back(VirtReg.reg);
     setStage(SplitVRegs.begin(), SplitVRegs.end(), RS_Done);
     DebugVars->splitRegister(VirtReg.reg, LRE.regs(), *LIS);
     LLVM_DEBUG(errs() << "Spilling Done\n");
@@ -3264,6 +3261,13 @@ unsigned MLRA::getPhyRegForColor(LiveInterval &VirtReg, unsigned color,
 
     return 0;
   }
+#if DIS_SANITY_CHECK 
+  ExtraRegInfo.grow(VirtReg.reg);
+  setStage(VirtReg, RS_Done);
+  LLVM_DEBUG(errs() << "\ngetPhyRegForColor " << color << "===>" << phyReg
+                    << " " << printReg(phyReg, TRI) << "\n");
+     return phyReg;
+#else 
   ExtraRegInfo.grow(VirtReg.reg);
   setStage(VirtReg, RS_Done);
   // if (ExtraRegInfo[Reg].Stage == RS_New)
@@ -3271,10 +3275,8 @@ unsigned MLRA::getPhyRegForColor(LiveInterval &VirtReg, unsigned color,
 
   LLVM_DEBUG(errs() << "\ngetPhyRegForColor " << color << "===>" << phyReg
                     << " " << printReg(phyReg, TRI) << "\n");
-  // return phyReg;
   LLVM_DEBUG(errs() << "Sanity check to see the predicted color is already "
                        "part of the interval.\n");
-#if 1
   // Populate a list of physical register spill candidates.
   SmallVector<unsigned, 8> PhysRegSpillCands;
 
@@ -3324,10 +3326,10 @@ unsigned MLRA::getPhyRegForColor(LiveInterval &VirtReg, unsigned color,
   if (VerifyEnabled) {
     MF->verify(this, "After spilling");
   }
-#endif
   // The live virtual register requesting allocation was spilled, so tell
   // the caller not to allocate anything during this round.
   return 0;
+#endif
 }
 
 void MLRA::allocatePhysRegsViaRL() {
@@ -3336,6 +3338,8 @@ void MLRA::allocatePhysRegsViaRL() {
              this->FunctionVirtRegToColorMap.end() &&
          "Function does not have the register allocation through MLRA");
   std::vector<LiveInterval *> NonSupporttedVirRegs;
+  unsigned step = TRI->getNumRegUnits() + 1;
+  
   for (unsigned i = 0, e = MRI->getNumVirtRegs(); i < e; ++i) {
     unsigned Reg = Register::index2VirtReg(i);
     LiveInterval *VirtReg = &LIS->getInterval(Reg);
@@ -3347,40 +3351,41 @@ void MLRA::allocatePhysRegsViaRL() {
     }
     // enqueue(&LIS->getInterval(Reg));
 #if 1
-    unsigned color =
-        this->FunctionVirtRegToColorMap[MF->getName()][std::to_string(i)];
     assert(!VRM->hasPhys(VirtReg->reg) && "Register already assigned");
+    unsigned node_id = i+step;
+    unsigned color =
+        this->FunctionVirtRegToColorMap[MF->getName()][std::to_string(node_id)];
 
     // Check for already allocated register
-    if (Register::isPhysicalRegister(Reg)) {
+    /*if (Register::isPhysicalRegister(Reg)) {
       errs() << "Already physical register assigned to Live interval of "
                 "virtual reg "
              << i << " to " << printReg(Reg, TRI) << "\n";
       continue;
-    }
+    }*/
 
     Matrix->invalidateVirtRegs(); // Don't know why it is used
     // selectOrSplit requests the allocator to return an available physical
     // register if possible and populate a list of new live intervals that
     // result from splitting.
 
-#if 0 
-    // 164 
-    errs() << "getNumRegUnits  Registers=" << TRI->getNumRegUnits() << ";\n";
-    // 118
-    errs() << "getNumRegClasses() " << TRI->getNumRegClasses() << " \n";
-    int reg_count =0;
-    for(auto rc : TRI->regclasses()){
-	    errs () << "RegClassName " << TRI->getRegClassName(rc) << "\n";
-    auto rci_order = RCI.getOrder(rc);
-    for (auto O:rci_order){
-          errs() << ' ' << printReg(O, TRI) << "="<<O;
-	reg_count++;	
-    }
-    errs() << "\n";
-    }
-    // errs () << "Register Count " << reg_count << "\n";
-#endif
+    #if 0 
+        // 164 
+        errs() << "getNumRegUnits  Registers=" << TRI->getNumRegUnits() << ";\n";
+        // 118
+        errs() << "getNumRegClasses() " << TRI->getNumRegClasses() << " \n";
+        int reg_count =0;
+        for(auto rc : TRI->regclasses()){
+    	    errs () << "RegClassName " << TRI->getRegClassName(rc) << "\n";
+        auto rci_order = RCI.getOrder(rc);
+        for (auto O:rci_order){
+              errs() << ' ' << printReg(O, TRI) << "="<<O;
+    	reg_count++;	
+        }
+        errs() << "\n";
+        }
+        // errs () << "Register Count " << reg_count << "\n";
+    #endif
 
     using VirtRegVec = SmallVector<unsigned, 4>;
     VirtRegVec SplitVRegs;
@@ -3410,6 +3415,8 @@ void MLRA::allocatePhysRegsViaRL() {
           for (auto O
                : rci_order) { errs() << ' ' << printReg(O, TRI) << "=" << O; });
       LastEvicted.clearEvicteeInfo(VirtReg->reg);
+      
+      // Get the physical register mapped  to color
       AvailablePhysReg = getPhyRegForColor(*VirtReg, color, SplitVRegs); //
     }
 
