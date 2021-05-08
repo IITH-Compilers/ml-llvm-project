@@ -75,7 +75,8 @@ def allocate_registers(inter_graph_list : list, trained_model : str):
     
     logging.info('Start the inference....')
     allocations = run_predict_for_multiple_functions(agent, config, inter_graph_list)
-    logging.info('Distrubuted seqs : {}'.format(seqs))
+    logging.info('allocated  : {}'.format(allocations))
+
     return allocations
 
 
