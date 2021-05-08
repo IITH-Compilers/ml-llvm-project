@@ -241,26 +241,37 @@ def constructGraph(graph):
     all_edges = []
     spill_cost_list = []
     reg_class_list = []
+    allocate_type_list = []
     for idx, node in enumerate(nodes):
         
         nodeId = node['id']
-        # nodeVec = list(map(float, node['label'].strip("\"").split(', ')))
         properties = re.search("{.*}", node['label']).group()
-        # print(spill_cost)
         properties = properties.split(' ')
         regClass = praseProp(properties[0]) 
         spill_cost = praseProp(properties[1])
+        allocate_type = praseProp(properties[2])
+
+        print(allocate_type)
         if spill_cost not in ["inf", "INF"]:
             spill_cost = eval(spill_cost)
-            spill_cost_list.append(spill_cost)
         else:
             spill_cost = float(1000)
-            spill_cost_list.append(spill_cost)
-        node['label'] = re.sub(" {.*} {.*} ", '', node['label'])
-        node_mat = eval(node['label'].replace("\"",""))
+        node['label'] = re.sub(" {.*} ", '', node['label'])
+        
+        print(node['label'])
+         
+        if node['label'] != "\"\"":
+            node_mat = eval(node['label'].replace("\"",""))
+        else:
+            node_mat = [[1,1,1,1,1]]
+        # print(node_mat)
+        
         node_tansor_matrix = torch.FloatTensor(node_mat)
         nodeVec = constructVectorFromMatrix(node_tansor_matrix)
         reg_class_list.append(regClass)
+        spill_cost_list.append(spill_cost)
+        allocate_type_list.append(allocate_type)
+        
         initial_node_representation.append(nodeVec)
         nid_idx[nodeId] = idx
         idx_nid[idx] = nodeId
@@ -272,7 +283,6 @@ def constructGraph(graph):
             if i != neighId:
                 all_edges.append((i, neighId))
 
-    # initial_node_representation = torch.FloatTensor(initial_node_representation)
     initial_node_representation = torch.stack(initial_node_representation, dim=0)
     
     # print(initial_node_representation)
