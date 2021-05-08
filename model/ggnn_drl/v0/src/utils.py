@@ -92,7 +92,7 @@ def get_colored_graph(file_id, fileName, funcName, color_assignment_map):
             print("Unexpected error:", sys.exc_info()[0])
     return data
 
-def parse_args():
+def get_parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset', dest='dataset', metavar='DIRECTORY', help='Location of the dataSet..')
     parser.add_argument('--epochs', dest='epochs', type=int, required=False, help='Epochs to run.', default=100)

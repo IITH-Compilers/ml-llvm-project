@@ -74,7 +74,7 @@ def run(agent, config):
                 # reward is 0 till we reach the end node
                 # reward will be -negative, maximize  the reward
                 
-                next_state, reward, done  = env.step(action)
+                next_state, reward, done, response  = env.step(action)
                
                 # put the state transitionin memory buffer
                 agent.step(state, action, reward, next_state, done)

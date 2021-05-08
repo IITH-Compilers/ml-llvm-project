@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+
 import torch.nn as nn
 import torch.nn.utils
 from torch.autograd import Variable
@@ -225,6 +226,7 @@ class GatedGraphNeuralNetwork(nn.Module):
   
    # input graph jsonnx
 def praseProp(val):
+    val = val.strip()
     return val[1: len(val) - 1]
 
 def constructGraph(graph):
@@ -246,25 +248,23 @@ def constructGraph(graph):
         
         nodeId = node['id']
         properties = re.search("{.*}", node['label']).group()
-        properties = properties.split(' ')
+        properties = properties.split()
+        logging.debug('Node idx={} | {}'.format(idx, properties))
         regClass = praseProp(properties[0]) 
         spill_cost = praseProp(properties[1])
         allocate_type = praseProp(properties[2])
 
-        print(allocate_type)
+        logging.debug('Allocation type : {}'.format(allocate_type))
         if spill_cost not in ["inf", "INF"]:
             spill_cost = eval(spill_cost)
         else:
             spill_cost = float(1000)
         node['label'] = re.sub(" {.*} ", '', node['label'])
         
-        print(node['label'])
-         
         if node['label'] != "\"\"":
             node_mat = eval(node['label'].replace("\"",""))
         else:
             node_mat = [[1,1,1,1,1]]
-        # print(node_mat)
         
         node_tansor_matrix = torch.FloatTensor(node_mat)
         nodeVec = constructVectorFromMatrix(node_tansor_matrix)
@@ -289,12 +289,26 @@ def constructGraph(graph):
     logging.debug("Shape of the hidden nodes matrix N X D : {}".format(initial_node_representation.shape)) 
     # Create aGraph obj for getting the Zero incoming egdes nodes
     graphObj = Graph(all_edges,  num_nodes)
+
     logging.debug('All links : {}'.format(all_edges))
     logging.debug("num_nodes : {}".format(num_nodes) )
     ggnn = GatedGraphNeuralNetwork(hidden_size=initial_node_representation.shape[1], annotation_size=2, num_edge_types=1, layer_timesteps=[5], residual_connections={}, nodelevel=True)
     annotation_zero = np.zeros((num_nodes, 2))
     annotation_zero[:, 0] = spill_cost_list
     ggnn.annotations = torch.FloatTensor(annotation_zero)
+    
+    '''
+    Support for already allocated registers.
+    Mark the nodes as visted in the graph and 
+    ggnn so that removed from action space
+    '''
+    for node_idx in range(num_nodes):
+        if reg_class_list[node_idx] == 'Phy':
+            color, phyReg = map( lambda x : int(x.split('=')[-1]),allocate_type_list[node_idx].split(';'))
+            logging.debug('creating graph; Marking node_idx={} with color={}'.format(node_idx, color))
+            
+            graphObj.UpdateVisitList(node_idx, color)
+            ggnn.updateAnnotation(node_idx, color)
     
     # ggnn.annotations = torch.FloatTensor(annotations_list)
     # ggnn.annotations = ggnn.annotations.reshape((ggnn.annotations.shape[0], 1))

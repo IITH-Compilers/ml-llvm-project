@@ -85,11 +85,14 @@ class GraphColorEnv:
         self.cur_node = self.cur_node + 1
         next_node = self.cur_node 
         next_obs = next_hidden_state[next_node]
-        # print(next_hidden_state)
-        
+        assert not self.topology.discovered[self.cur_node], 'Node {} already visited so taking next node.'.format(self.cur_node)
+ 
         adj_colors = self.topology.getColorOfVisitedAdjNodes(next_node)
         regClass = self.reg_class_list[self.cur_node]
-        return (next_obs, next_node, adj_colors, regClass), reward, done 
+        logging.debug('Node Choosen for coloring : {}'.format(next_node))
+        logging.debug('Adjacent colors : {}'.format(adj_colors))
+        logging.debug('regClass of Nodes : {}'.format(regClass))
+        return (next_obs, next_node, adj_colors, regClass), reward, done, response 
     
     # input graph : jsonnx
     # return the state of the graph, all the possible starting nodes
@@ -111,9 +114,15 @@ class GraphColorEnv:
         self.spill_cost_list = self.ggnn.spill_cost_list
         self.reg_class_list = self.ggnn.reg_class_list
         self.cur_node = 0
+        while self.topology.discovered[self.cur_node]:
+            logging.debug('Node {} already visited so taking next node.'.format(self.cur_node))
+            self.cur_node = self.cur_node+1
         obs= hidden_state[self.cur_node]
         adj_colors = self.topology.getColorOfVisitedAdjNodes(self.cur_node)
         self.regClass = self.reg_class_list[self.cur_node]
+        logging.debug('Node Choosen for coloring : {}'.format(self.cur_node))
+        logging.debug('Adjacent colors : {}'.format(adj_colors))
+        logging.debug('regClass of Nodes : {}'.format(self.regClass))
         return ( obs, self.cur_node, adj_colors, self.regClass)
 
 

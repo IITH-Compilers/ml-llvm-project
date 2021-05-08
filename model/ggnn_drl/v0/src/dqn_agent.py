@@ -73,6 +73,7 @@ class Agent():
         """
         state, nodeChoosen, adj_colors, regClass = state
         
+        assert regClass != 'Phy', "Trying assign color to physical node."
         logging.debug('Reg Class : {}'.format(regClass))
         logging.debug('Adj colors : {}'.format(adj_colors))
         # logging.debug("state type : {}, {}".format(type(state), state.shape))
