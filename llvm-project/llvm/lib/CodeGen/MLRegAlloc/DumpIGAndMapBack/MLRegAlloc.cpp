@@ -2859,22 +2859,24 @@ bool MLRA::spillInterferences(LiveInterval &VirtReg, unsigned PhysReg,
   return true;
 }
 
-void MLRA::dumpInterferenceGraph(MachineFunction &mf) {
-  MachineFunction *MF = &mf;
-  VirtRegMap &vrm = getAnalysis<VirtRegMap>();
-  LiveIntervals &lis = getAnalysis<LiveIntervals>();
-  LiveRegMatrix &mat = getAnalysis<LiveRegMatrix>();
-  TRI = &vrm.getTargetRegInfo();
-  MRI = &vrm.getRegInfo();
-  VRM = &vrm;
-  LIS = &lis;
-  Matrix = &mat;
-  MRI->freezeReservedRegs(vrm.getMachineFunction());
+void MLRA::dumpInterferenceGraph() {
+  
+  LLVM_DEBUG(errs() << "Starting dumping \n");
+  //MachineFunction *MF = &mf;
+  //VirtRegMap &vrm = getAnalysis<VirtRegMap>();
+  //LiveIntervals &lis = getAnalysis<LiveIntervals>();
+  //LiveRegMatrix &mat = getAnalysis<LiveRegMatrix>();
+  //TRI = &vrm.getTargetRegInfo();
+  //MRI = &vrm.getRegInfo();
+  //VRM = &vrm;
+  //LIS = &lis;
+  //Matrix = &mat;
+  // MRI->freezeReservedRegs(vrm.getMachineFunction());
 
-  RCI.runOnMachineFunction(vrm.getMachineFunction());
+  //RCI.runOnMachineFunction(vrm.getMachineFunction());
 
-  calculateSpillWeightsAndHints(*LIS, *MF, VRM, getAnalysis<MachineLoopInfo>(),
-                                getAnalysis<MachineBlockFrequencyInfo>());
+  //calculateSpillWeightsAndHints(*LIS, *MF, VRM, getAnalysis<MachineLoopInfo>(),
+  //                              getAnalysis<MachineBlockFrequencyInfo>());
 
   StringRef moduleName = MF->getFunction().getParent()->getName();
   if (llvm::sys::path::is_relative(moduleName)) {
@@ -2883,33 +2885,31 @@ void MLRA::dumpInterferenceGraph(MachineFunction &mf) {
     moduleName = StringRef(temp);
   }
   std::string absmoduleName = moduleName.str();
-  //     errs () << absmoduleName << "\n";
+  
   std::string input_fileName =
       absmoduleName.substr(absmoduleName.rfind('/') + 1);
 
   std::error_code EC;
-  // TODO: Name mangling
   raw_fd_ostream File(input_fileName + "_F" + std::to_string(FuntionCounter) +
                           ".dot",
                       EC, sys::fs::F_Text);
 
-  MRI->verifyUseLists();
-
+  // LLVM_DEBUG(LIS->dump());
+  
   File << "graph G {\n";
   File << "FileName=\"" << absmoduleName << "\";\n";
   File << "Function=\"" << MF->getName() << "\";\n";
 
-  LLVM_DEBUG(errs() << "RegUnit Already assigned\n");
-  // TODO: Fix no of Registers
   File << "Registers=" << TRI->getNumRegUnits() << ";\n";
   unsigned step = TRI->getNumRegUnits() + 1;
   for (unsigned i = 1, e = TRI->getNumRegUnits(); i <= e; ++i) {
    if (MRI->reg_nodbg_empty(i))
      continue;
     if (LiveRange *phyRange = &LIS->getRegUnit(i)) {
-      // errs() << "Already physical register assigned idx:" << i << "  name:" << printReg(i, TRI) << "\n";
-      //errs() << printRegUnit(i, TRI) << ' ' << *phyRange << "\n";
-            std::string regClass = "Phy";
+       LLVM_DEBUG(errs() << "Already physical register assigned idx:" << i << "  name:" << printReg(i, TRI) << "\n";
+       errs() << printRegUnit(i, TRI) << ' ' << *phyRange << "\n");
+      
+      std::string regClass = "Phy";
       std::string node_str =
           std::to_string(i) + " [label=\" {" + regClass + "} {0.00}";
       std::string reginfo;
@@ -2930,214 +2930,47 @@ void MLRA::dumpInterferenceGraph(MachineFunction &mf) {
       for (unsigned j = 0, ev = MRI->getNumVirtRegs(); j < ev; ++j) {
         unsigned Reg = Register::index2VirtReg(j);
         LiveInterval *VirtReg = &LIS->getInterval(Reg);
-        
+        LLVM_DEBUG(errs () << "%" << j << " under consideration\n");
         std::string regClass_vr = TRI->getRegClassName(MRI->getRegClass(VirtReg->reg));
         if (this->regClassSupported4_MLRA.find(regClass_vr) ==
             regClassSupported4_MLRA.end()) {
-          LLVM_DEBUG(errs() << "Register class(" << regClass_vr
+          LLVM_DEBUG(errs() << "%"<< j << " Register class(" << regClass_vr
                             << ") is not supported.\n");
           continue;
         }
-
+        
         if (Matrix->checkInterference(*VirtReg, i)) {
-          isInterfaced = true; 
-          edges = edges + std::to_string(i)+"--"+std::to_string(step + j)+ "\n";
+          LLVM_DEBUG(errs() << "Interference happened\n");
+          isInterfaced = true;
+          // edges = edges + TRI->getSubRegIndexName(i) + "--" +
+          //         std::to_string(j) + "\n";
+
+          edges = edges + std::to_string(i) + "--" + std::to_string(step + j) +
+                  "\n";
         }
+
+        LLVM_DEBUG(errs () << "\n");
       }
       if (isInterfaced){
         File << node_str << edges;
       }
-      errs () << "\n";
+      LLVM_DEBUG(errs () << "\n");
     }
   }
-  /*for (unsigned i = 1, e = TRI->getNumRegUnits(); i <= e; ++i) {
-    if (MRI->reg_nodbg_empty(i))
-      continue;
-
-    if (LiveRange *alreadyUsedReg = &LIS->getRegUnit(i)) {
-      LLVM_DEBUG(errs() << printRegUnit(i, TRI) << ' ' << *alreadyUsedReg
-                        << '\n');
-      if (Register::isPhysicalRegister(i)) {
-        LLVM_DEBUG(
-            errs() << "Already physical register assigned to Live interval of "
-                      "virtual reg "
-                   << i << " to " << printReg(i, TRI) << "\n");
-      } else {
-        llvm_unreachable("Should be a physical register at this point");
-        // LLVM_DEBUG(errs() << "Not valid phy reg = " << i << "\n\n");
-        // continue;
-      }
-      LLVM_DEBUG(errs() << "Reserved Unit : " << MRI->isReservedRegUnit(i)
-                        << "\n");
-      LLVM_DEBUG(errs() << "Used Phy reg :  " << MRI->isPhysRegUsed(i) << "\n");
-      std::string regClass = "Phy"; //
-TRI->getRegClassName(TRI->getRegClass(TRI->getRegSizeInBits(i,
-                                    // *MRI)));
-      LLVM_DEBUG(errs() << regClass << "\n");
-
-      // Check for the supported register class.
-      *bool isRegNotSupported = false;
-      if (this->regClassSupported4_MLRA.find(regClass) ==
-          regClassSupported4_MLRA.end()) {
-        errs() << "Register class(" << regClass << ") is not supported.\n";
-        // continue;
-        isRegNotSupported = true;
-      }/
-      bool is_atleastoneinstruction = false;
-
-      std::string node_str =
-          std::to_string(i) + " [label=\" {" + regClass + "} {0.00} ";
-      std::string reginfo;
-      unsigned color = 0 ;
-      unsigned preg = i;
-
-      if (this->target_PhyReg2ColorMap["X86"].find(preg) !=
-          this->target_PhyReg2ColorMap["X86"].end()) {
-        color = this->target_PhyReg2ColorMap["X86"][preg];
-      }
-
-      reginfo = " {PhyColor=" + std::to_string(color) +
-                ";PhyReg=" + std::to_string(preg) + "} ";
-      node_str = node_str + reginfo;
-
-      LLVM_DEBUG(alreadyUsedReg->print(dbgs()));
-      LLVM_DEBUG(dbgs() << "\n");
-
-      for (unsigned j = 0, ev = MRI->getNumVirtRegs(); j < ev; ++j) {
-        unsigned Reg = Register::index2VirtReg(j);
-        LiveInterval *VirtReg = &LIS->getInterval(Reg);
-       //MCRegUnitIterator Units(i, TRI);
-
-        //for (; Units.isValid(); ++Units) {
-        if(Matrix->checkInterference(*VirtReg, i)){
-            errs () << i << "--" << step +j << "\n";
-        }
-        //}
-      }
-      // ================================================================
-      * if (MRI->isLiveIn(preg)) {
-        LLVM_DEBUG(errs() << "Phy is live\n");
-        Register vr = MRI->getLiveInVirtReg(preg);
-        // LiveInterval *interLI = &LIS->getInterval(vr);
-        File << node_str + "\"];\n";
-        Register vr_index = Register::virtReg2Index(vr);
-        // if (alreadyUsedReg->overlaps(LIS->getInterval(vr)))
-        File << preg << " -- " << step + vr_index << ";\n";
-        is_atleastoneinstruction = true;
-      } else {
-        LLVM_DEBUG(errs() << "Phy is not live.\n");
-
-        node_str = node_str + "[";
-        for (auto &S : alreadyUsedReg->segments) {
-          for (SlotIndex I = S.start.getBaseIndex(), E = S.end.getBaseIndex();
-               I != E; I = I.getNextIndex()) {
-            auto *MIR = LIS->getInstructionFromIndex(I);
-            if (!MIR)
-              continue;
-            double *p;
-            p = getRandom();
-
-            std::ostringstream os;
-            for (int i = 0; i < 5; i++) {
-              os << *(p + i);
-              if (i < 4)
-                os << ", ";
-            }
-
-            std::string str(os.str());
-
-            // if(E != I.getNextIndex())
-            //  node_str = node_str + ", " + "\n";
-            if (!is_atleastoneinstruction) {
-              node_str = node_str + "[ " + str + " ]";
-            } else {
-              node_str = node_str + ", \n[ " + str + " ]";
-            }
-            is_atleastoneinstruction = true;
-          }
-        }
-        node_str = node_str + "]\"];\n";
-
-        if (is_atleastoneinstruction) {
-          LLVM_DEBUG(errs() << "segments are there so node included.\n");
-          File << node_str;
-
-          for (unsigned j = 0; j < MRI->getNumVirtRegs(); ++j) {
-            unsigned Reg1 = Register::index2VirtReg(j);
-            if (MRI->reg_nodbg_empty(Reg1))
-              continue;
-            // Support for interference for supportedRegister Only
-            // std::string regClass_j =
-            // TRI->getRegClassName(MRI->getRegClass(Reg1));
-            // if (this->regClassSupported4_MLRA.find(regClass_j) ==
-             //   regClassSupported4_MLRA.end()) {
-             // continue;
-           // }
-            if (alreadyUsedReg->overlaps(LIS->getInterval(Reg1)))
-              File << i << " -- " << step + j << ";\n";
-          }
-        }
-      }
-      // Special case
-      if (!is_atleastoneinstruction && MRI->isPhysRegUsed(i)) {
-        LLVM_DEBUG(errs() << "Preserved Unit Flow\n");
-        for (unsigned j = 0; j < MRI->getNumVirtRegs(); ++j) {
-          unsigned Reg1 = Register::index2VirtReg(j);
-          if (MRI->reg_nodbg_empty(Reg1))
-            continue;
-          // Support for interference for supportedRegister Only
-          // std::string regClass_j =
-          // TRI->getRegClassName(MRI->getRegClass(Reg1));
-          //if (this->regClassSupported4_MLRA.find(regClass_j) ==
-            //  regClassSupported4_MLRA.end()) {
-            // continue;
-//           }
-          // if (alreadyUsedReg->overlaps(LIS->getInterval(Reg1)))
-              if(Matrix->checkInterference(LIS->getInterval(Reg1), i){
-                errs() << i << " -- " << step + j << ";\n";
-
-              }
-               //MCRegUnitIterator Units(i, TRI);
-
-              for (; Units.isValid(); ++Units) {
-               // Instantiate a "subquery", not to be confused with the Queries
-array. LiveIntervalUnion::Query subQ(LIS->getInterval(Reg1),
-Matrix->getLiveUnions()[*Units]); if (subQ.checkInterference()){ errs() << i <<
-" -- " << step + j << ";\n"; break;
-               }
-             }
-            if (Matrix->query(alreadyUsedReg, i)
-                  .isSeenInterference(&LIS->getInterval(Reg1))) {
-            errs() << i << " -- " << step + j << ";\n";
-          }
-        }
-      }
-    }
-    LLVM_DEBUG(errs() << "\n");
-
-  }
-  LLVM_DEBUG(errs() << "RegUnit Already assigned end\n");*/
+  LLVM_DEBUG(errs () << "Interference for physical register ended ...\n");
 
   /*
    * Iterating over the virtual registers.
    *
    * */
+  LLVM_DEBUG(errs () << "Interference for virtaul register started ...\n");
   for (unsigned i = 0, e = MRI->getNumVirtRegs(); i < e; ++i) {
     unsigned Reg = Register::index2VirtReg(i);
     LiveInterval *VirtReg = &LIS->getInterval(Reg);
     if (MRI->reg_nodbg_empty(Reg))
       continue;
-    // Check for already allocated register
-    /*bool isPhyReg = false;
-    if (Register::isPhysicalRegister(Reg)) {
-      errs() << "Already physical register assigned to Live interval of "
-                "virtual reg "
-             << i << " to " << printReg(Reg, TRI) << "\n";
-      // continue;
-      isPhyReg = true;
-    }*/
     // Check for the supported register class.
-    bool isRegNotSupported = false;
+    // bool isRegNotSupported = false;
     std::string regClass = TRI->getRegClassName(MRI->getRegClass(VirtReg->reg));
     if (this->regClassSupported4_MLRA.find(regClass) ==
         regClassSupported4_MLRA.end()) {
@@ -3166,10 +2999,10 @@ Matrix->getLiveUnions()[*Units]); if (subQ.checkInterference()){ errs() << i <<
 
     LLVM_DEBUG(VirtReg->print(dbgs()));
     LLVM_DEBUG(dbgs() << "\n");
-#if PRINT_MRI_INST
-    VirtReg->print(File);
-    File << VirtReg->overlaps(LIS->getInterval(Reg));
-#endif
+    #if PRINT_MRI_INST
+        VirtReg->print(File);
+        File << VirtReg->overlaps(LIS->getInterval(Reg));
+    #endif
     node_str = node_str + "[";
     for (auto &S : VirtReg->segments) {
       for (SlotIndex I = S.start.getBaseIndex(), E = S.end.getBaseIndex();
@@ -3177,9 +3010,9 @@ Matrix->getLiveUnions()[*Units]); if (subQ.checkInterference()){ errs() << i <<
         auto *MIR = LIS->getInstructionFromIndex(I);
         if (!MIR)
           continue;
-#if PRINT_MRI_INST
-        MIR->print(File);
-#endif
+        #if PRINT_MRI_INST
+          MIR->print(File);
+        #endif
         double *p;
         p = getRandom();
 
@@ -3192,8 +3025,6 @@ Matrix->getLiveUnions()[*Units]); if (subQ.checkInterference()){ errs() << i <<
 
         std::string str(os.str());
 
-        // if(E != I.getNextIndex())
-        //  node_str = node_str + ", " + "\n";
         if (!is_atleastoneinstruction) {
           node_str = node_str + "[ " + str + " ]";
         } else {
@@ -3224,10 +3055,12 @@ Matrix->getLiveUnions()[*Units]); if (subQ.checkInterference()){ errs() << i <<
     }
   }
   File << "}";
-  LLVM_DEBUG(dbgs() << "\n\nSlot Indexes\n\n");
+  LLVM_DEBUG(errs() << "\nFinish dumping and some stats after it. \n");
+  LLVM_DEBUG(dbgs() << "\n***********Slot Indexes***********\n");
   LLVM_DEBUG(LIS->getSlotIndexes()->dump());
-  LLVM_DEBUG(dbgs() << "\n\nComplete\n\n");
+  LLVM_DEBUG(dbgs() << "\n************LSI **************\n");
   LLVM_DEBUG(LIS->print(dbgs()));
+  LLVM_DEBUG(errs() << "\ndumpInterference() call ended.\n");
 }
 
 unsigned MLRA::getPhyRegForColor(LiveInterval &VirtReg, unsigned color,
@@ -3575,29 +3408,13 @@ void MLRA::allocatePhysRegsViaRL() {
 }
 
 bool MLRA::runOnMachineFunction(MachineFunction &mf) {
-  LLVM_DEBUG(dbgs() << "********** ML REGISTER ALLOCATION **********\n"
+    LLVM_DEBUG(dbgs() << "********** ML REGISTER ALLOCATION **********\n"
                     << "********** Function: " << mf.getName() << '\n');
-  FuntionCounter++;
-  // ---------------------- Dump Dot -----------------------------//
-  if (enable_dump_ig_dot) {
-    dumpInterferenceGraph(mf);
-  }
-  // ---------------------- Dump Dot Finished -----------------------------//
-
-  // --------------------------- Map c to p Kickstart ---------------------//
-  if (enable_experimental_mlra &&
-      this->FunctionVirtRegToColorMap.find(mf.getName()) !=
-          this->FunctionVirtRegToColorMap.end()) {
+    FuntionCounter++;
     MF = &mf;
-    // Get the information regarding intruction in targert machine
-    // ie. X86 register
-    // TODO : How many register are present and we can use
     TRI = MF->getSubtarget().getRegisterInfo();
-    // Information regarding the instruction set of the target means the asm
     TII = MF->getSubtarget().getInstrInfo();
-    // RCI -> RegisterClassInfo
     RCI.runOnMachineFunction(mf);
-#if 1
     EnableLocalReassign =
         EnableLocalReassignment || MF->getSubtarget().enableRALocalReassignment(
                                        MF->getTarget().getOptLevel());
@@ -3606,7 +3423,6 @@ bool MLRA::runOnMachineFunction(MachineFunction &mf) {
         ConsiderLocalIntervalCost.getNumOccurrences()
             ? ConsiderLocalIntervalCost
             : MF->getSubtarget().enableAdvancedRASplitCost();
-#endif
 
     if (VerifyEnabled)
       MF->verify(this, "Before mlra");
@@ -3630,8 +3446,8 @@ bool MLRA::runOnMachineFunction(MachineFunction &mf) {
     LLVM_DEBUG(LIS->dump());
 
     SpillerInstance.reset(createInlineSpiller(*this, *MF, *VRM));
-// Support for Greedy
-#if 1
+    
+    // Support for Greedy
     SA.reset(new SplitAnalysis(*VRM, *LIS, *Loops));
     SE.reset(new SplitEditor(*SA, *AA, *LIS, *VRM, *DomTree, *MBFI));
     ExtraRegInfo.clear();
@@ -3641,33 +3457,40 @@ bool MLRA::runOnMachineFunction(MachineFunction &mf) {
     GlobalCand.resize(32); // This will grow as needed.
     SetOfBrokenHints.clear();
     LastEvicted.clear();
-#endif
     // Support for Greedy
 
     // Point of change
-    allocatePhysRegsViaRL();
-#if 1
+    if(enable_dump_ig_dot){
+        LLVM_DEBUG(errs () << "\n******************* Dump the graphs (START)*************************** \n\n");
+        dumpInterferenceGraph();
+        LLVM_DEBUG(errs () << "\n******************* Dump the graphs (END)*************************** \n\n");
+    } 
+    
+    if (enable_experimental_mlra &&
+      this->FunctionVirtRegToColorMap.find(mf.getName()) !=
+          this->FunctionVirtRegToColorMap.end()) {
+      LLVM_DEBUG(errs () << "********************************* Running ML allocatePhysRegsViaRL() (START)**********************\n");
+      allocatePhysRegsViaRL();
+      LLVM_DEBUG(errs () << "********************************* Running ML allocatePhysRegsViaRL() (END)**********************\n");
+    } else {
+      errs() << "Running LLVM Greedy allocatePhyReg as Function not present or MLRA is not "
+            "enabled.\n";
+      allocatePhysRegs();
+    } 
     tryHintsRecoloring();
-#endif
     postOptimization();
-
+    
     LLVM_DEBUG(errs() << "Post alloc VirtRegMap:\n" << *VRM << "\n");
-
     reportNumberOfSplillsReloads();
-
     releaseMemory();
     MF->verify(this, "After mlra.");
     return true;
-  }
-  // --------------------------- Map c to p Goal Acheived
-  // ---------------------//
-
-  errs() << "Running LLVM Greedy as Function not present or MLRA is not "
-            "enabled.\n";
 
   // Code for greedy ra is below in case of
   // some egdes use-case and for the sake of compleleness
-  //
+#if 0
+  errs() << "Running LLVM Greedy as Function not present or MLRA is not "
+            "enabled.\n";
   MF = &mf;
   TRI = MF->getSubtarget().getRegisterInfo();
   TII = MF->getSubtarget().getInstrInfo();
@@ -3721,4 +3544,5 @@ bool MLRA::runOnMachineFunction(MachineFunction &mf) {
 
   releaseMemory();
   return true;
+#endif
 }

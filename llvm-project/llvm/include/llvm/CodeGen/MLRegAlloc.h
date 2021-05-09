@@ -349,7 +349,7 @@ class MLRA : public MachineFunctionPass,
 
   std::map<std::string, std::map<std::string, int64_t>>
       FunctionVirtRegToColorMap;
-  
+
   std::map<std::string, std::map<int64_t, int64_t>> target_Color2PhyRegMap;
   std::map<std::string, std::map<int64_t, int64_t>> target_PhyReg2ColorMap;
 
@@ -511,7 +511,8 @@ private:
                           SmallVectorImpl<unsigned> &SplitVRegs);
 
   // Logic to dump the dot
-  void dumpInterferenceGraph(MachineFunction &mf);
+  // void dumpInterferenceGraph(MachineFunction &mf);
+  void dumpInterferenceGraph();
 
   // Custom RL allocator
   void allocatePhysRegsViaRL();
@@ -523,10 +524,12 @@ private:
   unsigned getPhyRegForColor(LiveInterval &VirtReg, unsigned color,
                              SmallVector<unsigned, 4> &SplitVRegs);
 
-  std::set<std::string> regClassSupported4_MLRA = {"GR8", "GR16", "GR32","GR64"};
+  std::set<std::string> regClassSupported4_MLRA = {"GR8", "GR16", "GR32",
+                                                   "GR64"};
 
-  std::map<std::string, std::map<std::string, int64_t>> setPredictionFromFile(std::string pred_file){
-    assert(pred_file !="" && "Path is empty.");
+  std::map<std::string, std::map<std::string, int64_t>>
+  setPredictionFromFile(std::string pred_file) {
+    assert(pred_file != "" && "Path is empty.");
     LLVM_DEBUG(errs() << pred_file << "\n");
     std::ifstream predColorFile(pred_file);
     std::string jsonString;
@@ -559,11 +562,11 @@ private:
           }
         }
       }
-    }  
-  return this->FunctionVirtRegToColorMap;
+    }
+    return this->FunctionVirtRegToColorMap;
   }
-  
-  void loadTargetRegisterConfig(std::string config_colorMap){
+
+  void loadTargetRegisterConfig(std::string config_colorMap) {
     assert(config_colorMap != "" && "Path is empty");
     LLVM_DEBUG(errs() << config_colorMap << "\n");
     std::ifstream targert_color2reg_file(config_colorMap);
@@ -615,17 +618,16 @@ private:
       }
     }
   }
-  
+
   /**
    * set the prediction map
    * { FunNme = {Reg : color }}
-   * 
+   *
    * */
   void setPrediction(std::map<std::string, std::map<std::string, int64_t>>
-      FunctionVirtRegToColorMap){
-          this->FunctionVirtRegToColorMap = FunctionVirtRegToColorMap;
+                         FunctionVirtRegToColorMap) {
+    this->FunctionVirtRegToColorMap = FunctionVirtRegToColorMap;
   }
-
 };
 
 FunctionPass *createMLRegisterAllocator();
