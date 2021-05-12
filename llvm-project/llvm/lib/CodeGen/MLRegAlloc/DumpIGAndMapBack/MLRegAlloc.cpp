@@ -2901,27 +2901,32 @@ void MLRA::dumpInterferenceGraph() {
   File << "Function=\"" << MF->getName() << "\";\n";
 
   File << "Registers=" << TRI->getNumRegUnits() << ";\n";
-  //SmallVector<LiveRange *> physRegLR;
-  for (unsigned i = 0, e = MRI->getNumVirtRegs(); i != e; ++i)
-  { unsigned Reg = Register::index2VirtReg(i);
+  // SmallVector<LiveRange *> physRegLR;
+  for (unsigned i = 0, e = MRI->getNumVirtRegs(); i != e; ++i) {
+    unsigned Reg = Register::index2VirtReg(i);
     LIS->getInterval(Reg);
   }
-  for (unsigned i = 1, e = TRI->getNumRegUnits(); i != e; ++i){
+  for (unsigned i = 1, e = TRI->getNumRegUnits(); i != e; ++i) {
     LIS->getRegUnit(i);
   }
 
-  
-  LLVM_DEBUG(errs() << "Dumping LIS after interating over allover and before pr -- vr interference check\n");
+  LLVM_DEBUG(errs() << "Dumping LIS after interating over allover and before "
+                       "pr -- vr interference check\n");
   LLVM_DEBUG(LIS->dump());
   unsigned step = TRI->getNumRegUnits() + 1;
-  for (unsigned i = 1, e = TRI->getNumRegUnits(); i <= e; ++i) {
-    if (MRI->reg_nodbg_empty(i))
-      continue;
-  LLVM_DEBUG(errs() << "Dumping LIS before Live Range check -- vr interference check\n");
-    LLVM_DEBUG(LIS->dump());
+  for (unsigned i = 1, e = TRI->getNumRegUnits(); i != e; ++i) {
+    // if (MRI->reg_nodbg_empty(i))
+    //   continue;
+    errs() << "Starting to process - " << printRegUnit(i, TRI) << "\n";
+    LLVM_DEBUG(
+        errs()
+        << "Dumping LIS before Live Range check -- vr interference check\n");
+    // LLVM_DEBUG(LIS->dump());
     if (LiveRange *phyRange = LIS->getCachedRegUnit(i)) {
-  LLVM_DEBUG(errs() << "Dumping LIS After Live Range check -- vr interference check\n");
-     LLVM_DEBUG(LIS->dump());
+      LLVM_DEBUG(
+          errs()
+          << "Dumping LIS After Live Range check -- vr interference check\n");
+      // LLVM_DEBUG(LIS->dump());
       LLVM_DEBUG(errs() << "Already physical register assigned idx:" << i
                         << "  name:" << printReg(i, TRI) << "\n";
                  errs() << printRegUnit(i, TRI) << ' ' << *phyRange << "\n");
@@ -2956,7 +2961,6 @@ void MLRA::dumpInterferenceGraph() {
                             << ") is not supported.\n");
           continue;
         }
-        
 
         if (Matrix->checkInterference(*VirtReg, i)) {
           LLVM_DEBUG(errs() << "Interference happened\n");
@@ -2978,7 +2982,9 @@ void MLRA::dumpInterferenceGraph() {
   }
   LLVM_DEBUG(errs() << "Interference for physical register ended ...\n");
 
-  LLVM_DEBUG(errs() << "Dumping LIS AFTER pr -- vr & before vr -- vr interference check\n");
+  LLVM_DEBUG(
+      errs()
+      << "Dumping LIS AFTER pr -- vr & before vr -- vr interference check\n");
   LLVM_DEBUG(LIS->dump());
   /*
    * Iterating over the virtual registers.
@@ -3294,8 +3300,10 @@ void MLRA::allocatePhysRegsViaRL() {
       } else if (MI) {
         LLVMContext &Context =
             MI->getParent()->getParent()->getMMI().getModule()->getContext();
+        errs() << "Emitting error here1\n ";
         Context.emitError("ran out of registers during register allocation");
       } else {
+        errs() << "Emitting error here2\n ";
         report_fatal_error("ran out of registers during register allocation");
       }
       LLVM_DEBUG(
@@ -3381,8 +3389,10 @@ void MLRA::allocatePhysRegsViaRL() {
       } else if (MI) {
         LLVMContext &Context =
             MI->getParent()->getParent()->getMMI().getModule()->getContext();
+        errs() << "Emitting error here3\n ";
         Context.emitError("ran out of registers during register allocation");
       } else {
+        errs() << "Emitting error here4\n ";
         report_fatal_error("ran out of registers during register allocation");
       }
       LLVM_DEBUG(
