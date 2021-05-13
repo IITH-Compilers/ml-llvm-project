@@ -115,6 +115,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeWinEHPreparePass(Registry);
   initializeXRayInstrumentationPass(Registry);
   initializeMLRAPass(Registry);
+  initializeMLRABasicPass(Registry);
 }
 
 void LLVMInitializeCodeGen(LLVMPassRegistryRef R) {
