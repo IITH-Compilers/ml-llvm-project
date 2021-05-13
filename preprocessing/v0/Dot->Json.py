@@ -8,6 +8,7 @@ import os
 import threading
 import numpy as np
 GRAPH_DIR=sys.argv[1]
+MODE=sys.argv[2]
 
 
 mutex=threading.Lock()
@@ -33,9 +34,13 @@ def mapfiles(files):
             d2j = Dot2Json()
             graph = d2j.dot_to_json(dotPath)
             #mutex.release()
-            if len(graph['nodes']) ==0 or  len(graph['nodes']) > 1000:
+            if len(graph['nodes']) ==0  :
                 # print('File not included for json : {}'.format(dotPath))
                 continue
+            if MODE  == "train":
+                if len(graph['nodes']) > 1000:
+                    continue
+
             name = (dotPath.split('/')[-1]).split('.dot')[0]
 #           print(name)
             with open(os.path.join(JSON_DIR, '{}.json'.format(name)), 'w') as f:
