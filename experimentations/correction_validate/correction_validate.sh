@@ -13,10 +13,10 @@ INP_DIR=$1
 [[ ! -d ${INP_DIR} ]] && echo "Input directory does not exist" && exit
 INP_DIR=`realpath ${INP_DIR}`
 
-IP_FLR_NAME=level-O0-llfiles
-# IP_FLR_NAME=execute
-# INP_TYPE=src
-INP_TYPE=llfiles
+# IP_FLR_NAME=level-O0-llfiles
+IP_FLR_NAME=execute
+INP_TYPE=src
+# INP_TYPE=llfiles
 
 USE_MCA=
 # USE_MCA=" -use-mca "
@@ -37,6 +37,9 @@ elif [ ${MODEL} == "mlbasicra" ];
 then
     declare -A ra_flags=([dump]="-ml-basicra-dump-ig-dot" [exp]="-ml-basicra-experimental" [pred]="-ml-basicra-pred-file")
 elif [ ${MODEL} == "greedy" ];
+then
+    declare -A ra_flags=([dump]="" [exp]="" [pred]="")
+elif [ ${MODEL} == "basic" ];
 then
     declare -A ra_flags=([dump]="" [exp]="" [pred]="")
 else
