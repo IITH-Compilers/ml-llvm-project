@@ -3090,6 +3090,7 @@ void MLRA::dumpInterferenceGraph() {
       File << this->graph;
   }
   else {
+    this->graph = "";
     errs () << MF->getName() << " *********No Interference graph created*******\n";
   }
   // File << "}";

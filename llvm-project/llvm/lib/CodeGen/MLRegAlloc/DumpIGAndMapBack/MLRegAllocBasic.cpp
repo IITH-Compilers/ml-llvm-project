@@ -476,7 +476,8 @@ void MLRABasic::dumpInterferenceGraph() {
       File << this->graph;
   }
   else {
-    errs () << MF->getName() << "*********No Interference graph created*******\n";
+    this->graph = "";
+    errs () << MF->getName() << " *********No Interference graph created*******\n";
   }
   // File << "}";
   LLVM_DEBUG(errs() << "\nFinish dumping and some stats after it. \n");
