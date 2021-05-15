@@ -14,10 +14,14 @@ INP_DIR=$1
 INP_DIR=`realpath ${INP_DIR}`
 
 # IP_FLR_NAME=level-O0-llfiles
-IP_FLR_NAME=execute
+# IP_FLR_NAME=execute
+# IP_FLR_NAME=execute_greedy_filter_timeout
+IP_FLR_NAME=execute_basic_filter_timeout
 INP_TYPE=src
 # INP_TYPE=llfiles
+[[ ! -d ${INP_DIR}/${IP_FLR_NAME} ]] && echo "Input directory does not exist : ${INP_DIR}/${IP_FLR_NAME}" && exit
 
+echo "Data read from folder : ${INP_DIR}/${IP_FLR_NAME}"
 USE_MCA=
 # USE_MCA=" -use-mca "
 TIME_OUT= # "timeout --kill-after=2m 2m "
@@ -179,7 +183,7 @@ if [ ${INP_TYPE} == "llfiles" ];
 then   
  INP_REGEX=*.ll
  for d in ${INP_DIR}/${IP_FLR_NAME}/*.ll; do 
-          generate "$d" " " &
+          generate "$d" " " # &
           pids[${i}]=$!
  done 
 # wait for all pids
@@ -204,7 +208,7 @@ then
     for d in $(find ${INP_DIR}/${IP_FLR_NAME} -name "*.c");
     do 
      # echo "INCLUDES Header path : ${INCLUDE_F}" 
-      generate "$d" "${INCLUDE_F}" & 
+      generate "$d" "${INCLUDE_F}" # & 
       pids[${i}]=$!
     done  
 # wait for all pids

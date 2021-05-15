@@ -117,6 +117,8 @@ class MLRABasic : public MachineFunctionPass,
 
   bool LRE_CanEraseVirtReg(unsigned) override;
   void LRE_WillShrinkVirtReg(unsigned) override;
+  std::string graph;
+  std::map<std::string, std::string> Function2Graphs;
 
 public:
   MLRABasic();
@@ -174,6 +176,13 @@ public:
 
     return r;
   }
+  std::string &getGraph(){
+    return graph;
+  }
+
+  std::map<std::string, std::string> &getGraphsForFunctions(){
+    return Function2Graphs;
+  }
 
   // Logic to dump the dot
   // void dumpInterferenceGraph(MachineFunction &mf);
@@ -197,7 +206,11 @@ public:
     assert(pred_file != "" && "Path is empty.");
     LLVM_DEBUG(errs() << pred_file << "\n");
     std::ifstream predColorFile(pred_file);
-    std::string jsonString;
+    if(predColorFile.fail()){
+        errs () << "setPredictionFromFile- file does not exist at the location " << pred_file << "\n";
+        return this->FunctionVirtRegToColorMap;
+    }
+std::string jsonString;
     jsonString.assign((std::istreambuf_iterator<char>(predColorFile)),
                       (std::istreambuf_iterator<char>()));
     // LLVM_DEBUG(errs() << jsonString << "\n");

@@ -14,10 +14,10 @@ echo "Input data directory path: ${INP_DIR}"
 [[ ! -d ${INP_DIR} ]] && echo "Input directory does not exist" && exit
 INP_DIR=`realpath ${INP_DIR}`
 
-# IP_FLR_NAME=level-O0-llfiles
-IP_FLR_NAME=execute
-#INP_TYPE=llfiles
-INP_TYPE="src"
+IP_FLR_NAME=level-O0-llfiles
+# IP_FLR_NAME=execute
+INP_TYPE=llfiles
+# INP_TYPE="src"
 
 # WD=${INP_DIR}/G_O3_3
 # echo "${WD}: Run to check the effect of added new ID if loopid not found in rdg on data"

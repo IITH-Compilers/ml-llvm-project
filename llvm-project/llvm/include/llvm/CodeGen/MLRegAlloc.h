@@ -92,7 +92,7 @@ class MLRA : public MachineFunctionPass,
 
   // context
   MachineFunction *MF;
-  int FuntionCounter = 0;
+  int FunctionCounter = 0;
   // Shortcuts to some useful interface.
   const TargetInstrInfo *TII;
   const TargetRegisterInfo *TRI;
@@ -352,11 +352,12 @@ class MLRA : public MachineFunctionPass,
 
   std::map<std::string, std::map<int64_t, int64_t>> target_Color2PhyRegMap;
   std::map<std::string, std::map<int64_t, int64_t>> target_PhyReg2ColorMap;
-
+  std::string graph;
+  std::map<std::string, std::string> Function2Graphs;
 public:
   MLRA();
   MLRA(DenseMap<unsigned, unsigned> VirtRegToColor);
-
+  
   /// Return the pass name.
   StringRef getPassName() const override { return "Greedy Register Allocator"; }
 
@@ -390,6 +391,15 @@ public:
 
     return r;
   }
+  
+  std::string &getGraph(){
+    return graph;
+  }
+
+  std::map<std::string, std::string> &getGraphsForFunctions(){
+    return Function2Graphs;
+  }
+
 
   static char ID;
 
@@ -532,6 +542,10 @@ private:
     assert(pred_file != "" && "Path is empty.");
     LLVM_DEBUG(errs() << pred_file << "\n");
     std::ifstream predColorFile(pred_file);
+    if(predColorFile.fail()){
+        errs () << "setPredictionFromFile- file does not exist at the location " << pred_file << "\n";
+        return this->FunctionVirtRegToColorMap;
+    }
     std::string jsonString;
     jsonString.assign((std::istreambuf_iterator<char>(predColorFile)),
                       (std::istreambuf_iterator<char>()));

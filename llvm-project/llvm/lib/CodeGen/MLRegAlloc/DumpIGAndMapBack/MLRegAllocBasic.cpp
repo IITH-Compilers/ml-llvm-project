@@ -264,29 +264,11 @@ void MLRABasic::dumpInterferenceGraph() {
   // getAnalysis<MachineLoopInfo>(),
   //                               getAnalysis<MachineBlockFrequencyInfo>());
 
-  StringRef moduleName = MF->getFunction().getParent()->getName();
-  if (llvm::sys::path::is_relative(moduleName)) {
-    SmallString<1024> temp = moduleName;
-    llvm::sys::fs::make_absolute(temp);
-    moduleName = StringRef(temp);
-  }
-  std::string absmoduleName = moduleName.str();
-
-  std::string input_fileName =
-      absmoduleName.substr(absmoduleName.rfind('/') + 1);
-
-  std::error_code EC;
-  raw_fd_ostream File(input_fileName + "_F" + std::to_string(FunctionCounter) +
-                          ".dot",
-                      EC, sys::fs::F_Text);
 
   // LLVM_DEBUG(LIS->dump());
 
-  File << "graph G {\n";
-  File << "FileName=\"" << absmoduleName << "\";\n";
-  File << "Function=\"" << MF->getName() << "\";\n";
 
-  File << "Registers=" << TRI->getNumRegUnits() << ";\n";
+  std::string nodes = "";
   // SmallVector<LiveRange *> physRegLR;
   for (unsigned i = 0, e = MRI->getNumVirtRegs(); i != e; ++i) {
     unsigned Reg = Register::index2VirtReg(i);
@@ -303,7 +285,7 @@ void MLRABasic::dumpInterferenceGraph() {
   for (unsigned i = 1, e = TRI->getNumRegUnits(); i != e; ++i) {
     // if (MRI->reg_nodbg_empty(i))
     //   continue;
-    errs() << "Starting to process - " << printRegUnit(i, TRI) << "\n";
+    LLVM_DEBUG(errs() << "Starting to process - " << printRegUnit(i, TRI) << "\n");
     LLVM_DEBUG(
         errs()
         << "Dumping LIS before Live Range check -- vr interference check\n");
@@ -361,7 +343,7 @@ void MLRABasic::dumpInterferenceGraph() {
         LLVM_DEBUG(errs() << "\n");
       }
       if (isInterfaced) {
-        File << node_str << edges;
+        nodes = nodes +  node_str  +  edges;
       }
       LLVM_DEBUG(errs() << "\n");
     }
@@ -383,40 +365,30 @@ void MLRABasic::dumpInterferenceGraph() {
     if (MRI->reg_nodbg_empty(Reg))
       continue;
     // Check for the supported register class.
-    // bool isRegNotSupported = false;
     std::string regClass = TRI->getRegClassName(MRI->getRegClass(VirtReg->reg));
     if (this->regClassSupported4_MLRA.find(regClass) ==
         regClassSupported4_MLRA.end()) {
       LLVM_DEBUG(errs() << "Register class(" << regClass
                         << ") is not supported.\n");
       continue;
-      // isRegNotSupported = true;
     }
     bool is_atleastoneinstruction = false;
     int node_id = step + i;
     std::string node_str = std::to_string(node_id) + " [label=\" {" + regClass +
                            "} {" + std::to_string(VirtReg->weight) + "} ";
     std::string reginfo;
-    /*if (isRegNotSupported) {
-      unsigned color =0;
-      unsigned preg = VRM->hasPhys(VirtReg->reg);
-      if (this->target_PhyReg2ColorMap["X86"].find(preg) !=
-    this->target_PhyReg2ColorMap["X86"].end()){
-      color=this->target_PhyReg2ColorMap["X86"][preg];
-      }
-      reginfo = " {Vir=" + std::to_string(color) + "="+std::to_string(preg)+"}
-    "; } else { reginfo = " {Vir} ";
-    }*/
     reginfo = " {Vir} ";
     node_str = node_str + reginfo;
 
     LLVM_DEBUG(VirtReg->print(dbgs()));
     LLVM_DEBUG(dbgs() << "\n");
 #if PRINT_MRI_INST
-    VirtReg->print(File);
-    File << VirtReg->overlaps(LIS->getInterval(Reg));
+    // VirtReg->print(File);
+    // File << VirtReg->overlaps(LIS->getInterval(Reg));
 #endif
-    node_str = node_str + "[";
+    std::string segmentInst="";
+    if (!VirtReg->segments.empty()){
+    // node_str = node_str + "[";
     for (auto &S : VirtReg->segments) {
       for (SlotIndex I = S.start.getBaseIndex(), E = S.end.getBaseIndex();
            I != E; I = I.getNextIndex()) {
@@ -424,7 +396,7 @@ void MLRABasic::dumpInterferenceGraph() {
         if (!MIR)
           continue;
 #if PRINT_MRI_INST
-        MIR->print(File);
+        // MIR->print(File);
 #endif
         double *p;
         p = getRandom();
@@ -439,18 +411,19 @@ void MLRABasic::dumpInterferenceGraph() {
         std::string str(os.str());
 
         if (!is_atleastoneinstruction) {
-          node_str = node_str + "[ " + str + " ]";
+          segmentInst = segmentInst + "[ " + str + " ]";
         } else {
-          node_str = node_str + ", \n[ " + str + " ]";
+          segmentInst = segmentInst + ", \n[ " + str + " ]";
         }
         is_atleastoneinstruction = true;
       }
     }
-    node_str = node_str + "]\"];\n";
-
+    //node_str = node_str + "]\"];\n";
+    }
     if (is_atleastoneinstruction) {
-      File << node_str;
-
+      node_str = node_str + "[" + segmentInst +"]\"];\n";
+      //File << node_str;
+      std::string edges = "";
       for (unsigned j = i + 1; j < MRI->getNumVirtRegs(); ++j) {
         unsigned Reg1 = Register::index2VirtReg(j);
         if (MRI->reg_nodbg_empty(Reg1))
@@ -461,14 +434,51 @@ void MLRABasic::dumpInterferenceGraph() {
             regClassSupported4_MLRA.end()) {
           continue;
         }
+        std::string edge = "";
         if (VirtReg->overlaps(LIS->getInterval(Reg1))) {
-          File << node_id << " -- " << j + step << ";\n";
-          LLVM_DEBUG(errs() << node_id - step << " -- " << j << "\n");
+          edge= std::to_string(node_id) +" -- " + std::to_string(j+step) + ";\n";
+          //File << node_id << " -- " << j + step << ";\n";
+          LLVM_DEBUG(errs() << edge << "\n");
+          edges = edges + edge;
         }
       }
+      if(edges != ""){
+         node_str = node_str + edges;
+      }
+    } else {
+     node_str =node_str  + "\"];\n";
     }
+  nodes= nodes+node_str;
   }
-  File << "}";
+  
+  if (nodes != ""){ 
+          std::string funName = MF->getName();
+      StringRef moduleName = MF->getFunction().getParent()->getName();
+      if (llvm::sys::path::is_relative(moduleName)) {
+        SmallString<1024> temp = moduleName;
+        llvm::sys::fs::make_absolute(temp);
+        moduleName = StringRef(temp);
+      }
+      std::string absmoduleName = moduleName.str();
+
+      std::string input_fileName =
+          absmoduleName.substr(absmoduleName.rfind('/') + 1);
+
+      std::error_code EC;
+      raw_fd_ostream File(input_fileName + "_F" + std::to_string(FunctionCounter) +
+                              ".dot",
+                          EC, sys::fs::F_Text);
+      this->graph = "graph G {\nFileName=\"" + absmoduleName + "\";\nFunction=\"" 
+              + funName + "\";\n" + "Registers=" + std::to_string(TRI->getNumRegUnits()) + ";\n";
+
+      this->graph = this->graph + nodes + "}"; 
+      this->Function2Graphs[funName] = this->graph;
+      File << this->graph;
+  }
+  else {
+    errs () << MF->getName() << "*********No Interference graph created*******\n";
+  }
+  // File << "}";
   LLVM_DEBUG(errs() << "\nFinish dumping and some stats after it. \n");
   LLVM_DEBUG(dbgs() << "\n***********Slot Indexes***********\n");
   LLVM_DEBUG(LIS->getSlotIndexes()->dump());
