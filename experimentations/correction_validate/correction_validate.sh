@@ -19,9 +19,12 @@ INP_DIR=`realpath ${INP_DIR}`
 IP_FLR_NAME=execute_basic_filter_timeout
 INP_TYPE=src
 # INP_TYPE=llfiles
-[[ ! -d ${INP_DIR}/${IP_FLR_NAME} ]] && echo "Input directory does not exist : ${INP_DIR}/${IP_FLR_NAME}" && exit
 
-echo "Data read from folder : ${INP_DIR}/${IP_FLR_NAME}"
+SRCH_FLR=${INP_DIR}/${IP_FLR_NAME}
+
+[[ ! -d ${SRCH_FLR} ]] && echo "Input directory does not exist : ${SRCH_FLR}" && exit
+
+echo "Data read from folder : ${SRCH_FLR}"
 USE_MCA=
 # USE_MCA=" -use-mca "
 TIME_OUT= # "timeout --kill-after=2m 2m "
@@ -106,8 +109,8 @@ fi
 
 MODEL_DUMP_ARGS=" ${RA_ACTIVATED} ${DUMP_ARGS} "
 MODEL_EXPT_ARGS=" ${RA_ACTIVATED} ${EXPT_ARGS} "
-echo "${MODEL_DUMP_ARGS}"
-echo "${MODEL_EXPT_ARGS}"
+echo "Dump flags: ${MODEL_DUMP_ARGS}"
+echo "Enable allocator flags ${MODEL_EXPT_ARGS}"
 echo "Opt. Pass seq used to generate data : ${OPT_PASSES_SEQ}"
 
 
@@ -153,14 +156,23 @@ INCLUDE_FILE="$2"
             if [ -f dev.out ];
             then
                 objdump -S dev.out > objdump 
-                valgrind --log-file=valgrindDump ./dev.out > output &
+                valgrind --log-file=valgrindDump ./dev.out > output #&
                 wait $!
                 # valgrind --log-fd=9 9>>test.log ./app
                 if [ $? == 0 ];
                 then
-                 ./dev.out > output
-                 echo "SUCCESS: Semantic not Sure" > RUNTIME_SUCCESS
-                else
+                   ./dev.out > output
+                   echo "SUCCESS: Semantic not Sure" > RUNTIME_SUCCESS
+                   ${TIME_OUT} ${LLVM_BUILD}/bin/clang ${INCLUDE_FILE} ${OPT_PASSES_SEQ}  ${d} -o baseline.out  &> /dev/null
+                   ./baseline.out  &>   output_baseline
+                   compare=$(diff output output_baseline)
+                   if [ $? -eq 0 ]
+                   then
+                           echo "$compare" > SEMANTIC_CORRECT
+                   else
+                       echo "$compare" > SEMANTIC_INCORRECT
+                   fi
+                 else
                    # echo "$d"
                   echo "RUNTIME ERORR : $?" > RUNTIME_ERROR
                 fi
@@ -182,7 +194,7 @@ INCLUDE_FILE="$2"
 if [ ${INP_TYPE} == "llfiles" ];
 then   
  INP_REGEX=*.ll
- for d in ${INP_DIR}/${IP_FLR_NAME}/*.ll; do 
+ for d in ${SRCH_FLR}/*.ll; do 
           generate "$d" " " # &
           pids[${i}]=$!
  done 
@@ -196,8 +208,8 @@ elif [ ${INP_TYPE} == "src" ];
 then
     INP_REGEX="*.c"
     INCLUDES=""
-    echo "files directory : ${INP_DIR}/${IP_FLR_NAME}"
-    for dir in $(find ${INP_DIR}/${IP_FLR_NAME} -type d);
+    echo "files directory : ${SRCH_FLR}"
+    for dir in $(find ${SRCH_FLR} -type d);
     do
      INCLUDES+=" -I ${dir}"
      echo "Working  ${INCLUDES}"
@@ -205,7 +217,7 @@ then
     echo "INCLUDES Header path : ${INCLUDES}" 
      INCLUDE_F="${INCLUDES}"
      
-    for d in $(find ${INP_DIR}/${IP_FLR_NAME} -name "*.c");
+    for d in $(find ${SRCH_FLR} -name "*.c");
     do 
      # echo "INCLUDES Header path : ${INCLUDE_F}" 
       generate "$d" "${INCLUDE_F}" # & 
@@ -238,7 +250,7 @@ echo ""
 }
 
 (echo "************* ${INP_TYPE} USED **************" 
-files=(`find ${INP_DIR}/${IP_FLR_NAME} -name "${INP_REGEX}"`)
+files=(`find ${SRCH_FLR} -name "${INP_REGEX}"`)
 files_num=${#files[@]}
 echo "files : ${files_num}"
 echo "") >> ${BENCHMARK_NAME}/run.stats
@@ -251,14 +263,16 @@ echo "") >> ${BENCHMARK_NAME}/run.stats
 
 printStat "BASEFILES COMPILABLE" "BASEFILE_COMPILABLE" >> ${BENCHMARK_NAME}/run.stats
 printStat "BASEFILES NOT COMPILABLE" "BASEFILE_NOT_COMPILABLE" >> ${BENCHMARK_NAME}/run.stats
-printStat "Assembly Generated" "*.s" >> ${BENCHMARK_NAME}/run.stats
+printStat "Assembly Generated" "dev.s" >> ${BENCHMARK_NAME}/run.stats
 printStat "Codegen Success" "CODEGEN_SUCCESS" >> ${BENCHMARK_NAME}/run.stats
 printStat "LINK ERROR" "LINK_ERROR" >> ${BENCHMARK_NAME}/run.stats
-printStat "Binary Genenrated" "*.out" >> ${BENCHMARK_NAME}/run.stats
+printStat "Binary Genenrated" "dev.out" >> ${BENCHMARK_NAME}/run.stats
 printStat "RUNTIME Error" "RUNTIME_ERROR" >> ${BENCHMARK_NAME}/run.stats
 printStat "SUCCESS Execution" "RUNTIME_SUCCESS" >> ${BENCHMARK_NAME}/run.stats
 printStat "CODEGEN Error" "CODEGEN_ERROR" >> ${BENCHMARK_NAME}/run.stats
 printStat "INTERFERENCE GRAPHS ERROR" "INTERFERENCE_ERROR" >> ${BENCHMARK_NAME}/run.stats
+printStat "SEMANTIC CORRECT" "SEMANTIC_CORRECT" >> ${BENCHMARK_NAME}/run.stats
+printStat "SEMANTIC INCORRECT" "SEMANTIC_INCORRECT" >> ${BENCHMARK_NAME}/run.stats
 # echo "************* SUCCESS Execution **************" >> ${BENCHMARK_NAME}/run.stats
 # files=(`find ${BENCHMARK_NAME} -name "RUNTIME_SUCCESS"`)
 # files_num=${#files[@]}
