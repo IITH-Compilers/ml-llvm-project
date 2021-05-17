@@ -2,6 +2,7 @@
    "targets":[
       {
          "name":"X86",
+         "regclasses": ["GR8", "GR16", "GR32", "GR64"],
          "register":[
             {
                "color":1,

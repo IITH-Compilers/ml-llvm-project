@@ -198,8 +198,8 @@ public:
   unsigned getPhyRegForColor(LiveInterval &VirtReg, unsigned color,
                              SmallVector<unsigned, 4> &SplitVRegs);
 
-  std::set<std::string> regClassSupported4_MLRA = {"GR8", "GR16", "GR32",
-                                                   "GR64"};
+  std::set<std::string> regClassSupported4_MLRA;  //{"GR8", "GR16", "GR32",
+                                                  // "GR64"};
 
   std::map<std::string, std::map<std::string, int64_t>>
   setPredictionFromFile(std::string pred_file) {
@@ -248,6 +248,7 @@ std::string jsonString;
     assert(config_colorMap != "" && "Path is empty");
     LLVM_DEBUG(errs() << config_colorMap << "\n");
     std::ifstream targert_color2reg_file(config_colorMap);
+    assert(!targert_color2reg_file.fail() && "Config file is not present.");
     std::string config;
     config.assign((std::istreambuf_iterator<char>(targert_color2reg_file)),
                   (std::istreambuf_iterator<char>()));
@@ -262,7 +263,16 @@ std::string jsonString;
               if (json::Value *target = O->get("name")) {
                 std::string targetName;
                 json::fromJSON(*target, targetName);
+                
+                if(json::Array *registerClasses = O->getArray("regclasses")){
+                   for (auto regClass : *registerClasses) {
+                        std::string regClassName;
+                        json::fromJSON(regClass, regClassName);
 
+                        LLVM_DEBUG(errs () << "regClass " << regClassName << "\n");
+                        this->regClassSupported4_MLRA.insert(regClassName);
+                   }
+                }
                 std::map<int64_t, int64_t> color2PhyRegmap;
                 std::map<int64_t, int64_t> PhyReg2Colormap;
                 if (json::Array *registerArr = O->getArray("register")) {

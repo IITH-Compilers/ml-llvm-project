@@ -323,12 +323,12 @@ void MLRABasic::dumpInterferenceGraph() {
         LLVM_DEBUG(errs() << "%" << j << " under consideration\n");
         std::string regClass_vr =
             TRI->getRegClassName(MRI->getRegClass(VirtReg->reg));
-        if (this->regClassSupported4_MLRA.find(regClass_vr) ==
+        /*if (this->regClassSupported4_MLRA.find(regClass_vr) ==
             regClassSupported4_MLRA.end()) {
           LLVM_DEBUG(errs() << "%" << j << " Register class(" << regClass_vr
                             << ") is not supported.\n");
           continue;
-        }
+        }*/
 
         if (Matrix->checkInterference(*VirtReg, i)) {
           LLVM_DEBUG(errs() << "Interference happened\n");
@@ -366,12 +366,12 @@ void MLRABasic::dumpInterferenceGraph() {
       continue;
     // Check for the supported register class.
     std::string regClass = TRI->getRegClassName(MRI->getRegClass(VirtReg->reg));
-    if (this->regClassSupported4_MLRA.find(regClass) ==
+    /*if (this->regClassSupported4_MLRA.find(regClass) ==
         regClassSupported4_MLRA.end()) {
       LLVM_DEBUG(errs() << "Register class(" << regClass
                         << ") is not supported.\n");
       continue;
-    }
+    }*/
     bool is_atleastoneinstruction = false;
     int node_id = step + i;
     std::string node_str = std::to_string(node_id) + " [label=\" {" + regClass +
@@ -430,10 +430,10 @@ void MLRABasic::dumpInterferenceGraph() {
           continue;
         // Support for interference for supportedRegister Only
         std::string regClass_j = TRI->getRegClassName(MRI->getRegClass(Reg1));
-        if (this->regClassSupported4_MLRA.find(regClass_j) ==
+        /*if (this->regClassSupported4_MLRA.find(regClass_j) ==
             regClassSupported4_MLRA.end()) {
           continue;
-        }
+        }*/
         std::string edge = "";
         if (VirtReg->overlaps(LIS->getInterval(Reg1))) {
           edge= std::to_string(node_id) +" -- " + std::to_string(j+step) + ";\n";
