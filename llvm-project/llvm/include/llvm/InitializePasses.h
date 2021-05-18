@@ -428,6 +428,8 @@ void initializeXRayInstrumentationPass(PassRegistry&);
 
 void initializeMLRAPass(PassRegistry&);
 void initializeMLRABasicPass(PassRegistry&);
+void initializeCollectMachineIRPass(PassRegistry &);
+
 } // end namespace llvm
 
 #endif // LLVM_INITIALIZEPASSES_H

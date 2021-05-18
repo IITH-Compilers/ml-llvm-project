@@ -24,6 +24,7 @@ set(LLVM_LINK_COMPONENTS
   Vectorize
   Passes
   DumpIGAndMapBack
+  CollectMachineIR
   )
 
 add_llvm_tool(opt

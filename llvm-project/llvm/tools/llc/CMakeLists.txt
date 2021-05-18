@@ -18,6 +18,7 @@ set(LLVM_LINK_COMPONENTS
   TransformUtils
   Vectorize
   DumpIGAndMapBack
+  CollectMachineIR
   )
 
 add_llvm_tool(llc

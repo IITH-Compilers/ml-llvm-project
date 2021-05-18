@@ -16,6 +16,7 @@ set( LLVM_LINK_COMPONENTS
   TransformUtils
   Vectorize
   DumpIGAndMapBack
+  CollectMachineIR
   )
 
 option(CLANG_PLUGIN_SUPPORT "Build clang with plugin support" ON)
