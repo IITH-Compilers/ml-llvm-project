@@ -29,11 +29,8 @@ class GraphColorEnv:
 
     def getReward_Static(self, action):
        
-        home_dir = self.home_dir
         method_name = self.functionName
-        # loop_id = self.loopId
         ll_file_name = self.fileName
-        # fun_id = self.fun_id
         
         # ipc to llvm splill cost function for reward
 
@@ -96,17 +93,20 @@ class GraphColorEnv:
     
     # input graph : jsonnx
     # return the state of the graph, all the possible starting nodes
-    def reset_env(self, graph, path):
+    def reset_env(self, graph, path=None):
         self.color_assignment_map = {}
         
         logging.debug('reset the env.')
-        attr = utils.getllFileAttributes(path)
-        self.path = path
+        if path is not None:
+            attr = utils.getllFileAttributes(path)
+            self.path = path
+            self.home_dir = attr['HOME_DIR']
+        
+
         self.graph = graph
         self.fileName = graph['graph'][1][1]['FileName'].strip('\"') 
         self.functionName = graph['graph'][1][1]['Function'].strip('\"')
-        self.home_dir = attr['HOME_DIR']
-        self.fun_id = attr['FUN_ID']
+        self.fun_id = graph['graph'][1][1]['Function_ID']
         self.num_nodes = len(self.graph['nodes'])
         hidden_state, self.topology, self.ggnn = constructGraph(self.graph)
         

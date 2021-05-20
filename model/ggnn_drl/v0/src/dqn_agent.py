@@ -35,7 +35,7 @@ class Agent():
         # random.seed(seed)
         self.spill_color_idx = 0 
         self.action_space = np.arange(57)
-        print(self.action_space)
+        # print(self.action_space)
         state_size = config.state_size
         # Q-Network
         self.qnetwork_local = QNetwork(state_size,  seed=seed).to(device)

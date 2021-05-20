@@ -13,6 +13,7 @@ import datetime
 import pandas as pd
 import logging
 import json
+from argparse import Namespace
 
 logger = logging.getLogger(__file__) 
 
@@ -63,7 +64,7 @@ def composeData(payload):
 def get_colored_graph(file_id, fileName, funcName, color_assignment_map):
     payload = {'FileName' : fileName, 'Function' : funcName, 'mapping' : color_assignment_map}
     
-    if config.inference:
+    if config.mode == 'inference':
         return composeData(payload) 
     coloredGraphDir = os.path.join(config.intermediate_data, 'coloredGraphs')
     if not os.path.exists(coloredGraphDir):
@@ -111,6 +112,12 @@ def get_parse_args():
     global config 
     config = parser.parse_args()
     return config
+
+def set_config(config_):
+    global config 
+    config = Namespace(**config_)
+    return config
+
 
 
 def log_subprocess_output(pipe):
