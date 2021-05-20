@@ -57,7 +57,6 @@ def run_predict_for_multiple_functions(agent, config, inter_graph_list):
 
 def allocate_registers(inter_graph_list : list, trained_model : str):
     
-    # print('In python...')
     config = { 'mode' :'inference', 'state_size':5, 'action_space':57, 'intermediate_data' : '/tmp'}
     config = utils.set_config(config)
     logdir='/tmp'
