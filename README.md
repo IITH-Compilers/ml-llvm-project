@@ -12,15 +12,6 @@
 * `cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="clang" -DLLVM_TARGETS_TO_BUILD="X86" -DLLVM_ENABLE_ASSERTIONS=ON ../llvm-project/llvm`
 * `ninja clang opt llc`
 
-## GRPC Support
-* `C-Python bindings or vice-versa`
-* `Prove a seamless way of cross platform communication`
-
-### Build grpc & LLVM_GRPC
-* `Steps to build grpc` [Steps](https://grpc.io/docs/languages/cpp/quickstart/#build-and-install-grpc-protocol-buffers-and-abseil)
-* `Set the grpc installation directory path to env. variable **PATH**`
-* `Now build LLVM_GRPC` [Steps](https://github.com/anilavakundu/LLVM_GRPC/tree/afc51aa7e7c9711308fb9beb9ad41138f2fbe4ff)
-
 ## Run MLRegAlloc Pass
 *  _`mlra`_` flag to choice our pass`
 * `{BUILD}/bin/clang -03 -mllvm -regalloc=mlra  <Input_file>`
