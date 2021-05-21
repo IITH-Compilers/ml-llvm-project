@@ -5,3 +5,5 @@ scratch/
 trained_model/
 log/
 benchmarks/
+*build/
+
