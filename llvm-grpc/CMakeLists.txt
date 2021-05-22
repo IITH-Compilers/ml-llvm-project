@@ -11,31 +11,9 @@ set(protobuf_MODULE_COMPATIBLE TRUE)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -fno-rtti")
-
-#set(CMAKE_C_COMPILER clang-10)
-#set(CMAKE_CXX_COMPILER clang++-10)
-
-#set(LLVM_BUILD_DIR "" CACHE PATH "LLVM Build Directory")
-
-#list (APPEND CMAKE_PREFIX_PATH "${LLVM_BUILD_DIR}/lib/cmake/llvm/")
-
-#if(NOT LLVM_BUILD_DIR)
-  #message(FATAL_ERROR "Specify LLVM Build Directory")
-#else()
-  #message(STATUS "Found LLVM Build Dir: ${LLVM_BUILD_DIR}")
-  #add_definitions(-DLLVM_BUILD_DIR="${LLVM_BUILD_DIR}")  
-#endif()
-
  
- 
-#set(Clang_DIR "${LLVM_BUILD_DIR}/lib/cmake/clang")
 
 find_package(Protobuf CONFIG REQUIRED)
-#find_package(LLVM 10.0.1 REQUIRED CONFIG)
-#find_package(Clang REQUIRED CONFIG) 
-#message(STATUS "Found CLANG ${Clang_DIR}")
-#message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
-#message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 message(STATUS "Using protobuf ${Protobuf_VERSION}")
 
 set(_PROTOBUF_LIBPROTOBUF protobuf::libprotobuf)
@@ -68,9 +46,9 @@ set(proto_dir ${CMAKE_CURRENT_SOURCE_DIR}/Protos)
 
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/Include/Service)
 
-set(LLVM_GRPC_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/Include" CACHE PATH "llvm-gRPC include directories")
+#set(LLVM_GRPC_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/Include" CACHE PATH "llvm-gRPC include directories")
 
-message(STATUS "include dirs:" ${LLVM_GRPC_INCLUDE_DIRS})
+#message(STATUS "include dirs:" ${LLVM_GRPC_INCLUDE_DIRS})
 
 
 foreach(proto ${proto_list})

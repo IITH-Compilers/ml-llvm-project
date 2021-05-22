@@ -20,6 +20,9 @@ add_llvm_library(LLVMHello MODULE BUILDTREE_ONLY
   )
 
 
+
+set (LLVM_GRPC_INCLUDE_DIRS "${LLVM_EXTERNAL_LLVM_GRPC_SOURCE_DIR}/Include")
+
 message(STATUS "Includes in LLVMHello:" ${LLVM_GRPC_INCLUDE_DIRS})
 
 #adding include directories for llvm-grpc

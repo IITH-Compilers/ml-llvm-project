@@ -1,4 +1,4 @@
-#include "RegisterAllocationInference.grpc.pb.h"
+#include "Service/RegisterAllocationInference/RegisterAllocationInference.grpc.pb.h"
 #include <grpcpp/grpcpp.h>
 #include <vector>
 
