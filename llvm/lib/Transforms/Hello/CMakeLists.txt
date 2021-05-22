@@ -10,7 +10,7 @@ if(WIN32 OR CYGWIN)
   set(LLVM_LINK_COMPONENTS Core Support)
 endif()
 
-add_llvm_library( LLVMHello MODULE BUILDTREE_ONLY
+add_llvm_library(LLVMHello MODULE BUILDTREE_ONLY
   Hello.cpp
 
   DEPENDS
@@ -18,3 +18,11 @@ add_llvm_library( LLVMHello MODULE BUILDTREE_ONLY
   PLUGIN_TOOL
   opt
   )
+
+
+message(STATUS "Includes in LLVMHello:" ${LLVM_GRPC_INCLUDE_DIRS})
+
+#adding include directories for llvm-grpc
+include_directories(${LLVM_GRPC_INCLUDE_DIRS})
+#linking the pass library with llvm-grpc
+target_link_libraries(LLVMHello LLVMgRPC)
