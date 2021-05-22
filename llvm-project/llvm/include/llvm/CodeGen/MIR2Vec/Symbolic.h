@@ -10,12 +10,9 @@
 #include "llvm/CodeGen/MIR2Vec/utils.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineInstruction.h"
+#include "llvm/CodeGen/MachineInstr.h"
 
 #include "llvm/ADT/MapVector.h"
-#include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/Function.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <fstream>
@@ -24,10 +21,12 @@
 class MIR2Vec_Symbolic {
 
 private:
-  llvm::MachineFunction &F;
+  float WO, WA;
   IR2Vec::Vector fnVector;
+  const llvm::TargetInstrInfo *TII;
+  const llvm::TargetRegisterInfo *TRI;
 
-  IR2Vec::Vector getValue(std::string key);
+  bool getValue(std::string key, IR2Vec::Vector &);
   IR2Vec::Vector
   bb2Vec(llvm::MachineBasicBlock &B,
          llvm::SmallVector<llvm::MachineFunction *, 15> &funcStack);
@@ -37,20 +36,18 @@ private:
   std::string res;
   llvm::SmallMapVector<const llvm::MachineFunction *, IR2Vec::Vector, 16>
       funcVecMap;
-  llvm::SmallMapVector<const llvm::MachineInstruction *, IR2Vec::Vector, 128>
+  llvm::SmallMapVector<const llvm::MachineInstr *, IR2Vec::Vector, 128>
       instVecMap;
   std::map<std::string, IR2Vec::Vector> opcMap;
 
 public:
-  IR2Vec_Symbolic(llvm::MachineFunction &F) : F{F} {
-    fnVector = IR2Vec::Vector(DIM, 0);
-    res = "";
-    IR2Vec::collectDataFromVocab(opcMap);
-  }
+  MIR2Vec_Symbolic(std::string vocab);
+  MIR2Vec_Symbolic(std::string vocab, unsigned WO, unsigned WA);
 
-  void generateSymbolicEncodings(std::ostream *o = nullptr);
+  void generateSymbolicEncodings(llvm::MachineFunction &F,
+                                 std::ostream *o = nullptr);
 
-  llvm::SmallMapVector<const llvm::MachineInstruction *, IR2Vec::Vector, 128>
+  llvm::SmallMapVector<const llvm::MachineInstr *, IR2Vec::Vector, 128>
   getInstVecMap() {
     return instVecMap;
   }

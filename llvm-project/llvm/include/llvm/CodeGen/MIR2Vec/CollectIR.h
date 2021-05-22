@@ -40,9 +40,7 @@ public:
     o.open(oname, std::ios_base::app);
     res = "";
   }
-  //   CollectMachineIR(std::unique_ptr<llvm::Module> &M) : M{*M} { res = ""; }
 
-  //   void generateTriplets(std::ostream &out);
 };
 FunctionPass *createCollectMachineIRPass();
 } // namespace llvm

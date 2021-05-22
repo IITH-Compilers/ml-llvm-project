@@ -9,29 +9,14 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/InitializePasses.h"
-
 #include "llvm/Pass.h"
 
-// #include "llvm/Analysis/LoopInfo.h"
-// #include "llvm/IR/LegacyPassManager.h"
-// #include "llvm/IR/Type.h"
-#include "llvm/Pass.h"
-// #include "llvm/Transforms/Scalar.h"
 #include <fstream>
 
 using namespace llvm;
 
-// void CollectMachineIR::generateTriplets(std::ostream &out) {
-//   for (Function &F : M)
-//     for (BasicBlock &B : F)
-//       traverseBasicBlock(B);
-//   out << res;
-// }
-
-// namespace llvm {
 char CollectMachineIR::ID = 0;
 char &llvm::CollectMachineIRID = CollectMachineIR::ID;
-// } // namespace llvm
 
 INITIALIZE_PASS_BEGIN(CollectMachineIR, "cmir", "Collect IR pass of MIR", false,
                       false)
@@ -54,44 +39,14 @@ bool CollectMachineIR::runOnMachineFunction(MachineFunction &MF) {
 
 void CollectMachineIR::traverseBasicBlock(MachineBasicBlock &MB) {
   for (MachineInstr &I : MB) {
-    // errs() << "==========================================\n";
-    // I.dump();
     std::string temp;
+    // errs() << "----------------------------------------\n";
+    // I.dump();
+    // errs() << I.getDesc().getFlags() << "\n";
+    // errs() << "----------------------------------------\n";
+
     temp += "\n OPC_" + std::to_string(I.getOpcode()) + " ";
 
-    // switch (I.getType()->getTypeID()) {
-    // case 0:
-    //   res += " voidTy ";
-    //   break;
-    // case 1:
-    // case 2:
-    // case 3:
-    // case 4:
-    // case 5:
-    // case 6:
-    //   res += " floatTy ";
-    //   break;
-    // case 11:
-    //   res += " integerTy ";
-    //   break;
-    // case 12:
-    //   res += " functionTy ";
-    //   break;
-    // case 13:
-    //   res += " structTy ";
-    //   break;
-    // case 14:
-    //   res += " arrayTy ";
-    //   break;
-    // case 15:
-    //   res += " pointerTy ";
-    //   break;
-    // case 16:
-    //   res += " vectorTy ";
-    //   break;
-    // default:
-    //   res += "unknownTy";
-    // }
     for (unsigned i = 0; i < I.getNumOperands(); i++) {
       auto MO = I.getOperand(i);
       switch (MO.getType()) {
@@ -133,7 +88,7 @@ void CollectMachineIR::traverseBasicBlock(MachineBasicBlock &MB) {
         temp += " GlobalAddress ";
         break;
       case MachineOperand::MO_BlockAddress:
-        temp += " JumpTableIndex ";
+        temp += " BlockAddress ";
         break;
       case MachineOperand::MO_RegisterMask:
         temp += " RegisterMask ";

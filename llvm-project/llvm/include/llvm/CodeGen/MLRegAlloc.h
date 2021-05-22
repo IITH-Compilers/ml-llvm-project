@@ -79,9 +79,13 @@
 
 #define PRINT_MRI_INST 0
 
+class MIR2Vec_Symbolic;
+
 namespace llvm {
 
 class MLRA : public MachineFunctionPass,
+             //  public RegAllocGreedy,
+             //  public MLRA,
              public RegAllocBase,
              private LiveRangeEdit::Delegate {
 
@@ -92,6 +96,7 @@ class MLRA : public MachineFunctionPass,
 
   // context
   MachineFunction *MF;
+  MIR2Vec_Symbolic *symbolic;
   int FunctionCounter = 0;
   // Shortcuts to some useful interface.
   const TargetInstrInfo *TII;
@@ -354,10 +359,11 @@ class MLRA : public MachineFunctionPass,
   std::map<std::string, std::map<int64_t, int64_t>> target_PhyReg2ColorMap;
   std::string graph;
   std::map<std::string, std::string> Function2Graphs;
+
 public:
   MLRA();
   MLRA(DenseMap<unsigned, unsigned> VirtRegToColor);
-  
+
   /// Return the pass name.
   StringRef getPassName() const override { return "Greedy Register Allocator"; }
 
@@ -391,15 +397,12 @@ public:
 
     return r;
   }
-  
-  std::string &getGraph(){
-    return graph;
-  }
 
-  std::map<std::string, std::string> &getGraphsForFunctions(){
+  std::string &getGraph() { return graph; }
+
+  std::map<std::string, std::string> &getGraphsForFunctions() {
     return Function2Graphs;
   }
-
 
   static char ID;
 
@@ -542,9 +545,10 @@ private:
     assert(pred_file != "" && "Path is empty.");
     LLVM_DEBUG(errs() << pred_file << "\n");
     std::ifstream predColorFile(pred_file);
-    if(predColorFile.fail()){
-        errs () << "setPredictionFromFile- file does not exist at the location " << pred_file << "\n";
-        return this->FunctionVirtRegToColorMap;
+    if (predColorFile.fail()) {
+      errs() << "setPredictionFromFile- file does not exist at the location "
+             << pred_file << "\n";
+      return this->FunctionVirtRegToColorMap;
     }
     std::string jsonString;
     jsonString.assign((std::istreambuf_iterator<char>(predColorFile)),
@@ -599,15 +603,15 @@ private:
               if (json::Value *target = O->get("name")) {
                 std::string targetName;
                 json::fromJSON(*target, targetName);
-                
-                if(json::Array *registerClasses = O->getArray("regclasses")){
-                   for (auto regClass : *registerClasses) {
-                        std::string regClassName;
-                        json::fromJSON(regClass, regClassName);
 
-                        LLVM_DEBUG(errs () << "regClass " << regClassName << "\n");
-                        this->regClassSupported4_MLRA.insert(regClassName);
-                   }
+                if (json::Array *registerClasses = O->getArray("regclasses")) {
+                  for (auto regClass : *registerClasses) {
+                    std::string regClassName;
+                    json::fromJSON(regClass, regClassName);
+
+                    LLVM_DEBUG(errs() << "regClass " << regClassName << "\n");
+                    this->regClassSupported4_MLRA.insert(regClassName);
+                  }
                 }
                 std::map<int64_t, int64_t> color2PhyRegmap;
                 std::map<int64_t, int64_t> PhyReg2Colormap;
@@ -652,6 +656,8 @@ private:
                          FunctionVirtRegToColorMap) {
     this->FunctionVirtRegToColorMap = FunctionVirtRegToColorMap;
   }
+
+  std::string targetName;
 };
 
 FunctionPass *createMLRegisterAllocator();
