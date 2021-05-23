@@ -1,0 +1,3073 @@
+{
+    "GR8": [
+        {
+            "regId": 2,
+            "regName": "AL"
+        },
+        {
+            "regId": 11,
+            "regName": "CL"
+        },
+        {
+            "regId": 19,
+            "regName": "DL"
+        },
+        {
+            "regId": 61,
+            "regName": "SIL"
+        },
+        {
+            "regId": 18,
+            "regName": "DIL"
+        },
+        {
+            "regId": 239,
+            "regName": "R8B"
+        },
+        {
+            "regId": 240,
+            "regName": "R9B"
+        },
+        {
+            "regId": 241,
+            "regName": "R10B"
+        },
+        {
+            "regId": 242,
+            "regName": "R11B"
+        },
+        {
+            "regId": 5,
+            "regName": "BL"
+        },
+        {
+            "regId": 8,
+            "regName": "BPL"
+        },
+        {
+            "regId": 245,
+            "regName": "R14B"
+        },
+        {
+            "regId": 246,
+            "regName": "R15B"
+        },
+        {
+            "regId": 243,
+            "regName": "R12B"
+        },
+        {
+            "regId": 244,
+            "regName": "R13B"
+        }
+    ],
+    "GR8_NOREX": [
+        {
+            "regId": 2,
+            "regName": "AL"
+        },
+        {
+            "regId": 11,
+            "regName": "CL"
+        },
+        {
+            "regId": 19,
+            "regName": "DL"
+        },
+        {
+            "regId": 5,
+            "regName": "BL"
+        }
+    ],
+    "GR8_ABCD_L": [
+        {
+            "regId": 2,
+            "regName": "AL"
+        },
+        {
+            "regId": 11,
+            "regName": "CL"
+        },
+        {
+            "regId": 19,
+            "regName": "DL"
+        },
+        {
+            "regId": 5,
+            "regName": "BL"
+        }
+    ],
+    "GR16": [
+        {
+            "regId": 3,
+            "regName": "AX"
+        },
+        {
+            "regId": 13,
+            "regName": "CX"
+        },
+        {
+            "regId": 21,
+            "regName": "DX"
+        },
+        {
+            "regId": 59,
+            "regName": "SI"
+        },
+        {
+            "regId": 16,
+            "regName": "DI"
+        },
+        {
+            "regId": 263,
+            "regName": "R8W"
+        },
+        {
+            "regId": 264,
+            "regName": "R9W"
+        },
+        {
+            "regId": 265,
+            "regName": "R10W"
+        },
+        {
+            "regId": 266,
+            "regName": "R11W"
+        },
+        {
+            "regId": 9,
+            "regName": "BX"
+        },
+        {
+            "regId": 6,
+            "regName": "BP"
+        },
+        {
+            "regId": 269,
+            "regName": "R14W"
+        },
+        {
+            "regId": 270,
+            "regName": "R15W"
+        },
+        {
+            "regId": 267,
+            "regName": "R12W"
+        },
+        {
+            "regId": 268,
+            "regName": "R13W"
+        }
+    ],
+    "GR16_NOREX": [
+        {
+            "regId": 3,
+            "regName": "AX"
+        },
+        {
+            "regId": 13,
+            "regName": "CX"
+        },
+        {
+            "regId": 21,
+            "regName": "DX"
+        },
+        {
+            "regId": 59,
+            "regName": "SI"
+        },
+        {
+            "regId": 16,
+            "regName": "DI"
+        },
+        {
+            "regId": 9,
+            "regName": "BX"
+        },
+        {
+            "regId": 6,
+            "regName": "BP"
+        }
+    ],
+    "VK1": [
+        {
+            "regId": 111,
+            "regName": "K0"
+        },
+        {
+            "regId": 112,
+            "regName": "K1"
+        },
+        {
+            "regId": 113,
+            "regName": "K2"
+        },
+        {
+            "regId": 114,
+            "regName": "K3"
+        },
+        {
+            "regId": 115,
+            "regName": "K4"
+        },
+        {
+            "regId": 116,
+            "regName": "K5"
+        },
+        {
+            "regId": 117,
+            "regName": "K6"
+        },
+        {
+            "regId": 118,
+            "regName": "K7"
+        }
+    ],
+    "VK16": [
+        {
+            "regId": 111,
+            "regName": "K0"
+        },
+        {
+            "regId": 112,
+            "regName": "K1"
+        },
+        {
+            "regId": 113,
+            "regName": "K2"
+        },
+        {
+            "regId": 114,
+            "regName": "K3"
+        },
+        {
+            "regId": 115,
+            "regName": "K4"
+        },
+        {
+            "regId": 116,
+            "regName": "K5"
+        },
+        {
+            "regId": 117,
+            "regName": "K6"
+        },
+        {
+            "regId": 118,
+            "regName": "K7"
+        }
+    ],
+    "VK2": [
+        {
+            "regId": 111,
+            "regName": "K0"
+        },
+        {
+            "regId": 112,
+            "regName": "K1"
+        },
+        {
+            "regId": 113,
+            "regName": "K2"
+        },
+        {
+            "regId": 114,
+            "regName": "K3"
+        },
+        {
+            "regId": 115,
+            "regName": "K4"
+        },
+        {
+            "regId": 116,
+            "regName": "K5"
+        },
+        {
+            "regId": 117,
+            "regName": "K6"
+        },
+        {
+            "regId": 118,
+            "regName": "K7"
+        }
+    ],
+    "VK4": [
+        {
+            "regId": 111,
+            "regName": "K0"
+        },
+        {
+            "regId": 112,
+            "regName": "K1"
+        },
+        {
+            "regId": 113,
+            "regName": "K2"
+        },
+        {
+            "regId": 114,
+            "regName": "K3"
+        },
+        {
+            "regId": 115,
+            "regName": "K4"
+        },
+        {
+            "regId": 116,
+            "regName": "K5"
+        },
+        {
+            "regId": 117,
+            "regName": "K6"
+        },
+        {
+            "regId": 118,
+            "regName": "K7"
+        }
+    ],
+    "VK8": [
+        {
+            "regId": 111,
+            "regName": "K0"
+        },
+        {
+            "regId": 112,
+            "regName": "K1"
+        },
+        {
+            "regId": 113,
+            "regName": "K2"
+        },
+        {
+            "regId": 114,
+            "regName": "K3"
+        },
+        {
+            "regId": 115,
+            "regName": "K4"
+        },
+        {
+            "regId": 116,
+            "regName": "K5"
+        },
+        {
+            "regId": 117,
+            "regName": "K6"
+        },
+        {
+            "regId": 118,
+            "regName": "K7"
+        }
+    ],
+    "VK16WM": [
+        {
+            "regId": 112,
+            "regName": "K1"
+        },
+        {
+            "regId": 113,
+            "regName": "K2"
+        },
+        {
+            "regId": 114,
+            "regName": "K3"
+        },
+        {
+            "regId": 115,
+            "regName": "K4"
+        },
+        {
+            "regId": 116,
+            "regName": "K5"
+        },
+        {
+            "regId": 117,
+            "regName": "K6"
+        },
+        {
+            "regId": 118,
+            "regName": "K7"
+        }
+    ],
+    "VK1WM": [
+        {
+            "regId": 112,
+            "regName": "K1"
+        },
+        {
+            "regId": 113,
+            "regName": "K2"
+        },
+        {
+            "regId": 114,
+            "regName": "K3"
+        },
+        {
+            "regId": 115,
+            "regName": "K4"
+        },
+        {
+            "regId": 116,
+            "regName": "K5"
+        },
+        {
+            "regId": 117,
+            "regName": "K6"
+        },
+        {
+            "regId": 118,
+            "regName": "K7"
+        }
+    ],
+    "VK2WM": [
+        {
+            "regId": 112,
+            "regName": "K1"
+        },
+        {
+            "regId": 113,
+            "regName": "K2"
+        },
+        {
+            "regId": 114,
+            "regName": "K3"
+        },
+        {
+            "regId": 115,
+            "regName": "K4"
+        },
+        {
+            "regId": 116,
+            "regName": "K5"
+        },
+        {
+            "regId": 117,
+            "regName": "K6"
+        },
+        {
+            "regId": 118,
+            "regName": "K7"
+        }
+    ],
+    "VK4WM": [
+        {
+            "regId": 112,
+            "regName": "K1"
+        },
+        {
+            "regId": 113,
+            "regName": "K2"
+        },
+        {
+            "regId": 114,
+            "regName": "K3"
+        },
+        {
+            "regId": 115,
+            "regName": "K4"
+        },
+        {
+            "regId": 116,
+            "regName": "K5"
+        },
+        {
+            "regId": 117,
+            "regName": "K6"
+        },
+        {
+            "regId": 118,
+            "regName": "K7"
+        }
+    ],
+    "VK8WM": [
+        {
+            "regId": 112,
+            "regName": "K1"
+        },
+        {
+            "regId": 113,
+            "regName": "K2"
+        },
+        {
+            "regId": 114,
+            "regName": "K3"
+        },
+        {
+            "regId": 115,
+            "regName": "K4"
+        },
+        {
+            "regId": 116,
+            "regName": "K5"
+        },
+        {
+            "regId": 117,
+            "regName": "K6"
+        },
+        {
+            "regId": 118,
+            "regName": "K7"
+        }
+    ],
+    "SEGMENT_REG": [],
+    "GR16_ABCD": [
+        {
+            "regId": 3,
+            "regName": "AX"
+        },
+        {
+            "regId": 13,
+            "regName": "CX"
+        },
+        {
+            "regId": 21,
+            "regName": "DX"
+        },
+        {
+            "regId": 9,
+            "regName": "BX"
+        }
+    ],
+    "FPCCR": [],
+    "VK16PAIR": [
+        {
+            "regId": 279,
+            "regName": "K0_K1"
+        },
+        {
+            "regId": 280,
+            "regName": "K2_K3"
+        },
+        {
+            "regId": 281,
+            "regName": "K4_K5"
+        },
+        {
+            "regId": 282,
+            "regName": "K6_K7"
+        }
+    ],
+    "VK1PAIR": [
+        {
+            "regId": 279,
+            "regName": "K0_K1"
+        },
+        {
+            "regId": 280,
+            "regName": "K2_K3"
+        },
+        {
+            "regId": 281,
+            "regName": "K4_K5"
+        },
+        {
+            "regId": 282,
+            "regName": "K6_K7"
+        }
+    ],
+    "VK2PAIR": [
+        {
+            "regId": 279,
+            "regName": "K0_K1"
+        },
+        {
+            "regId": 280,
+            "regName": "K2_K3"
+        },
+        {
+            "regId": 281,
+            "regName": "K4_K5"
+        },
+        {
+            "regId": 282,
+            "regName": "K6_K7"
+        }
+    ],
+    "VK4PAIR": [
+        {
+            "regId": 279,
+            "regName": "K0_K1"
+        },
+        {
+            "regId": 280,
+            "regName": "K2_K3"
+        },
+        {
+            "regId": 281,
+            "regName": "K4_K5"
+        },
+        {
+            "regId": 282,
+            "regName": "K6_K7"
+        }
+    ],
+    "VK8PAIR": [
+        {
+            "regId": 279,
+            "regName": "K0_K1"
+        },
+        {
+            "regId": 280,
+            "regName": "K2_K3"
+        },
+        {
+            "regId": 281,
+            "regName": "K4_K5"
+        },
+        {
+            "regId": 282,
+            "regName": "K6_K7"
+        }
+    ],
+    "VK16PAIR_with_sub_mask_0_in_VK16WM": [
+        {
+            "regId": 280,
+            "regName": "K2_K3"
+        },
+        {
+            "regId": 281,
+            "regName": "K4_K5"
+        },
+        {
+            "regId": 282,
+            "regName": "K6_K7"
+        }
+    ],
+    "FR32X": [
+        {
+            "regId": 143,
+            "regName": "XMM0"
+        },
+        {
+            "regId": 144,
+            "regName": "XMM1"
+        },
+        {
+            "regId": 145,
+            "regName": "XMM2"
+        },
+        {
+            "regId": 146,
+            "regName": "XMM3"
+        },
+        {
+            "regId": 147,
+            "regName": "XMM4"
+        },
+        {
+            "regId": 148,
+            "regName": "XMM5"
+        },
+        {
+            "regId": 149,
+            "regName": "XMM6"
+        },
+        {
+            "regId": 150,
+            "regName": "XMM7"
+        },
+        {
+            "regId": 151,
+            "regName": "XMM8"
+        },
+        {
+            "regId": 152,
+            "regName": "XMM9"
+        },
+        {
+            "regId": 153,
+            "regName": "XMM10"
+        },
+        {
+            "regId": 154,
+            "regName": "XMM11"
+        },
+        {
+            "regId": 155,
+            "regName": "XMM12"
+        },
+        {
+            "regId": 156,
+            "regName": "XMM13"
+        },
+        {
+            "regId": 157,
+            "regName": "XMM14"
+        },
+        {
+            "regId": 158,
+            "regName": "XMM15"
+        }
+    ],
+    "LOW32_ADDR_ACCESS_RBP": [
+        {
+            "regId": 22,
+            "regName": "EAX"
+        },
+        {
+            "regId": 25,
+            "regName": "ECX"
+        },
+        {
+            "regId": 27,
+            "regName": "EDX"
+        },
+        {
+            "regId": 32,
+            "regName": "ESI"
+        },
+        {
+            "regId": 26,
+            "regName": "EDI"
+        },
+        {
+            "regId": 255,
+            "regName": "R8D"
+        },
+        {
+            "regId": 256,
+            "regName": "R9D"
+        },
+        {
+            "regId": 257,
+            "regName": "R10D"
+        },
+        {
+            "regId": 258,
+            "regName": "R11D"
+        },
+        {
+            "regId": 24,
+            "regName": "EBX"
+        },
+        {
+            "regId": 23,
+            "regName": "EBP"
+        },
+        {
+            "regId": 261,
+            "regName": "R14D"
+        },
+        {
+            "regId": 262,
+            "regName": "R15D"
+        },
+        {
+            "regId": 259,
+            "regName": "R12D"
+        },
+        {
+            "regId": 260,
+            "regName": "R13D"
+        },
+        {
+            "regId": 50,
+            "regName": "RBP"
+        }
+    ],
+    "LOW32_ADDR_ACCESS": [
+        {
+            "regId": 22,
+            "regName": "EAX"
+        },
+        {
+            "regId": 25,
+            "regName": "ECX"
+        },
+        {
+            "regId": 27,
+            "regName": "EDX"
+        },
+        {
+            "regId": 32,
+            "regName": "ESI"
+        },
+        {
+            "regId": 26,
+            "regName": "EDI"
+        },
+        {
+            "regId": 255,
+            "regName": "R8D"
+        },
+        {
+            "regId": 256,
+            "regName": "R9D"
+        },
+        {
+            "regId": 257,
+            "regName": "R10D"
+        },
+        {
+            "regId": 258,
+            "regName": "R11D"
+        },
+        {
+            "regId": 24,
+            "regName": "EBX"
+        },
+        {
+            "regId": 23,
+            "regName": "EBP"
+        },
+        {
+            "regId": 261,
+            "regName": "R14D"
+        },
+        {
+            "regId": 262,
+            "regName": "R15D"
+        },
+        {
+            "regId": 259,
+            "regName": "R12D"
+        },
+        {
+            "regId": 260,
+            "regName": "R13D"
+        }
+    ],
+    "LOW32_ADDR_ACCESS_RBP_with_sub_8bit": [
+        {
+            "regId": 22,
+            "regName": "EAX"
+        },
+        {
+            "regId": 25,
+            "regName": "ECX"
+        },
+        {
+            "regId": 27,
+            "regName": "EDX"
+        },
+        {
+            "regId": 32,
+            "regName": "ESI"
+        },
+        {
+            "regId": 26,
+            "regName": "EDI"
+        },
+        {
+            "regId": 255,
+            "regName": "R8D"
+        },
+        {
+            "regId": 256,
+            "regName": "R9D"
+        },
+        {
+            "regId": 257,
+            "regName": "R10D"
+        },
+        {
+            "regId": 258,
+            "regName": "R11D"
+        },
+        {
+            "regId": 24,
+            "regName": "EBX"
+        },
+        {
+            "regId": 23,
+            "regName": "EBP"
+        },
+        {
+            "regId": 261,
+            "regName": "R14D"
+        },
+        {
+            "regId": 262,
+            "regName": "R15D"
+        },
+        {
+            "regId": 259,
+            "regName": "R12D"
+        },
+        {
+            "regId": 260,
+            "regName": "R13D"
+        },
+        {
+            "regId": 50,
+            "regName": "RBP"
+        }
+    ],
+    "DEBUG_REG": [
+        {
+            "regId": 87,
+            "regName": "DR0"
+        },
+        {
+            "regId": 88,
+            "regName": "DR1"
+        },
+        {
+            "regId": 89,
+            "regName": "DR2"
+        },
+        {
+            "regId": 90,
+            "regName": "DR3"
+        },
+        {
+            "regId": 91,
+            "regName": "DR4"
+        },
+        {
+            "regId": 92,
+            "regName": "DR5"
+        },
+        {
+            "regId": 93,
+            "regName": "DR6"
+        },
+        {
+            "regId": 94,
+            "regName": "DR7"
+        },
+        {
+            "regId": 95,
+            "regName": "DR8"
+        },
+        {
+            "regId": 96,
+            "regName": "DR9"
+        },
+        {
+            "regId": 97,
+            "regName": "DR10"
+        },
+        {
+            "regId": 98,
+            "regName": "DR11"
+        },
+        {
+            "regId": 99,
+            "regName": "DR12"
+        },
+        {
+            "regId": 100,
+            "regName": "DR13"
+        },
+        {
+            "regId": 101,
+            "regName": "DR14"
+        },
+        {
+            "regId": 102,
+            "regName": "DR15"
+        }
+    ],
+    "FR32": [
+        {
+            "regId": 143,
+            "regName": "XMM0"
+        },
+        {
+            "regId": 144,
+            "regName": "XMM1"
+        },
+        {
+            "regId": 145,
+            "regName": "XMM2"
+        },
+        {
+            "regId": 146,
+            "regName": "XMM3"
+        },
+        {
+            "regId": 147,
+            "regName": "XMM4"
+        },
+        {
+            "regId": 148,
+            "regName": "XMM5"
+        },
+        {
+            "regId": 149,
+            "regName": "XMM6"
+        },
+        {
+            "regId": 150,
+            "regName": "XMM7"
+        },
+        {
+            "regId": 151,
+            "regName": "XMM8"
+        },
+        {
+            "regId": 152,
+            "regName": "XMM9"
+        },
+        {
+            "regId": 153,
+            "regName": "XMM10"
+        },
+        {
+            "regId": 154,
+            "regName": "XMM11"
+        },
+        {
+            "regId": 155,
+            "regName": "XMM12"
+        },
+        {
+            "regId": 156,
+            "regName": "XMM13"
+        },
+        {
+            "regId": 157,
+            "regName": "XMM14"
+        },
+        {
+            "regId": 158,
+            "regName": "XMM15"
+        }
+    ],
+    "GR32": [
+        {
+            "regId": 22,
+            "regName": "EAX"
+        },
+        {
+            "regId": 25,
+            "regName": "ECX"
+        },
+        {
+            "regId": 27,
+            "regName": "EDX"
+        },
+        {
+            "regId": 32,
+            "regName": "ESI"
+        },
+        {
+            "regId": 26,
+            "regName": "EDI"
+        },
+        {
+            "regId": 255,
+            "regName": "R8D"
+        },
+        {
+            "regId": 256,
+            "regName": "R9D"
+        },
+        {
+            "regId": 257,
+            "regName": "R10D"
+        },
+        {
+            "regId": 258,
+            "regName": "R11D"
+        },
+        {
+            "regId": 24,
+            "regName": "EBX"
+        },
+        {
+            "regId": 23,
+            "regName": "EBP"
+        },
+        {
+            "regId": 261,
+            "regName": "R14D"
+        },
+        {
+            "regId": 262,
+            "regName": "R15D"
+        },
+        {
+            "regId": 259,
+            "regName": "R12D"
+        },
+        {
+            "regId": 260,
+            "regName": "R13D"
+        }
+    ],
+    "GR32_NOSP": [
+        {
+            "regId": 22,
+            "regName": "EAX"
+        },
+        {
+            "regId": 25,
+            "regName": "ECX"
+        },
+        {
+            "regId": 27,
+            "regName": "EDX"
+        },
+        {
+            "regId": 32,
+            "regName": "ESI"
+        },
+        {
+            "regId": 26,
+            "regName": "EDI"
+        },
+        {
+            "regId": 255,
+            "regName": "R8D"
+        },
+        {
+            "regId": 256,
+            "regName": "R9D"
+        },
+        {
+            "regId": 257,
+            "regName": "R10D"
+        },
+        {
+            "regId": 258,
+            "regName": "R11D"
+        },
+        {
+            "regId": 24,
+            "regName": "EBX"
+        },
+        {
+            "regId": 23,
+            "regName": "EBP"
+        },
+        {
+            "regId": 261,
+            "regName": "R14D"
+        },
+        {
+            "regId": 262,
+            "regName": "R15D"
+        },
+        {
+            "regId": 259,
+            "regName": "R12D"
+        },
+        {
+            "regId": 260,
+            "regName": "R13D"
+        }
+    ],
+    "LOW32_ADDR_ACCESS_RBP_with_sub_16bit_in_GR16_NOREX": [
+        {
+            "regId": 22,
+            "regName": "EAX"
+        },
+        {
+            "regId": 25,
+            "regName": "ECX"
+        },
+        {
+            "regId": 27,
+            "regName": "EDX"
+        },
+        {
+            "regId": 32,
+            "regName": "ESI"
+        },
+        {
+            "regId": 26,
+            "regName": "EDI"
+        },
+        {
+            "regId": 24,
+            "regName": "EBX"
+        },
+        {
+            "regId": 23,
+            "regName": "EBP"
+        },
+        {
+            "regId": 50,
+            "regName": "RBP"
+        }
+    ],
+    "GR32_NOREX": [
+        {
+            "regId": 22,
+            "regName": "EAX"
+        },
+        {
+            "regId": 25,
+            "regName": "ECX"
+        },
+        {
+            "regId": 27,
+            "regName": "EDX"
+        },
+        {
+            "regId": 32,
+            "regName": "ESI"
+        },
+        {
+            "regId": 26,
+            "regName": "EDI"
+        },
+        {
+            "regId": 24,
+            "regName": "EBX"
+        },
+        {
+            "regId": 23,
+            "regName": "EBP"
+        }
+    ],
+    "VK32": [
+        {
+            "regId": 111,
+            "regName": "K0"
+        },
+        {
+            "regId": 112,
+            "regName": "K1"
+        },
+        {
+            "regId": 113,
+            "regName": "K2"
+        },
+        {
+            "regId": 114,
+            "regName": "K3"
+        },
+        {
+            "regId": 115,
+            "regName": "K4"
+        },
+        {
+            "regId": 116,
+            "regName": "K5"
+        },
+        {
+            "regId": 117,
+            "regName": "K6"
+        },
+        {
+            "regId": 118,
+            "regName": "K7"
+        }
+    ],
+    "GR32_NOREX_NOSP": [
+        {
+            "regId": 22,
+            "regName": "EAX"
+        },
+        {
+            "regId": 25,
+            "regName": "ECX"
+        },
+        {
+            "regId": 27,
+            "regName": "EDX"
+        },
+        {
+            "regId": 32,
+            "regName": "ESI"
+        },
+        {
+            "regId": 26,
+            "regName": "EDI"
+        },
+        {
+            "regId": 24,
+            "regName": "EBX"
+        },
+        {
+            "regId": 23,
+            "regName": "EBP"
+        }
+    ],
+    "RFP32": [
+        {
+            "regId": 103,
+            "regName": "FP0"
+        },
+        {
+            "regId": 104,
+            "regName": "FP1"
+        },
+        {
+            "regId": 105,
+            "regName": "FP2"
+        },
+        {
+            "regId": 106,
+            "regName": "FP3"
+        },
+        {
+            "regId": 107,
+            "regName": "FP4"
+        },
+        {
+            "regId": 108,
+            "regName": "FP5"
+        },
+        {
+            "regId": 109,
+            "regName": "FP6"
+        }
+    ],
+    "VK32WM": [
+        {
+            "regId": 112,
+            "regName": "K1"
+        },
+        {
+            "regId": 113,
+            "regName": "K2"
+        },
+        {
+            "regId": 114,
+            "regName": "K3"
+        },
+        {
+            "regId": 115,
+            "regName": "K4"
+        },
+        {
+            "regId": 116,
+            "regName": "K5"
+        },
+        {
+            "regId": 117,
+            "regName": "K6"
+        },
+        {
+            "regId": 118,
+            "regName": "K7"
+        }
+    ],
+    "GR32_ABCD": [
+        {
+            "regId": 22,
+            "regName": "EAX"
+        },
+        {
+            "regId": 25,
+            "regName": "ECX"
+        },
+        {
+            "regId": 27,
+            "regName": "EDX"
+        },
+        {
+            "regId": 24,
+            "regName": "EBX"
+        }
+    ],
+    "GR32_TC": [
+        {
+            "regId": 22,
+            "regName": "EAX"
+        },
+        {
+            "regId": 25,
+            "regName": "ECX"
+        },
+        {
+            "regId": 27,
+            "regName": "EDX"
+        }
+    ],
+    "GR32_ABCD_and_GR32_TC": [
+        {
+            "regId": 22,
+            "regName": "EAX"
+        },
+        {
+            "regId": 25,
+            "regName": "ECX"
+        },
+        {
+            "regId": 27,
+            "regName": "EDX"
+        }
+    ],
+    "GR32_AD": [
+        {
+            "regId": 22,
+            "regName": "EAX"
+        },
+        {
+            "regId": 27,
+            "regName": "EDX"
+        }
+    ],
+    "GR32_BPSP": [
+        {
+            "regId": 23,
+            "regName": "EBP"
+        }
+    ],
+    "GR32_BSI": [
+        {
+            "regId": 32,
+            "regName": "ESI"
+        },
+        {
+            "regId": 24,
+            "regName": "EBX"
+        }
+    ],
+    "GR32_CB": [
+        {
+            "regId": 25,
+            "regName": "ECX"
+        },
+        {
+            "regId": 24,
+            "regName": "EBX"
+        }
+    ],
+    "GR32_DC": [
+        {
+            "regId": 27,
+            "regName": "EDX"
+        },
+        {
+            "regId": 25,
+            "regName": "ECX"
+        }
+    ],
+    "GR32_DIBP": [
+        {
+            "regId": 26,
+            "regName": "EDI"
+        },
+        {
+            "regId": 23,
+            "regName": "EBP"
+        }
+    ],
+    "GR32_SIDI": [
+        {
+            "regId": 32,
+            "regName": "ESI"
+        },
+        {
+            "regId": 26,
+            "regName": "EDI"
+        }
+    ],
+    "LOW32_ADDR_ACCESS_RBP_with_sub_32bit": [
+        {
+            "regId": 50,
+            "regName": "RBP"
+        }
+    ],
+    "CCR": [
+        {
+            "regId": 28,
+            "regName": "EFLAGS"
+        }
+    ],
+    "DFCCR": [
+        {
+            "regId": 14,
+            "regName": "DF"
+        }
+    ],
+    "GR32_ABCD_and_GR32_BSI": [
+        {
+            "regId": 24,
+            "regName": "EBX"
+        }
+    ],
+    "GR32_AD_and_GR32_DC": [
+        {
+            "regId": 27,
+            "regName": "EDX"
+        }
+    ],
+    "GR32_BPSP_and_GR32_DIBP": [
+        {
+            "regId": 23,
+            "regName": "EBP"
+        }
+    ],
+    "GR32_BPSP_and_GR32_TC": [],
+    "GR32_BSI_and_GR32_SIDI": [
+        {
+            "regId": 32,
+            "regName": "ESI"
+        }
+    ],
+    "GR32_CB_and_GR32_DC": [
+        {
+            "regId": 25,
+            "regName": "ECX"
+        }
+    ],
+    "GR32_DIBP_and_GR32_SIDI": [
+        {
+            "regId": 26,
+            "regName": "EDI"
+        }
+    ],
+    "LOW32_ADDR_ACCESS_RBP_with_sub_8bit_with_sub_32bit": [
+        {
+            "regId": 50,
+            "regName": "RBP"
+        }
+    ],
+    "LOW32_ADDR_ACCESS_with_sub_32bit": [],
+    "RFP64": [
+        {
+            "regId": 103,
+            "regName": "FP0"
+        },
+        {
+            "regId": 104,
+            "regName": "FP1"
+        },
+        {
+            "regId": 105,
+            "regName": "FP2"
+        },
+        {
+            "regId": 106,
+            "regName": "FP3"
+        },
+        {
+            "regId": 107,
+            "regName": "FP4"
+        },
+        {
+            "regId": 108,
+            "regName": "FP5"
+        },
+        {
+            "regId": 109,
+            "regName": "FP6"
+        }
+    ],
+    "FR64X": [
+        {
+            "regId": 143,
+            "regName": "XMM0"
+        },
+        {
+            "regId": 144,
+            "regName": "XMM1"
+        },
+        {
+            "regId": 145,
+            "regName": "XMM2"
+        },
+        {
+            "regId": 146,
+            "regName": "XMM3"
+        },
+        {
+            "regId": 147,
+            "regName": "XMM4"
+        },
+        {
+            "regId": 148,
+            "regName": "XMM5"
+        },
+        {
+            "regId": 149,
+            "regName": "XMM6"
+        },
+        {
+            "regId": 150,
+            "regName": "XMM7"
+        },
+        {
+            "regId": 151,
+            "regName": "XMM8"
+        },
+        {
+            "regId": 152,
+            "regName": "XMM9"
+        },
+        {
+            "regId": 153,
+            "regName": "XMM10"
+        },
+        {
+            "regId": 154,
+            "regName": "XMM11"
+        },
+        {
+            "regId": 155,
+            "regName": "XMM12"
+        },
+        {
+            "regId": 156,
+            "regName": "XMM13"
+        },
+        {
+            "regId": 157,
+            "regName": "XMM14"
+        },
+        {
+            "regId": 158,
+            "regName": "XMM15"
+        }
+    ],
+    "GR64": [
+        {
+            "regId": 49,
+            "regName": "RAX"
+        },
+        {
+            "regId": 52,
+            "regName": "RCX"
+        },
+        {
+            "regId": 54,
+            "regName": "RDX"
+        },
+        {
+            "regId": 57,
+            "regName": "RSI"
+        },
+        {
+            "regId": 53,
+            "regName": "RDI"
+        },
+        {
+            "regId": 127,
+            "regName": "R8"
+        },
+        {
+            "regId": 128,
+            "regName": "R9"
+        },
+        {
+            "regId": 129,
+            "regName": "R10"
+        },
+        {
+            "regId": 130,
+            "regName": "R11"
+        },
+        {
+            "regId": 51,
+            "regName": "RBX"
+        },
+        {
+            "regId": 133,
+            "regName": "R14"
+        },
+        {
+            "regId": 134,
+            "regName": "R15"
+        },
+        {
+            "regId": 131,
+            "regName": "R12"
+        },
+        {
+            "regId": 132,
+            "regName": "R13"
+        },
+        {
+            "regId": 50,
+            "regName": "RBP"
+        }
+    ],
+    "CONTROL_REG": [
+        {
+            "regId": 71,
+            "regName": "CR0"
+        },
+        {
+            "regId": 72,
+            "regName": "CR1"
+        },
+        {
+            "regId": 73,
+            "regName": "CR2"
+        },
+        {
+            "regId": 74,
+            "regName": "CR3"
+        },
+        {
+            "regId": 75,
+            "regName": "CR4"
+        },
+        {
+            "regId": 76,
+            "regName": "CR5"
+        },
+        {
+            "regId": 77,
+            "regName": "CR6"
+        },
+        {
+            "regId": 78,
+            "regName": "CR7"
+        },
+        {
+            "regId": 79,
+            "regName": "CR8"
+        },
+        {
+            "regId": 80,
+            "regName": "CR9"
+        },
+        {
+            "regId": 81,
+            "regName": "CR10"
+        },
+        {
+            "regId": 82,
+            "regName": "CR11"
+        },
+        {
+            "regId": 83,
+            "regName": "CR12"
+        },
+        {
+            "regId": 84,
+            "regName": "CR13"
+        },
+        {
+            "regId": 85,
+            "regName": "CR14"
+        },
+        {
+            "regId": 86,
+            "regName": "CR15"
+        }
+    ],
+    "FR64": [
+        {
+            "regId": 143,
+            "regName": "XMM0"
+        },
+        {
+            "regId": 144,
+            "regName": "XMM1"
+        },
+        {
+            "regId": 145,
+            "regName": "XMM2"
+        },
+        {
+            "regId": 146,
+            "regName": "XMM3"
+        },
+        {
+            "regId": 147,
+            "regName": "XMM4"
+        },
+        {
+            "regId": 148,
+            "regName": "XMM5"
+        },
+        {
+            "regId": 149,
+            "regName": "XMM6"
+        },
+        {
+            "regId": 150,
+            "regName": "XMM7"
+        },
+        {
+            "regId": 151,
+            "regName": "XMM8"
+        },
+        {
+            "regId": 152,
+            "regName": "XMM9"
+        },
+        {
+            "regId": 153,
+            "regName": "XMM10"
+        },
+        {
+            "regId": 154,
+            "regName": "XMM11"
+        },
+        {
+            "regId": 155,
+            "regName": "XMM12"
+        },
+        {
+            "regId": 156,
+            "regName": "XMM13"
+        },
+        {
+            "regId": 157,
+            "regName": "XMM14"
+        },
+        {
+            "regId": 158,
+            "regName": "XMM15"
+        }
+    ],
+    "GR64_with_sub_8bit": [
+        {
+            "regId": 49,
+            "regName": "RAX"
+        },
+        {
+            "regId": 52,
+            "regName": "RCX"
+        },
+        {
+            "regId": 54,
+            "regName": "RDX"
+        },
+        {
+            "regId": 57,
+            "regName": "RSI"
+        },
+        {
+            "regId": 53,
+            "regName": "RDI"
+        },
+        {
+            "regId": 127,
+            "regName": "R8"
+        },
+        {
+            "regId": 128,
+            "regName": "R9"
+        },
+        {
+            "regId": 129,
+            "regName": "R10"
+        },
+        {
+            "regId": 130,
+            "regName": "R11"
+        },
+        {
+            "regId": 51,
+            "regName": "RBX"
+        },
+        {
+            "regId": 133,
+            "regName": "R14"
+        },
+        {
+            "regId": 134,
+            "regName": "R15"
+        },
+        {
+            "regId": 131,
+            "regName": "R12"
+        },
+        {
+            "regId": 132,
+            "regName": "R13"
+        },
+        {
+            "regId": 50,
+            "regName": "RBP"
+        }
+    ],
+    "GR64_NOSP": [
+        {
+            "regId": 49,
+            "regName": "RAX"
+        },
+        {
+            "regId": 52,
+            "regName": "RCX"
+        },
+        {
+            "regId": 54,
+            "regName": "RDX"
+        },
+        {
+            "regId": 57,
+            "regName": "RSI"
+        },
+        {
+            "regId": 53,
+            "regName": "RDI"
+        },
+        {
+            "regId": 127,
+            "regName": "R8"
+        },
+        {
+            "regId": 128,
+            "regName": "R9"
+        },
+        {
+            "regId": 129,
+            "regName": "R10"
+        },
+        {
+            "regId": 130,
+            "regName": "R11"
+        },
+        {
+            "regId": 51,
+            "regName": "RBX"
+        },
+        {
+            "regId": 133,
+            "regName": "R14"
+        },
+        {
+            "regId": 134,
+            "regName": "R15"
+        },
+        {
+            "regId": 131,
+            "regName": "R12"
+        },
+        {
+            "regId": 132,
+            "regName": "R13"
+        },
+        {
+            "regId": 50,
+            "regName": "RBP"
+        }
+    ],
+    "GR64_TC": [
+        {
+            "regId": 49,
+            "regName": "RAX"
+        },
+        {
+            "regId": 52,
+            "regName": "RCX"
+        },
+        {
+            "regId": 54,
+            "regName": "RDX"
+        },
+        {
+            "regId": 57,
+            "regName": "RSI"
+        },
+        {
+            "regId": 53,
+            "regName": "RDI"
+        },
+        {
+            "regId": 127,
+            "regName": "R8"
+        },
+        {
+            "regId": 128,
+            "regName": "R9"
+        },
+        {
+            "regId": 130,
+            "regName": "R11"
+        }
+    ],
+    "GR64_NOREX": [
+        {
+            "regId": 49,
+            "regName": "RAX"
+        },
+        {
+            "regId": 52,
+            "regName": "RCX"
+        },
+        {
+            "regId": 54,
+            "regName": "RDX"
+        },
+        {
+            "regId": 57,
+            "regName": "RSI"
+        },
+        {
+            "regId": 53,
+            "regName": "RDI"
+        },
+        {
+            "regId": 51,
+            "regName": "RBX"
+        },
+        {
+            "regId": 50,
+            "regName": "RBP"
+        }
+    ],
+    "GR64_TCW64": [
+        {
+            "regId": 49,
+            "regName": "RAX"
+        },
+        {
+            "regId": 52,
+            "regName": "RCX"
+        },
+        {
+            "regId": 54,
+            "regName": "RDX"
+        },
+        {
+            "regId": 127,
+            "regName": "R8"
+        },
+        {
+            "regId": 128,
+            "regName": "R9"
+        },
+        {
+            "regId": 129,
+            "regName": "R10"
+        },
+        {
+            "regId": 130,
+            "regName": "R11"
+        }
+    ],
+    "GR64_TC_with_sub_8bit": [
+        {
+            "regId": 49,
+            "regName": "RAX"
+        },
+        {
+            "regId": 52,
+            "regName": "RCX"
+        },
+        {
+            "regId": 54,
+            "regName": "RDX"
+        },
+        {
+            "regId": 57,
+            "regName": "RSI"
+        },
+        {
+            "regId": 53,
+            "regName": "RDI"
+        },
+        {
+            "regId": 127,
+            "regName": "R8"
+        },
+        {
+            "regId": 128,
+            "regName": "R9"
+        },
+        {
+            "regId": 130,
+            "regName": "R11"
+        }
+    ],
+    "GR64_NOSP_and_GR64_TC": [
+        {
+            "regId": 49,
+            "regName": "RAX"
+        },
+        {
+            "regId": 52,
+            "regName": "RCX"
+        },
+        {
+            "regId": 54,
+            "regName": "RDX"
+        },
+        {
+            "regId": 57,
+            "regName": "RSI"
+        },
+        {
+            "regId": 53,
+            "regName": "RDI"
+        },
+        {
+            "regId": 127,
+            "regName": "R8"
+        },
+        {
+            "regId": 128,
+            "regName": "R9"
+        },
+        {
+            "regId": 130,
+            "regName": "R11"
+        }
+    ],
+    "GR64_TCW64_with_sub_8bit": [
+        {
+            "regId": 49,
+            "regName": "RAX"
+        },
+        {
+            "regId": 52,
+            "regName": "RCX"
+        },
+        {
+            "regId": 54,
+            "regName": "RDX"
+        },
+        {
+            "regId": 127,
+            "regName": "R8"
+        },
+        {
+            "regId": 128,
+            "regName": "R9"
+        },
+        {
+            "regId": 129,
+            "regName": "R10"
+        },
+        {
+            "regId": 130,
+            "regName": "R11"
+        }
+    ],
+    "GR64_TC_and_GR64_TCW64": [
+        {
+            "regId": 49,
+            "regName": "RAX"
+        },
+        {
+            "regId": 52,
+            "regName": "RCX"
+        },
+        {
+            "regId": 54,
+            "regName": "RDX"
+        },
+        {
+            "regId": 127,
+            "regName": "R8"
+        },
+        {
+            "regId": 128,
+            "regName": "R9"
+        },
+        {
+            "regId": 130,
+            "regName": "R11"
+        }
+    ],
+    "GR64_with_sub_16bit_in_GR16_NOREX": [
+        {
+            "regId": 49,
+            "regName": "RAX"
+        },
+        {
+            "regId": 52,
+            "regName": "RCX"
+        },
+        {
+            "regId": 54,
+            "regName": "RDX"
+        },
+        {
+            "regId": 57,
+            "regName": "RSI"
+        },
+        {
+            "regId": 53,
+            "regName": "RDI"
+        },
+        {
+            "regId": 51,
+            "regName": "RBX"
+        },
+        {
+            "regId": 50,
+            "regName": "RBP"
+        }
+    ],
+    "VK64": [
+        {
+            "regId": 111,
+            "regName": "K0"
+        },
+        {
+            "regId": 112,
+            "regName": "K1"
+        },
+        {
+            "regId": 113,
+            "regName": "K2"
+        },
+        {
+            "regId": 114,
+            "regName": "K3"
+        },
+        {
+            "regId": 115,
+            "regName": "K4"
+        },
+        {
+            "regId": 116,
+            "regName": "K5"
+        },
+        {
+            "regId": 117,
+            "regName": "K6"
+        },
+        {
+            "regId": 118,
+            "regName": "K7"
+        }
+    ],
+    "VR64": [
+        {
+            "regId": 119,
+            "regName": "MM0"
+        },
+        {
+            "regId": 120,
+            "regName": "MM1"
+        },
+        {
+            "regId": 121,
+            "regName": "MM2"
+        },
+        {
+            "regId": 122,
+            "regName": "MM3"
+        },
+        {
+            "regId": 123,
+            "regName": "MM4"
+        },
+        {
+            "regId": 124,
+            "regName": "MM5"
+        },
+        {
+            "regId": 125,
+            "regName": "MM6"
+        },
+        {
+            "regId": 126,
+            "regName": "MM7"
+        }
+    ],
+    "GR64_NOREX_NOSP": [
+        {
+            "regId": 49,
+            "regName": "RAX"
+        },
+        {
+            "regId": 52,
+            "regName": "RCX"
+        },
+        {
+            "regId": 54,
+            "regName": "RDX"
+        },
+        {
+            "regId": 57,
+            "regName": "RSI"
+        },
+        {
+            "regId": 53,
+            "regName": "RDI"
+        },
+        {
+            "regId": 51,
+            "regName": "RBX"
+        },
+        {
+            "regId": 50,
+            "regName": "RBP"
+        }
+    ],
+    "GR64_NOREX_and_GR64_TC": [
+        {
+            "regId": 49,
+            "regName": "RAX"
+        },
+        {
+            "regId": 52,
+            "regName": "RCX"
+        },
+        {
+            "regId": 54,
+            "regName": "RDX"
+        },
+        {
+            "regId": 57,
+            "regName": "RSI"
+        },
+        {
+            "regId": 53,
+            "regName": "RDI"
+        }
+    ],
+    "GR64_NOSP_and_GR64_TCW64": [
+        {
+            "regId": 49,
+            "regName": "RAX"
+        },
+        {
+            "regId": 52,
+            "regName": "RCX"
+        },
+        {
+            "regId": 54,
+            "regName": "RDX"
+        },
+        {
+            "regId": 127,
+            "regName": "R8"
+        },
+        {
+            "regId": 128,
+            "regName": "R9"
+        },
+        {
+            "regId": 129,
+            "regName": "R10"
+        },
+        {
+            "regId": 130,
+            "regName": "R11"
+        }
+    ],
+    "GR64_TCW64_and_GR64_TC_with_sub_8bit": [
+        {
+            "regId": 49,
+            "regName": "RAX"
+        },
+        {
+            "regId": 52,
+            "regName": "RCX"
+        },
+        {
+            "regId": 54,
+            "regName": "RDX"
+        },
+        {
+            "regId": 127,
+            "regName": "R8"
+        },
+        {
+            "regId": 128,
+            "regName": "R9"
+        },
+        {
+            "regId": 130,
+            "regName": "R11"
+        }
+    ],
+    "VK64WM": [
+        {
+            "regId": 112,
+            "regName": "K1"
+        },
+        {
+            "regId": 113,
+            "regName": "K2"
+        },
+        {
+            "regId": 114,
+            "regName": "K3"
+        },
+        {
+            "regId": 115,
+            "regName": "K4"
+        },
+        {
+            "regId": 116,
+            "regName": "K5"
+        },
+        {
+            "regId": 117,
+            "regName": "K6"
+        },
+        {
+            "regId": 118,
+            "regName": "K7"
+        }
+    ],
+    "GR64_TC_and_GR64_NOSP_and_GR64_TCW64": [
+        {
+            "regId": 49,
+            "regName": "RAX"
+        },
+        {
+            "regId": 52,
+            "regName": "RCX"
+        },
+        {
+            "regId": 54,
+            "regName": "RDX"
+        },
+        {
+            "regId": 127,
+            "regName": "R8"
+        },
+        {
+            "regId": 128,
+            "regName": "R9"
+        },
+        {
+            "regId": 130,
+            "regName": "R11"
+        }
+    ],
+    "GR64_TC_and_GR64_with_sub_16bit_in_GR16_NOREX": [
+        {
+            "regId": 49,
+            "regName": "RAX"
+        },
+        {
+            "regId": 52,
+            "regName": "RCX"
+        },
+        {
+            "regId": 54,
+            "regName": "RDX"
+        },
+        {
+            "regId": 57,
+            "regName": "RSI"
+        },
+        {
+            "regId": 53,
+            "regName": "RDI"
+        }
+    ],
+    "GR64_NOREX_NOSP_and_GR64_TC": [
+        {
+            "regId": 49,
+            "regName": "RAX"
+        },
+        {
+            "regId": 52,
+            "regName": "RCX"
+        },
+        {
+            "regId": 54,
+            "regName": "RDX"
+        },
+        {
+            "regId": 57,
+            "regName": "RSI"
+        },
+        {
+            "regId": 53,
+            "regName": "RDI"
+        }
+    ],
+    "GR64_NOREX_and_GR64_TCW64": [
+        {
+            "regId": 49,
+            "regName": "RAX"
+        },
+        {
+            "regId": 52,
+            "regName": "RCX"
+        },
+        {
+            "regId": 54,
+            "regName": "RDX"
+        }
+    ],
+    "GR64_ABCD": [
+        {
+            "regId": 49,
+            "regName": "RAX"
+        },
+        {
+            "regId": 52,
+            "regName": "RCX"
+        },
+        {
+            "regId": 54,
+            "regName": "RDX"
+        },
+        {
+            "regId": 51,
+            "regName": "RBX"
+        }
+    ],
+    "GR64_with_sub_32bit_in_GR32_TC": [
+        {
+            "regId": 49,
+            "regName": "RAX"
+        },
+        {
+            "regId": 52,
+            "regName": "RCX"
+        },
+        {
+            "regId": 54,
+            "regName": "RDX"
+        }
+    ],
+    "GR64_with_sub_32bit_in_GR32_ABCD_and_GR32_TC": [
+        {
+            "regId": 49,
+            "regName": "RAX"
+        },
+        {
+            "regId": 52,
+            "regName": "RCX"
+        },
+        {
+            "regId": 54,
+            "regName": "RDX"
+        }
+    ],
+    "GR64_AD": [
+        {
+            "regId": 49,
+            "regName": "RAX"
+        },
+        {
+            "regId": 54,
+            "regName": "RDX"
+        }
+    ],
+    "GR64_and_LOW32_ADDR_ACCESS_RBP": [
+        {
+            "regId": 50,
+            "regName": "RBP"
+        }
+    ],
+    "GR64_with_sub_32bit_in_GR32_BPSP": [
+        {
+            "regId": 50,
+            "regName": "RBP"
+        }
+    ],
+    "GR64_with_sub_32bit_in_GR32_BSI": [
+        {
+            "regId": 57,
+            "regName": "RSI"
+        },
+        {
+            "regId": 51,
+            "regName": "RBX"
+        }
+    ],
+    "GR64_with_sub_32bit_in_GR32_CB": [
+        {
+            "regId": 52,
+            "regName": "RCX"
+        },
+        {
+            "regId": 51,
+            "regName": "RBX"
+        }
+    ],
+    "GR64_with_sub_32bit_in_GR32_DC": [
+        {
+            "regId": 52,
+            "regName": "RCX"
+        },
+        {
+            "regId": 54,
+            "regName": "RDX"
+        }
+    ],
+    "GR64_with_sub_32bit_in_GR32_DIBP": [
+        {
+            "regId": 53,
+            "regName": "RDI"
+        },
+        {
+            "regId": 50,
+            "regName": "RBP"
+        }
+    ],
+    "GR64_with_sub_32bit_in_GR32_SIDI": [
+        {
+            "regId": 57,
+            "regName": "RSI"
+        },
+        {
+            "regId": 53,
+            "regName": "RDI"
+        }
+    ],
+    "GR64_and_LOW32_ADDR_ACCESS": [],
+    "GR64_with_sub_32bit_in_GR32_ABCD_and_GR32_BSI": [
+        {
+            "regId": 51,
+            "regName": "RBX"
+        }
+    ],
+    "GR64_with_sub_32bit_in_GR32_AD_and_GR32_DC": [
+        {
+            "regId": 54,
+            "regName": "RDX"
+        }
+    ],
+    "GR64_with_sub_32bit_in_GR32_BPSP_and_GR32_DIBP": [
+        {
+            "regId": 50,
+            "regName": "RBP"
+        }
+    ],
+    "GR64_with_sub_32bit_in_GR32_BPSP_and_GR32_TC": [],
+    "GR64_with_sub_32bit_in_GR32_BSI_and_GR32_SIDI": [
+        {
+            "regId": 57,
+            "regName": "RSI"
+        }
+    ],
+    "GR64_with_sub_32bit_in_GR32_CB_and_GR32_DC": [
+        {
+            "regId": 52,
+            "regName": "RCX"
+        }
+    ],
+    "GR64_with_sub_32bit_in_GR32_DIBP_and_GR32_SIDI": [
+        {
+            "regId": 53,
+            "regName": "RDI"
+        }
+    ],
+    "RST": [],
+    "RFP80": [
+        {
+            "regId": 103,
+            "regName": "FP0"
+        },
+        {
+            "regId": 104,
+            "regName": "FP1"
+        },
+        {
+            "regId": 105,
+            "regName": "FP2"
+        },
+        {
+            "regId": 106,
+            "regName": "FP3"
+        },
+        {
+            "regId": 107,
+            "regName": "FP4"
+        },
+        {
+            "regId": 108,
+            "regName": "FP5"
+        },
+        {
+            "regId": 109,
+            "regName": "FP6"
+        }
+    ],
+    "RFP80_7": [
+        {
+            "regId": 110,
+            "regName": "FP7"
+        }
+    ],
+    "VR128X": [
+        {
+            "regId": 143,
+            "regName": "XMM0"
+        },
+        {
+            "regId": 144,
+            "regName": "XMM1"
+        },
+        {
+            "regId": 145,
+            "regName": "XMM2"
+        },
+        {
+            "regId": 146,
+            "regName": "XMM3"
+        },
+        {
+            "regId": 147,
+            "regName": "XMM4"
+        },
+        {
+            "regId": 148,
+            "regName": "XMM5"
+        },
+        {
+            "regId": 149,
+            "regName": "XMM6"
+        },
+        {
+            "regId": 150,
+            "regName": "XMM7"
+        },
+        {
+            "regId": 151,
+            "regName": "XMM8"
+        },
+        {
+            "regId": 152,
+            "regName": "XMM9"
+        },
+        {
+            "regId": 153,
+            "regName": "XMM10"
+        },
+        {
+            "regId": 154,
+            "regName": "XMM11"
+        },
+        {
+            "regId": 155,
+            "regName": "XMM12"
+        },
+        {
+            "regId": 156,
+            "regName": "XMM13"
+        },
+        {
+            "regId": 157,
+            "regName": "XMM14"
+        },
+        {
+            "regId": 158,
+            "regName": "XMM15"
+        }
+    ],
+    "VR128": [
+        {
+            "regId": 143,
+            "regName": "XMM0"
+        },
+        {
+            "regId": 144,
+            "regName": "XMM1"
+        },
+        {
+            "regId": 145,
+            "regName": "XMM2"
+        },
+        {
+            "regId": 146,
+            "regName": "XMM3"
+        },
+        {
+            "regId": 147,
+            "regName": "XMM4"
+        },
+        {
+            "regId": 148,
+            "regName": "XMM5"
+        },
+        {
+            "regId": 149,
+            "regName": "XMM6"
+        },
+        {
+            "regId": 150,
+            "regName": "XMM7"
+        },
+        {
+            "regId": 151,
+            "regName": "XMM8"
+        },
+        {
+            "regId": 152,
+            "regName": "XMM9"
+        },
+        {
+            "regId": 153,
+            "regName": "XMM10"
+        },
+        {
+            "regId": 154,
+            "regName": "XMM11"
+        },
+        {
+            "regId": 155,
+            "regName": "XMM12"
+        },
+        {
+            "regId": 156,
+            "regName": "XMM13"
+        },
+        {
+            "regId": 157,
+            "regName": "XMM14"
+        },
+        {
+            "regId": 158,
+            "regName": "XMM15"
+        }
+    ],
+    "BNDR": [
+        {
+            "regId": 67,
+            "regName": "BND0"
+        },
+        {
+            "regId": 68,
+            "regName": "BND1"
+        },
+        {
+            "regId": 69,
+            "regName": "BND2"
+        },
+        {
+            "regId": 70,
+            "regName": "BND3"
+        }
+    ],
+    "VR256X": [
+        {
+            "regId": 175,
+            "regName": "YMM0"
+        },
+        {
+            "regId": 176,
+            "regName": "YMM1"
+        },
+        {
+            "regId": 177,
+            "regName": "YMM2"
+        },
+        {
+            "regId": 178,
+            "regName": "YMM3"
+        },
+        {
+            "regId": 179,
+            "regName": "YMM4"
+        },
+        {
+            "regId": 180,
+            "regName": "YMM5"
+        },
+        {
+            "regId": 181,
+            "regName": "YMM6"
+        },
+        {
+            "regId": 182,
+            "regName": "YMM7"
+        },
+        {
+            "regId": 183,
+            "regName": "YMM8"
+        },
+        {
+            "regId": 184,
+            "regName": "YMM9"
+        },
+        {
+            "regId": 185,
+            "regName": "YMM10"
+        },
+        {
+            "regId": 186,
+            "regName": "YMM11"
+        },
+        {
+            "regId": 187,
+            "regName": "YMM12"
+        },
+        {
+            "regId": 188,
+            "regName": "YMM13"
+        },
+        {
+            "regId": 189,
+            "regName": "YMM14"
+        },
+        {
+            "regId": 190,
+            "regName": "YMM15"
+        }
+    ],
+    "VR256": [
+        {
+            "regId": 175,
+            "regName": "YMM0"
+        },
+        {
+            "regId": 176,
+            "regName": "YMM1"
+        },
+        {
+            "regId": 177,
+            "regName": "YMM2"
+        },
+        {
+            "regId": 178,
+            "regName": "YMM3"
+        },
+        {
+            "regId": 179,
+            "regName": "YMM4"
+        },
+        {
+            "regId": 180,
+            "regName": "YMM5"
+        },
+        {
+            "regId": 181,
+            "regName": "YMM6"
+        },
+        {
+            "regId": 182,
+            "regName": "YMM7"
+        },
+        {
+            "regId": 183,
+            "regName": "YMM8"
+        },
+        {
+            "regId": 184,
+            "regName": "YMM9"
+        },
+        {
+            "regId": 185,
+            "regName": "YMM10"
+        },
+        {
+            "regId": 186,
+            "regName": "YMM11"
+        },
+        {
+            "regId": 187,
+            "regName": "YMM12"
+        },
+        {
+            "regId": 188,
+            "regName": "YMM13"
+        },
+        {
+            "regId": 189,
+            "regName": "YMM14"
+        },
+        {
+            "regId": 190,
+            "regName": "YMM15"
+        }
+    ],
+    "VR512": [
+        {
+            "regId": 207,
+            "regName": "ZMM0"
+        },
+        {
+            "regId": 208,
+            "regName": "ZMM1"
+        },
+        {
+            "regId": 209,
+            "regName": "ZMM2"
+        },
+        {
+            "regId": 210,
+            "regName": "ZMM3"
+        },
+        {
+            "regId": 211,
+            "regName": "ZMM4"
+        },
+        {
+            "regId": 212,
+            "regName": "ZMM5"
+        },
+        {
+            "regId": 213,
+            "regName": "ZMM6"
+        },
+        {
+            "regId": 214,
+            "regName": "ZMM7"
+        },
+        {
+            "regId": 215,
+            "regName": "ZMM8"
+        },
+        {
+            "regId": 216,
+            "regName": "ZMM9"
+        },
+        {
+            "regId": 217,
+            "regName": "ZMM10"
+        },
+        {
+            "regId": 218,
+            "regName": "ZMM11"
+        },
+        {
+            "regId": 219,
+            "regName": "ZMM12"
+        },
+        {
+            "regId": 220,
+            "regName": "ZMM13"
+        },
+        {
+            "regId": 221,
+            "regName": "ZMM14"
+        },
+        {
+            "regId": 222,
+            "regName": "ZMM15"
+        }
+    ],
+    "VR512_0_15": [
+        {
+            "regId": 207,
+            "regName": "ZMM0"
+        },
+        {
+            "regId": 208,
+            "regName": "ZMM1"
+        },
+        {
+            "regId": 209,
+            "regName": "ZMM2"
+        },
+        {
+            "regId": 210,
+            "regName": "ZMM3"
+        },
+        {
+            "regId": 211,
+            "regName": "ZMM4"
+        },
+        {
+            "regId": 212,
+            "regName": "ZMM5"
+        },
+        {
+            "regId": 213,
+            "regName": "ZMM6"
+        },
+        {
+            "regId": 214,
+            "regName": "ZMM7"
+        },
+        {
+            "regId": 215,
+            "regName": "ZMM8"
+        },
+        {
+            "regId": 216,
+            "regName": "ZMM9"
+        },
+        {
+            "regId": 217,
+            "regName": "ZMM10"
+        },
+        {
+            "regId": 218,
+            "regName": "ZMM11"
+        },
+        {
+            "regId": 219,
+            "regName": "ZMM12"
+        },
+        {
+            "regId": 220,
+            "regName": "ZMM13"
+        },
+        {
+            "regId": 221,
+            "regName": "ZMM14"
+        },
+        {
+            "regId": 222,
+            "regName": "ZMM15"
+        }
+    ]
+}

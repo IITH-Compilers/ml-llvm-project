@@ -1,0 +1,938 @@
+{
+    "GPR32all": [
+        {
+            "regId": 185,
+            "regName": "W0"
+        },
+        {
+            "regId": 186,
+            "regName": "W1"
+        },
+        {
+            "regId": 187,
+            "regName": "W2"
+        },
+        {
+            "regId": 188,
+            "regName": "W3"
+        },
+        {
+            "regId": 189,
+            "regName": "W4"
+        },
+        {
+            "regId": 190,
+            "regName": "W5"
+        },
+        {
+            "regId": 191,
+            "regName": "W6"
+        },
+        {
+            "regId": 192,
+            "regName": "W7"
+        },
+        {
+            "regId": 193,
+            "regName": "W8"
+        },
+        {
+            "regId": 194,
+            "regName": "W9"
+        },
+        {
+            "regId": 195,
+            "regName": "W10"
+        },
+        {
+            "regId": 196,
+            "regName": "W11"
+        },
+        {
+            "regId": 197,
+            "regName": "W12"
+        },
+        {
+            "regId": 198,
+            "regName": "W13"
+        },
+        {
+            "regId": 199,
+            "regName": "W14"
+        },
+        {
+            "regId": 200,
+            "regName": "W15"
+        },
+        {
+            "regId": 201,
+            "regName": "W16"
+        },
+        {
+            "regId": 202,
+            "regName": "W17"
+        },
+        {
+            "regId": 203,
+            "regName": "W18"
+        },
+        {
+            "regId": 204,
+            "regName": "W19"
+        },
+        {
+            "regId": 205,
+            "regName": "W20"
+        },
+        {
+            "regId": 206,
+            "regName": "W21"
+        },
+        {
+            "regId": 207,
+            "regName": "W22"
+        },
+        {
+            "regId": 208,
+            "regName": "W23"
+        },
+        {
+            "regId": 209,
+            "regName": "W24"
+        },
+        {
+            "regId": 210,
+            "regName": "W25"
+        },
+        {
+            "regId": 211,
+            "regName": "W26"
+        },
+        {
+            "regId": 212,
+            "regName": "W27"
+        },
+        {
+            "regId": 213,
+            "regName": "W28"
+        },
+        {
+            "regId": 215,
+            "regName": "W30"
+        }
+    ],
+    "GPR32": [
+        {
+            "regId": 193,
+            "regName": "W8"
+        },
+        {
+            "regId": 194,
+            "regName": "W9"
+        },
+        {
+            "regId": 195,
+            "regName": "W10"
+        },
+        {
+            "regId": 196,
+            "regName": "W11"
+        },
+        {
+            "regId": 197,
+            "regName": "W12"
+        },
+        {
+            "regId": 198,
+            "regName": "W13"
+        },
+        {
+            "regId": 199,
+            "regName": "W14"
+        },
+        {
+            "regId": 200,
+            "regName": "W15"
+        },
+        {
+            "regId": 201,
+            "regName": "W16"
+        },
+        {
+            "regId": 202,
+            "regName": "W17"
+        },
+        {
+            "regId": 203,
+            "regName": "W18"
+        },
+        {
+            "regId": 185,
+            "regName": "W0"
+        },
+        {
+            "regId": 186,
+            "regName": "W1"
+        },
+        {
+            "regId": 187,
+            "regName": "W2"
+        },
+        {
+            "regId": 188,
+            "regName": "W3"
+        },
+        {
+            "regId": 189,
+            "regName": "W4"
+        },
+        {
+            "regId": 190,
+            "regName": "W5"
+        },
+        {
+            "regId": 191,
+            "regName": "W6"
+        },
+        {
+            "regId": 192,
+            "regName": "W7"
+        },
+        {
+            "regId": 204,
+            "regName": "W19"
+        },
+        {
+            "regId": 205,
+            "regName": "W20"
+        },
+        {
+            "regId": 206,
+            "regName": "W21"
+        },
+        {
+            "regId": 207,
+            "regName": "W22"
+        },
+        {
+            "regId": 208,
+            "regName": "W23"
+        },
+        {
+            "regId": 209,
+            "regName": "W24"
+        },
+        {
+            "regId": 210,
+            "regName": "W25"
+        },
+        {
+            "regId": 211,
+            "regName": "W26"
+        },
+        {
+            "regId": 212,
+            "regName": "W27"
+        },
+        {
+            "regId": 213,
+            "regName": "W28"
+        },
+        {
+            "regId": 215,
+            "regName": "W30"
+        }
+    ],
+    "GPR32sp": [
+        {
+            "regId": 193,
+            "regName": "W8"
+        },
+        {
+            "regId": 194,
+            "regName": "W9"
+        },
+        {
+            "regId": 195,
+            "regName": "W10"
+        },
+        {
+            "regId": 196,
+            "regName": "W11"
+        },
+        {
+            "regId": 197,
+            "regName": "W12"
+        },
+        {
+            "regId": 198,
+            "regName": "W13"
+        },
+        {
+            "regId": 199,
+            "regName": "W14"
+        },
+        {
+            "regId": 200,
+            "regName": "W15"
+        },
+        {
+            "regId": 201,
+            "regName": "W16"
+        },
+        {
+            "regId": 202,
+            "regName": "W17"
+        },
+        {
+            "regId": 203,
+            "regName": "W18"
+        },
+        {
+            "regId": 185,
+            "regName": "W0"
+        },
+        {
+            "regId": 186,
+            "regName": "W1"
+        },
+        {
+            "regId": 187,
+            "regName": "W2"
+        },
+        {
+            "regId": 188,
+            "regName": "W3"
+        },
+        {
+            "regId": 189,
+            "regName": "W4"
+        },
+        {
+            "regId": 190,
+            "regName": "W5"
+        },
+        {
+            "regId": 191,
+            "regName": "W6"
+        },
+        {
+            "regId": 192,
+            "regName": "W7"
+        },
+        {
+            "regId": 204,
+            "regName": "W19"
+        },
+        {
+            "regId": 205,
+            "regName": "W20"
+        },
+        {
+            "regId": 206,
+            "regName": "W21"
+        },
+        {
+            "regId": 207,
+            "regName": "W22"
+        },
+        {
+            "regId": 208,
+            "regName": "W23"
+        },
+        {
+            "regId": 209,
+            "regName": "W24"
+        },
+        {
+            "regId": 210,
+            "regName": "W25"
+        },
+        {
+            "regId": 211,
+            "regName": "W26"
+        },
+        {
+            "regId": 212,
+            "regName": "W27"
+        },
+        {
+            "regId": 213,
+            "regName": "W28"
+        },
+        {
+            "regId": 215,
+            "regName": "W30"
+        }
+    ],
+    "GPR32common": [
+        {
+            "regId": 193,
+            "regName": "W8"
+        },
+        {
+            "regId": 194,
+            "regName": "W9"
+        },
+        {
+            "regId": 195,
+            "regName": "W10"
+        },
+        {
+            "regId": 196,
+            "regName": "W11"
+        },
+        {
+            "regId": 197,
+            "regName": "W12"
+        },
+        {
+            "regId": 198,
+            "regName": "W13"
+        },
+        {
+            "regId": 199,
+            "regName": "W14"
+        },
+        {
+            "regId": 200,
+            "regName": "W15"
+        },
+        {
+            "regId": 201,
+            "regName": "W16"
+        },
+        {
+            "regId": 202,
+            "regName": "W17"
+        },
+        {
+            "regId": 203,
+            "regName": "W18"
+        },
+        {
+            "regId": 185,
+            "regName": "W0"
+        },
+        {
+            "regId": 186,
+            "regName": "W1"
+        },
+        {
+            "regId": 187,
+            "regName": "W2"
+        },
+        {
+            "regId": 188,
+            "regName": "W3"
+        },
+        {
+            "regId": 189,
+            "regName": "W4"
+        },
+        {
+            "regId": 190,
+            "regName": "W5"
+        },
+        {
+            "regId": 191,
+            "regName": "W6"
+        },
+        {
+            "regId": 192,
+            "regName": "W7"
+        },
+        {
+            "regId": 204,
+            "regName": "W19"
+        },
+        {
+            "regId": 205,
+            "regName": "W20"
+        },
+        {
+            "regId": 206,
+            "regName": "W21"
+        },
+        {
+            "regId": 207,
+            "regName": "W22"
+        },
+        {
+            "regId": 208,
+            "regName": "W23"
+        },
+        {
+            "regId": 209,
+            "regName": "W24"
+        },
+        {
+            "regId": 210,
+            "regName": "W25"
+        },
+        {
+            "regId": 211,
+            "regName": "W26"
+        },
+        {
+            "regId": 212,
+            "regName": "W27"
+        },
+        {
+            "regId": 213,
+            "regName": "W28"
+        },
+        {
+            "regId": 215,
+            "regName": "W30"
+        }
+    ],
+    "GPR32arg": [
+        {
+            "regId": 185,
+            "regName": "W0"
+        },
+        {
+            "regId": 186,
+            "regName": "W1"
+        },
+        {
+            "regId": 187,
+            "regName": "W2"
+        },
+        {
+            "regId": 188,
+            "regName": "W3"
+        },
+        {
+            "regId": 189,
+            "regName": "W4"
+        },
+        {
+            "regId": 190,
+            "regName": "W5"
+        },
+        {
+            "regId": 191,
+            "regName": "W6"
+        },
+        {
+            "regId": 192,
+            "regName": "W7"
+        }
+    ],
+    "GPR32sponly": [],
+    "GPR64noip": [
+        {
+            "regId": 216,
+            "regName": "X0"
+        },
+        {
+            "regId": 217,
+            "regName": "X1"
+        },
+        {
+            "regId": 218,
+            "regName": "X2"
+        },
+        {
+            "regId": 219,
+            "regName": "X3"
+        },
+        {
+            "regId": 220,
+            "regName": "X4"
+        },
+        {
+            "regId": 221,
+            "regName": "X5"
+        },
+        {
+            "regId": 222,
+            "regName": "X6"
+        },
+        {
+            "regId": 223,
+            "regName": "X7"
+        },
+        {
+            "regId": 224,
+            "regName": "X8"
+        },
+        {
+            "regId": 225,
+            "regName": "X9"
+        },
+        {
+            "regId": 226,
+            "regName": "X10"
+        },
+        {
+            "regId": 227,
+            "regName": "X11"
+        },
+        {
+            "regId": 228,
+            "regName": "X12"
+        },
+        {
+            "regId": 229,
+            "regName": "X13"
+        },
+        {
+            "regId": 230,
+            "regName": "X14"
+        },
+        {
+            "regId": 231,
+            "regName": "X15"
+        },
+        {
+            "regId": 234,
+            "regName": "X18"
+        },
+        {
+            "regId": 235,
+            "regName": "X19"
+        },
+        {
+            "regId": 236,
+            "regName": "X20"
+        },
+        {
+            "regId": 237,
+            "regName": "X21"
+        },
+        {
+            "regId": 238,
+            "regName": "X22"
+        },
+        {
+            "regId": 239,
+            "regName": "X23"
+        },
+        {
+            "regId": 240,
+            "regName": "X24"
+        },
+        {
+            "regId": 241,
+            "regName": "X25"
+        },
+        {
+            "regId": 242,
+            "regName": "X26"
+        },
+        {
+            "regId": 243,
+            "regName": "X27"
+        },
+        {
+            "regId": 244,
+            "regName": "X28"
+        }
+    ],
+    "GPR64common_and_GPR64noip": [
+        {
+            "regId": 216,
+            "regName": "X0"
+        },
+        {
+            "regId": 217,
+            "regName": "X1"
+        },
+        {
+            "regId": 218,
+            "regName": "X2"
+        },
+        {
+            "regId": 219,
+            "regName": "X3"
+        },
+        {
+            "regId": 220,
+            "regName": "X4"
+        },
+        {
+            "regId": 221,
+            "regName": "X5"
+        },
+        {
+            "regId": 222,
+            "regName": "X6"
+        },
+        {
+            "regId": 223,
+            "regName": "X7"
+        },
+        {
+            "regId": 224,
+            "regName": "X8"
+        },
+        {
+            "regId": 225,
+            "regName": "X9"
+        },
+        {
+            "regId": 226,
+            "regName": "X10"
+        },
+        {
+            "regId": 227,
+            "regName": "X11"
+        },
+        {
+            "regId": 228,
+            "regName": "X12"
+        },
+        {
+            "regId": 229,
+            "regName": "X13"
+        },
+        {
+            "regId": 230,
+            "regName": "X14"
+        },
+        {
+            "regId": 231,
+            "regName": "X15"
+        },
+        {
+            "regId": 234,
+            "regName": "X18"
+        },
+        {
+            "regId": 235,
+            "regName": "X19"
+        },
+        {
+            "regId": 236,
+            "regName": "X20"
+        },
+        {
+            "regId": 237,
+            "regName": "X21"
+        },
+        {
+            "regId": 238,
+            "regName": "X22"
+        },
+        {
+            "regId": 239,
+            "regName": "X23"
+        },
+        {
+            "regId": 240,
+            "regName": "X24"
+        },
+        {
+            "regId": 241,
+            "regName": "X25"
+        },
+        {
+            "regId": 242,
+            "regName": "X26"
+        },
+        {
+            "regId": 243,
+            "regName": "X27"
+        },
+        {
+            "regId": 244,
+            "regName": "X28"
+        }
+    ],
+    "tcGPR64": [
+        {
+            "regId": 216,
+            "regName": "X0"
+        },
+        {
+            "regId": 217,
+            "regName": "X1"
+        },
+        {
+            "regId": 218,
+            "regName": "X2"
+        },
+        {
+            "regId": 219,
+            "regName": "X3"
+        },
+        {
+            "regId": 220,
+            "regName": "X4"
+        },
+        {
+            "regId": 221,
+            "regName": "X5"
+        },
+        {
+            "regId": 222,
+            "regName": "X6"
+        },
+        {
+            "regId": 223,
+            "regName": "X7"
+        },
+        {
+            "regId": 224,
+            "regName": "X8"
+        },
+        {
+            "regId": 225,
+            "regName": "X9"
+        },
+        {
+            "regId": 226,
+            "regName": "X10"
+        },
+        {
+            "regId": 227,
+            "regName": "X11"
+        },
+        {
+            "regId": 228,
+            "regName": "X12"
+        },
+        {
+            "regId": 229,
+            "regName": "X13"
+        },
+        {
+            "regId": 230,
+            "regName": "X14"
+        },
+        {
+            "regId": 231,
+            "regName": "X15"
+        },
+        {
+            "regId": 232,
+            "regName": "X16"
+        },
+        {
+            "regId": 233,
+            "regName": "X17"
+        },
+        {
+            "regId": 234,
+            "regName": "X18"
+        }
+    ],
+    "GPR64noip_and_tcGPR64": [
+        {
+            "regId": 216,
+            "regName": "X0"
+        },
+        {
+            "regId": 217,
+            "regName": "X1"
+        },
+        {
+            "regId": 218,
+            "regName": "X2"
+        },
+        {
+            "regId": 219,
+            "regName": "X3"
+        },
+        {
+            "regId": 220,
+            "regName": "X4"
+        },
+        {
+            "regId": 221,
+            "regName": "X5"
+        },
+        {
+            "regId": 222,
+            "regName": "X6"
+        },
+        {
+            "regId": 223,
+            "regName": "X7"
+        },
+        {
+            "regId": 224,
+            "regName": "X8"
+        },
+        {
+            "regId": 225,
+            "regName": "X9"
+        },
+        {
+            "regId": 226,
+            "regName": "X10"
+        },
+        {
+            "regId": 227,
+            "regName": "X11"
+        },
+        {
+            "regId": 228,
+            "regName": "X12"
+        },
+        {
+            "regId": 229,
+            "regName": "X13"
+        },
+        {
+            "regId": 230,
+            "regName": "X14"
+        },
+        {
+            "regId": 231,
+            "regName": "X15"
+        },
+        {
+            "regId": 234,
+            "regName": "X18"
+        }
+    ],
+    "GPR64arg": [
+        {
+            "regId": 216,
+            "regName": "X0"
+        },
+        {
+            "regId": 217,
+            "regName": "X1"
+        },
+        {
+            "regId": 218,
+            "regName": "X2"
+        },
+        {
+            "regId": 219,
+            "regName": "X3"
+        },
+        {
+            "regId": 220,
+            "regName": "X4"
+        },
+        {
+            "regId": 221,
+            "regName": "X5"
+        },
+        {
+            "regId": 222,
+            "regName": "X6"
+        },
+        {
+            "regId": 223,
+            "regName": "X7"
+        }
+    ],
+    "rtcGPR64": [
+        {
+            "regId": 232,
+            "regName": "X16"
+        },
+        {
+            "regId": 233,
+            "regName": "X17"
+        }
+    ],
+    "GPR64sponly": []
+}
