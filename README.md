@@ -9,7 +9,8 @@
 
 ## Build LLVM
 * `mkdir -p build_release && cd build_release`
-* `cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="clang" -DLLVM_TARGETS_TO_BUILD="X86" -DLLVM_ENABLE_ASSERTIONS=ON ../llvm-project/llvm`
+* For X86: `cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="clang" -DLLVM_TARGETS_TO_BUILD="X86" -DLLVM_ENABLE_ASSERTIONS=ON ../llvm-project/llvm`
+* For AArch64: `cmake -DCMAKE_CROSSCOMPILING=True -DLLVM_DEFAULT_TARGET_TRIPLE=aarch64-linux-gnueabihf -DLLVM_TARGET_ARCH=AArch64 -DLLVM_TARGETS_TO_BUILD=AArch64 -DLLVM_ENABLE_PIC=False -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra" -G Ninja ../llvm-project/llvm`
 * `ninja clang opt llc`
 
 ## Run MLRegAlloc Pass
