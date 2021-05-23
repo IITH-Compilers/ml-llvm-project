@@ -44,6 +44,7 @@ private:
   std::string fname;
   unsigned int lid;
   std::string partition;
+  std::string vecfactor;
   bool distributed;
 
   void createContainer(DataDependenceGraph &ddg);
@@ -63,10 +64,12 @@ public:
   std::function<const LoopAccessInfo &(Loop &)> GetLAA;
 
   LoopDistribution() { distributed = false; }
-  LoopDistribution(std::string fname, unsigned int lid, std::string partition) {
+  LoopDistribution(std::string fname, unsigned int lid, std::string partition,
+                   std::string vecfactor) {
     this->fname = fname;
     this->lid = lid;
     this->partition = partition;
+    this->vecfactor = vecfactor;
     distributed = false;
   }
   void computeDistribution(SmallVector<DataDependenceGraph *, 5> &SCCGraphs,
@@ -86,7 +89,8 @@ public:
                         DependenceInfo &DI);
 
   bool computeDistributionOnLoop(DataDependenceGraph *SCCGraph, Loop *il,
-                                 std::string partitionp);
+                                 std::string partitionp,
+                                 std::string vecfactor = "");
 
   bool runwithAnalysis(SmallVector<DataDependenceGraph *, 5> &SCCGraphs,
                        SmallVector<Loop *, 5> &loops,
