@@ -154,9 +154,9 @@ static cl::opt<bool>
                        cl::desc("Allows loops to be peeled when the dynamic "
                                 "trip count is known to be low."));
 
-static cl::opt<bool> UnrollUnrollRemainder(
-  "unroll-remainder", cl::Hidden,
-  cl::desc("Allow the loop remainder to be unrolled."));
+static cl::opt<bool>
+    UnrollUnrollRemainder("unroll-remainder", cl::Hidden,
+                          cl::desc("Allow the loop remainder to be unrolled."));
 
 // This option isn't ever intended to be enabled, it serves to allow
 // experiments to check the assumptions about when this kind of revisit is
@@ -527,9 +527,10 @@ static Optional<EstimatedUnrollCost> analyzeLoopUnrollCost(
         // and if the visitor returns true, mark the instruction as free after
         // unrolling and continue.
         bool IsFree = Analyzer.visit(I);
-        bool Inserted = InstCostMap.insert({&I, (int)Iteration,
-                                           (unsigned)IsFree,
-                                           /*IsCounted*/ false}).second;
+        bool Inserted = InstCostMap
+                            .insert({&I, (int)Iteration, (unsigned)IsFree,
+                                     /*IsCounted*/ false})
+                            .second;
         (void)Inserted;
         assert(Inserted && "Cannot have a state for an unvisited instruction!");
 
@@ -720,9 +721,9 @@ static unsigned getFullUnrollBoostingFactor(const EstimatedUnrollCost &Cost,
 }
 
 // Returns loop size estimation for unrolled loop.
-static uint64_t getUnrolledLoopSize(
-    unsigned LoopSize,
-    TargetTransformInfo::UnrollingPreferences &UP) {
+static uint64_t
+getUnrolledLoopSize(unsigned LoopSize,
+                    TargetTransformInfo::UnrollingPreferences &UP) {
   assert(LoopSize >= UP.BEInsns && "LoopSize should not be less than BEInsns!");
   return (uint64_t)(LoopSize - UP.BEInsns) * UP.Count + UP.BEInsns;
 }
@@ -1003,8 +1004,7 @@ bool llvm::computeUnrollCount(
   if (MaxTripCount && UP.Count > MaxTripCount)
     UP.Count = MaxTripCount;
 
-  LLVM_DEBUG(dbgs() << "  runtime unrolling with count: " << UP.Count
-                    << "\n");
+  LLVM_DEBUG(dbgs() << "  runtime unrolling with count: " << UP.Count << "\n");
   if (UP.Count < 2)
     UP.Count = 0;
   return ExplicitUnroll;
@@ -1144,12 +1144,13 @@ static LoopUnrollResult tryToUnrollLoop(
   if (UnrollResult == LoopUnrollResult::PartiallyUnrolled) {
     LLVMContext &Context = L->getHeader()->getContext();
     if (L->getLoopLatch()->getTerminator()->getMetadata("VLID")) {
-      MDNode *New_IF_MD = MDNode::get(Context, ConstantAsMetadata::get(ConstantInt::get(
-                    Context, llvm::APInt(64, UP.Count , false))));
-      SmallVector<BasicBlock*, 4> LoopLatches;
+      MDNode *New_IF_MD =
+          MDNode::get(Context, ConstantAsMetadata::get(ConstantInt::get(
+                                   Context, llvm::APInt(64, UP.Count, false))));
+      SmallVector<BasicBlock *, 4> LoopLatches;
       L->getLoopLatches(LoopLatches);
       for (auto LL : LoopLatches) {
-        LL->getTerminator()->setMetadata("IF", New_IF_MD);
+        LL->getTerminator()->setMetadata("UF", New_IF_MD);
       }
     }
   }
@@ -1344,7 +1345,7 @@ PreservedAnalyses LoopFullUnrollPass::run(Loop &L, LoopAnalysisManager &AM,
   if (!Changed)
     return PreservedAnalyses::all();
 
-  // The parent must not be damaged by unrolling!
+    // The parent must not be damaged by unrolling!
 #ifndef NDEBUG
   if (ParentL)
     ParentL->verifyLoop();
@@ -1438,8 +1439,9 @@ PreservedAnalyses LoopUnrollPass::run(Function &F,
       AM.getResult<ModuleAnalysisManagerFunctionProxy>(F).getManager();
   ProfileSummaryInfo *PSI =
       MAM.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
-  auto *BFI = (PSI && PSI->hasProfileSummary()) ?
-      &AM.getResult<BlockFrequencyAnalysis>(F) : nullptr;
+  auto *BFI = (PSI && PSI->hasProfileSummary())
+                  ? &AM.getResult<BlockFrequencyAnalysis>(F)
+                  : nullptr;
 
   bool Changed = false;
 

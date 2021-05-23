@@ -28,7 +28,7 @@
 #include <algorithm>
 #include <string>
 
-#define MemoryInstCost 10
+#define MemoryInstCost 5
 
 using namespace llvm;
 
@@ -166,10 +166,10 @@ public:
       if (VF != 1) {
         VecLoop = getVectorLoop(L);
         assert(VecLoop && "Could not find vector loop for a vectorized loop");
-        if (MDNode *IF_MD =
-                VecLoop->getLoopLatch()->getTerminator()->getMetadata("IF")) {
+        if (MDNode *UF_MD =
+                VecLoop->getLoopLatch()->getTerminator()->getMetadata("UF")) {
           auto constVal =
-              dyn_cast<ConstantAsMetadata>(IF_MD->getOperand(0))->getValue();
+              dyn_cast<ConstantAsMetadata>(UF_MD->getOperand(0))->getValue();
           unsigned UF = dyn_cast<ConstantInt>(constVal)->getZExtValue();
 
           if (IF == 1 && UF != 1)
@@ -202,6 +202,9 @@ public:
           }
         }
       }
+
+      LoopCost = LoopCost * (TripCount / (VF * IF));
+      dbgs() << "Loop cost with only instructions: " << LoopCost << "\n";
 
       for (auto BB : L->getBlocks()) {
         for (auto &I : *BB) {
