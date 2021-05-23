@@ -70,6 +70,7 @@ void RDGWrapperPass::Print_IR2Vec_File(DataDependenceGraph &G,
       int tmp = 0;
       SmallVector<double, DIM> NodeVec;
       std::string s;
+      bool ifound = false;
 
       if (N->NodeLabel != "") {
         for (Instruction *II : IList) {
@@ -83,14 +84,17 @@ void RDGWrapperPass::Print_IR2Vec_File(DataDependenceGraph &G,
                 II->dump();
               });
 
-          if (tmp == 0 || instVecMap.find(II) == instVecMap.end()) {
+          if (instVecMap.find(II) == instVecMap.end()) {
             continue;
-          } else if (tmp == 1) {
-            NodeVec = instVecMap.find(II)->second;
           } else {
             auto vec = instVecMap.find(II)->second;
-            for (int i = 0; i < DIM; ++i) {
-              NodeVec[i] += vec[i];
+            if (!ifound) {
+              NodeVec = vec;
+              ifound = true;
+            } else {
+              for (int i = 0; i < DIM; ++i) {
+                NodeVec[i] += vec[i];
+              }
             }
           }
         }
@@ -123,7 +127,8 @@ void RDGWrapperPass::Print_IR2Vec_File(DataDependenceGraph &G,
             if ((*E).isMemoryDependence()) {
               md++;
               // errs() << NodeNumber.find(N)->second << " -> "
-              //        << NodeNumber.find(&E->getTargetNode())->second << " : "
+              //        << NodeNumber.find(&E->getTargetNode())->second << " :
+              //        "
               //        << (*E).getKind() << " : " << (*E).getEdgeWeight() <<
               //        "\n";
 
@@ -191,7 +196,8 @@ bool RDGWrapperPass::runOnFunction(Function &F) {
   return true;
 }
 
-// SmallVector<std::string, 2> RDG_StringList(RDGWrapperPass &R, Function &F) {
+// SmallVector<std::string, 2> RDG_StringList(RDGWrapperPass &R, Function &F)
+// {
 //   SmallVector<std::string, 2> s = R.computeRDGForFunction(F);
 //   return s;
 // }
