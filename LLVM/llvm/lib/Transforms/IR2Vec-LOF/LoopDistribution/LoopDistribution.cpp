@@ -655,8 +655,8 @@ bool LoopDistribution::findLoopAndDistribute(
 bool LoopDistribution::runwithAnalysis(
     SmallVector<DataDependenceGraph *, 5> &SCCGraphs,
     SmallVector<Loop *, 5> &loops, SmallVector<std::string, 5> &dis_seqs,
-    ScalarEvolution *SE_, LoopInfo *LI_, DominatorTree *DT_, AAResults *AA_,
-    OptimizationRemarkEmitter *ORE_,
+    SmallVector<std::string, 5> &vf_seqs, ScalarEvolution *SE_, LoopInfo *LI_,
+    DominatorTree *DT_, AAResults *AA_, OptimizationRemarkEmitter *ORE_,
     std::function<const LoopAccessInfo &(Loop &)> GetLAA_, DependenceInfo &DI) {
   bool isdis = false;
   int size = loops.size();
@@ -692,7 +692,8 @@ bool LoopDistribution::runwithAnalysis(
                       << " Loop : " << loops[i] << "\n";
                loops[i]->dump());
     changeLoopIDMetaData(loops[i]);
-    isdis |= computeDistributionOnLoop(SCCGraphs[i], loops[i], dis_seqs[i]);
+    isdis |= computeDistributionOnLoop(SCCGraphs[i], loops[i], dis_seqs[i],
+                                       vf_seqs[i]);
   }
 
   return isdis;

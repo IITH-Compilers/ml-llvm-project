@@ -30,12 +30,6 @@
 #define DEBUG_TYPE "custom_loop_distribution"
 
 using namespace llvm;
-static cl::opt<bool> runMaximal("run-maximal", cl::Hidden, cl::Optional, cl::init(false),
-                                     cl::desc("Enable flag to run maximal distribution on SPEC 2017."));
-
-static cl::opt<std::string> cost_function("cost-function", cl::Hidden, cl::Optional, cl::init("LC"),
-                                     cl::desc("Set the Cost function to get the maximl distribution on SPEC 2017."));
-
 custom_loop_distribution::custom_loop_distribution() : FunctionPass(ID) {
   initializecustom_loop_distributionPass(*PassRegistry::getPassRegistry());
   Py_Initialize();
@@ -76,6 +70,7 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
 
   LLVM_DEBUG(errs() << "Number rdg generated : " << RDG_List.size() << "\n");
   SmallVector<std::string, 5> distributed_seqs;
+  SmallVector<std::string, 5> vf_seqs;
 
   PyObject *pName, *pModule, *pFunc, *presult;
 
@@ -83,7 +78,7 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
   PyRun_SimpleString("import os");
 
   PyRun_SimpleString(std::string("sys.path.append(\"")
-                         .append(DIST_MODEL_SRC)
+                         .append(MODEL_SRC)
                          .append("\")")
                          .c_str());
   // Build the name object
@@ -105,13 +100,8 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
     LLVM_DEBUG(errs() << "pModule: " << pModule << "............"
                       << "\n");
     Py_INCREF(pModule);
-    if(runMaximal){
-	pFunc = PyObject_GetAttrString(pModule, "maximal_loop_distribution");
-	LLVM_DEBUG(errs() << " Run the maximal loop distribution function.\n");
-    }else{
-	pFunc = PyObject_GetAttrString(pModule, "predict_loop_distribution");
-        LLVM_DEBUG(errs() << " Run the model to predict the loop distribution.\n");
-    }
+
+    pFunc = PyObject_GetAttrString(pModule, "predict_loop_distribution");
 
     if (pFunc == NULL) {
       errs() << "ERROR getting function attribute";
@@ -129,18 +119,11 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
           Py_INCREF(py_rdg);
         }
 
-        PyObject *modelPath = PyUnicode_FromString(DIST_INFERENCE_MODEL);
-	PyObject *arglist;
-	if (runMaximal){
-         /**
-	  * TODO: Place the loop_cost.csv in the model directory.
-	  */
-         PyObject *py_cost_function = PyUnicode_FromString(cost_function.c_str());
-         arglist = PyTuple_Pack(3, my_list, modelPath, py_cost_function);
-	} else {
-	 arglist = PyTuple_Pack(2, my_list, modelPath);
-        }
+        PyObject *distModelPath = PyUnicode_FromString(DIST_INFERENCE_MODEL);
+        PyObject *vfModelPath = PyUnicode_FromString(VF_INFERENCE_MODEL);
 
+        PyObject *arglist =
+            PyTuple_Pack(3, my_list, distModelPath, vfModelPath);
 
         if (!arglist) {
           errs() << "no arglist\n";
@@ -163,13 +146,26 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
         }
 
         int size = PyList_Size(presult);
+        assert(size == 2);
         LLVM_DEBUG(errs() << size << " is the size of result list.\n");
 
         for (int j = 0; j < size; j++) {
           PyObject *plobj = PyList_GetItem(presult, j);
-          const char *dis_seq = PyUnicode_AsUTF8(plobj);
-          LLVM_DEBUG(errs() << dis_seq << "\n");
-          distributed_seqs.push_back(dis_seq);
+          if (!PyList_Check(plobj)) {
+            errs() << "Result is not list";
+            PyErr_BadArgument();
+            assert(false);
+          }
+          int objSize = PyList_Size(plobj);
+          for (int k = 0; k < objSize; k++) {
+            PyObject *seq = PyList_GetItem(plobj, k);
+            const char *char_seq = PyUnicode_AsUTF8(seq);
+            LLVM_DEBUG(errs() << char_seq << "\n");
+            if (j == 0)
+              distributed_seqs.push_back(char_seq);
+            else if (j == 1)
+              vf_seqs.push_back(char_seq);
+          }
         }
         Py_DECREF(presult);
         Py_DECREF(my_list);
@@ -195,8 +191,9 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
 
   DependenceInfo DI = DependenceInfo(&F, AA, SE, LI);
   LLVM_DEBUG(errs() << "Function name=" << F.getName() << "\n");
-  bool isdis = dist_helper.runwithAnalysis(SCCGraphs, loops, distributed_seqs,
-                                           SE, LI, DT, AA, ORE, GetLAA, DI);
+  bool isdis =
+      dist_helper.runwithAnalysis(SCCGraphs, loops, distributed_seqs, vf_seqs,
+                                  SE, LI, DT, AA, ORE, GetLAA, DI);
 
   LLVM_DEBUG(if (isdis) { errs() << "Code is distributed..\n"; });
   return isdis;

@@ -95,6 +95,7 @@ public:
   bool runwithAnalysis(SmallVector<DataDependenceGraph *, 5> &SCCGraphs,
                        SmallVector<Loop *, 5> &loops,
                        SmallVector<std::string, 5> &dis_seqs,
+                       SmallVector<std::string, 5> &vecfactor,
                        ScalarEvolution *SE_, LoopInfo *LI_, DominatorTree *DT_,
                        AAResults *AA_, OptimizationRemarkEmitter *ORE_,
                        std::function<const LoopAccessInfo &(Loop &)> GetLAA_,
