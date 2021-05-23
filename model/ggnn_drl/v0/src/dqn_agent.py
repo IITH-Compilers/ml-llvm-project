@@ -33,13 +33,16 @@ class Agent():
             seed (int): random seed
         """
         # random.seed(seed)
-        self.spill_color_idx = 0 
-        self.action_space = np.arange(57)
+        self.spill_color_idx = 0
+        self.target = config.target
+        self.registerAS = RegisterActionSpace(self.target)
+        self.action_space_size = self.registerAS.ac_sp_normlize_size
+
         # print(self.action_space)
         state_size = config.state_size
         # Q-Network
-        self.qnetwork_local = QNetwork(state_size,  seed=seed).to(device)
-        self.qnetwork_target = QNetwork(state_size, seed=seed).to(device)
+        self.qnetwork_local = QNetwork(state_size, action_size=self.action_space_size, seed=seed).to(device)
+        self.qnetwork_target = QNetwork(state_size, action_size=self.action_space_size, seed=seed).to(device)
         
         self.optimizer = optim.Adam(self.qnetwork_local.parameters(), lr=LR)
         
@@ -76,62 +79,39 @@ class Agent():
         assert regClass != 'Phy', "Trying assign color to physical node."
         logging.debug('Reg Class : {}'.format(regClass))
         logging.debug('Adj colors : {}'.format(adj_colors))
-        # logging.debug("state type : {}, {}".format(type(state), state.shape))
-        state = torch.from_numpy(state).float() # .unsqueeze(0)
-        # logging.debug("shape={} and type={}".format(state.shape, type(state)))
+        
+        # Choose a register from regClass only
+        action_space = self.registerAS.maskActionSpace(regClass, adj_colors)
+        
+        logging.debug('colors in action space after masking : {}'.format(action_space))
+        if action_space is None or len(action_space) == 0:
+            actions = self.spill_color_idx
+            return actions
         
         # Epsilon-greedy action selection
         if random.random() > eps:
             logging.debug('EXP: Model decision')
+            # logging.debug("state type : {}, {}".format(type(state), state.shape))
+            state = torch.from_numpy(state).float() # .unsqueeze(0)
             state = state.to(device)
             self.qnetwork_local.eval()
             with torch.no_grad():
                 # assign a color to the node
                 out = self.qnetwork_local(state)
-                action_space = self.action_space
-                # Choose a register from regClass only
-                if regClass in RegisterActionSpace.regMask.keys():
-                    selectedInterval = RegisterActionSpace.regMask[regClass]
-                    action_space = action_space[selectedInterval]
-                    if len(adj_colors) > 0:
-                        adj_colors = RegisterActionSpace.adj_color_mask(adj_colors, regClass)
-                        action_space = np.delete(action_space, adj_colors)
-                else:
-                    logging.warning('RegClass not present in the map = {}'.format(regClass))
-                    action_space = action_space[RegisterActionSpace.regMask['spill']]
-                
-                logging.debug('colors in action space after masking : {}'.format(action_space))
-
-                if action_space is None or len(action_space) ==0:
-                    actions = self.spill_color_idx
-                else:
-                    out = out[action_space]
-                    _, actions = self.getMaxQvalueAndActions(out)
-                    actions = actions.cpu().numpy()
-                    actions = action_space[actions]
+                # Out of all, taking the only the masked classes
+                out = out[action_space]
+                # Find the index of the max probality
+                _, actions_idx = self.getMaxQvalueAndActions(out)
+                actions_idx = actions_idx.cpu().numpy()
+                # Get the color at the predicted index
+                actions = action_space[actions_idx]
                 # print(actions , type(actions)) 
-                # print(actions , type(actions))
             if self.mode in ['train']:
                 self.qnetwork_local.train()
-
         else:
             logging.debug('EXP: Random ')
-            action_space = self.action_space
-            if regClass in RegisterActionSpace.regMask.keys():
-                selectedInterval = RegisterActionSpace.regMask[regClass]
-                action_space = action_space[selectedInterval]
-                if len(adj_colors) > 0:
-                    adj_colors = RegisterActionSpace.adj_color_mask(adj_colors, regClass)
-                    action_space = np.delete(action_space, adj_colors)
-            else:
-                logging.warning('RegClass not present in the map = {}'.format(regClass))
-                action_space = action_space[RegisterActionSpace.regMask['spill']]
-            
-            logging.debug('action space after msking : {}'.format(action_space))
-            if action_space is None or len(action_space) ==0:
-                actions = self.spill_color_idx
-            else:
-                actions = random.choice(action_space)
+            actions = random.choice(action_space)
+
         # print(actions , type(actions)) 
         actions = int(actions)
         # print(actions , type(actions))

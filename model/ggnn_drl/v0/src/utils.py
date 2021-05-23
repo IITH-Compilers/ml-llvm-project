@@ -97,7 +97,7 @@ def get_parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset', dest='dataset', metavar='DIRECTORY', help='Location of the dataSet..')
     parser.add_argument('--epochs', dest='epochs', type=int, required=False, help='Epochs to run.', default=100)
-    parser.add_argument('--state_size', dest='state_size', required=False, type=int, help='Embedding of each instruction.', default=5)
+    parser.add_argument('--state_size', dest='state_size', required=False, type=int, help='Embedding of each instruction.', default=300)
     parser.add_argument('--action_space', dest='action_space', required=False, type=int, help='Size of the actiion space.', default=25)
     parser.add_argument('--trained_model', dest='trained_model', required=True,  help=' location ')
     parser.add_argument('--intermediate_data', dest='intermediate_data', required=True,  help=' location of temp data generated during model execution')
@@ -108,6 +108,8 @@ def get_parse_args():
     parser.add_argument('--dump-color-graph', dest='dump_color_graph', action='store_true')
     parser.add_argument('--dump-type', dest='dump_type', type=str, required=False, default='One', help="Dumping predicted file format i.e. one for each function or only one for whole file.")
     parser.add_argument('--inference', dest='inference', action='store_true')
+
+    parser.add_argument('--target', dest='target', required=True,  help='Architecture supported.')
 
     global config 
     config = parser.parse_args()

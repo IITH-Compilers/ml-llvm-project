@@ -244,6 +244,7 @@ def constructGraph(graph):
     spill_cost_list = []
     reg_class_list = []
     allocate_type_list = []
+    
     for idx, node in enumerate(nodes):
         
         nodeId = node['id']
@@ -264,7 +265,7 @@ def constructGraph(graph):
         if node['label'] != "\"\"":
             node_mat = eval(node['label'].replace("\"",""))
         else:
-            node_mat = [[1,1,1,1,1]]
+            node_mat = [[1]*300]
         
         node_tansor_matrix = torch.FloatTensor(node_mat)
         nodeVec = constructVectorFromMatrix(node_tansor_matrix)
@@ -304,7 +305,7 @@ def constructGraph(graph):
     '''
     for node_idx in range(num_nodes):
         if reg_class_list[node_idx] == 'Phy':
-            color, phyReg = map( lambda x : int(x.split('=')[-1]),allocate_type_list[node_idx].split(';'))
+            color, phyReg = map( lambda x : int(x.split('=')[-1]), allocate_type_list[node_idx].split(';'))
             logging.debug('creating graph; Marking node_idx={} with color={}'.format(node_idx, color))
             
             graphObj.UpdateVisitList(node_idx, color)

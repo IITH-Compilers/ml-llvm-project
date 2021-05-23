@@ -4,13 +4,27 @@ echo "Start flow script."
 PWD=`pwd`
 HOME=`realpath ${PWD}/../..`
 
-BUILD_TYPE="_release"
+TARGET=$1
+if [ -z ${TARGET} ];
+then
+    echo "TARGET is empty."
+    exit
+fi
 
-LLVM_BUILD="${HOME}/llvm-project/build${BUILD_TYPE}"
+if [[ $TARGET != "x86" && $TARGET != "aarch64" ]];
+then
+    echo "TARGET should be x86 or aarch64."
+    exit
+  
+fi
+
+BUILD_TYPE="${TARGET}_release_build"
+
+LLVM_BUILD="${HOME}/llvm-project/${BUILD_TYPE}"
 echo "LLVM Build used for the data generation: ${LLVM_BUILD}"
 [[ ! -d ${LLVM_BUILD} ]] && echo "LLVM build directory does not exist" && exit
 
-INP_DIR=${HOME}/data/gcc-c-torture
+INP_DIR=${HOME}/sample/data/PE-benchmarks
 
 # PE-benchmarks
 # gcc-c-torture
@@ -19,7 +33,7 @@ INP_DIR=${HOME}/data/gcc-c-torture
 echo "Input data directory path: ${INP_DIR}"
 [[ ! -d ${INP_DIR} ]] && echo "Input directory does not exist" && exit
 
-MODE=$1
+MODE=$2
 if [ -z ${MODE} ];
 then
     echo "MODE data type is empty."
@@ -35,7 +49,7 @@ fi
 
 declare -A MODELS=([mlra]=" -mllvm -regalloc=mlra  -mllvm -mlra-dump-ig-dot " [mlbasicra]=" -mllvm -regalloc=mlbasicra  -mllvm -ml-basicra-dump-ig-dot ")
 
-MODEL=$2
+MODEL=$3
 
 
 if [ -z ${MODEL} ] || [ ! ${MODELS[${MODEL}]+_} ]; 
@@ -45,17 +59,17 @@ then
 fi
 
 # IP_FLR_NAME=execute
-IP_FLR_NAME=execute_basic_filter_timeout
-# IP_FLR_NAME=level-O0-llfiles
-# INP_TYPE=llfiles
-INP_TYPE=src
+# IP_FLR_NAME=execute_basic_filter_timeout
+IP_FLR_NAME=level-O0-llfiles
+INP_TYPE=llfiles
+# INP_TYPE=src
 SRCH_FLR=${INP_DIR}/${IP_FLR_NAME}
 [[ ! -d ${SRCH_FLR} ]] && echo " directory does not exist : ${SRCH_FLR}" && exit
 
 echo "Data will generated from ${SRCH_FLR}"
 echo ""
 
-WD=${SRCH_FLR}_UNSPRTCLASS_${MODE}_${MODEL}
+WD=${SRCH_FLR}_${MODE}_${MODEL}_${TARGET}
 echo "Data will generated at : ${WD}"
 
 mkdir -p "${WD}"

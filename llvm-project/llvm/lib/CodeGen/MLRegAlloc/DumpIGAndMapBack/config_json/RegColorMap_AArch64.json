@@ -1,0 +1,317 @@
+{
+    "targets": [
+        {
+            "name": "AArch64",
+            "regclasses": [
+                "GPR32all",
+                "GPR32",
+                "GPR32sp",
+                "GPR32common",
+                "GPR32arg",
+                "GPR64noip",
+                "GPR64common_and_GPR64noip",
+                "tcGPR64",
+                "GPR64noip_and_tcGPR64",
+                "GPR64arg",
+                "rtcGPR64"
+            ],
+            "register": [
+                {
+                    "color": 1,
+                    "name": "W0",
+                    "phyReg": 185
+                },
+                {
+                    "color": 2,
+                    "name": "W1",
+                    "phyReg": 186
+                },
+                {
+                    "color": 3,
+                    "name": "W2",
+                    "phyReg": 187
+                },
+                {
+                    "color": 4,
+                    "name": "W3",
+                    "phyReg": 188
+                },
+                {
+                    "color": 5,
+                    "name": "W4",
+                    "phyReg": 189
+                },
+                {
+                    "color": 6,
+                    "name": "W5",
+                    "phyReg": 190
+                },
+                {
+                    "color": 7,
+                    "name": "W6",
+                    "phyReg": 191
+                },
+                {
+                    "color": 8,
+                    "name": "W7",
+                    "phyReg": 192
+                },
+                {
+                    "color": 9,
+                    "name": "W8",
+                    "phyReg": 193
+                },
+                {
+                    "color": 10,
+                    "name": "W9",
+                    "phyReg": 194
+                },
+                {
+                    "color": 11,
+                    "name": "W10",
+                    "phyReg": 195
+                },
+                {
+                    "color": 12,
+                    "name": "W11",
+                    "phyReg": 196
+                },
+                {
+                    "color": 13,
+                    "name": "W12",
+                    "phyReg": 197
+                },
+                {
+                    "color": 14,
+                    "name": "W13",
+                    "phyReg": 198
+                },
+                {
+                    "color": 15,
+                    "name": "W14",
+                    "phyReg": 199
+                },
+                {
+                    "color": 16,
+                    "name": "W15",
+                    "phyReg": 200
+                },
+                {
+                    "color": 17,
+                    "name": "W16",
+                    "phyReg": 201
+                },
+                {
+                    "color": 18,
+                    "name": "W17",
+                    "phyReg": 202
+                },
+                {
+                    "color": 19,
+                    "name": "W18",
+                    "phyReg": 203
+                },
+                {
+                    "color": 20,
+                    "name": "W19",
+                    "phyReg": 204
+                },
+                {
+                    "color": 21,
+                    "name": "W20",
+                    "phyReg": 205
+                },
+                {
+                    "color": 22,
+                    "name": "W21",
+                    "phyReg": 206
+                },
+                {
+                    "color": 23,
+                    "name": "W22",
+                    "phyReg": 207
+                },
+                {
+                    "color": 24,
+                    "name": "W23",
+                    "phyReg": 208
+                },
+                {
+                    "color": 25,
+                    "name": "W24",
+                    "phyReg": 209
+                },
+                {
+                    "color": 26,
+                    "name": "W25",
+                    "phyReg": 210
+                },
+                {
+                    "color": 27,
+                    "name": "W26",
+                    "phyReg": 211
+                },
+                {
+                    "color": 28,
+                    "name": "W27",
+                    "phyReg": 212
+                },
+                {
+                    "color": 29,
+                    "name": "W28",
+                    "phyReg": 213
+                },
+                {
+                    "color": 30,
+                    "name": "W30",
+                    "phyReg": 215
+                },
+                {
+                    "color": 31,
+                    "name": "X0",
+                    "phyReg": 216
+                },
+                {
+                    "color": 32,
+                    "name": "X1",
+                    "phyReg": 217
+                },
+                {
+                    "color": 33,
+                    "name": "X2",
+                    "phyReg": 218
+                },
+                {
+                    "color": 34,
+                    "name": "X3",
+                    "phyReg": 219
+                },
+                {
+                    "color": 35,
+                    "name": "X4",
+                    "phyReg": 220
+                },
+                {
+                    "color": 36,
+                    "name": "X5",
+                    "phyReg": 221
+                },
+                {
+                    "color": 37,
+                    "name": "X6",
+                    "phyReg": 222
+                },
+                {
+                    "color": 38,
+                    "name": "X7",
+                    "phyReg": 223
+                },
+                {
+                    "color": 39,
+                    "name": "X8",
+                    "phyReg": 224
+                },
+                {
+                    "color": 40,
+                    "name": "X9",
+                    "phyReg": 225
+                },
+                {
+                    "color": 41,
+                    "name": "X10",
+                    "phyReg": 226
+                },
+                {
+                    "color": 42,
+                    "name": "X11",
+                    "phyReg": 227
+                },
+                {
+                    "color": 43,
+                    "name": "X12",
+                    "phyReg": 228
+                },
+                {
+                    "color": 44,
+                    "name": "X13",
+                    "phyReg": 229
+                },
+                {
+                    "color": 45,
+                    "name": "X14",
+                    "phyReg": 230
+                },
+                {
+                    "color": 46,
+                    "name": "X15",
+                    "phyReg": 231
+                },
+                {
+                    "color": 47,
+                    "name": "X16",
+                    "phyReg": 232
+                },
+                {
+                    "color": 48,
+                    "name": "X17",
+                    "phyReg": 233
+                },
+                {
+                    "color": 49,
+                    "name": "X18",
+                    "phyReg": 234
+                },
+                {
+                    "color": 50,
+                    "name": "X19",
+                    "phyReg": 235
+                },
+                {
+                    "color": 51,
+                    "name": "X20",
+                    "phyReg": 236
+                },
+                {
+                    "color": 52,
+                    "name": "X21",
+                    "phyReg": 237
+                },
+                {
+                    "color": 53,
+                    "name": "X22",
+                    "phyReg": 238
+                },
+                {
+                    "color": 54,
+                    "name": "X23",
+                    "phyReg": 239
+                },
+                {
+                    "color": 55,
+                    "name": "X24",
+                    "phyReg": 240
+                },
+                {
+                    "color": 56,
+                    "name": "X25",
+                    "phyReg": 241
+                },
+                {
+                    "color": 57,
+                    "name": "X26",
+                    "phyReg": 242
+                },
+                {
+                    "color": 58,
+                    "name": "X27",
+                    "phyReg": 243
+                },
+                {
+                    "color": 59,
+                    "name": "X28",
+                    "phyReg": 244
+                }
+            ]
+        }
+    ]
+}

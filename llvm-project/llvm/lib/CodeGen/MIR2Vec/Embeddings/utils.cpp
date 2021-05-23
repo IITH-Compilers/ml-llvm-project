@@ -14,7 +14,7 @@ using namespace IR2Vec;
 
 void IR2Vec::collectDataFromVocab(std::string vocab,
                                   std::map<std::string, Vector> &opcMap) {
-  errs() << "Reading from " + vocab + "\n";
+  // LLVM_DEBUG(errs() << "Reading from " + vocab + "\n");
   std::ifstream i(vocab);
   std::string delimiter = ":";
   for (std::string line; getline(i, line);) {

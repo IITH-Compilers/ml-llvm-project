@@ -6,4 +6,6 @@ trained_model/
 log/
 benchmarks/
 *build/
+*.swp
+*.swo
 

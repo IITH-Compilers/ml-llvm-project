@@ -74,7 +74,6 @@ class GraphColorEnv:
         if False not in self.topology.discovered:
             response = utils.get_colored_graph(self.fun_id, self.fileName, self.functionName, self.color_assignment_map)
             done = True
-
             return (next_hidden_state[nodeChoosen], nodeChoosen), reward, done, response
 
         # next_hidden_state = next_hidden_state[possible_next_nodes]
@@ -102,9 +101,8 @@ class GraphColorEnv:
             self.path = path
             self.home_dir = attr['HOME_DIR']
         
-
         self.graph = graph
-        self.fileName = graph['graph'][1][1]['FileName'].strip('\"') 
+        self.fileName = graph['graph'][1][1]['FileName'].strip('\"')
         self.functionName = graph['graph'][1][1]['Function'].strip('\"')
         self.fun_id = graph['graph'][1][1]['Function_ID']
         self.num_nodes = len(self.graph['nodes'])
@@ -114,16 +112,16 @@ class GraphColorEnv:
         self.spill_cost_list = self.ggnn.spill_cost_list
         self.reg_class_list = self.ggnn.reg_class_list
         self.cur_node = 0
+        
         while self.topology.discovered[self.cur_node]:
             logging.debug('Node {} already visited so taking next node.'.format(self.cur_node))
             self.cur_node = self.cur_node+1
+        
         obs= hidden_state[self.cur_node]
         adj_colors = self.topology.getColorOfVisitedAdjNodes(self.cur_node)
         self.regClass = self.reg_class_list[self.cur_node]
         logging.debug('Node Choosen for coloring : {}'.format(self.cur_node))
         logging.debug('Adjacent colors : {}'.format(adj_colors))
         logging.debug('regClass of Nodes : {}'.format(self.regClass))
+        
         return ( obs, self.cur_node, adj_colors, self.regClass)
-
-
-

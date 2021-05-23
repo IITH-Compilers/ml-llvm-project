@@ -52,8 +52,15 @@ then
         echo "Running the training using ${PY_SPT}..................."
         MODEL_PAR=`realpath ${PWD}/../trained_model`
 
+	TARGET=$3
+	if [ -z ${TARGET} ]
+	then
+		echo "Enter the target."
+		exit
+	fi
 
-        KEY_POINT=$3
+
+        KEY_POINT=$4
         if [ -z ${KEY_POINT} ]
         then 
             KEY_POINT="Regular"
@@ -100,8 +107,15 @@ then
             echo "Trained model path not valid" 
             exit
         fi
-        
-        KEY_POINT=$4
+ 
+	TARGET=$4
+	if [ -z ${TARGET} ]
+	then
+		echo "Enter the target."
+		exit
+	fi
+       
+        KEY_POINT=$5
         if [ -z ${KEY_POINT} ]
         then 
             KEY_POINT="Full"
@@ -131,7 +145,7 @@ echo "Location of the trained model: ${TRAINED_MODEL}"
 echo "Location of the generated llfiles and outfiles : ${GEN_DATA}"
 echo "Logs files with LEVEL ${LOG_LEVEL} : ${LOG}"
 ## Call the py script 
-python ${PY_SPT} --dataset=${DATA_SET} --trained_model=${TRAINED_MODEL} --intermediate_data=${GEN_DATA}  --logdir ${LOG} --mode ${MODE_PROCESS} --epochs=${EPOCHS} --log-level ${LOG_LEVEL} ${DUMP_PRED_DOT}  
+python ${PY_SPT} --dataset=${DATA_SET} --trained_model=${TRAINED_MODEL} --intermediate_data=${GEN_DATA}  --logdir ${LOG} --mode ${MODE_PROCESS} --epochs=${EPOCHS} --log-level ${LOG_LEVEL} ${DUMP_PRED_DOT} --target ${TARGET} 
 
 echo "Completed the process........."
 

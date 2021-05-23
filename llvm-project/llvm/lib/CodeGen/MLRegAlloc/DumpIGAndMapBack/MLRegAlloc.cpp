@@ -204,13 +204,12 @@ MLRA::MLRA() : MachineFunctionPass(ID) {
     setPredictionFromFile(pred_file);
   }
   std::string config_colorMap =
-      "/home/venkat/IF-DV/Rohit/regAlloc/ML-Register-Allocation/llvm-project/"
-      "llvm/lib/CodeGen/MLRegAlloc/DumpIGAndMapBack/RegColorMap.json";
+      "/home/cs18mtech11030/project/ML-Register-Allocation/llvm-project/"
+      "llvm/lib/CodeGen/MLRegAlloc/DumpIGAndMapBack/config_json/RegColorMap_Both.json";
   loadTargetRegisterConfig(config_colorMap);
 
   std::string vocab =
-      "/home/venkat/IF-DV/Rohit/regAlloc/ML-Register-Allocation/data/"
-      "seedEmbedding_1500E_300D.txt";
+      "/home/cs18mtech11030/project/ML-Register-Allocation/llvm-project/llvm/lib/CodeGen/MIR2Vec/Embeddings/seedEmbedding_1500E_300D.txt";
   symbolic = new MIR2Vec_Symbolic(vocab);
 }
 
@@ -3007,11 +3006,12 @@ void MLRA::dumpInterferenceGraph() {
     // File << VirtReg->overlaps(LIS->getInterval(Reg));
 #endif
     auto instVecMap = symbolic->getInstVecMap();
-    errs() << "Instructions in map:\n";
+    
+    LLVM_DEBUG(errs() << "Instructions in map:\n";
     for (auto inst : instVecMap) {
       inst.first->dump();
     }
-    errs() << "==========================================\n";
+    errs() << "==========================================\n");
     std::string segmentInst = "";
     if (!VirtReg->segments.empty()) {
       // node_str = node_str + "[";
@@ -3023,14 +3023,17 @@ void MLRA::dumpInterferenceGraph() {
           if (!MIR)
             continue;
           IR2Vec::Vector vec = instVecMap[MIR];
-          errs() << "---------------MIR Vector--------------------";
-          MIR->dump();
+	  if(vec.size() <= 0){
+	  	LLVM_DEBUG(errs () << "Value not found in the map \n");
+		continue;
+	  }
+          LLVM_DEBUG(errs() << "---------------MIR Vector--------------------"; MIR->dump());
           std::string str = "";
           for (unsigned idx = 0; idx < DIM - 1; idx++) {
             str += std::to_string(vec[idx]) + ", ";
           }
           str += std::to_string(vec[DIM - 1]);
-          errs() << "\n";
+          LLVM_DEBUG(errs() << "\n");
 #if PRINT_MRI_INST
           // MIR->print(File);
 #endif
@@ -3107,6 +3110,7 @@ void MLRA::dumpInterferenceGraph() {
                         EC, sys::fs::F_Text);
     this->graph = "graph G {\nFileName=\"" + absmoduleName +
                   "\";\nFunction=\"" + funName + "\";\n" +
+                  "Function_ID=" + std::to_string(FunctionCounter) + ";\n"+
                   "Registers=" + std::to_string(TRI->getNumRegUnits()) + ";\n";
 
     this->graph = this->graph + nodes + "}";
@@ -3477,21 +3481,28 @@ void MLRA::allocatePhysRegsViaRL() {
 bool MLRA::runOnMachineFunction(MachineFunction &mf) {
   LLVM_DEBUG(dbgs() << "********** ML REGISTER ALLOCATION **********\n"
                     << "********** Function: " << mf.getName() << '\n');
-  this->targetName = "X86";
+  // this->targetName = "X86";
 
-  /*switch (MF.getTarget().getTargetTriple().getArch()) {
+  switch (mf.getTarget().getTargetTriple().getArch()) {
           case Triple::ArchType::aarch64:
                   {
-                    this->targetName = "AARCH64";
+                    this->targetName = "AArch64";
                     break;
                   }
-          default:
-                  this->targetName = "X86";
+          case Triple::ArchType::x86:
+          case Triple::ArchType::x86_64:
+                  {
+                    this->targetName = "X86";
+                    break;
+                  }
+	   default:
+                  this->targetName = "UnKnown";
   }
-  */
+ 
+  // errs () << "this->targetName :: " << this->targetName << "\n"; 
   // Todo: commented out the next line due to compilation error
-  //  assert(this->target_Color2PhyRegMap[targetName].find() !=
-  //  this->target_Color2PhyRegMap[targetName].end() && "Not a valid Target");
+   assert(this->target_Color2PhyRegMap.find(this->targetName) !=
+    this->target_Color2PhyRegMap.end() && "Not a valid Target");
 
   FunctionCounter++;
   MF = &mf;
