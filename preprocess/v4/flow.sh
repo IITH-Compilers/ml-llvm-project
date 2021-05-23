@@ -92,12 +92,11 @@ mkdir -p ${LL_WD}
 REMARKS_DIR=${WD}/remarks
 GRAPHS=${WD}/graphs
 
-G_TYPE="version_inline"
-LOOPS_DOT=${GRAPHS}/${G_TYPE}/loops/dot
-LOOPS_JSON=${GRAPHS}/${G_TYPE}/loops/json
-RDG_DOT=${GRAPHS}/${G_TYPE}/rdg/dot
-RDG_JSON=${GRAPHS}/${G_TYPE}/rdg/json
-SCC_DOT=${GRAPHS}/${G_TYPE}/scc/dot
+LOOPS_DOT=${GRAPHS}/loops/dot
+LOOPS_JSON=${GRAPHS}/loops/json
+RDG_DOT=${GRAPHS}/rdg/dot
+RDG_JSON=${GRAPHS}/rdg/json
+SCC_DOT=${GRAPHS}/scc/dot
 META_SSA=${LL_WD}/meta_ssa
 
 mkdir -p ${LOOPS_DOT} ${RDG_DOT} ${LOOPS_JSON} ${RDG_JSON} ${META_SSA} ${SCC_DOT} ${REMARKS_DIR}
@@ -106,7 +105,7 @@ mkdir -p ${LOOPS_DOT} ${RDG_DOT} ${LOOPS_JSON} ${RDG_JSON} ${META_SSA} ${SCC_DOT
 
 for d in ${INP_DIR}/${LL_FLR_NAME}/*.ll; do 
         # name=`basename ${d}` && oname=${name%.*} && rfile= && if [ ! -z "${REMARKS}" ]; then rfile="-pass-remarks-output=${oname}_${G_TYPE}.yaml"; fi && mkdir ${LOOPS_DOT}/${oname} && cd ${LOOPS_DOT}/${oname} && ${TIME_OUT} ${LLVM_BUILD}/bin/opt ${SSA_PASSES_SEQ} -rdg ${USE_MCA} -S ${REMARKS} ${rfile}   ${d} -o ${META_SSA}/${oname}.ll  && mkdir ${RDG_DOT}/${oname} && mv ${LOOPS_DOT}/${oname}/I_* ${RDG_DOT}/${oname}/ && mkdir ${SCC_DOT}/${oname} && mv ${LOOPS_DOT}/${oname}/S_* ${SCC_DOT}/${oname}/ & 
-        name=`basename ${d}` && oname=${name%.*} && rfile= && if [ ! -z "${REMARKS}" ]; then rfile="-pass-remarks-output=${oname}_${G_TYPE}.yaml"; fi &&  cd ${LOOPS_DOT} && ${TIME_OUT} ${LLVM_BUILD}/bin/opt ${SSA_PASSES_SEQ} -loop-simplify -rdg ${USE_MCA} -S ${REMARKS} ${rfile}   ${d} -o ${META_SSA}/${oname}.ll & 
+        name=`basename ${d}` && oname=${name%.*} && rfile= && if [ ! -z "${REMARKS}" ]; then rfile="-pass-remarks-output=${oname}.yaml"; fi &&  cd ${LOOPS_DOT} && ${TIME_OUT} ${LLVM_BUILD}/bin/opt ${SSA_PASSES_SEQ} -loop-simplify -rdg ${USE_MCA} -S ${REMARKS} ${rfile}   ${d} -o ${META_SSA}/${oname}.ll & 
 done 
  
 wait
@@ -117,17 +116,17 @@ mv ${LOOPS_DOT}/S_* ${SCC_DOT}/
 mv ${LOOPS_DOT}/*.yaml ${REMARKS_DIR}/
 # Covert dot to json and filter out unwanted json
 
-echo "Graphs are present at ${GRAPHS}/${G_TYPE}"
-python  Dot-\>Json.py ${GRAPHS}/${G_TYPE}/loops
-# python  Dot-\>Json.py ${GRAPHS}/${G_TYPE}/rdg
+echo "Graphs will be generated present at ${GRAPHS}"
+python  Dot-\>Json.py ${GRAPHS}/loops
+# python  Dot-\>Json.py ${GRAPHS}/rdg
 
 echo "valid graphs generated inside ${GRAPHS}"
 
 ############################# RDG collection After Predistribution passes #########
 # G_TYPE="inline"
-# DOT=${GRAPHS}/${G_TYPE}/dot
-# JSON_DIR=${GRAPHS}/${G_TYPE}/json
-# SCC=${GRAPHS}/${G_TYPE}/scc
+# DOT=${GRAPHS}/dot
+# JSON_DIR=${GRAPHS}/json
+# SCC=${GRAPHS}/scc
 # META_SSA_IML_RDG=${LL_WD}/meta_ssa_inline
 # 
 # mkdir -p ${DOT} ${JSON_DIR} ${META_SSA_IML_RDG} ${SCC}
@@ -143,8 +142,8 @@ echo "valid graphs generated inside ${GRAPHS}"
 # mv ${DOT}/*.yaml ${REMARKS_DIR}/
 # # Covert dot to json and filter out unwanted json
 # 
-# echo "Graphs are present at ${GRAPHS}/${G_TYPE}"
-# python  Dot-\>Json.py ${GRAPHS}/${G_TYPE}
+# echo "Graphs are present at ${GRAPHS}"
+# python  Dot-\>Json.py ${GRAPHS}
 
 # exit
 

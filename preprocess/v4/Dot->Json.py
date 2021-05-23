@@ -7,10 +7,10 @@ import glob
 import os
 import threading
 import numpy as np
-import shutil
-
 GRAPH_DIR=sys.argv[1]
 json_dir = os.path.join(GRAPH_DIR, 'json')
+if not os.path.exists(json_dir):
+    os.makedirs(json_dir)
 
 def dot_to_json(file_in):
 #    print(file_in)
@@ -20,10 +20,6 @@ def dot_to_json(file_in):
     graph_json = json_graph.adjacency_data(graph_netx)
     # exit()
     return graph_json 
-def remove_prefix(text, prefix):
-    if text.startswith(prefix):
-        return text[len(prefix):]
-    return text 
 
 def mapfiles(files):
 
@@ -36,13 +32,8 @@ def mapfiles(files):
         #     continue
         name = (dotPath.split('/')[-1]).split('.dot')[0]
 #         print(name)
-        filename_funcname_loopid, inlinetype =tuple(name.rsplit("_", 1))
-        file_name_loopid_dir = remove_prefix(filename_funcname_loopid, 'I_')
-        file_name_loopid_dir = os.path.join(json_dir, file_name_loopid_dir)
-        if not os.path.exists(file_name_loopid_dir):
-            os.makedirs(file_name_loopid_dir)
 
-        with open(os.path.join(file_name_loopid_dir, '{}.json'.format(name)), 'w') as f:
+        with open(os.path.join(json_dir, '{}.json'.format(name)), 'w') as f:
             json.dump(graph,  f)
 
 def runit(files):
@@ -55,34 +46,8 @@ def runit(files):
 def chunkify(lst,n):
     return [lst[i::n] for i in range(n) if len(lst[i::n]) > 0 ]
 
-def filterjson(dirs):
-
-#    print('-----------------------------------')
-    for dir_path in  dirs:
-#         print(dotPath) 
-        dir_name = os.path.dirname(dir_path)
-#         print(dir_name)
-        all_files =glob.glob(os.path.join(dir_path, '*.json'))
-        rdg_files =glob.glob(os.path.join(dir_path, 'I_*.json'))
-        
-        inline_files = list(set(all_files)^set(rdg_files))
-        
-        if len(inline_files) < 2 and len(rdg_files) == 0:
-            print('Remove the dir {}'.format(dir_path))
-            shutil.rmtree(dir_path)
-        # elif (os.path.join(dir_path, "{}_TypeInlined-Versioned.json".format(dir_name)) not in inline_files) and len(rdg_files) == 0:
-        #    print('Remove the dir {}'.format(dir_path))
-        #    shutil.rmtree(dir_path)
-
-
-
-
-allfiles =glob.glob(os.path.join(GRAPH_DIR, 'dot/*.dot'))
+allfiles =glob.glob(os.path.join(GRAPH_DIR, 'dot/I_*.dot'))
 mapfiles(allfiles)
-
-json_sub_dir =glob.glob(os.path.join(json_dir,"*"))
-# print(json_sub_dir) 
-filterjson(json_sub_dir)
 print('--------------Done-------------')
 # exit()
 # 
