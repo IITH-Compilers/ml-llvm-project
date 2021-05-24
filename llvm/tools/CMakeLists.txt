@@ -44,6 +44,7 @@ add_llvm_tool_subdirectory(llvm-profdata)
 add_llvm_external_project(clang)
 add_llvm_external_project(lld)
 add_llvm_external_project(lldb)
+add_llvm_external_project(ir2vec)
 add_llvm_external_project(mlir)
 # Flang depends on mlir, so place it afterward
 add_llvm_external_project(flang)
