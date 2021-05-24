@@ -5,6 +5,7 @@
 
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SCCIterator.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
@@ -52,16 +53,18 @@ static cl::opt<unsigned> CLS("cache-line-size", cl::init(64), cl::Hidden,
 
 #define DEBUG_TYPE "locality"
 
-class LoopCost : public FunctionPass {
+class LoopCost : public ModulePass {
   DenseMap<Loop *, Loop *> ScalarToVecLoop;
   void collectScalarVectorLoops(SmallVectorImpl<Loop *> &);
   void GetInnerLoops(Loop *, SmallVectorImpl<Loop *> &);
+  uint64_t RecursivelyComputeInstructionCost(Function *,
+                                             SmallSet<Function *, 20> &);
 
 public:
   static char ID;
   ScalarEvolution *SE;
 
-  LoopCost() : FunctionPass(ID) {}
+  LoopCost() : ModulePass(ID) {}
 
   Loop *getVectorLoop(Loop *L) {
     if (ScalarToVecLoop.find(L) != ScalarToVecLoop.end())
@@ -94,14 +97,23 @@ public:
     return ID;
   }
 
-  bool runOnFunction(Function &F) override {
-    if (F.getName() != funcName || skipFunction(F))
+  bool runOnModule(Module &M) override {
+    for (Module::iterator FI = M.begin(), E = M.end(); FI != E; FI++) {
+      Function &F = *FI;
+      if (!F.isDeclaration())
+        runOnFunction(F);
+    }
+    return false;
+  }
+
+  bool runOnFunction(Function &F) {
+    if (F.getName() != funcName)
       return false;
 
-    auto *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-    auto *LAA = &getAnalysis<LoopAccessLegacyAnalysis>();
+    auto *LI = &getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo();
+    auto *LAA = &getAnalysis<LoopAccessLegacyAnalysis>(F);
     auto *TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-    SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
+    SE = &getAnalysis<ScalarEvolutionWrapperPass>(F).getSE();
 
     SmallVector<Loop *, 32> InnerLoops;
     for (Loop *L : *LI)
@@ -243,6 +255,33 @@ public:
     AU.setPreservesAll();
   }
 };
+
+uint64_t
+LoopCost::RecursivelyComputeInstructionCost(Function *F,
+                                            SmallSet<Function *, 20> &Visited) {
+  // Get TTI for the function
+  auto *TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(*F);
+  if (Visited.find(F) != Visited.end())
+    return 0;
+
+  uint64_t LoopCost = 0;
+  for (inst_iterator I = inst_begin(F), E = inst_end(F); I != E; ++I) {
+    Instruction *Inst = &*I;
+    if (!isa<CallInst>(*Inst)) {
+      LoopCost +=
+          TTI->getInstructionCost(Inst, TargetTransformInfo::TCK_Latency);
+    } else {
+      CallInst *CI = cast<CallInst>(Inst);
+      if (!CI->getCalledFunction())
+        continue;
+      Visited.insert(F);
+      LoopCost +=
+          RecursivelyComputeInstructionCost(CI->getCalledFunction(), Visited);
+      Visited.erase(F);
+    }
+  }
+  return LoopCost;
+}
 
 void LoopCost::collectScalarVectorLoops(SmallVectorImpl<Loop *> &AllLoops) {
   for (auto L : AllLoops) {
