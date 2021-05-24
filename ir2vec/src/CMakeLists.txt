@@ -18,6 +18,7 @@ set(libsrc libIR2Vec.cpp ${commonsrc})
 
 file(GLOB RESOURCE_FILES ../vocabulary/**.txt)
 
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/include/IR2Vec.h DESTINATION ${LLVM_MAIN_INCLUDE_DIR}/llvm )
 
 add_llvm_library(LLVMIR2Vec
   ${libsrc}
