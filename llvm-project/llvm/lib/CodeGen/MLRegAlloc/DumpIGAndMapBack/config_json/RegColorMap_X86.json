@@ -21,20 +21,16 @@
                 "GR32_TC",
                 "GR32_ABCD_and_GR32_TC",
                 "GR32_AD",
-                "GR32_BPSP",
                 "GR32_BSI",
                 "GR32_CB",
                 "GR32_DC",
                 "GR32_DIBP",
                 "GR32_SIDI",
-                "LOW32_ADDR_ACCESS_RBP_with_sub_32bit",
                 "GR32_ABCD_and_GR32_BSI",
                 "GR32_AD_and_GR32_DC",
-                "GR32_BPSP_and_GR32_DIBP",
                 "GR32_BSI_and_GR32_SIDI",
                 "GR32_CB_and_GR32_DC",
                 "GR32_DIBP_and_GR32_SIDI",
-                "LOW32_ADDR_ACCESS_RBP_with_sub_8bit_with_sub_32bit",
                 "GR64",
                 "GR64_with_sub_8bit",
                 "GR64_NOSP",
@@ -58,8 +54,6 @@
                 "GR64_with_sub_32bit_in_GR32_TC",
                 "GR64_with_sub_32bit_in_GR32_ABCD_and_GR32_TC",
                 "GR64_AD",
-                "GR64_and_LOW32_ADDR_ACCESS_RBP",
-                "GR64_with_sub_32bit_in_GR32_BPSP",
                 "GR64_with_sub_32bit_in_GR32_BSI",
                 "GR64_with_sub_32bit_in_GR32_CB",
                 "GR64_with_sub_32bit_in_GR32_DC",
@@ -67,7 +61,6 @@
                 "GR64_with_sub_32bit_in_GR32_SIDI",
                 "GR64_with_sub_32bit_in_GR32_ABCD_and_GR32_BSI",
                 "GR64_with_sub_32bit_in_GR32_AD_and_GR32_DC",
-                "GR64_with_sub_32bit_in_GR32_BPSP_and_GR32_DIBP",
                 "GR64_with_sub_32bit_in_GR32_BSI_and_GR32_SIDI",
                 "GR64_with_sub_32bit_in_GR32_CB_and_GR32_DC",
                 "GR64_with_sub_32bit_in_GR32_DIBP_and_GR32_SIDI"
@@ -105,8 +98,8 @@
                 },
                 {
                     "color": 7,
-                    "name": "BP",
-                    "phyReg": 6
+                    "name": "R12D",
+                    "phyReg": 259
                 },
                 {
                     "color": 8,
@@ -115,8 +108,8 @@
                 },
                 {
                     "color": 9,
-                    "name": "BPL",
-                    "phyReg": 8
+                    "name": "R9W",
+                    "phyReg": 264
                 },
                 {
                     "color": 10,
@@ -125,8 +118,8 @@
                 },
                 {
                     "color": 11,
-                    "name": "R9W",
-                    "phyReg": 264
+                    "name": "R10W",
+                    "phyReg": 265
                 },
                 {
                     "color": 12,
@@ -135,8 +128,8 @@
                 },
                 {
                     "color": 13,
-                    "name": "R10W",
-                    "phyReg": 265
+                    "name": "R11W",
+                    "phyReg": 266
                 },
                 {
                     "color": 14,
@@ -145,13 +138,13 @@
                 },
                 {
                     "color": 15,
-                    "name": "R11W",
-                    "phyReg": 266
+                    "name": "R12W",
+                    "phyReg": 267
                 },
                 {
                     "color": 16,
-                    "name": "R12W",
-                    "phyReg": 267
+                    "name": "R13W",
+                    "phyReg": 268
                 },
                 {
                     "color": 17,
@@ -160,8 +153,8 @@
                 },
                 {
                     "color": 18,
-                    "name": "R13W",
-                    "phyReg": 268
+                    "name": "R14W",
+                    "phyReg": 269
                 },
                 {
                     "color": 19,
@@ -175,8 +168,8 @@
                 },
                 {
                     "color": 21,
-                    "name": "R14W",
-                    "phyReg": 269
+                    "name": "R15W",
+                    "phyReg": 270
                 },
                 {
                     "color": 22,
@@ -185,53 +178,53 @@
                 },
                 {
                     "color": 23,
-                    "name": "R15W",
-                    "phyReg": 270
-                },
-                {
-                    "color": 24,
                     "name": "EAX",
                     "phyReg": 22
                 },
                 {
-                    "color": 25,
-                    "name": "EBP",
-                    "phyReg": 23
+                    "color": 24,
+                    "name": "R11",
+                    "phyReg": 130
                 },
                 {
-                    "color": 26,
+                    "color": 25,
                     "name": "EBX",
                     "phyReg": 24
                 },
                 {
-                    "color": 27,
+                    "color": 26,
                     "name": "ECX",
                     "phyReg": 25
                 },
                 {
-                    "color": 28,
+                    "color": 27,
                     "name": "EDI",
                     "phyReg": 26
                 },
                 {
-                    "color": 29,
+                    "color": 28,
                     "name": "EDX",
                     "phyReg": 27
                 },
                 {
-                    "color": 30,
-                    "name": "R12D",
-                    "phyReg": 259
+                    "color": 29,
+                    "name": "R9",
+                    "phyReg": 128
                 },
                 {
-                    "color": 31,
+                    "color": 30,
                     "name": "R13D",
                     "phyReg": 260
                 },
                 {
+                    "color": 31,
+                    "name": "R13",
+                    "phyReg": 132
+                },
+                {
                     "color": 32,
-                    "name": "R9",
-                    "phyReg": 128
+                    "name": "R14",
+                    "phyReg": 133
                 },
                 {
                     "color": 33,
@@ -240,136 +233,116 @@
                 },
                 {
                     "color": 34,
-                    "name": "R13",
-                    "phyReg": 132
-                },
-                {
-                    "color": 35,
                     "name": "R14D",
                     "phyReg": 261
                 },
                 {
-                    "color": 36,
-                    "name": "R14",
-                    "phyReg": 133
-                },
-                {
-                    "color": 37,
+                    "color": 35,
                     "name": "R15",
                     "phyReg": 134
                 },
                 {
-                    "color": 38,
+                    "color": 36,
                     "name": "R15D",
                     "phyReg": 262
                 },
                 {
-                    "color": 39,
+                    "color": 37,
                     "name": "RAX",
                     "phyReg": 49
                 },
                 {
-                    "color": 40,
-                    "name": "RBP",
-                    "phyReg": 50
-                },
-                {
-                    "color": 41,
+                    "color": 38,
                     "name": "RBX",
                     "phyReg": 51
                 },
                 {
-                    "color": 42,
+                    "color": 39,
                     "name": "RCX",
                     "phyReg": 52
                 },
                 {
-                    "color": 43,
+                    "color": 40,
                     "name": "RDI",
                     "phyReg": 53
                 },
                 {
-                    "color": 44,
+                    "color": 41,
                     "name": "RDX",
                     "phyReg": 54
                 },
                 {
-                    "color": 45,
+                    "color": 42,
                     "name": "R10",
                     "phyReg": 129
                 },
                 {
-                    "color": 46,
+                    "color": 43,
                     "name": "RSI",
                     "phyReg": 57
                 },
                 {
-                    "color": 47,
+                    "color": 44,
                     "name": "SI",
                     "phyReg": 59
                 },
                 {
-                    "color": 48,
+                    "color": 45,
                     "name": "SIL",
                     "phyReg": 61
                 },
                 {
-                    "color": 49,
-                    "name": "R11",
-                    "phyReg": 130
-                },
-                {
-                    "color": 50,
+                    "color": 46,
                     "name": "R12",
                     "phyReg": 131
                 },
                 {
-                    "color": 51,
+                    "color": 47,
                     "name": "R8B",
                     "phyReg": 239
                 },
                 {
-                    "color": 52,
+                    "color": 48,
                     "name": "R9B",
                     "phyReg": 240
                 },
                 {
-                    "color": 53,
+                    "color": 49,
                     "name": "R10B",
                     "phyReg": 241
                 },
                 {
-                    "color": 54,
+                    "color": 50,
                     "name": "R11B",
                     "phyReg": 242
                 },
                 {
-                    "color": 55,
+                    "color": 51,
                     "name": "R12B",
                     "phyReg": 243
                 },
                 {
-                    "color": 56,
+                    "color": 52,
                     "name": "R13B",
                     "phyReg": 244
                 },
                 {
-                    "color": 57,
+                    "color": 53,
                     "name": "R14B",
                     "phyReg": 245
                 },
                 {
-                    "color": 58,
+                    "color": 54,
                     "name": "R15B",
                     "phyReg": 246
                 },
                 {
-                    "color": 59,
+                    "color": 55,
                     "name": "R8",
                     "phyReg": 127
                 },
                 {
-                    "color": 60,
+                    "color": 56,
                     "name": "R8D",
                     "phyReg": 255
                 }

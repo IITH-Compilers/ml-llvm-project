@@ -2863,27 +2863,55 @@ bool MLRA::spillInterferences(LiveInterval &VirtReg, unsigned PhysReg,
 }
 
 void MLRA::dumpInterferenceGraph() {
+#if 0
+        errs() << "getNumRegUnits  Registers=" << TRI->getNumRegUnits() << ";\n";
+        errs() << "Num  Registers=" << TRI->getNumRegs() << ";\n";
+        errs() << "getNumRegClasses() " << TRI->getNumRegClasses() << " \n";
+        
+	std::string jsonreg = "{\n";
+	std::string eachreg = "";
+	int j = 0;
+        int regClassesNum = TRI->getNumRegClasses();
+	for(auto rc : TRI->regclasses()){
+    	   // errs () << "RegClassName " << TRI->getRegClassName(rc) << "\n";
+	  std::string regClass = TRI->getRegClassName(rc);
+	  
+           std::string ireg = "";
+
+	   auto rci_order = RCI.getOrder(rc);
+	   int order_size = rci_order.size();
+	   int i = 0;
+           for (auto O:rci_order){
+		   if (i == (order_size-1)){
+		   ireg = ireg + "{" + "\"regId\":" + std::to_string(O)+", \"regName\":\""+ TRI->getName(O) +"\"}\n";
+		   } else{
+		   ireg = ireg + "{" + "\"regId\":" + std::to_string(O)+", \"regName\":\""+ TRI->getName(O) +"\"},\n";
+		   }
+                 // errs() << ' ' << printReg(O, TRI) << "="<<O;
+
+           i++;
+	   }
+           
+	   if (j == (regClassesNum-1) ){
+	   eachreg = eachreg + "\""+regClass+"\"" + ": ["  + ireg +  "]\n";
+	   } else {
+	   eachreg = eachreg + "\""+regClass+"\"" + ": ["  + ireg +  "],\n";
+	   }
+        
+ 	j++;
+	}
+	jsonreg = jsonreg + eachreg + "}";
+
+	// errs () << jsonreg << "\n";
+	std::error_code EC2;
+        raw_fd_ostream regInfo_file(this->targetName + "_reg_info_"+std::to_string(FunctionCounter)+".json",
+                        EC2, sys::fs::F_Text);
+	regInfo_file << jsonreg;
+	//exit(0);
+#endif
 
   LLVM_DEBUG(errs() << "\nStarting dumping \n");
   LLVM_DEBUG(LIS->dump());
-  // MachineFunction *MF = &mf;
-  // VirtRegMap &vrm = getAnalysis<VirtRegMap>();
-  // LiveIntervals &lis = getAnalysis<LiveIntervals>();
-  // LiveRegMatrix &mat = getAnalysis<LiveRegMatrix>();
-  // TRI = &vrm.getTargetRegInfo();
-  // MRI = &vrm.getRegInfo();
-  // VRM = &vrm;
-  // LIS = &lis;
-  // Matrix = &mat;
-  //  MRI->freezeReservedRegs(vrm.getMachineFunction());
-
-  // RCI.runOnMachineFunction(vrm.getMachineFunction());
-
-  // calculateSpillWeightsAndHints(*LIS, *MF, VRM,
-  // getAnalysis<MachineLoopInfo>(),
-  //                               getAnalysis<MachineBlockFrequencyInfo>());
-
-  // LLVM_DEBUG(LIS->dump());
 
   std::string nodes = "";
   // SmallVector<LiveRange *> physRegLR;
@@ -2897,7 +2925,7 @@ void MLRA::dumpInterferenceGraph() {
 
   LLVM_DEBUG(errs() << "Dumping LIS after interating over allover and before "
                        "pr -- vr interference check\n");
-  LLVM_DEBUG(LIS->dump());
+  // LLVM_DEBUG(LIS->dump());
   unsigned step = TRI->getNumRegUnits() + 1;
   for (unsigned i = 1, e = TRI->getNumRegUnits(); i != e; ++i) {
     // if (MRI->reg_nodbg_empty(i))
@@ -2914,8 +2942,7 @@ void MLRA::dumpInterferenceGraph() {
           << "Dumping LIS After Live Range check -- vr interference check\n");
       // LLVM_DEBUG(LIS->dump());
       LLVM_DEBUG(errs() << "Already physical register assigned idx:" << i
-                        << "  name:" << printReg(i, TRI) << "\n";
-                 errs() << printRegUnit(i, TRI) << ' ' << *phyRange << "\n");
+                        << "  name:" << printReg(i, TRI) << "\n");
 
       std::string regClass = "Phy";
       std::string node_str =
@@ -2972,7 +2999,7 @@ void MLRA::dumpInterferenceGraph() {
   LLVM_DEBUG(
       errs()
       << "Dumping LIS AFTER pr -- vr & before vr -- vr interference check\n");
-  LLVM_DEBUG(LIS->dump());
+  // LLVM_DEBUG(LIS->dump());
   /*
    * Iterating over the virtual registers.
    *
@@ -3012,9 +3039,10 @@ void MLRA::dumpInterferenceGraph() {
       inst.first->dump();
     }
     errs() << "==========================================\n");
+    
     std::string segmentInst = "";
     if (!VirtReg->segments.empty()) {
-      // node_str = node_str + "[";
+      
       for (auto &S : VirtReg->segments) {
         // ToDo: Change this loop to capture the uses of definition
         for (SlotIndex I = S.start.getBaseIndex(), E = S.end.getBaseIndex();
@@ -3037,18 +3065,6 @@ void MLRA::dumpInterferenceGraph() {
 #if PRINT_MRI_INST
           // MIR->print(File);
 #endif
-          // double *p;
-          // p = getRandom();
-
-          // std::ostringstream os;
-          // for (int i = 0; i < 5; i++) {
-          //   os << *(p + i);
-          //   if (i < 4)
-          //     os << ", ";
-          // }
-
-          // std::string str(os.str());
-
           if (!is_atleastoneinstruction) {
             segmentInst = segmentInst + "[ " + str + " ]";
           } else {
@@ -3057,11 +3073,14 @@ void MLRA::dumpInterferenceGraph() {
           is_atleastoneinstruction = true;
         }
       }
-      // node_str = node_str + "]\"];\n";
     }
-    if (is_atleastoneinstruction) {
-      node_str = node_str + "[" + segmentInst + "]\"];\n";
-      // File << node_str;
+    
+    if (!VirtReg->segments.empty()) {
+      if (segmentInst != ""){
+      	node_str = node_str + "[" + segmentInst + "]\"];\n";
+      } else{
+      node_str = node_str + "\"];\n";
+      }
       std::string edges = "";
       for (unsigned j = i + 1; j < MRI->getNumVirtRegs(); ++j) {
         unsigned Reg1 = Register::index2VirtReg(j);
@@ -3077,7 +3096,6 @@ void MLRA::dumpInterferenceGraph() {
         if (VirtReg->overlaps(LIS->getInterval(Reg1))) {
           edge = std::to_string(node_id) + " -- " + std::to_string(j + step) +
                  ";\n";
-          // File << node_id << " -- " << j + step << ";\n";
           LLVM_DEBUG(errs() << edge << "\n");
           edges = edges + edge;
         }
@@ -3249,7 +3267,6 @@ void MLRA::allocatePhysRegsViaRL() {
       LIS->removeInterval(VirtReg->reg);
       continue;
     }
-    // enqueue(&LIS->getInterval(Reg));
 #if 1
     assert(!VRM->hasPhys(VirtReg->reg) && "Register already assigned");
     unsigned node_id = i + step;
@@ -3363,7 +3380,8 @@ void MLRA::allocatePhysRegsViaRL() {
     if (AvailablePhysReg) {
       // assert(!Matrix->checkInterference(*VirtReg, AvailablePhysReg) &&
       //      "Reg interfere with existing allocation");
-      LLVM_DEBUG(errs() << "Insert ot VMAP " << printReg(AvailablePhysReg, TRI)
+      
+      LLVM_DEBUG(errs() << "Insert to VMAP " << printReg(AvailablePhysReg, TRI)
                         << "\n");
       Matrix->assign(*VirtReg, AvailablePhysReg);
       LLVM_DEBUG(errs() << "Post alloc VirtRegMap:\n"
@@ -3389,12 +3407,11 @@ void MLRA::allocatePhysRegsViaRL() {
       enqueue(SplitVirtReg);
       // ++NumNewQueued;
     }
-    LLVM_DEBUG(errs() << "After split itr \n "; LIS->dump());
+    // LLVM_DEBUG(errs() << "After split itr \n "; LIS->dump());
 #endif
   }
 
   // Assign register to the Non supported RegClass
-  // for(auto VirtReg : NonSupporttedVirRegs){
   while (LiveInterval *VirtReg = dequeue()) {
     std::string regClass = TRI->getRegClassName(MRI->getRegClass(VirtReg->reg));
     LLVM_DEBUG(errs() << "Register class(" << regClass

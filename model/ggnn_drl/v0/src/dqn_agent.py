@@ -99,14 +99,18 @@ class Agent():
                 # assign a color to the node
                 out = self.qnetwork_local(state)
                 # Out of all, taking the only the masked classes
+                # print(action_space)
                 out = out[action_space]
                 # Find the index of the max probality
+                # print(out)
                 _, actions_idx = self.getMaxQvalueAndActions(out)
+                # print(actions_idx)
                 actions_idx = actions_idx.cpu().numpy()
                 # Get the color at the predicted index
                 actions = action_space[actions_idx]
                 # print(actions , type(actions)) 
             if self.mode in ['train']:
+                # print('trainin')
                 self.qnetwork_local.train()
         else:
             logging.debug('EXP: Random ')

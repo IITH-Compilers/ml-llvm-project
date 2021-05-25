@@ -35,11 +35,14 @@ class RegisterActionSpace:
         self.ac_sp_normlize = np.arange(0, self.num_regs_supp+1) # 1.... Num of supported registers
         self.ac_sp_normlize_size = len(self.ac_sp_normlize)
         print('Size of the action space  : {} '.format(len(self.ac_sp_normlize)))
-        # Original to 
-        normal_org_map = dict(zip(self.ac_sp_normlize, self.regs_supp))
+        # Original to
+
+        
+        assert len(self.ac_sp_normlize[1:]) == len(self.regs_supp), "Action space size (w/o spill) and supported register should be same"
+        normal_org_map = dict(zip(self.ac_sp_normlize[1:], self.regs_supp))
 
         # print(normal_org_map)
-        org_normal_map = dict(zip(self.regs_supp, self.ac_sp_normlize))
+        org_normal_map = dict(zip(self.regs_supp, self.ac_sp_normlize[1:]))
         # print(org_normal_map)
         
 
@@ -53,10 +56,12 @@ class RegisterActionSpace:
         self.suppcls_regs_normalize_map  = dict(zip(self.supported_regclasses, supp_regs_normal_values_map))
 
 
-        # reg_target = {"name":target, "regclasses" : self.supported_regclasses,"register" : [ {"color": org_normal_map[reg], "name" : self.reg_idname_map[reg], "phyReg" : reg } for reg in self.regs_supp] }
+        # reg_target = {"name":target, "regclasses" : self.supported_regclasses,"register" : [ {"color": int(org_normal_map[reg]), "name" : self.reg_idname_map[reg], "phyReg" : int(reg) } for reg in self.regs_supp] }
 
         # color2regmap = { "targets" : [reg_target]}
+        # 
 
+        # print(color2regmap)
         # with open("RegColorMap_{}.json".format(target), "w") as f:
         #     json.dump(color2regmap, f, indent=4)
         
@@ -97,7 +102,7 @@ class RegisterActionSpace:
         if regClass in self.supported_regclasses:
             # selectedInterval = self.suppcls_regs_map[regClass]
             # print(regClass)
-            selectedInterval = self.suppcls_regs_normalize_map[regClass]
+            selectedInterval = np.array(self.suppcls_regs_normalize_map[regClass])
             # print(selectedInterval)
             action_space = self.ac_sp_normlize[selectedInterval]
             if len(adj_colors) > 0:
