@@ -2925,7 +2925,7 @@ void MLRA::dumpInterferenceGraph() {
 			}
 		
 		}
-		if ( i== e ){
+		if ( i== e-1 ){
 			collist = collist + "\""+std::to_string(i) + "\" : ["+ colreg+"]\n";
 		} else {
 			collist = collist + "\""+std::to_string(i) + "\" : ["+ colreg+"],\n";
@@ -2944,6 +2944,15 @@ void MLRA::dumpInterferenceGraph() {
 
 #endif
 
+#if 0
+        errs() << "getNumRegUnits  Registers=" << TRI->getNumRegUnits() << ";\n";
+        errs() << "Num  Registers=" << TRI->getNumRegs() << ";\n";
+        errs() << "getNumRegClasses() " << TRI->getNumRegClasses() << " \n";
+	for (unsigned i = 1, e = TRI->getNumRegs(); i != e; ++i){
+	errs () << "regId : "<< i <<  "; name = "<< printReg(i, TRI) << "\n";
+	}
+
+#endif
   LLVM_DEBUG(errs() << "\nStarting dumping \n");
   LLVM_DEBUG(LIS->dump());
 
@@ -2953,24 +2962,25 @@ void MLRA::dumpInterferenceGraph() {
     unsigned Reg = Register::index2VirtReg(i);
     LIS->getInterval(Reg);
   }
-  for (unsigned i = 1, e = TRI->getNumRegUnits(); i != e; ++i) {
+  
+  /*for (unsigned i = 1, e = TRI->getNumRegUnits(); i != e; ++i) {
     LIS->getRegUnit(i);
-  }
+  }*/
 
   LLVM_DEBUG(errs() << "Dumping LIS after interating over allover and before "
                        "pr -- vr interference check\n");
   // LLVM_DEBUG(LIS->dump());
-  unsigned step = TRI->getNumRegUnits() + 1;
-  for (unsigned i = 1, e = TRI->getNumRegUnits(); i != e; ++i) {
+  unsigned step = TRI->getNumRegs() + 1;
+  for (unsigned i = 1, e = TRI->getNumRegs(); i != e; ++i) {
     // if (MRI->reg_nodbg_empty(i))
     //   continue;
-    LLVM_DEBUG(errs() << "Starting to process - " << printRegUnit(i, TRI)
+    LLVM_DEBUG(errs() << "Starting to process - " << printReg(i, TRI)
                       << "\n");
     LLVM_DEBUG(
         errs()
         << "Dumping LIS before Live Range check -- vr interference check\n");
     // LLVM_DEBUG(LIS->dump());
-    if (LiveRange *phyRange = LIS->getCachedRegUnit(i)) {
+    // if (LiveRange *phyRange = LIS->getCachedRegUnit(i)) {
       LLVM_DEBUG(
           errs()
           << "Dumping LIS After Live Range check -- vr interference check\n");
@@ -3026,7 +3036,7 @@ void MLRA::dumpInterferenceGraph() {
         nodes = nodes + node_str + edges;
       }
       LLVM_DEBUG(errs() << "\n");
-    }
+    // }
   }
   LLVM_DEBUG(errs() << "Interference for physical register ended ...\n");
 
@@ -3290,7 +3300,7 @@ void MLRA::allocatePhysRegsViaRL() {
              this->FunctionVirtRegToColorMap.end() &&
          "Function does not have the register allocation through MLRA");
   std::vector<LiveInterval *> NonSupporttedVirRegs;
-  unsigned step = TRI->getNumRegUnits() + 1;
+  unsigned step = TRI->getNumRegs() + 1;
 
   for (unsigned i = 0, e = MRI->getNumVirtRegs(); i < e; ++i) {
     unsigned Reg = Register::index2VirtReg(i);
