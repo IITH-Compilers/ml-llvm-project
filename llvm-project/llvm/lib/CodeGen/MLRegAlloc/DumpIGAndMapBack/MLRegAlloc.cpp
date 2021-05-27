@@ -2910,6 +2910,40 @@ void MLRA::dumpInterferenceGraph() {
 	//exit(0);
 #endif
 
+#if 0
+	// std::map<unsigned, std::vector<unsigned>> reg2unitsList;
+	std::string collist = "";
+	for (unsigned i = 1, e = TRI->getNumRegs(); i != e; ++i){
+			bool col = false;
+			std::string colreg = "";
+		for(unsigned j = 1, e1 = TRI->getNumRegs(); j != e1; ++j){
+			if(i != j && TRI->regsOverlap(i,j)){
+				errs() << "Register - " << printReg(i, TRI) << "and Register - " << printReg(j, TRI) << "overlap? -->" << TRI->regsOverlap(i,j) << "\n";
+			if (col)
+			{ colreg  = colreg +", "+ std::to_string(j);
+			} else { col =true; colreg = std::to_string(j);}
+			}
+		
+		}
+		if ( i== e ){
+			collist = collist + "\""+std::to_string(i) + "\" : ["+ colreg+"]\n";
+		} else {
+			collist = collist + "\""+std::to_string(i) + "\" : ["+ colreg+"],\n";
+		}
+		/*errs () << "Register("+std::to_string(i)+") "<< printReg(i, TRI) <<" and its Units\n";
+		for ( MCRegUnitIterator Units(i, TRI); Units.isValid(); ++Units){
+			errs () << printRegUnit(*Units, TRI) << "("+std::to_string(*Units)+")" << " ";
+		}*/
+		//errs () << "\n";
+	}
+	std::string jsonreg = "{\n" +collist  + "\n}"; 
+	std::error_code EC2;
+        raw_fd_ostream regInfo_file(this->targetName + "_ovlap_info_"+std::to_string(FunctionCounter)+".json",
+                        EC2, sys::fs::F_Text);
+	regInfo_file << jsonreg;
+
+#endif
+
   LLVM_DEBUG(errs() << "\nStarting dumping \n");
   LLVM_DEBUG(LIS->dump());
 
