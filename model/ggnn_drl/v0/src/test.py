@@ -30,6 +30,7 @@ def run(agent, config):
     score = 0
     count = 1
     testing_set = glob.glob(os.path.join(dataset, 'graphs/IG/json/*.json'))
+    # testing_set = glob.glob(os.path.join(dataset, 'graphs/IG/json/pr53645-2.c_F25.json'))
 
     for path in tqdm(testing_set, 'Validating......'): # Number of the iterations
         logging.info('Loading new graph datapoint into the env ---------> {} '.format(os.path.split(path)[1]))
