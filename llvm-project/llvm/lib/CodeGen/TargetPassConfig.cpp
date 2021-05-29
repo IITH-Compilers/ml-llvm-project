@@ -225,6 +225,12 @@ static cl::opt<bool> EnableCollectMIR(
     cl::desc(
         "Generate th triplets for embedding"));
 
+static cl::opt<bool> EnableConfigGen(
+    "enable-config-gen", cl::Hidden,
+    cl::desc(
+        "Generate config files"));
+
+
 /// Allow standard passes to be disabled by command line options. This supports
 /// simple binary flags that either suppress the pass or do nothing.
 /// i.e. -disable-mypass=false has no effect.
@@ -1191,6 +1197,10 @@ void TargetPassConfig::addOptimizedRegAlloc() {
   
   if(EnableCollectMIR){
     addPass(&CollectMachineIRID);
+  }
+
+  if(EnableConfigGen){
+    addPass(&ConfigGenID);
   }
 
   if (addRegAssignmentOptimized()) {

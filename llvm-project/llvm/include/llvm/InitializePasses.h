@@ -429,6 +429,7 @@ void initializeXRayInstrumentationPass(PassRegistry&);
 void initializeMLRAPass(PassRegistry&);
 void initializeMLRABasicPass(PassRegistry&);
 void initializeCollectMachineIRPass(PassRegistry &);
+void initializeConfigGenPass(PassRegistry &);
 
 } // end namespace llvm
 

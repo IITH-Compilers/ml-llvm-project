@@ -66,127 +66,148 @@ using namespace llvm;
 char ConfigGen::ID = 0;
 char &llvm::ConfigGenID = ConfigGen::ID;
 
-
-INITIALIZE_PASS_BEGIN(ConfigGen, "mlra-config-gen",
-    PASS_DISCRIPTION,
-    false, // is CFG only?
-    true  // is analysis?
+INITIALIZE_PASS_BEGIN(ConfigGen, "mlra-config-gen", PASS_DISCRIPTION,
+                      false, // is CFG only?
+                      false   // is analysis?
 )
 // INITIALIZE_PASS_DEPENDENCY(LiveRegMatrix)
-INITIALIZE_PASS_END(ConfigGen, "mlra-config-gen",
-    PASS_DISCRIPTION,
-    false, // is CFG only?
-    true  // is analysis?
+INITIALIZE_PASS_END(ConfigGen, "mlra-config-gen", PASS_DISCRIPTION,
+                    false, // is CFG only?
+                    false   // is analysis?
 )
 
-FunctionPass llvm::*createX86ConfigGenPass() { return new ConfigGen(); }
+FunctionPass *llvm::createConfigGenPass() { return new ConfigGen(); }
 
 void ConfigGen::dumpTargetRegisterClasssConfig() {
-  #if 0
-          errs() << "getNumRegUnits  Registers=" << TRI->getNumRegUnits() << ";\n";
-          errs() << "Num  Registers=" << TRI->getNumRegs() << ";\n";
-          errs() << "getNumRegClasses() " << TRI->getNumRegClasses() << " \n";
-          
-    std::string jsonreg = "{\n";
-    std::string eachreg = "";
-    int j = 0;
-          int regClassesNum = TRI->getNumRegClasses();
-    for(auto rc : TRI->regclasses()){
-          // errs () << "RegClassName " << TRI->getRegClassName(rc) << "\n";
-      std::string regClass = TRI->getRegClassName(rc);
-      
-            std::string ireg = "";
+#if 1
+  errs() << "getNumRegUnits  Registers=" << TRI->getNumRegUnits() << ";\n";
+  errs() << "Num  Registers=" << TRI->getNumRegs() << ";\n";
+  errs() << "getNumRegClasses() " << TRI->getNumRegClasses() << " \n";
 
-      auto rci_order = RCI.getOrder(rc);
-      int order_size = rci_order.size();
-      int i = 0;
-            for (auto O:rci_order){
-        if (i == (order_size-1)){
-        ireg = ireg + "{" + "\"regId\":" + std::to_string(O)+", \"regName\":\""+ TRI->getName(O) +"\"}\n";
-        } else{
-        ireg = ireg + "{" + "\"regId\":" + std::to_string(O)+", \"regName\":\""+ TRI->getName(O) +"\"},\n";
-        }
-                  // errs() << ' ' << printReg(O, TRI) << "="<<O;
+  std::string jsonreg = "{\n";
+  std::string eachreg = "";
+  int j = 0;
+  int regClassesNum = TRI->getNumRegClasses();
+  for (auto rc : TRI->regclasses()) {
+    // errs () << "RegClassName " << TRI->getRegClassName(rc) << "\n";
+    std::string regClass = TRI->getRegClassName(rc);
 
-            i++;
-      }
-            
-      if (j == (regClassesNum-1) ){
-      eachreg = eachreg + "\""+regClass+"\"" + ": ["  + ireg +  "]\n";
+    std::string ireg = "";
+
+    auto rci_order = RCI.getOrder(rc);
+    int order_size = rci_order.size();
+    int i = 0;
+    for (auto O : rci_order) {
+      if (i == (order_size - 1)) {
+        ireg = ireg + "{" + "\"regId\":" + std::to_string(O) +
+               ", \"regName\":\"" + TRI->getName(O) + "\"}\n";
       } else {
-      eachreg = eachreg + "\""+regClass+"\"" + ": ["  + ireg +  "],\n";
+        ireg = ireg + "{" + "\"regId\":" + std::to_string(O) +
+               ", \"regName\":\"" + TRI->getName(O) + "\"},\n";
       }
-          
-    j++;
-    }
-    jsonreg = jsonreg + eachreg + "}";
+      // errs() << ' ' << printReg(O, TRI) << "="<<O;
 
-    // errs () << jsonreg << "\n";
-    std::error_code EC2;
-          raw_fd_ostream regInfo_file(this->targetName + "_reg_info_"+std::to_string(FunctionCounter)+".json",
-                          EC2, sys::fs::F_Text);
-    regInfo_file << jsonreg;
-    //exit(0);
-  #endif
+      i++;
+    }
+
+    if (j == (regClassesNum - 1)) {
+      eachreg = eachreg + "\"" + regClass + "\"" + ": [" + ireg + "]\n";
+    } else {
+      eachreg = eachreg + "\"" + regClass + "\"" + ": [" + ireg + "],\n";
+    }
+
+    j++;
+  }
+  jsonreg = jsonreg + eachreg + "}";
+
+  // errs () << jsonreg << "\n";
+  std::error_code EC2;
+  raw_fd_ostream regInfo_file(this->targetName + "_reg_info_" +
+                                  std::to_string(FunctionCounter) + ".json",
+                              EC2, sys::fs::F_Text);
+  regInfo_file << jsonreg;
+  // exit(0);
+#endif
 }
 
-
 void ConfigGen::dumpRegisterOverlapInfo() {
-  #if 0
-    // std::map<unsigned, std::vector<unsigned>> reg2unitsList;
-    std::string collist = "";
-    for (unsigned i = 1, e = TRI->getNumRegs(); i != e; ++i){
-        bool col = false;
-        std::string colreg = "";
-      for(unsigned j = 1, e1 = TRI->getNumRegs(); j != e1; ++j){
-        if(i != j && TRI->regsOverlap(i,j)){
-          errs() << "Register - " << printReg(i, TRI) << "and Register - " << printReg(j, TRI) << "overlap? -->" << TRI->regsOverlap(i,j) << "\n";
-        if (col)
-        { colreg  = colreg +", "+ std::to_string(j);
-        } else { col =true; colreg = std::to_string(j);}
+#if 1
+  // std::map<unsigned, std::vector<unsigned>> reg2unitsList;
+  std::string collist = "";
+  for (unsigned i = 1, e = TRI->getNumRegs(); i != e; ++i) {
+    bool col = false;
+    std::string colreg = "";
+    for (unsigned j = 1, e1 = TRI->getNumRegs(); j != e1; ++j) {
+      if (i != j && TRI->regsOverlap(i, j)) {
+        errs() << "Register - " << printReg(i, TRI) << "and Register - "
+               << printReg(j, TRI) << "overlap? -->" << TRI->regsOverlap(i, j)
+               << "\n";
+        if (col) {
+          colreg = colreg + ", " + std::to_string(j);
+        } else {
+          col = true;
+          colreg = std::to_string(j);
         }
-      
       }
-      if ( i== e-1 ){
-        collist = collist + "\""+std::to_string(i) + "\" : ["+ colreg+"]\n";
-      } else {
-        collist = collist + "\""+std::to_string(i) + "\" : ["+ colreg+"],\n";
-      }
-      /*errs () << "Register("+std::to_string(i)+") "<< printReg(i, TRI) <<" and its Units\n";
-      for ( MCRegUnitIterator Units(i, TRI); Units.isValid(); ++Units){
-        errs () << printRegUnit(*Units, TRI) << "("+std::to_string(*Units)+")" << " ";
-      }*/
-      //errs () << "\n";
     }
-    std::string jsonreg = "{\n" +collist  + "\n}"; 
-    std::error_code EC2;
-          raw_fd_ostream regInfo_file(this->targetName + "_ovlap_info_"+std::to_string(FunctionCounter)+".json",
-                          EC2, sys::fs::F_Text);
-    regInfo_file << jsonreg;
+    if (i == e - 1) {
+      collist = collist + "\"" + std::to_string(i) + "\" : [" + colreg + "]\n";
+    } else {
+      collist = collist + "\"" + std::to_string(i) + "\" : [" + colreg + "],\n";
+    }
+    /*errs () << "Register("+std::to_string(i)+") "<< printReg(i, TRI) <<" and
+    its Units\n"; for ( MCRegUnitIterator Units(i, TRI); Units.isValid();
+    ++Units){ errs () << printRegUnit(*Units, TRI) <<
+    "("+std::to_string(*Units)+")" << " ";
+    }*/
+    // errs () << "\n";
+  }
+  std::string jsonreg = "{\n" + collist + "\n}";
+  std::error_code EC2;
+  raw_fd_ostream regInfo_file(this->targetName + "_ovlap_info_" +
+                                  std::to_string(FunctionCounter) + ".json",
+                              EC2, sys::fs::F_Text);
+  regInfo_file << jsonreg;
 
-  #endif
+#endif
 
-  #if 0
+#if 0
           errs() << "getNumRegUnits  Registers=" << TRI->getNumRegUnits() << ";\n";
           errs() << "Num  Registers=" << TRI->getNumRegs() << ";\n";
           errs() << "getNumRegClasses() " << TRI->getNumRegClasses() << " \n";
       for (unsigned i = 1, e = TRI->getNumRegs(); i != e; ++i){
       errs () << "regId : "<< i <<  "; name = "<< printReg(i, TRI) << "\n";
       }
-  #endif
+#endif
 }
 
 bool ConfigGen::runOnMachineFunction(MachineFunction &mf) {
 
-    MF = &mf;
-    
-    TRI = MF->getSubtarget().getRegisterInfo();
+  MF = &mf;
 
-    dumpTargetRegisterClasssConfig();
+  TRI = MF->getSubtarget().getRegisterInfo();
 
-    dumpRegisterOverlapInfo();
+  RCI.runOnMachineFunction(mf);
 
-    return false;
+  FunctionCounter++;
+
+  switch (mf.getTarget().getTargetTriple().getArch()) {
+  case Triple::ArchType::aarch64: {
+    this->targetName = "AArch64";
+    break;
+  }
+  case Triple::ArchType::x86:
+  case Triple::ArchType::x86_64: {
+    this->targetName = "X86";
+    break;
+  }
+  default:
+    this->targetName = "UnKnown";
+  }
+
+  dumpTargetRegisterClasssConfig();
+
+  dumpRegisterOverlapInfo();
+
+  return false;
 }
-
-

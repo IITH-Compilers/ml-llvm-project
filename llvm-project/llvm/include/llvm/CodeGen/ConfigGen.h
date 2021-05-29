@@ -56,6 +56,8 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 
+#include <iostream>
+
 namespace llvm {
   
   class ConfigGen : public MachineFunctionPass {
@@ -63,13 +65,14 @@ namespace llvm {
     public:
       static char ID;        
       ConfigGen() : MachineFunctionPass(ID) { 
-
+        ;
       }
 
     private:
         const TargetRegisterInfo *TRI = nullptr;
         // MachineRegisterInfo *MRI = nullptr;
         // LiveIntervals *LIS = nullptr;
+        RegisterClassInfo RCI;
         MachineFunction *MF = nullptr;
         
         void dumpTargetRegisterClasssConfig();
@@ -103,8 +106,9 @@ namespace llvm {
         AU.addRequired<MachineOptimizationRemarkEmitterPass>();
         MachineFunctionPass::getAnalysisUsage(AU);
     }
-
+    std::string targetName;
+    int FunctionCounter = 0;
     
   };
-  FunctionPass *createX86ConfigGenPass();
+  FunctionPass *createConfigGenPass();
 }
