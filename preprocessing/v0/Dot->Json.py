@@ -6,6 +6,8 @@ import json
 import glob
 import os
 import threading
+import multiprocessing
+
 import numpy as np
 GRAPH_DIR=sys.argv[1]
 MODE=sys.argv[2]
@@ -30,10 +32,8 @@ def mapfiles(files):
     for dotPath in  files:
 #         print(dotPath) 
         try:
-            #mutex.acquire()
             d2j = Dot2Json()
             graph = d2j.dot_to_json(dotPath)
-            #mutex.release()
             if len(graph['nodes']) ==0  :
                 # print('File not included for json : {}'.format(dotPath))
                 continue
@@ -60,27 +60,24 @@ def chunkify(lst,n):
     return [lst[i::n] for i in range(n) if len(lst[i::n]) > 0 ]
 
 allfiles =glob.glob(os.path.join(GRAPH_DIR, 'dot/*.dot'))
-mapfiles(allfiles)
-print('--------------Done-------------')
-# exit()
+# mapfiles(allfiles)
+# print('--------------Done-------------')
 # 
-# no_of_threads=50
-# 
-# chunk_list=chunkify(allfiles, no_of_threads)
-# print(np.array(chunk_list).shape)
-# # exit()
-# 
-# threads=[]
-# mutex=threading.Lock()	
-# 
-# for chunk in chunk_list:
-#     # print(chunk)
-#     t = threading.Thread(target=mapfiles, args=(chunk,))
-# 
-#     t.start()
-#     threads.append(t)
-# 
-# for t in threads:
-#     t.join()
-# 
-# print('Done Paralel')
+no_of_threads=80
+
+chunk_list=chunkify(allfiles, no_of_threads)
+
+# print(chunk_list)
+
+processes=[]
+
+for chunk in chunk_list:
+    p = multiprocessing.Process(target=mapfiles, args=(chunk,))
+
+    p.start()
+    processes.append(p)
+
+for p in processes:
+    p.join()
+
+print('Done Paralel')
