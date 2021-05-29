@@ -2972,6 +2972,8 @@ void MLRA::dumpInterferenceGraph() {
   // LLVM_DEBUG(LIS->dump());
   unsigned step = TRI->getNumRegs() + 1;
   for (unsigned i = 1, e = TRI->getNumRegs(); i != e; ++i) {
+
+    
     // if (MRI->reg_nodbg_empty(i))
     //   continue;
     LLVM_DEBUG(errs() << "Starting to process - " << printReg(i, TRI)
@@ -2999,7 +3001,10 @@ void MLRA::dumpInterferenceGraph() {
           this->target_PhyReg2ColorMap[targetName].end()) {
         color = this->target_PhyReg2ColorMap[targetName][preg];
       }
-
+      if ( color  == 0 ){
+	 LLVM_DEBUG(errs () << "Unsupported registers so continued.\n");
+      	continue;
+      }
       reginfo = " {PhyColor=" + std::to_string(color) +
                 ";PhyReg=" + std::to_string(preg) + "} ";
       node_str = node_str + reginfo + "\"];\n";
@@ -3013,12 +3018,12 @@ void MLRA::dumpInterferenceGraph() {
         std::string regClass_vr =
             TRI->getRegClassName(MRI->getRegClass(VirtReg->reg));
 
-        /*if (this->regClassSupported4_MLRA.find(regClass_vr) ==
+        if (this->regClassSupported4_MLRA.find(regClass_vr) ==
             regClassSupported4_MLRA.end()) {
           LLVM_DEBUG(errs() << "%" << j << " Register class(" << regClass_vr
                             << ") is not supported.\n");
           continue;
-        }*/
+        }
 
         if (Matrix->checkInterference(*VirtReg, i)) {
           LLVM_DEBUG(errs() << "Interference happened\n");
@@ -3056,12 +3061,12 @@ void MLRA::dumpInterferenceGraph() {
       continue;
     // Check for the supported register class.
     std::string regClass = TRI->getRegClassName(MRI->getRegClass(VirtReg->reg));
-    /*if (this->regClassSupported4_MLRA.find(regClass) ==
+    if (this->regClassSupported4_MLRA.find(regClass) ==
         regClassSupported4_MLRA.end()) {
       LLVM_DEBUG(errs() << "Register class(" << regClass
                         << ") is not supported.\n");
       continue;
-    }*/
+    }
     bool is_atleastoneinstruction = false;
     int node_id = step + i;
     std::string node_str = std::to_string(node_id) + " [label=\" {" + regClass +
@@ -3132,10 +3137,10 @@ void MLRA::dumpInterferenceGraph() {
           continue;
         // Support for interference for supportedRegister Only
         std::string regClass_j = TRI->getRegClassName(MRI->getRegClass(Reg1));
-        /*if (this->regClassSupported4_MLRA.find(regClass_j) ==
+        if (this->regClassSupported4_MLRA.find(regClass_j) ==
             regClassSupported4_MLRA.end()) {
           continue;
-        }*/
+        }
         std::string edge = "";
         if (VirtReg->overlaps(LIS->getInterval(Reg1))) {
           edge = std::to_string(node_id) + " -- " + std::to_string(j + step) +
