@@ -3,6 +3,7 @@ include_directories( ${CMAKE_CURRENT_BINARY_DIR}/../.. ${CMAKE_CURRENT_SOURCE_DI
 add_llvm_component_library(LLVMDumpIGAndMapBack 
 	MLRegAlloc.cpp
     MLRegAllocBasic.cpp
+    ConfigGen.cpp
     DEPENDS intrinsics_gen)
 
 target_link_libraries(LLVMDumpIGAndMapBack LLVMSymbolic)
