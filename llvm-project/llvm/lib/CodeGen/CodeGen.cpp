@@ -117,6 +117,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeMLRAPass(Registry);
   initializeMLRABasicPass(Registry);
   initializeCollectMachineIRPass(Registry);
+  initializeConfigGenPass(Registry);
 }
 
 void LLVMInitializeCodeGen(LLVMPassRegistryRef R) {

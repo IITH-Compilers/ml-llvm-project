@@ -141,6 +141,8 @@ extern char &RABasicID;
 
 extern char &CollectMachineIRID;
 
+extern char &ConfigGenID;
+
 /// VirtRegRewriter pass. Rewrite virtual registers to physical registers as
 /// assigned in VirtRegMap.
 extern char &VirtRegRewriterID;
