@@ -79,10 +79,9 @@ INITIALIZE_PASS_END(ConfigGen, "mlra-config-gen", PASS_DISCRIPTION,
 FunctionPass *llvm::createConfigGenPass() { return new ConfigGen(); }
 
 void ConfigGen::dumpTargetRegisterClasssConfig() {
-#if 1
-  errs() << "getNumRegUnits  Registers=" << TRI->getNumRegUnits() << ";\n";
-  errs() << "Num  Registers=" << TRI->getNumRegs() << ";\n";
-  errs() << "getNumRegClasses() " << TRI->getNumRegClasses() << " \n";
+  LLVM_DEBUG(errs() << "getNumRegUnits  Registers=" << TRI->getNumRegUnits() << ";\n");
+  LLVM_DEBUG(errs() << "Num  Registers=" << TRI->getNumRegs() << ";\n");
+  LLVM_DEBUG(errs() << "getNumRegClasses() " << TRI->getNumRegClasses() << " \n");
 
   std::string jsonreg = "{\n";
   std::string eachreg = "";
@@ -122,16 +121,14 @@ void ConfigGen::dumpTargetRegisterClasssConfig() {
 
   // errs () << jsonreg << "\n";
   std::error_code EC2;
-  raw_fd_ostream regInfo_file(this->targetName + "_reg_info_" +
-                                  std::to_string(FunctionCounter) + ".json",
+  raw_fd_ostream regInfo_file(this->targetName + "_reg_info" + ".json",
                               EC2, sys::fs::F_Text);
   regInfo_file << jsonreg;
   // exit(0);
-#endif
 }
 
 void ConfigGen::dumpRegisterOverlapInfo() {
-#if 1
+
   // std::map<unsigned, std::vector<unsigned>> reg2unitsList;
   std::string collist = "";
   for (unsigned i = 1, e = TRI->getNumRegs(); i != e; ++i) {
@@ -139,9 +136,9 @@ void ConfigGen::dumpRegisterOverlapInfo() {
     std::string colreg = "";
     for (unsigned j = 1, e1 = TRI->getNumRegs(); j != e1; ++j) {
       if (i != j && TRI->regsOverlap(i, j)) {
-        errs() << "Register - " << printReg(i, TRI) << "and Register - "
+        LLVM_DEBUG(errs() << "Register - " << printReg(i, TRI) << "and Register - "
                << printReg(j, TRI) << "overlap? -->" << TRI->regsOverlap(i, j)
-               << "\n";
+               << "\n");
         if (col) {
           colreg = colreg + ", " + std::to_string(j);
         } else {
@@ -164,21 +161,10 @@ void ConfigGen::dumpRegisterOverlapInfo() {
   }
   std::string jsonreg = "{\n" + collist + "\n}";
   std::error_code EC2;
-  raw_fd_ostream regInfo_file(this->targetName + "_ovlap_info_" +
-                                  std::to_string(FunctionCounter) + ".json",
+  raw_fd_ostream regInfo_file(this->targetName + "_ovlap_info" + ".json",
                               EC2, sys::fs::F_Text);
   regInfo_file << jsonreg;
 
-#endif
-
-#if 0
-          errs() << "getNumRegUnits  Registers=" << TRI->getNumRegUnits() << ";\n";
-          errs() << "Num  Registers=" << TRI->getNumRegs() << ";\n";
-          errs() << "getNumRegClasses() " << TRI->getNumRegClasses() << " \n";
-      for (unsigned i = 1, e = TRI->getNumRegs(); i != e; ++i){
-      errs () << "regId : "<< i <<  "; name = "<< printReg(i, TRI) << "\n";
-      }
-#endif
 }
 
 bool ConfigGen::runOnMachineFunction(MachineFunction &mf) {
@@ -204,10 +190,13 @@ bool ConfigGen::runOnMachineFunction(MachineFunction &mf) {
   default:
     this->targetName = "UnKnown";
   }
+  // Called by first function in the file
+  if(FunctionCounter == 1) {
+    dumpTargetRegisterClasssConfig();
 
-  dumpTargetRegisterClasssConfig();
-
-  dumpRegisterOverlapInfo();
+    dumpRegisterOverlapInfo();
+  }
+  
 
   return false;
 }

@@ -58,6 +58,8 @@
 
 #include <iostream>
 
+#define DEBUG_TYPE "regalloc"
+
 namespace llvm {
   
   class ConfigGen : public MachineFunctionPass {
