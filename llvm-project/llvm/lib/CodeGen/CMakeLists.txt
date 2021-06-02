@@ -180,7 +180,7 @@ add_llvm_component_library(LLVMCodeGen
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/CodeGen
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/CodeGen/PBQP
 
-  LINK_LIBS ${LLVM_PTHREAD_LIB}
+  LINK_LIBS ${LLVM_PTHREAD_LIB} LLVMMLRegAlloc
 
   DEPENDS
   intrinsics_gen
@@ -192,3 +192,4 @@ add_subdirectory(MIRParser)
 add_subdirectory(GlobalISel)
 add_subdirectory(MLRegAlloc)
 add_subdirectory(MIR2Vec)
+

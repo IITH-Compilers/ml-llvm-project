@@ -114,8 +114,6 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeWasmEHPreparePass(Registry);
   initializeWinEHPreparePass(Registry);
   initializeXRayInstrumentationPass(Registry);
-  initializeMLRAPass(Registry);
-  initializeMLRABasicPass(Registry);
   initializeCollectMachineIRPass(Registry);
 }
 

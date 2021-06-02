@@ -1059,6 +1059,7 @@ void RegAllocFast::allocateInstruction(MachineInstr &MI) {
       }
       continue;
     }
+    // Reg is physical reg from here
     if (!MRI->isAllocatable(Reg)) continue;
     if (MO.isUse()) {
       usePhysReg(MO);

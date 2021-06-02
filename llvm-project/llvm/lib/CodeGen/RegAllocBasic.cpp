@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/LiveRangeEdit.h"
 #include "llvm/CodeGen/LiveRegMatrix.h"
 #include "llvm/CodeGen/LiveStacks.h"
+#include "llvm/CodeGen/MLRegAlloc.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -44,12 +45,12 @@ static RegisterRegAlloc basicRegAlloc("basic", "basic register allocator",
                                       createBasicRegisterAllocator);
 
 namespace {
-  struct CompSpillWeight {
-    bool operator()(LiveInterval *A, LiveInterval *B) const {
-      return A->weight < B->weight;
-    }
-  };
-}
+struct CompSpillWeight {
+  bool operator()(LiveInterval *A, LiveInterval *B) const {
+    return A->weight < B->weight;
+  }
+};
+} // namespace
 
 namespace {
 /// RABasic provides a minimal implementation of the basic register allocation
@@ -58,15 +59,16 @@ namespace {
 /// provides a useful baseline both for measuring other allocators and comparing
 /// the speed of the basic algorithm against other styles of allocators.
 class RABasic : public MachineFunctionPass,
-                public RegAllocBase,
+                public MLRA,
                 private LiveRangeEdit::Delegate {
   // context
   MachineFunction *MF;
 
   // state
   std::unique_ptr<Spiller> SpillerInstance;
-  std::priority_queue<LiveInterval*, std::vector<LiveInterval*>,
-                      CompSpillWeight> Queue;
+  std::priority_queue<LiveInterval *, std::vector<LiveInterval *>,
+                      CompSpillWeight>
+      Queue;
 
   // Scratch space.  Allocated here to avoid repeated malloc calls in
   // selectOrSplit().
@@ -88,9 +90,7 @@ public:
 
   Spiller &spiller() override { return *SpillerInstance; }
 
-  void enqueue(LiveInterval *LI) override {
-    Queue.push(LI);
-  }
+  void enqueue(LiveInterval *LI) override { Queue.push(LI); }
 
   LiveInterval *dequeue() override {
     if (Queue.empty())
@@ -166,8 +166,7 @@ void RABasic::LRE_WillShrinkVirtReg(unsigned VirtReg) {
   enqueue(&LI);
 }
 
-RABasic::RABasic(): MachineFunctionPass(ID) {
-}
+RABasic::RABasic() : MachineFunctionPass(ID) {}
 
 void RABasic::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
@@ -193,10 +192,7 @@ void RABasic::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-void RABasic::releaseMemory() {
-  SpillerInstance.reset();
-}
-
+void RABasic::releaseMemory() { SpillerInstance.reset(); }
 
 // Spill or split all live virtual registers currently unified under PhysReg
 // that interfere with VirtReg. The newly spilled or split live intervals are
@@ -205,7 +201,7 @@ bool RABasic::spillInterferences(LiveInterval &VirtReg, unsigned PhysReg,
                                  SmallVectorImpl<unsigned> &SplitVRegs) {
   // Record each interference and determine if all are spillable before mutating
   // either the union or live intervals.
-  SmallVector<LiveInterval*, 8> Intfs;
+  SmallVector<LiveInterval *, 8> Intfs;
 
   // Collect interferences assigned to any alias of the physical register.
   for (MCRegUnitIterator Units(PhysReg, TRI); Units.isValid(); ++Units) {
@@ -280,7 +276,8 @@ unsigned RABasic::selectOrSplit(LiveInterval &VirtReg,
 
   // Try to spill another interfering reg with less spill weight.
   for (SmallVectorImpl<unsigned>::iterator PhysRegI = PhysRegSpillCands.begin(),
-       PhysRegE = PhysRegSpillCands.end(); PhysRegI != PhysRegE; ++PhysRegI) {
+                                           PhysRegE = PhysRegSpillCands.end();
+       PhysRegI != PhysRegE; ++PhysRegI) {
     if (!spillInterferences(VirtReg, *PhysRegI, SplitVRegs))
       continue;
 
@@ -307,15 +304,40 @@ bool RABasic::runOnMachineFunction(MachineFunction &mf) {
                     << "********** Function: " << mf.getName() << '\n');
 
   MF = &mf;
-  RegAllocBase::init(getAnalysis<VirtRegMap>(),
-                     getAnalysis<LiveIntervals>(),
+  RegAllocBase::init(getAnalysis<VirtRegMap>(), getAnalysis<LiveIntervals>(),
                      getAnalysis<LiveRegMatrix>());
 
-  calculateSpillWeightsAndHints(*LIS, *MF, VRM,
-                                getAnalysis<MachineLoopInfo>(),
+  calculateSpillWeightsAndHints(*LIS, *MF, VRM, getAnalysis<MachineLoopInfo>(),
                                 getAnalysis<MachineBlockFrequencyInfo>());
 
   SpillerInstance.reset(createInlineSpiller(*this, *MF, *VRM));
+
+  if (enable_experimental_mlra) {
+    MLRA::init(&mf);
+    if (enable_dump_ig_dot) {
+      symbolic->generateSymbolicEncodings(mf);
+      LLVM_DEBUG(errs() << "\n******************* Dump the graphs "
+                           "(START)*************************** \n\n");
+      dumpInterferenceGraph();
+      LLVM_DEBUG(errs() << "\n******************* Dump the graphs "
+                           "(END)*************************** \n\n");
+    }
+
+    if (this->FunctionVirtRegToColorMap.find(mf.getName()) !=
+        this->FunctionVirtRegToColorMap.end()) {
+      LLVM_DEBUG(
+          errs() << "********************************* Running ML "
+                    "allocatePhysRegsViaRL() (START)**********************\n");
+      allocatePhysRegsViaRL();
+      LLVM_DEBUG(
+          errs() << "********************************* Running ML "
+                    "allocatePhysRegsViaRL() (END)**********************\n");
+    }
+    errs() << "The ML allocated virtual registers: /n";
+    for (auto i : mlAllocatedRegs)
+      errs() << printReg(i, TRI) << "\t";
+    errs() << "Done MLRA allocation for : " << mf.getName() << '\n';
+  }
 
   allocatePhysRegs();
   postOptimization();
@@ -327,7 +349,4 @@ bool RABasic::runOnMachineFunction(MachineFunction &mf) {
   return true;
 }
 
-FunctionPass* llvm::createBasicRegisterAllocator()
-{
-  return new RABasic();
-}
+FunctionPass *llvm::createBasicRegisterAllocator() { return new RABasic(); }

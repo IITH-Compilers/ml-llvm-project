@@ -1,3 +1,7 @@
+include_directories( ${CMAKE_CURRENT_BINARY_DIR}/.. ${CMAKE_CURRENT_SOURCE_DIR}/.. )
 
-# add_subdirectory(DumpIG)
-add_subdirectory(DumpIGAndMapBack)
+add_llvm_component_library(LLVMMLRegAlloc
+	MLRegAlloc.cpp
+    DEPENDS intrinsics_gen)
+
+target_link_libraries(LLVMMLRegAlloc LLVMSymbolic)

@@ -28,6 +28,7 @@ echo "Data read from folder : ${SRCH_FLR}"
 USE_MCA=
 # USE_MCA=" -use-mca "
 TIME_OUT= # "timeout --kill-after=2m 2m "
+TIME_OUT_EXE="timeout --kill-after=2m 2m "
 
 MODEL=$2
 
@@ -37,18 +38,22 @@ then
         exit
 fi
 
-if [ ${MODEL} == "mlra" ];
+# if [ ${MODEL} == "mlra" ];
+if [ ${MODEL} == "greedy" ];
+then
+    declare -A ra_flags=([dump]="-mlra-dump-ig-dot" [exp]="-mlra-experimental" [pred]="-mlra-pred-file")
+elif [ ${MODEL} == "basic" ];
 then
     declare -A ra_flags=([dump]="-mlra-dump-ig-dot" [exp]="-mlra-experimental" [pred]="-mlra-pred-file")
 elif [ ${MODEL} == "mlbasicra" ];
 then
     declare -A ra_flags=([dump]="-ml-basicra-dump-ig-dot" [exp]="-ml-basicra-experimental" [pred]="-ml-basicra-pred-file")
-elif [ ${MODEL} == "greedy" ];
-then
-    declare -A ra_flags=([dump]="" [exp]="" [pred]="")
-elif [ ${MODEL} == "basic" ];
-then
-    declare -A ra_flags=([dump]="" [exp]="" [pred]="")
+#elif [ ${MODEL} == "greedy" ];
+#then
+#    declare -A ra_flags=([dump]="" [exp]="" [pred]="")
+#elif [ ${MODEL} == "basic" ];
+#then
+#    declare -A ra_flags=([dump]="" [exp]="" [pred]="")
 else
      echo "${MODEL} is not among."
      exit
@@ -58,7 +63,8 @@ BENCHMARK_NAME=$3
 [[ -z ${BENCHMARK_NAME} ]] && echo "Benchmark is not specified." && exit
 
 PRED_CLR_JSON_DIR=$4
-if [ $MODEL == "mlra" ] || [ $MODEL == "mlbasicra" ];
+if [ $MODEL == "basic" ] || [ $MODEL == "greedy" ];
+# if [ $MODEL == "mlra" ] || [ $MODEL == "mlbasicra" ];
 then
 [[ ! -d ${PRED_CLR_JSON_DIR} ]] && echo "Prediction Colored directory does not exist" && exit
 PRED_CLR_JSON_DIR=`realpath ${PRED_CLR_JSON_DIR}`
@@ -149,22 +155,21 @@ INCLUDE_FILE="$2"
                 PRED_JSON="-mllvm ${ra_flags[pred]}=${PRED_CLR_JSON_DIR}/predColor-${name}.json"
         fi
          
-        (${TIME_OUT} ${LLVM_BUILD}/bin/clang ${INCLUDE_FILE} ${OPT_PASSES_SEQ} ${MODEL_EXPT_ARGS} ${PRED_JSON} ${USE_MCA} ${REMARKS} ${rfile}  ${d} -S -o dev.s ${DEBUG} && ${TIME_OUT} ${LLVM_BUILD}/bin/clang ${INCLUDE_FILE} dev.s -o dev.out) &> codegenDump
+        (${TIME_OUT} ${LLVM_BUILD}/bin/clang ${INCLUDE_FILE} ${OPT_PASSES_SEQ} ${MODEL_EXPT_ARGS} ${PRED_JSON} ${USE_MCA} ${REMARKS} ${rfile}  ${d} -S -o dev.s -mllvm -debug-only=regalloc && ${TIME_OUT} ${LLVM_BUILD}/bin/clang ${INCLUDE_FILE} dev.s -o dev.out) &> codegenDump
         if [ -f dev.s ];
         then
             echo "SUCCESS: Assembly is generated." > CODEGEN_SUCCESS
             if [ -f dev.out ];
             then
                 objdump -S dev.out > objdump 
-                valgrind --log-file=valgrindDump ./dev.out > output #&
-                wait $!
-                # valgrind --log-fd=9 9>>test.log ./app
+                ${TIME_OUT_EXE} valgrind --log-file=valgrindDump ./dev.out > output #&
+                # wait $!
                 if [ $? == 0 ];
                 then
-                   ./dev.out > output
+                   ${TIME_OUT_EXE} ./dev.out > output
                    echo "SUCCESS: Semantic not Sure" > RUNTIME_SUCCESS
                    ${TIME_OUT} ${LLVM_BUILD}/bin/clang ${INCLUDE_FILE} ${OPT_PASSES_SEQ}  ${d} -o baseline.out  &> /dev/null
-                   ./baseline.out  &>   output_baseline
+                   ${TIME_OUT_EXE} ./baseline.out  &>   output_baseline
                    compare=$(diff output output_baseline)
                    if [ $? -eq 0 ]
                    then
@@ -195,7 +200,7 @@ if [ ${INP_TYPE} == "llfiles" ];
 then   
  INP_REGEX=*.ll
  for d in ${SRCH_FLR}/*.ll; do 
-          generate "$d" " " # &
+          generate "$d" " " &
           pids[${i}]=$!
  done 
 # wait for all pids
@@ -220,7 +225,7 @@ then
     for d in $(find ${SRCH_FLR} -name "*.c");
     do 
      # echo "INCLUDES Header path : ${INCLUDE_F}" 
-      generate "$d" "${INCLUDE_F}" # & 
+      generate "$d" "${INCLUDE_F}" & 
       pids[${i}]=$!
     done  
 # wait for all pids
