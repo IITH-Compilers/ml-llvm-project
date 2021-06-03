@@ -46,7 +46,7 @@ class LiveIntervals;
 class LiveRegMatrix;
 class MachineInstr;
 class MachineRegisterInfo;
-template<typename T> class SmallVectorImpl;
+template <typename T> class SmallVectorImpl;
 class Spiller;
 class TargetRegisterInfo;
 class VirtRegMap;
@@ -67,6 +67,7 @@ protected:
   LiveIntervals *LIS = nullptr;
   LiveRegMatrix *Matrix = nullptr;
   RegisterClassInfo RegClassInfo;
+  SmallVector<unsigned, 10> mlAllocatedRegs;
 
   /// Inst which is a def of an original reg and whose defs are already all
   /// dead after remat is saved in DeadRemats. The deletion of such inst is

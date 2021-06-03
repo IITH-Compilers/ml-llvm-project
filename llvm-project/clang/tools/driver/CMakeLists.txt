@@ -15,7 +15,6 @@ set( LLVM_LINK_COMPONENTS
   Support
   TransformUtils
   Vectorize
-  DumpIGAndMapBack
   CollectMachineIR
   )
 

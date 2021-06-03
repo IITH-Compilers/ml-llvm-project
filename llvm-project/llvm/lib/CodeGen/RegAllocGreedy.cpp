@@ -39,6 +39,7 @@
 #include "llvm/CodeGen/LiveRangeEdit.h"
 #include "llvm/CodeGen/LiveRegMatrix.h"
 #include "llvm/CodeGen/LiveStacks.h"
+#include "llvm/CodeGen/MLRegAlloc.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
@@ -82,21 +83,22 @@ using namespace llvm;
 #define DEBUG_TYPE "regalloc"
 
 STATISTIC(NumGlobalSplits, "Number of split global live ranges");
-STATISTIC(NumLocalSplits,  "Number of split local live ranges");
-STATISTIC(NumEvicted,      "Number of interferences evicted");
+STATISTIC(NumLocalSplits, "Number of split local live ranges");
+STATISTIC(NumEvicted, "Number of interferences evicted");
 
 static cl::opt<SplitEditor::ComplementSpillMode> SplitSpillMode(
     "split-spill-mode", cl::Hidden,
     cl::desc("Spill mode for splitting live ranges"),
     cl::values(clEnumValN(SplitEditor::SM_Partition, "default", "Default"),
                clEnumValN(SplitEditor::SM_Size, "size", "Optimize for size"),
-               clEnumValN(SplitEditor::SM_Speed, "speed", "Optimize for speed")),
+               clEnumValN(SplitEditor::SM_Speed, "speed",
+                          "Optimize for speed")),
     cl::init(SplitEditor::SM_Speed));
 
 static cl::opt<unsigned>
-LastChanceRecoloringMaxDepth("lcr-max-depth", cl::Hidden,
-                             cl::desc("Last chance recoloring max depth"),
-                             cl::init(5));
+    LastChanceRecoloringMaxDepth("lcr-max-depth", cl::Hidden,
+                                 cl::desc("Last chance recoloring max depth"),
+                                 cl::init(5));
 
 static cl::opt<unsigned> LastChanceRecoloringMaxInterference(
     "lcr-max-interf", cl::Hidden,
@@ -131,10 +133,10 @@ static cl::opt<unsigned>
                      cl::init(5000));
 
 // FIXME: Find a good default for this flag and remove the flag.
-static cl::opt<unsigned>
-CSRFirstTimeCost("regalloc-csr-first-time-cost",
-              cl::desc("Cost for first time use of callee-saved register."),
-              cl::init(0), cl::Hidden);
+static cl::opt<unsigned> CSRFirstTimeCost(
+    "regalloc-csr-first-time-cost",
+    cl::desc("Cost for first time use of callee-saved register."), cl::init(0),
+    cl::Hidden);
 
 static cl::opt<bool> ConsiderLocalIntervalCost(
     "consider-local-interval-cost", cl::Hidden,
@@ -148,7 +150,8 @@ static RegisterRegAlloc greedyRegAlloc("greedy", "greedy register allocator",
 namespace {
 
 class RAGreedy : public MachineFunctionPass,
-                 public RegAllocBase,
+                 //  public RegAllocBase,
+                 public MLRA,
                  private LiveRangeEdit::Delegate {
   // Convenient shortcuts.
   using PQueue = std::priority_queue<std::pair<unsigned, unsigned>>;
@@ -210,7 +213,6 @@ class RAGreedy : public MachineFunctionPass,
     /// Live range will be spilled.  No more splitting will be attempted.
     RS_Spill,
 
-
     /// Live range is in memory. Because of other evictions, it might get moved
     /// in a register in the end.
     RS_Memory,
@@ -261,10 +263,10 @@ class RAGreedy : public MachineFunctionPass,
     ExtraRegInfo[VirtReg.reg].Stage = Stage;
   }
 
-  template<typename Iterator>
+  template <typename Iterator>
   void setStage(Iterator Begin, Iterator End, LiveRangeStage NewStage) {
     ExtraRegInfo.resize(MRI->getNumVirtRegs());
-    for (;Begin != End; ++Begin) {
+    for (; Begin != End; ++Begin) {
       unsigned Reg = *Begin;
       if (ExtraRegInfo[Reg].Stage == RS_New)
         ExtraRegInfo[Reg].Stage = NewStage;
@@ -423,7 +425,7 @@ public:
   Spiller &spiller() override { return *SpillerInstance; }
   void enqueue(LiveInterval *LI) override;
   LiveInterval *dequeue() override;
-  unsigned selectOrSplit(LiveInterval&, SmallVectorImpl<unsigned>&) override;
+  unsigned selectOrSplit(LiveInterval &, SmallVectorImpl<unsigned> &) override;
   void aboutToRemoveInterval(LiveInterval &) override;
 
   /// Perform register allocation.
@@ -447,7 +449,7 @@ private:
   LiveInterval *dequeue(PQueue &CurQueue);
 
   BlockFrequency calcSpillCost();
-  bool addSplitConstraints(InterferenceCache::Cursor, BlockFrequency&);
+  bool addSplitConstraints(InterferenceCache::Cursor, BlockFrequency &);
   bool addThroughConstraints(InterferenceCache::Cursor, ArrayRef<unsigned>);
   bool growRegion(GlobalSplitCandidate &Cand);
   bool splitCanCauseEvictionChain(unsigned Evictee, GlobalSplitCandidate &Cand,
@@ -459,33 +461,31 @@ private:
   BlockFrequency calcGlobalSplitCost(GlobalSplitCandidate &,
                                      const AllocationOrder &Order,
                                      bool *CanCauseEvictionChain);
-  bool calcCompactRegion(GlobalSplitCandidate&);
-  void splitAroundRegion(LiveRangeEdit&, ArrayRef<unsigned>);
-  void calcGapWeights(unsigned, SmallVectorImpl<float>&);
+  bool calcCompactRegion(GlobalSplitCandidate &);
+  void splitAroundRegion(LiveRangeEdit &, ArrayRef<unsigned>);
+  void calcGapWeights(unsigned, SmallVectorImpl<float> &);
   unsigned canReassign(LiveInterval &VirtReg, unsigned PrevReg);
   bool shouldEvict(LiveInterval &A, bool, LiveInterval &B, bool);
-  bool canEvictInterference(LiveInterval&, unsigned, bool, EvictionCost&,
-                            const SmallVirtRegSet&);
+  bool canEvictInterference(LiveInterval &, unsigned, bool, EvictionCost &,
+                            const SmallVirtRegSet &);
   bool canEvictInterferenceInRange(LiveInterval &VirtReg, unsigned PhysReg,
                                    SlotIndex Start, SlotIndex End,
                                    EvictionCost &MaxCost);
   unsigned getCheapestEvicteeWeight(const AllocationOrder &Order,
                                     LiveInterval &VirtReg, SlotIndex Start,
                                     SlotIndex End, float *BestEvictWeight);
-  void evictInterference(LiveInterval&, unsigned,
-                         SmallVectorImpl<unsigned>&);
+  void evictInterference(LiveInterval &, unsigned, SmallVectorImpl<unsigned> &);
   bool mayRecolorAllInterferences(unsigned PhysReg, LiveInterval &VirtReg,
                                   SmallLISet &RecoloringCandidates,
                                   const SmallVirtRegSet &FixedRegisters);
 
-  unsigned tryAssign(LiveInterval&, AllocationOrder&,
-                     SmallVectorImpl<unsigned>&,
-                     const SmallVirtRegSet&);
-  unsigned tryEvict(LiveInterval&, AllocationOrder&,
-                    SmallVectorImpl<unsigned>&, unsigned,
-                    const SmallVirtRegSet&);
-  unsigned tryRegionSplit(LiveInterval&, AllocationOrder&,
-                          SmallVectorImpl<unsigned>&);
+  unsigned tryAssign(LiveInterval &, AllocationOrder &,
+                     SmallVectorImpl<unsigned> &, const SmallVirtRegSet &);
+  unsigned tryEvict(LiveInterval &, AllocationOrder &,
+                    SmallVectorImpl<unsigned> &, unsigned,
+                    const SmallVirtRegSet &);
+  unsigned tryRegionSplit(LiveInterval &, AllocationOrder &,
+                          SmallVectorImpl<unsigned> &);
   unsigned isSplitBenefitWorthCost(LiveInterval &VirtReg);
   /// Calculate cost of region splitting.
   unsigned calculateRegionSplitCost(LiveInterval &VirtReg,
@@ -495,23 +495,21 @@ private:
                                     bool *CanCauseEvictionChain = nullptr);
   /// Perform region splitting.
   unsigned doRegionSplit(LiveInterval &VirtReg, unsigned BestCand,
-                         bool HasCompact,
-                         SmallVectorImpl<unsigned> &NewVRegs);
+                         bool HasCompact, SmallVectorImpl<unsigned> &NewVRegs);
   /// Check other options before using a callee-saved register for the first
   /// time.
   unsigned tryAssignCSRFirstTime(LiveInterval &VirtReg, AllocationOrder &Order,
                                  unsigned PhysReg, unsigned &CostPerUseLimit,
                                  SmallVectorImpl<unsigned> &NewVRegs);
   void initializeCSRCost();
-  unsigned tryBlockSplit(LiveInterval&, AllocationOrder&,
-                         SmallVectorImpl<unsigned>&);
-  unsigned tryInstructionSplit(LiveInterval&, AllocationOrder&,
-                               SmallVectorImpl<unsigned>&);
-  unsigned tryLocalSplit(LiveInterval&, AllocationOrder&,
-    SmallVectorImpl<unsigned>&);
-  unsigned trySplit(LiveInterval&, AllocationOrder&,
-                    SmallVectorImpl<unsigned>&,
-                    const SmallVirtRegSet&);
+  unsigned tryBlockSplit(LiveInterval &, AllocationOrder &,
+                         SmallVectorImpl<unsigned> &);
+  unsigned tryInstructionSplit(LiveInterval &, AllocationOrder &,
+                               SmallVectorImpl<unsigned> &);
+  unsigned tryLocalSplit(LiveInterval &, AllocationOrder &,
+                         SmallVectorImpl<unsigned> &);
+  unsigned trySplit(LiveInterval &, AllocationOrder &,
+                    SmallVectorImpl<unsigned> &, const SmallVirtRegSet &);
   unsigned tryLastChanceRecoloring(LiveInterval &, AllocationOrder &,
                                    SmallVectorImpl<unsigned> &,
                                    SmallVirtRegSet &, unsigned);
@@ -560,8 +558,8 @@ private:
 char RAGreedy::ID = 0;
 char &llvm::RAGreedyID = RAGreedy::ID;
 
-INITIALIZE_PASS_BEGIN(RAGreedy, "greedy",
-                "Greedy Register Allocator", false, false)
+INITIALIZE_PASS_BEGIN(RAGreedy, "greedy", "Greedy Register Allocator", false,
+                      false)
 INITIALIZE_PASS_DEPENDENCY(LiveDebugVariables)
 INITIALIZE_PASS_DEPENDENCY(SlotIndexes)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervals)
@@ -575,31 +573,22 @@ INITIALIZE_PASS_DEPENDENCY(LiveRegMatrix)
 INITIALIZE_PASS_DEPENDENCY(EdgeBundles)
 INITIALIZE_PASS_DEPENDENCY(SpillPlacement)
 INITIALIZE_PASS_DEPENDENCY(MachineOptimizationRemarkEmitterPass)
-INITIALIZE_PASS_END(RAGreedy, "greedy",
-                "Greedy Register Allocator", false, false)
+INITIALIZE_PASS_END(RAGreedy, "greedy", "Greedy Register Allocator", false,
+                    false)
 
 #ifndef NDEBUG
 const char *const RAGreedy::StageName[] = {
-    "RS_New",
-    "RS_Assign",
-    "RS_Split",
-    "RS_Split2",
-    "RS_Spill",
-    "RS_Memory",
-    "RS_Done"
-};
+    "RS_New",   "RS_Assign", "RS_Split", "RS_Split2",
+    "RS_Spill", "RS_Memory", "RS_Done"};
 #endif
 
 // Hysteresis to use when comparing floats.
 // This helps stabilize decisions based on float comparisons.
 const float Hysteresis = (2007 / 2048.0f); // 0.97998046875
 
-FunctionPass* llvm::createGreedyRegisterAllocator() {
-  return new RAGreedy();
-}
+FunctionPass *llvm::createGreedyRegisterAllocator() { return new RAGreedy(); }
 
-RAGreedy::RAGreedy(): MachineFunctionPass(ID) {
-}
+RAGreedy::RAGreedy() : MachineFunctionPass(ID) {}
 
 void RAGreedy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
@@ -709,8 +698,8 @@ void RAGreedy::enqueue(PQueue &CurQueue, LiveInterval *LI) {
     // prevents excessive spilling in pathological cases.
     bool ReverseLocal = TRI->reverseLocalAssignment();
     const TargetRegisterClass &RC = *MRI->getRegClass(Reg);
-    bool ForceGlobal = !ReverseLocal &&
-      (Size / SlotIndex::InstrDist) > (2 * RC.getNumRegs());
+    bool ForceGlobal =
+        !ReverseLocal && (Size / SlotIndex::InstrDist) > (2 * RC.getNumRegs());
 
     if (ExtraRegInfo[Reg].Stage == RS_Assign && !ForceGlobal && !LI->empty() &&
         LIS->intervalIsInOneMBB(*LI)) {
@@ -759,8 +748,7 @@ LiveInterval *RAGreedy::dequeue(PQueue &CurQueue) {
 //===----------------------------------------------------------------------===//
 
 /// tryAssign - Try to assign VirtReg to an available register.
-unsigned RAGreedy::tryAssign(LiveInterval &VirtReg,
-                             AllocationOrder &Order,
+unsigned RAGreedy::tryAssign(LiveInterval &VirtReg, AllocationOrder &Order,
                              SmallVectorImpl<unsigned> &NewVRegs,
                              const SmallVirtRegSet &FixedRegisters) {
   Order.rewind();
@@ -844,8 +832,8 @@ unsigned RAGreedy::canReassign(LiveInterval &VirtReg, unsigned PrevReg) {
 ///                   register.
 /// @param B          The live range to be evicted.
 /// @param BreaksHint True when B is already assigned to its preferred register.
-bool RAGreedy::shouldEvict(LiveInterval &A, bool IsHint,
-                           LiveInterval &B, bool BreaksHint) {
+bool RAGreedy::shouldEvict(LiveInterval &A, bool IsHint, LiveInterval &B,
+                           bool BreaksHint) {
   bool CanSplit = getStage(B) < RS_Spill;
 
   // Be fairly aggressive about following hints as long as the evictee can be
@@ -917,10 +905,11 @@ bool RAGreedy::canEvictInterference(LiveInterval &VirtReg, unsigned PhysReg,
       //
       // Also allow urgent evictions of unspillable ranges from a strictly
       // larger allocation order.
-      bool Urgent = !VirtReg.isSpillable() &&
-        (Intf->isSpillable() ||
-         RegClassInfo.getNumAllocatableRegs(MRI->getRegClass(VirtReg.reg)) <
-         RegClassInfo.getNumAllocatableRegs(MRI->getRegClass(Intf->reg)));
+      bool Urgent =
+          !VirtReg.isSpillable() &&
+          (Intf->isSpillable() ||
+           RegClassInfo.getNumAllocatableRegs(MRI->getRegClass(VirtReg.reg)) <
+               RegClassInfo.getNumAllocatableRegs(MRI->getRegClass(Intf->reg)));
       // Only evict older cascades or live ranges without a cascade.
       unsigned IntfCascade = ExtraRegInfo[Intf->reg].Cascade;
       if (Cascade <= IntfCascade) {
@@ -1058,7 +1047,7 @@ void RAGreedy::evictInterference(LiveInterval &VirtReg, unsigned PhysReg,
                     << " interference: Cascade " << Cascade << '\n');
 
   // Collect all interfering virtregs first.
-  SmallVector<LiveInterval*, 8> Intfs;
+  SmallVector<LiveInterval *, 8> Intfs;
   for (MCRegUnitIterator Units(PhysReg, TRI); Units.isValid(); ++Units) {
     LiveIntervalUnion::Query &Q = Matrix->query(VirtReg, *Units);
     // We usually have the interfering VRegs cached so collectInterferingVRegs()
@@ -1066,7 +1055,7 @@ void RAGreedy::evictInterference(LiveInterval &VirtReg, unsigned PhysReg,
     // overlap the same register unit so we had different SubRanges queried
     // against it.
     Q.collectInterferingVRegs();
-    ArrayRef<LiveInterval*> IVR = Q.interferingVRegs();
+    ArrayRef<LiveInterval *> IVR = Q.interferingVRegs();
     Intfs.append(IVR.begin(), IVR.end());
   }
 
@@ -1103,8 +1092,7 @@ bool RAGreedy::isUnusedCalleeSavedReg(unsigned PhysReg) const {
 /// @param  VirtReg Currently unassigned virtual register.
 /// @param  Order   Physregs to try.
 /// @return         Physreg to assign VirtReg, or 0.
-unsigned RAGreedy::tryEvict(LiveInterval &VirtReg,
-                            AllocationOrder &Order,
+unsigned RAGreedy::tryEvict(LiveInterval &VirtReg, AllocationOrder &Order,
                             SmallVectorImpl<unsigned> &NewVRegs,
                             unsigned CostPerUseLimit,
                             const SmallVirtRegSet &FixedRegisters) {
@@ -1590,7 +1578,7 @@ BlockFrequency RAGreedy::calcGlobalSplitCost(GlobalSplitCandidate &Cand,
   for (unsigned i = 0; i != UseBlocks.size(); ++i) {
     const SplitAnalysis::BlockInfo &BI = UseBlocks[i];
     SpillPlacement::BlockConstraint &BC = SplitConstraints[i];
-    bool RegIn  = LiveBundles[Bundles->getBundle(BC.Number, false)];
+    bool RegIn = LiveBundles[Bundles->getBundle(BC.Number, false)];
     bool RegOut = LiveBundles[Bundles->getBundle(BC.Number, true)];
     unsigned Ins = 0;
 
@@ -1629,7 +1617,7 @@ BlockFrequency RAGreedy::calcGlobalSplitCost(GlobalSplitCandidate &Cand,
 
   for (unsigned i = 0, e = Cand.ActiveBlocks.size(); i != e; ++i) {
     unsigned Number = Cand.ActiveBlocks[i];
-    bool RegIn  = LiveBundles[Bundles->getBundle(Number, false)];
+    bool RegIn = LiveBundles[Bundles->getBundle(Number, false)];
     bool RegOut = LiveBundles[Bundles->getBundle(Number, true)];
     if (!RegIn && !RegOut)
       continue;
@@ -1858,7 +1846,7 @@ unsigned RAGreedy::tryRegionSplit(LiveInterval &VirtReg, AllocationOrder &Order,
   // To avoid it, we need to comapre the cost with the spill cost and not the
   // current max frequency.
   if (HasCompact && (BestCost > SpillCost) && (BestCand != NoCand) &&
-    CanCauseEvictionChain) {
+      CanCauseEvictionChain) {
     return 0;
   }
 
@@ -1901,7 +1889,7 @@ unsigned RAGreedy::calculateRegionSplitCost(LiveInterval &VirtReg,
     }
 
     if (GlobalCand.size() <= NumCands)
-      GlobalCand.resize(NumCands+1);
+      GlobalCand.resize(NumCands + 1);
     GlobalSplitCandidate &Cand = GlobalCand[NumCands];
     Cand.reset(IntfCache, PhysReg);
 
@@ -2082,9 +2070,9 @@ static unsigned getNumAllocatableRegsForConstraints(
 /// be moved to a larger register class.
 ///
 /// This is similar to spilling to a larger register class.
-unsigned
-RAGreedy::tryInstructionSplit(LiveInterval &VirtReg, AllocationOrder &Order,
-                              SmallVectorImpl<unsigned> &NewVRegs) {
+unsigned RAGreedy::tryInstructionSplit(LiveInterval &VirtReg,
+                                       AllocationOrder &Order,
+                                       SmallVectorImpl<unsigned> &NewVRegs) {
   const TargetRegisterClass *CurRC = MRI->getRegClass(VirtReg.reg);
   // There is no point to this if there are no larger sub-classes.
   if (!RegClassInfo.isProperSubClass(CurRC))
@@ -2120,7 +2108,7 @@ RAGreedy::tryInstructionSplit(LiveInterval &VirtReg, AllocationOrder &Order,
       }
     SE->openIntv();
     SlotIndex SegStart = SE->enterIntvBefore(Uses[i]);
-    SlotIndex SegStop  = SE->leaveIntvAfter(Uses[i]);
+    SlotIndex SegStop = SE->leaveIntvAfter(Uses[i]);
     SE->useIntv(SegStart, SegStop);
   }
 
@@ -2153,20 +2141,19 @@ void RAGreedy::calcGapWeights(unsigned PhysReg,
   assert(SA->getUseBlocks().size() == 1 && "Not a local interval");
   const SplitAnalysis::BlockInfo &BI = SA->getUseBlocks().front();
   ArrayRef<SlotIndex> Uses = SA->getUseSlots();
-  const unsigned NumGaps = Uses.size()-1;
+  const unsigned NumGaps = Uses.size() - 1;
 
   // Start and end points for the interference check.
-  SlotIndex StartIdx =
-    BI.LiveIn ? BI.FirstInstr.getBaseIndex() : BI.FirstInstr;
+  SlotIndex StartIdx = BI.LiveIn ? BI.FirstInstr.getBaseIndex() : BI.FirstInstr;
   SlotIndex StopIdx =
-    BI.LiveOut ? BI.LastInstr.getBoundaryIndex() : BI.LastInstr;
+      BI.LiveOut ? BI.LastInstr.getBoundaryIndex() : BI.LastInstr;
 
   GapWeight.assign(NumGaps, 0.0f);
 
   // Add interference from each overlapping register.
   for (MCRegUnitIterator Units(PhysReg, TRI); Units.isValid(); ++Units) {
-    if (!Matrix->query(const_cast<LiveInterval&>(SA->getParent()), *Units)
-          .checkInterference())
+    if (!Matrix->query(const_cast<LiveInterval &>(SA->getParent()), *Units)
+             .checkInterference())
       continue;
 
     // We know that VirtReg is a continuous interval from FirstInstr to
@@ -2177,10 +2164,10 @@ void RAGreedy::calcGapWeights(unsigned PhysReg,
     // StartIdx and after StopIdx.
     //
     LiveIntervalUnion::SegmentIter IntI =
-      Matrix->getLiveUnions()[*Units] .find(StartIdx);
+        Matrix->getLiveUnions()[*Units].find(StartIdx);
     for (unsigned Gap = 0; IntI.valid() && IntI.start() < StopIdx; ++IntI) {
       // Skip the gaps before IntI.
-      while (Uses[Gap+1].getBoundaryIndex() < IntI.start())
+      while (Uses[Gap + 1].getBoundaryIndex() < IntI.start())
         if (++Gap == NumGaps)
           break;
       if (Gap == NumGaps)
@@ -2190,7 +2177,7 @@ void RAGreedy::calcGapWeights(unsigned PhysReg,
       const float weight = IntI.value()->weight;
       for (; Gap != NumGaps; ++Gap) {
         GapWeight[Gap] = std::max(GapWeight[Gap], weight);
-        if (Uses[Gap+1].getBaseIndex() >= IntI.stop())
+        if (Uses[Gap + 1].getBaseIndex() >= IntI.stop())
           break;
       }
       if (Gap == NumGaps)
@@ -2206,7 +2193,7 @@ void RAGreedy::calcGapWeights(unsigned PhysReg,
 
     // Same loop as above. Mark any overlapped gaps as HUGE_VALF.
     for (unsigned Gap = 0; I != E && I->start < StopIdx; ++I) {
-      while (Uses[Gap+1].getBoundaryIndex() < I->start)
+      while (Uses[Gap + 1].getBoundaryIndex() < I->start)
         if (++Gap == NumGaps)
           break;
       if (Gap == NumGaps)
@@ -2214,7 +2201,7 @@ void RAGreedy::calcGapWeights(unsigned PhysReg,
 
       for (; Gap != NumGaps; ++Gap) {
         GapWeight[Gap] = huge_valf;
-        if (Uses[Gap+1].getBaseIndex() >= I->end)
+        if (Uses[Gap + 1].getBaseIndex() >= I->end)
           break;
       }
       if (Gap == NumGaps)
@@ -2245,7 +2232,7 @@ unsigned RAGreedy::tryLocalSplit(LiveInterval &VirtReg, AllocationOrder &Order,
   ArrayRef<SlotIndex> Uses = SA->getUseSlots();
   if (Uses.size() <= 2)
     return 0;
-  const unsigned NumGaps = Uses.size()-1;
+  const unsigned NumGaps = Uses.size() - 1;
 
   LLVM_DEBUG({
     dbgs() << "tryLocalSplit: ";
@@ -2268,18 +2255,18 @@ unsigned RAGreedy::tryLocalSplit(LiveInterval &VirtReg, AllocationOrder &Order,
     for (unsigned i = 0; i != NumGaps && ri != re; ++i) {
       // Look for Uses[i] <= RMS <= Uses[i+1].
       assert(!SlotIndex::isEarlierInstr(RMS[ri], Uses[i]));
-      if (SlotIndex::isEarlierInstr(Uses[i+1], RMS[ri]))
+      if (SlotIndex::isEarlierInstr(Uses[i + 1], RMS[ri]))
         continue;
       // Skip a regmask on the same instruction as the last use. It doesn't
       // overlap the live range.
-      if (SlotIndex::isSameInstr(Uses[i+1], RMS[ri]) && i+1 == NumGaps)
+      if (SlotIndex::isSameInstr(Uses[i + 1], RMS[ri]) && i + 1 == NumGaps)
         break;
       LLVM_DEBUG(dbgs() << ' ' << RMS[ri] << ':' << Uses[i] << '-'
                         << Uses[i + 1]);
       RegMaskGaps.push_back(i);
       // Advance ri to the next gap. A regmask on one of the uses counts in
       // both gaps.
-      while (ri != re && SlotIndex::isEarlierInstr(RMS[ri], Uses[i+1]))
+      while (ri != re && SlotIndex::isEarlierInstr(RMS[ri], Uses[i + 1]))
         ++ri;
     }
     LLVM_DEBUG(dbgs() << '\n');
@@ -2311,8 +2298,8 @@ unsigned RAGreedy::tryLocalSplit(LiveInterval &VirtReg, AllocationOrder &Order,
   float BestDiff = 0;
 
   const float blockFreq =
-    SpillPlacer->getBlockFrequency(BI.MBB->getNumber()).getFrequency() *
-    (1.0f / MBFI->getEntryFreq());
+      SpillPlacer->getBlockFrequency(BI.MBB->getNumber()).getFrequency() *
+      (1.0f / MBFI->getEntryFreq());
   SmallVector<float, 8> GapWeight;
 
   Order.rewind();
@@ -2423,7 +2410,7 @@ unsigned RAGreedy::tryLocalSplit(LiveInterval &VirtReg, AllocationOrder &Order,
 
   SE->openIntv();
   SlotIndex SegStart = SE->enterIntvBefore(Uses[BestBefore]);
-  SlotIndex SegStop  = SE->leaveIntvAfter(Uses[BestAfter]);
+  SlotIndex SegStop = SE->leaveIntvAfter(Uses[BestAfter]);
   SE->useIntv(SegStart, SegStop);
   SmallVector<unsigned, 8> IntvMap;
   SE->finish(&IntvMap);
@@ -2458,7 +2445,7 @@ unsigned RAGreedy::tryLocalSplit(LiveInterval &VirtReg, AllocationOrder &Order,
 /// assignable.
 /// @return Physreg when VirtReg may be assigned and/or new NewVRegs.
 unsigned RAGreedy::trySplit(LiveInterval &VirtReg, AllocationOrder &Order,
-                            SmallVectorImpl<unsigned>&NewVRegs,
+                            SmallVectorImpl<unsigned> &NewVRegs,
                             const SmallVirtRegSet &FixedRegisters) {
   // Ranges must be Split2 or less.
   if (getStage(VirtReg) >= RS_Spill)
@@ -2525,10 +2512,9 @@ static bool hasTiedDef(MachineRegisterInfo *MRI, unsigned reg) {
 /// for \p VirtReg.
 /// \p FixedRegisters contains all the virtual registers that cannot be
 /// recolored.
-bool
-RAGreedy::mayRecolorAllInterferences(unsigned PhysReg, LiveInterval &VirtReg,
-                                     SmallLISet &RecoloringCandidates,
-                                     const SmallVirtRegSet &FixedRegisters) {
+bool RAGreedy::mayRecolorAllInterferences(
+    unsigned PhysReg, LiveInterval &VirtReg, SmallLISet &RecoloringCandidates,
+    const SmallVirtRegSet &FixedRegisters) {
   const TargetRegisterClass *CurRC = MRI->getRegClass(VirtReg.reg);
 
   for (MCRegUnitIterator Units(PhysReg, TRI); Units.isValid(); ++Units) {
@@ -2536,7 +2522,8 @@ RAGreedy::mayRecolorAllInterferences(unsigned PhysReg, LiveInterval &VirtReg,
     // If there is LastChanceRecoloringMaxInterference or more interferences,
     // chances are one would not be recolorable.
     if (Q.collectInterferingVRegs(LastChanceRecoloringMaxInterference) >=
-        LastChanceRecoloringMaxInterference && !ExhaustiveSearch) {
+            LastChanceRecoloringMaxInterference &&
+        !ExhaustiveSearch) {
       LLVM_DEBUG(dbgs() << "Early abort: too many interferences.\n");
       CutOffInfo |= CO_Interf;
       return false;
@@ -2830,7 +2817,7 @@ unsigned RAGreedy::tryAssignCSRFirstTime(LiveInterval &VirtReg,
       return PhysReg;
 
     // Perform the actual pre-splitting.
-    doRegionSplit(VirtReg, BestCand, false/*HasCompact*/, NewVRegs);
+    doRegionSplit(VirtReg, BestCand, false /*HasCompact*/, NewVRegs);
     return 0;
   }
   return PhysReg;
@@ -3064,9 +3051,8 @@ unsigned RAGreedy::selectOrSplitImpl(LiveInterval &VirtReg,
   // queue. The RS_Split ranges already failed to do this, and they should not
   // get a second chance until they have been split.
   if (Stage != RS_Split)
-    if (unsigned PhysReg =
-            tryEvict(VirtReg, Order, NewVRegs, CostPerUseLimit,
-                     FixedRegisters)) {
+    if (unsigned PhysReg = tryEvict(VirtReg, Order, NewVRegs, CostPerUseLimit,
+                                    FixedRegisters)) {
       unsigned Hint = MRI->getSimpleHint(VirtReg.reg);
       // If VirtReg has a hint and that hint is broken record this
       // virtual register as a recoloring candidate for broken hint.
@@ -3221,9 +3207,9 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
   TII = MF->getSubtarget().getInstrInfo();
   RCI.runOnMachineFunction(mf);
 
-  EnableLocalReassign = EnableLocalReassignment ||
-                        MF->getSubtarget().enableRALocalReassignment(
-                            MF->getTarget().getOptLevel());
+  EnableLocalReassign =
+      EnableLocalReassignment || MF->getSubtarget().enableRALocalReassignment(
+                                     MF->getTarget().getOptLevel());
 
   EnableAdvancedRASplitCost =
       ConsiderLocalIntervalCost.getNumOccurrences()
@@ -3233,8 +3219,7 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
   if (VerifyEnabled)
     MF->verify(this, "Before greedy register allocator");
 
-  RegAllocBase::init(getAnalysis<VirtRegMap>(),
-                     getAnalysis<LiveIntervals>(),
+  RegAllocBase::init(getAnalysis<VirtRegMap>(), getAnalysis<LiveIntervals>(),
                      getAnalysis<LiveRegMatrix>());
   Indexes = &getAnalysis<SlotIndexes>();
   MBFI = &getAnalysis<MachineBlockFrequencyInfo>();
@@ -3259,9 +3244,36 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
   ExtraRegInfo.resize(MRI->getNumVirtRegs());
   NextCascade = 1;
   IntfCache.init(MF, Matrix->getLiveUnions(), Indexes, LIS, TRI);
-  GlobalCand.resize(32);  // This will grow as needed.
+  GlobalCand.resize(32); // This will grow as needed.
   SetOfBrokenHints.clear();
   LastEvicted.clear();
+
+  if (enable_experimental_mlra) {
+    MLRA::init(&mf);
+    if (enable_dump_ig_dot) {
+      symbolic->generateSymbolicEncodings(mf);
+      LLVM_DEBUG(errs() << "\n******************* Dump the graphs "
+                           "(START)*************************** \n\n");
+      dumpInterferenceGraph();
+      LLVM_DEBUG(errs() << "\n******************* Dump the graphs "
+                           "(END)*************************** \n\n");
+    }
+
+    if (this->FunctionVirtRegToColorMap.find(mf.getName()) !=
+        this->FunctionVirtRegToColorMap.end()) {
+      LLVM_DEBUG(
+          errs() << "********************************* Running ML "
+                    "allocatePhysRegsViaRL() (START)**********************\n");
+      allocatePhysRegsViaRL();
+      LLVM_DEBUG(
+          errs() << "********************************* Running ML "
+                    "allocatePhysRegsViaRL() (END)**********************\n");
+    }
+    errs() << "The ML allocated virtual registers: /n";
+    for (auto i : mlAllocatedRegs)
+      errs() << printReg(i, TRI) << "\t";
+    errs() << "Done MLRA allocation for : " << mf.getName() << '\n';
+  }
 
   allocatePhysRegs();
   tryHintsRecoloring();

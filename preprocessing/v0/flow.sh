@@ -18,13 +18,14 @@ then
   
 fi
 
-BUILD_TYPE="${TARGET}_release_build"
+BUILD_TYPE="build_release"
 
 LLVM_BUILD="${HOME}/llvm-project/${BUILD_TYPE}"
 echo "LLVM Build used for the data generation: ${LLVM_BUILD}"
 [[ ! -d ${LLVM_BUILD} ]] && echo "LLVM build directory does not exist" && exit
 
-INP_DIR=${HOME}/sample/data/PE-benchmarks
+# INP_DIR=${HOME}/data/gcc-c-torture
+INP_DIR=${HOME}/data/PE-benchmarks
 
 # PE-benchmarks
 # gcc-c-torture
@@ -47,7 +48,7 @@ then
   
 fi
 
-declare -A MODELS=([mlra]=" -mllvm -regalloc=mlra  -mllvm -mlra-dump-ig-dot " [mlbasicra]=" -mllvm -regalloc=mlbasicra  -mllvm -ml-basicra-dump-ig-dot ")
+declare -A MODELS=([mlra]=" -mllvm -mlra-experimental -mllvm -regalloc=greedy -mllvm -mlra-dump-ig-dot " [mlbasicra]=" -mllvm -mlra-experimental -mllvm -regalloc=basic  -mllvm -mlra-dump-ig-dot ")
 
 MODEL=$3
 
@@ -91,11 +92,11 @@ then
 fi
 
 echo "Opt. Pass seq used to generate data : ${OPT_PASSES_SEQ}"
-(${LLVM_BUILD}/bin/llvm-as < /dev/null | ${LLVM_BUILD}/bin/clang ${OPT_PASSES_SEQ}  -mllvm -regalloc=mlra -debug-pass=Arguments ../../sample/bublesort.c
+(${LLVM_BUILD}/bin/llvm-as < /dev/null | ${LLVM_BUILD}/bin/clang ${OPT_PASSES_SEQ}  -mllvm -regalloc=greedy -debug-pass=Arguments ../../sample/bublesort.c
 echo "\n"
-${LLVM_BUILD}/bin/llvm-as < /dev/null | ${LLVM_BUILD}/bin/opt ${OPT_PASSES_SEQ}  -regalloc=mlra -debug-pass=Arguments
+${LLVM_BUILD}/bin/llvm-as < /dev/null | ${LLVM_BUILD}/bin/opt ${OPT_PASSES_SEQ}  -regalloc=greedy -debug-pass=Arguments
 echo "\n"
-${LLVM_BUILD}/bin/llvm-as < /dev/null | ${LLVM_BUILD}/bin/llc ${OPT_PASSES_SEQ}  -regalloc=mlra -debug-pass=Arguments
+${LLVM_BUILD}/bin/llvm-as < /dev/null | ${LLVM_BUILD}/bin/llc ${OPT_PASSES_SEQ}  -regalloc=greedy -debug-pass=Arguments
 )  &>> ${WD}/run.log
 
 

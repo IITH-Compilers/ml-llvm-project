@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import logging
 import json
@@ -136,14 +137,15 @@ class RegisterActionSpace:
 
     @staticmethod
     def loadRegConfig(target):
+        baseDir = '/home/venkat/IF-DV/Rohit/regAlloc/ML-Register-Allocation/llvm-project/llvm/lib/CodeGen/MLRegAlloc/config_json'
         if target == "X86":
-            fileName='/home/cs18mtech11030/project/ML-Register-Allocation/llvm-project/llvm/lib/CodeGen/MLRegAlloc/DumpIGAndMapBack/config_json/X86_supported_RegClasses.json'
-            overlapfile = '/home/cs18mtech11030/project/ML-Register-Allocation/llvm-project/llvm/lib/CodeGen/MLRegAlloc/DumpIGAndMapBack/config_json/X86_overlaps_info.json'
+            fileName= os.path.join(baseDir, 'X86_supported_RegClasses.json')
+            overlapfile = os.path.join(baseDir, 'X86_overlaps_info.json')
         elif target == "AArch64":
-            fileName='/home/cs18mtech11030/project/ML-Register-Allocation/llvm-project/llvm/lib/CodeGen/MLRegAlloc/DumpIGAndMapBack/config_json/AArch64_supported_RegClasses.json'
-            overlapfile = '/home/cs18mtech11030/project/ML-Register-Allocation/llvm-project/llvm/lib/CodeGen/MLRegAlloc/DumpIGAndMapBack/config_json/AArch64_overlaps_info.json'
+            fileName= os.path.join(baseDir, 'AArch64_supported_RegClasses.json')
+            overlapfile = os.path.join(baseDir, 'AArch64_overlaps_info.json')
         else:
-            assert False, "Not valid architechture name"
+            assert False, "Not valid architecture name"
 
         with open(fileName) as f:
             regconfig = json.load(f)
