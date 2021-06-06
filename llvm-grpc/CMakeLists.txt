@@ -1,0 +1,119 @@
+project(llvm-gRPC)
+cmake_minimum_required(VERSION 3.13)
+
+include(AddLLVM)
+
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_BUILD_TYPE RelWithDebInfo)
+
+set(protobuf_MODULE_COMPATIBLE TRUE)
+
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -fno-rtti")
+ 
+
+find_package(Protobuf CONFIG REQUIRED)
+message(STATUS "Using protobuf ${Protobuf_VERSION}")
+
+set(_PROTOBUF_LIBPROTOBUF protobuf::libprotobuf)
+set(_REFLECTION gRPC::grpc++_reflection)
+if(CMAKE_CROSSCOMPILING)
+  find_program(_PROTOBUF_PROTOC protoc)
+else()
+  set(_PROTOBUF_PROTOC $<TARGET_FILE:protobuf::protoc>)
+endif()
+
+# Find gRPC installation
+# Looks for gRPCConfig.cmake file installed by gRPC's cmake installation.
+find_package(gRPC CONFIG REQUIRED)
+message(STATUS "Using gRPC ${gRPC_VERSION}")
+
+set(_GRPC_GRPCPP gRPC::grpc++)
+if(CMAKE_CROSSCOMPILING)
+  find_program(_GRPC_CPP_PLUGIN_EXECUTABLE grpc_cpp_plugin)
+  find_program(_GRPC_PYTHON_PLUGIN_EXECUTABLE grpc_python_plugin)
+else()
+  set(_GRPC_CPP_PLUGIN_EXECUTABLE $<TARGET_FILE:gRPC::grpc_cpp_plugin>)
+  set(_GRPC_PYTHON_PLUGIN_EXECUTABLE $<TARGET_FILE:gRPC::grpc_python_plugin>)
+endif()
+
+
+
+file(GLOB proto_list ${CMAKE_CURRENT_SOURCE_DIR}/Protos/*.proto)
+
+set(proto_dir ${CMAKE_CURRENT_SOURCE_DIR}/Protos)
+
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/Include/Service)
+
+#set(LLVM_GRPC_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/Include" CACHE PATH "llvm-gRPC include directories")
+
+#message(STATUS "include dirs:" ${LLVM_GRPC_INCLUDE_DIRS})
+
+
+foreach(proto ${proto_list})
+  get_filename_component(proto_name ${proto} NAME_WLE)
+  file(GLOB cc_file ${CMAKE_CURRENT_SOURCE_DIR}/Service/${proto_name}/*.cc)
+  set(cc_files ${cc_files} ${cc_file})
+  file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/Include/Service/${proto_name})
+  set(header_files ${header_files} "${CMAKE_CURRENT_SOURCE_DIR}/Include/Service/${proto_name}")
+  set(proto_srcs_list ${proto_srcs_list} "${CMAKE_CURRENT_SOURCE_DIR}/Include/Service/${proto_name}/${proto_name}.pb.cc")
+  set(grpc_srcs_list ${grpc_srcs_list} "${CMAKE_CURRENT_SOURCE_DIR}/Include/Service/${proto_name}/${proto_name}.grpc.pb.cc")
+  add_custom_command(
+      OUTPUT "${CMAKE_CURRENT_SOURCE_DIR}/Include/Service/${proto_name}/${proto_name}.pb.cc"
+             "${CMAKE_CURRENT_SOURCE_DIR}/Include/Service/${proto_name}/${proto_name}.pb.h"
+             "${CMAKE_CURRENT_SOURCE_DIR}/Include/Service/${proto_name}/${proto_name}.grpc.pb.cc"
+             "${CMAKE_CURRENT_SOURCE_DIR}/Include/Service/${proto_name}/${proto_name}.grpc.pb.h"
+      COMMAND ${_PROTOBUF_PROTOC}
+      ARGS --grpc_out "${CMAKE_CURRENT_SOURCE_DIR}/Include/Service/${proto_name}"
+      --cpp_out "${CMAKE_CURRENT_SOURCE_DIR}/Include/Service/${proto_name}"
+      -I "${proto_dir}"
+      --plugin=protoc-gen-grpc="${_GRPC_CPP_PLUGIN_EXECUTABLE}"
+      "${proto}"
+      DEPENDS "${proto}"
+  )
+endforeach()
+
+foreach(proto ${proto_list})
+  get_filename_component(proto_name ${proto} NAME_WLE)
+  set(proto_python_srcs_list ${proto_python_srcs_list} "${CMAKE_CURRENT_SOURCE_DIR}/Python-Utilities/${proto_name}_pb2.py")
+
+  add_custom_command(
+      OUTPUT "${CMAKE_CURRENT_SOURCE_DIR}/Python-Utilities/${proto_name}_pb2.py"
+      COMMAND ${_PROTOBUF_PROTOC}
+      ARGS --grpc_out "${CMAKE_CURRENT_SOURCE_DIR}/Python-Utilities/"
+      --python_out "${CMAKE_CURRENT_SOURCE_DIR}/Python-Utilities/"
+      -I "${proto_dir}"
+      --plugin=protoc-gen-grpc="${_GRPC_PYTHON_PLUGIN_EXECUTABLE}"
+      "${proto}"
+      DEPENDS "${proto}"
+  )
+endforeach()
+
+
+#file(GLOB service_src ${CMAKE_CURRENT_SOURCE_DIR}/Service/RegisterAllocation/*.cc)
+#file(GLOB inference_src ${CMAKE_CURRENT_SOURCE_DIR}/Service/RegisterAllocationInference/*.cc)
+
+# Building the library
+add_llvm_library(LLVMgRPC
+	  ${cc_files}
+	  ${CMAKE_CURRENT_SOURCE_DIR}/src/gRPCUtil.cc
+	  ${proto_srcs_list}
+	  ${grpc_srcs_list}
+ ${proto_python_srcs_list}
+)
+
+target_link_libraries(LLVMgRPC 
+	  PRIVATE ${_REFLECTION} 
+	          ${_GRPC_GRPCPP} 
+	          ${_PROTOBUF_LIBPROTOBUF}
+)
+
+
+
+target_include_directories(LLVMgRPC PRIVATE ${header_files})
+target_include_directories(LLVMgRPC PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(LLVMgRPC PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/Include)
+
+
+

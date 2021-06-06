@@ -10,11 +10,23 @@ if(WIN32 OR CYGWIN)
   set(LLVM_LINK_COMPONENTS Core Support)
 endif()
 
-add_llvm_library( LLVMHello MODULE BUILDTREE_ONLY
+add_llvm_library(LLVMHello MODULE BUILDTREE_ONLY
   Hello.cpp
 
+  LINK_COMPONENTS
+  gRPC
+  
   DEPENDS
   intrinsics_gen
   PLUGIN_TOOL
   opt
   )
+
+
+
+set (LLVM_GRPC_INCLUDE_DIRS "${LLVM_EXTERNAL_LLVM_GRPC_SOURCE_DIR}/Include")
+
+message(STATUS "Includes in LLVMHello:" ${LLVM_GRPC_INCLUDE_DIRS})
+
+#adding include directories for llvm-grpc
+include_directories(${LLVM_GRPC_INCLUDE_DIRS})
