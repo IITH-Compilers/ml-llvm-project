@@ -54,14 +54,3 @@ autoconf/autom4te.cache
 .vs
 # clangd index
 .clangd
-
-__pycache__/
-*.py[cod]
-data/
-scratch/
-trained_model/
-log/
-benchmarks/
-*build/
-*.swp
-*.swo
