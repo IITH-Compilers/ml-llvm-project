@@ -1,0 +1,665 @@
+{
+    "targets": [
+        {
+            "name": "X86",
+            "regclasses": [
+                "GR8",
+                "GR8_NOREX",
+                "GR8_ABCD_L",
+                "GR16",
+                "GR16_NOREX",
+                "GR16_ABCD",
+                "LOW32_ADDR_ACCESS_RBP",
+                "LOW32_ADDR_ACCESS",
+                "LOW32_ADDR_ACCESS_RBP_with_sub_8bit",
+                "GR32",
+                "GR32_NOSP",
+                "LOW32_ADDR_ACCESS_RBP_with_sub_16bit_in_GR16_NOREX",
+                "GR32_NOREX",
+                "GR32_NOREX_NOSP",
+                "GR32_ABCD",
+                "GR32_TC",
+                "GR32_ABCD_and_GR32_TC",
+                "GR32_AD",
+                "GR32_BSI",
+                "GR32_CB",
+                "GR32_DC",
+                "GR32_DIBP",
+                "GR32_SIDI",
+                "GR32_ABCD_and_GR32_BSI",
+                "GR32_AD_and_GR32_DC",
+                "GR32_BSI_and_GR32_SIDI",
+                "GR32_CB_and_GR32_DC",
+                "GR32_DIBP_and_GR32_SIDI",
+                "GR64",
+                "GR64_with_sub_8bit",
+                "GR64_NOSP",
+                "GR64_TC",
+                "GR64_NOREX",
+                "GR64_TCW64",
+                "GR64_TC_with_sub_8bit",
+                "GR64_NOSP_and_GR64_TC",
+                "GR64_TCW64_with_sub_8bit",
+                "GR64_TC_and_GR64_TCW64",
+                "GR64_with_sub_16bit_in_GR16_NOREX",
+                "GR64_NOREX_NOSP",
+                "GR64_NOREX_and_GR64_TC",
+                "GR64_NOSP_and_GR64_TCW64",
+                "GR64_TCW64_and_GR64_TC_with_sub_8bit",
+                "GR64_TC_and_GR64_NOSP_and_GR64_TCW64",
+                "GR64_TC_and_GR64_with_sub_16bit_in_GR16_NOREX",
+                "GR64_NOREX_NOSP_and_GR64_TC",
+                "GR64_NOREX_and_GR64_TCW64",
+                "GR64_ABCD",
+                "GR64_with_sub_32bit_in_GR32_TC",
+                "GR64_with_sub_32bit_in_GR32_ABCD_and_GR32_TC",
+                "GR64_AD",
+                "GR64_with_sub_32bit_in_GR32_BSI",
+                "GR64_with_sub_32bit_in_GR32_CB",
+                "GR64_with_sub_32bit_in_GR32_DC",
+                "GR64_with_sub_32bit_in_GR32_DIBP",
+                "GR64_with_sub_32bit_in_GR32_SIDI",
+                "GR64_with_sub_32bit_in_GR32_ABCD_and_GR32_BSI",
+                "GR64_with_sub_32bit_in_GR32_AD_and_GR32_DC",
+                "GR64_with_sub_32bit_in_GR32_BSI_and_GR32_SIDI",
+                "GR64_with_sub_32bit_in_GR32_CB_and_GR32_DC",
+                "GR64_with_sub_32bit_in_GR32_DIBP_and_GR32_SIDI"
+            ],
+            "register": [
+                {
+                    "color": 1,
+                    "name": "R9D",
+                    "phyReg": 256
+                },
+                {
+                    "color": 2,
+                    "name": "R10D",
+                    "phyReg": 257
+                },
+                {
+                    "color": 3,
+                    "name": "AL",
+                    "phyReg": 2
+                },
+                {
+                    "color": 4,
+                    "name": "AX",
+                    "phyReg": 3
+                },
+                {
+                    "color": 5,
+                    "name": "R11D",
+                    "phyReg": 258
+                },
+                {
+                    "color": 6,
+                    "name": "BL",
+                    "phyReg": 5
+                },
+                {
+                    "color": 7,
+                    "name": "R12D",
+                    "phyReg": 259
+                },
+                {
+                    "color": 8,
+                    "name": "R8W",
+                    "phyReg": 263
+                },
+                {
+                    "color": 9,
+                    "name": "R9W",
+                    "phyReg": 264
+                },
+                {
+                    "color": 10,
+                    "name": "BX",
+                    "phyReg": 9
+                },
+                {
+                    "color": 11,
+                    "name": "R10W",
+                    "phyReg": 265
+                },
+                {
+                    "color": 12,
+                    "name": "CL",
+                    "phyReg": 11
+                },
+                {
+                    "color": 13,
+                    "name": "R11W",
+                    "phyReg": 266
+                },
+                {
+                    "color": 14,
+                    "name": "CX",
+                    "phyReg": 13
+                },
+                {
+                    "color": 15,
+                    "name": "R12W",
+                    "phyReg": 267
+                },
+                {
+                    "color": 16,
+                    "name": "R13W",
+                    "phyReg": 268
+                },
+                {
+                    "color": 17,
+                    "name": "DI",
+                    "phyReg": 16
+                },
+                {
+                    "color": 18,
+                    "name": "R14W",
+                    "phyReg": 269
+                },
+                {
+                    "color": 19,
+                    "name": "DIL",
+                    "phyReg": 18
+                },
+                {
+                    "color": 20,
+                    "name": "DL",
+                    "phyReg": 19
+                },
+                {
+                    "color": 21,
+                    "name": "R15W",
+                    "phyReg": 270
+                },
+                {
+                    "color": 22,
+                    "name": "DX",
+                    "phyReg": 21
+                },
+                {
+                    "color": 23,
+                    "name": "EAX",
+                    "phyReg": 22
+                },
+                {
+                    "color": 24,
+                    "name": "R11",
+                    "phyReg": 130
+                },
+                {
+                    "color": 25,
+                    "name": "EBX",
+                    "phyReg": 24
+                },
+                {
+                    "color": 26,
+                    "name": "ECX",
+                    "phyReg": 25
+                },
+                {
+                    "color": 27,
+                    "name": "EDI",
+                    "phyReg": 26
+                },
+                {
+                    "color": 28,
+                    "name": "EDX",
+                    "phyReg": 27
+                },
+                {
+                    "color": 29,
+                    "name": "R9",
+                    "phyReg": 128
+                },
+                {
+                    "color": 30,
+                    "name": "R13D",
+                    "phyReg": 260
+                },
+                {
+                    "color": 31,
+                    "name": "R13",
+                    "phyReg": 132
+                },
+                {
+                    "color": 32,
+                    "name": "R14",
+                    "phyReg": 133
+                },
+                {
+                    "color": 33,
+                    "name": "ESI",
+                    "phyReg": 32
+                },
+                {
+                    "color": 34,
+                    "name": "R14D",
+                    "phyReg": 261
+                },
+                {
+                    "color": 35,
+                    "name": "R15",
+                    "phyReg": 134
+                },
+                {
+                    "color": 36,
+                    "name": "R15D",
+                    "phyReg": 262
+                },
+                {
+                    "color": 37,
+                    "name": "RAX",
+                    "phyReg": 49
+                },
+                {
+                    "color": 38,
+                    "name": "RBX",
+                    "phyReg": 51
+                },
+                {
+                    "color": 39,
+                    "name": "RCX",
+                    "phyReg": 52
+                },
+                {
+                    "color": 40,
+                    "name": "RDI",
+                    "phyReg": 53
+                },
+                {
+                    "color": 41,
+                    "name": "RDX",
+                    "phyReg": 54
+                },
+                {
+                    "color": 42,
+                    "name": "R10",
+                    "phyReg": 129
+                },
+                {
+                    "color": 43,
+                    "name": "RSI",
+                    "phyReg": 57
+                },
+                {
+                    "color": 44,
+                    "name": "SI",
+                    "phyReg": 59
+                },
+                {
+                    "color": 45,
+                    "name": "SIL",
+                    "phyReg": 61
+                },
+                {
+                    "color": 46,
+                    "name": "R12",
+                    "phyReg": 131
+                },
+                {
+                    "color": 47,
+                    "name": "R8B",
+                    "phyReg": 239
+                },
+                {
+                    "color": 48,
+                    "name": "R9B",
+                    "phyReg": 240
+                },
+                {
+                    "color": 49,
+                    "name": "R10B",
+                    "phyReg": 241
+                },
+                {
+                    "color": 50,
+                    "name": "R11B",
+                    "phyReg": 242
+                },
+                {
+                    "color": 51,
+                    "name": "R12B",
+                    "phyReg": 243
+                },
+                {
+                    "color": 52,
+                    "name": "R13B",
+                    "phyReg": 244
+                },
+                {
+                    "color": 53,
+                    "name": "R14B",
+                    "phyReg": 245
+                },
+                {
+                    "color": 54,
+                    "name": "R15B",
+                    "phyReg": 246
+                },
+                {
+                    "color": 55,
+                    "name": "R8",
+                    "phyReg": 127
+                },
+                {
+                    "color": 56,
+                    "name": "R8D",
+                    "phyReg": 255
+                }
+            ]
+        },
+        {
+            "name": "AArch64",
+            "regclasses": [
+                "GPR32all",
+                "GPR32",
+                "GPR32sp",
+                "GPR32common",
+                "GPR32arg",
+                "GPR64noip",
+                "GPR64common_and_GPR64noip",
+                "tcGPR64",
+                "GPR64noip_and_tcGPR64",
+                "GPR64arg",
+                "rtcGPR64"
+            ],
+            "register": [
+                {
+                    "color": 1,
+                    "name": "W0",
+                    "phyReg": 185
+                },
+                {
+                    "color": 2,
+                    "name": "W1",
+                    "phyReg": 186
+                },
+                {
+                    "color": 3,
+                    "name": "W2",
+                    "phyReg": 187
+                },
+                {
+                    "color": 4,
+                    "name": "W3",
+                    "phyReg": 188
+                },
+                {
+                    "color": 5,
+                    "name": "W4",
+                    "phyReg": 189
+                },
+                {
+                    "color": 6,
+                    "name": "W5",
+                    "phyReg": 190
+                },
+                {
+                    "color": 7,
+                    "name": "W6",
+                    "phyReg": 191
+                },
+                {
+                    "color": 8,
+                    "name": "W7",
+                    "phyReg": 192
+                },
+                {
+                    "color": 9,
+                    "name": "W8",
+                    "phyReg": 193
+                },
+                {
+                    "color": 10,
+                    "name": "W9",
+                    "phyReg": 194
+                },
+                {
+                    "color": 11,
+                    "name": "W10",
+                    "phyReg": 195
+                },
+                {
+                    "color": 12,
+                    "name": "W11",
+                    "phyReg": 196
+                },
+                {
+                    "color": 13,
+                    "name": "W12",
+                    "phyReg": 197
+                },
+                {
+                    "color": 14,
+                    "name": "W13",
+                    "phyReg": 198
+                },
+                {
+                    "color": 15,
+                    "name": "W14",
+                    "phyReg": 199
+                },
+                {
+                    "color": 16,
+                    "name": "W15",
+                    "phyReg": 200
+                },
+                {
+                    "color": 17,
+                    "name": "W16",
+                    "phyReg": 201
+                },
+                {
+                    "color": 18,
+                    "name": "W17",
+                    "phyReg": 202
+                },
+                {
+                    "color": 19,
+                    "name": "W18",
+                    "phyReg": 203
+                },
+                {
+                    "color": 20,
+                    "name": "W19",
+                    "phyReg": 204
+                },
+                {
+                    "color": 21,
+                    "name": "W20",
+                    "phyReg": 205
+                },
+                {
+                    "color": 22,
+                    "name": "W21",
+                    "phyReg": 206
+                },
+                {
+                    "color": 23,
+                    "name": "W22",
+                    "phyReg": 207
+                },
+                {
+                    "color": 24,
+                    "name": "W23",
+                    "phyReg": 208
+                },
+                {
+                    "color": 25,
+                    "name": "W24",
+                    "phyReg": 209
+                },
+                {
+                    "color": 26,
+                    "name": "W25",
+                    "phyReg": 210
+                },
+                {
+                    "color": 27,
+                    "name": "W26",
+                    "phyReg": 211
+                },
+                {
+                    "color": 28,
+                    "name": "W27",
+                    "phyReg": 212
+                },
+                {
+                    "color": 29,
+                    "name": "W28",
+                    "phyReg": 213
+                },
+                {
+                    "color": 30,
+                    "name": "W30",
+                    "phyReg": 215
+                },
+                {
+                    "color": 31,
+                    "name": "X0",
+                    "phyReg": 216
+                },
+                {
+                    "color": 32,
+                    "name": "X1",
+                    "phyReg": 217
+                },
+                {
+                    "color": 33,
+                    "name": "X2",
+                    "phyReg": 218
+                },
+                {
+                    "color": 34,
+                    "name": "X3",
+                    "phyReg": 219
+                },
+                {
+                    "color": 35,
+                    "name": "X4",
+                    "phyReg": 220
+                },
+                {
+                    "color": 36,
+                    "name": "X5",
+                    "phyReg": 221
+                },
+                {
+                    "color": 37,
+                    "name": "X6",
+                    "phyReg": 222
+                },
+                {
+                    "color": 38,
+                    "name": "X7",
+                    "phyReg": 223
+                },
+                {
+                    "color": 39,
+                    "name": "X8",
+                    "phyReg": 224
+                },
+                {
+                    "color": 40,
+                    "name": "X9",
+                    "phyReg": 225
+                },
+                {
+                    "color": 41,
+                    "name": "X10",
+                    "phyReg": 226
+                },
+                {
+                    "color": 42,
+                    "name": "X11",
+                    "phyReg": 227
+                },
+                {
+                    "color": 43,
+                    "name": "X12",
+                    "phyReg": 228
+                },
+                {
+                    "color": 44,
+                    "name": "X13",
+                    "phyReg": 229
+                },
+                {
+                    "color": 45,
+                    "name": "X14",
+                    "phyReg": 230
+                },
+                {
+                    "color": 46,
+                    "name": "X15",
+                    "phyReg": 231
+                },
+                {
+                    "color": 47,
+                    "name": "X16",
+                    "phyReg": 232
+                },
+                {
+                    "color": 48,
+                    "name": "X17",
+                    "phyReg": 233
+                },
+                {
+                    "color": 49,
+                    "name": "X18",
+                    "phyReg": 234
+                },
+                {
+                    "color": 50,
+                    "name": "X19",
+                    "phyReg": 235
+                },
+                {
+                    "color": 51,
+                    "name": "X20",
+                    "phyReg": 236
+                },
+                {
+                    "color": 52,
+                    "name": "X21",
+                    "phyReg": 237
+                },
+                {
+                    "color": 53,
+                    "name": "X22",
+                    "phyReg": 238
+                },
+                {
+                    "color": 54,
+                    "name": "X23",
+                    "phyReg": 239
+                },
+                {
+                    "color": 55,
+                    "name": "X24",
+                    "phyReg": 240
+                },
+                {
+                    "color": 56,
+                    "name": "X25",
+                    "phyReg": 241
+                },
+                {
+                    "color": 57,
+                    "name": "X26",
+                    "phyReg": 242
+                },
+                {
+                    "color": 58,
+                    "name": "X27",
+                    "phyReg": 243
+                },
+                {
+                    "color": 59,
+                    "name": "X28",
+                    "phyReg": 244
+                }
+            ]
+        }
+    ]
+}
