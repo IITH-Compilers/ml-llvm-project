@@ -1,6 +1,0 @@
-graph G {
-Function="main";
-Registers=164;
-0 [label="INF %0:gr32 = MOV32r0 implicit-def dead $eflags
-"];
-}
