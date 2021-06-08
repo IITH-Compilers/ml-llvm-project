@@ -1,5 +1,5 @@
 #include "gRPCUtil.h"
-#include "Service/RegisterAllocationInference/RegisterAllocationInference.h"
+#include "RegisterAllocationInference.h"
 #include <grpcpp/grpcpp.h>
 #include <string>
 

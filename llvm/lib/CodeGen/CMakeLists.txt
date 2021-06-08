@@ -183,7 +183,6 @@ add_llvm_component_library(LLVMCodeGen
   LINK_LIBS ${LLVM_PTHREAD_LIB} LLVMMLRegAlloc
   LINK_LIBS ${LLVM_PTHREAD_LIB} LLVMConfigGen
 
-
   DEPENDS
   intrinsics_gen
   )

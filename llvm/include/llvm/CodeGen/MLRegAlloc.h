@@ -62,6 +62,11 @@
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
+
+// gRPC includes
+#include "Service/RegisterAllocation.grpc.pb.h"
+#include <grpcpp/grpcpp.h>
+
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -82,7 +87,8 @@
 
 namespace llvm {
 
-class MLRA : public RegAllocBase {
+class MLRA : public RegAllocBase,
+             public registerallocation::RegisterAllocation::Service {
 
   // context
   MachineFunction *MF;
@@ -251,6 +257,12 @@ protected:
   }
 
   std::string targetName;
+
+private:
+  grpc::Status getGraphs(grpc::ServerContext *context,
+                         const registerallocation::Path *request,
+                         registerallocation::GraphList *response) override;
+  void startServer();
 };
 
 } // namespace llvm

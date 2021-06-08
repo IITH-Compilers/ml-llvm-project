@@ -24,15 +24,19 @@ if __name__ == '__main__':
 
     client=RegisterAllocationClient() # Creating register allocation client
 
-    client.startServer(binaryPath)  # Starting the server
+    #client.startServer(binaryPath)  # Starting the server
 
-    #print(client.getGraphs(testFiles)) # get Interference Graphs
-
-    client.codeGen(jsonFile,testFiles) # generate code from json graphs
-    client.codeGen(jsonFile1,testFiles1) 
-    client.codeGen(jsonFile2,testFiles2)
+    # print(client.getGraphs("Python")) # get Interference Graphs
+    # print(client.getGraphs("Python"))
+    # print(client.getGraphs("Exit"))
+    while True:
+        inp = input("String: ")
+        print(client.getGraphs(inp))
+    #client.codeGen(jsonFile,testFiles) # generate code from json graphs
+    #client.codeGen(jsonFile1,testFiles1) 
+    #client.codeGen(jsonFile2,testFiles2)
     #client.codeGen(jsonFile3,testFiles3)  
     
-    client.killServer() # killing the Server
+    #client.killServer() # killing the Server
 
 

@@ -74,6 +74,7 @@
 #include <cassert>
 #include <cstdint>
 #include <fstream>
+#include <future>
 #include <iostream>
 #include <map>
 #include <memory>
@@ -86,6 +87,15 @@
 
 #define DIS_SANITY_CHECK 1
 using namespace llvm;
+using grpc::ServerContext;
+using grpc::Status;
+using registerallocation::ColorData;
+using registerallocation::Empty;
+using registerallocation::GraphList;
+using registerallocation::Path;
+using registerallocation::RegisterAllocation;
+
+std::promise<void> *exit_requested;
 
 STATISTIC(NumGlobalSplits, "Number of split global live ranges");
 STATISTIC(NumLocalSplits, "Number of split local live ranges");
@@ -123,6 +133,37 @@ MLRA::MLRA(DenseMap<unsigned, unsigned> VirtRegToColor) {
   this->VirtRegToColor = VirtRegToColor;
 }
 
+grpc::Status MLRA::getGraphs(grpc::ServerContext *context,
+                             const registerallocation::Path *request,
+                             registerallocation::GraphList *response) {
+  errs() << request->irpath();
+  std::string str = "LLVM\n";
+  response->set_payload(str);
+  if (request->irpath() == "Exit")
+    exit_requested->set_value();
+  return Status::OK;
+}
+
+void MLRA::startServer() {
+  grpc::ServerBuilder builder;
+  std::string server_address("0.0.0.0:50051");
+  builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
+  builder.RegisterService(this);
+  exit_requested = new std::promise<void>();
+  std::unique_ptr<grpc::Server> server(builder.BuildAndStart());
+  errs() << "Server Listening on " << server_address << "\n";
+  auto serveFn = [&]() { server->Wait(); };
+
+  std::thread serving_thread(serveFn);
+
+  auto f = exit_requested->get_future();
+  f.wait();
+  server->Shutdown();
+  delete exit_requested;  
+  serving_thread.join();
+
+}
+
 void MLRA::init(MachineFunction *mf) {
   MF = mf;
   mlAllocatedRegs.clear();
@@ -141,6 +182,8 @@ void MLRA::init(MachineFunction *mf) {
   default:
     this->targetName = "UnKnown";
   }
+
+  startServer();
 }
 
 void MLRA::dumpInterferenceGraph() {
