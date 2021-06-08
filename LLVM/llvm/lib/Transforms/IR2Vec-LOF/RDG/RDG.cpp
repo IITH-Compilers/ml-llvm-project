@@ -477,10 +477,11 @@ DataDependenceGraph *RDG::computeRDGForInnerLoop(Loop &IL) {
     fail("CannotResolveDependences", "LAI dependences is a nullptr.", &IL);
     return nullptr;
   }
-//   errs() << "LAI.getDepChecker().getDependences()->size() : "  << LAI.getDepChecker().getDependences()->size() << "\n";
+  //   errs() << "LAI.getDepChecker().getDependences()->size() : "  <<
+  //   LAI.getDepChecker().getDependences()->size() << "\n";
   if (LAI.getDepChecker().getDependences()->size() == 0 &&
       !LAI.canVectorizeMemory()) {
-//    errs() << "No need to make RDG\n";
+    //    errs() << "No need to make RDG\n";
     fail("CannotResolveDependences", "LAI cannot analyze dependences", &IL);
     return nullptr;
   }
@@ -556,29 +557,17 @@ DataDependenceGraph *RDG::computeRDGForInnerLoop(Loop &IL) {
         }
       }
     }
-    /* auto br = dyn_cast<BranchInst>(BB->getTerminator());
-    errs() << "BB: " << &IL << "\n";
-    errs() << "BB Latch: " << LI.getLoopFor(BB) << "\n";
-    errs() << "Loop Latch: " << LI.getLoopFor(IL.getLoopLatch()) << "\n";
-    errs() << "Latch Block: "
-           << LI.getLoopFor(IL.getLoopLatch())->getLoopLatch() << "\n";
-    errs() << "br block: " << LI.getLoopFor(br->getParent())->getLoopLatch()
-           << "\n\n";
-    // if (br && br->isConditional() && BB != IL.getLoopLatch()) {
-    if (br && br->isConditional()) {
+    auto br = dyn_cast<BranchInst>(BB->getTerminator());
+    if (br && br->isConditional() && BB != IL.getLoopLatch()) {
       LLVM_DEBUG(errs() << "Conditions Present: no need to make RDG in case of "
                            "conditionals inside loop body\n");
-      errs() << *br << "\n";
-      errs() << (BB != IL.getLoopLatch()) << "\n";
-      errs() << "Latch: " << IL.getLoopLatch() << "\n";
-      errs() << "BB: " << BB << "\n";
       if (ORE)
         fail("MultipleConditions",
              "no support for distribution in case of conditionals inside "
              "loop body",
              &IL);
       return nullptr;
-    } */
+    }
   }
 
   // Use of DependenceGraphBuilder
