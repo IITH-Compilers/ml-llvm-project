@@ -23,7 +23,7 @@ message Path {
 }
 
 message GraphList {
-  repeated bytes payload=1;
+  bytes payload=1;
 }
 
 message ColorData {

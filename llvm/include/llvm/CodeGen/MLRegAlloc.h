@@ -62,6 +62,13 @@
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
+
+// gRPC includes
+#include "Service/RegisterAllocation.grpc.pb.h"
+#include "Service/RegisterAllocationInference.grpc.pb.h"
+#include "gRPCUtil.h"
+#include <grpcpp/grpcpp.h>
+
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -82,7 +89,8 @@
 
 namespace llvm {
 
-class MLRA : public RegAllocBase {
+class MLRA : public RegAllocBase,
+             public registerallocation::RegisterAllocation::Service {
 
   // context
   MachineFunction *MF;
@@ -94,6 +102,7 @@ protected:
   static cl::opt<bool> enable_dump_ig_dot;
   static cl::opt<std::string> pred_file;
   static cl::opt<bool> enable_experimental_mlra;
+  static cl::opt<bool> enable_mlra_inference;
 
   MIR2Vec_Symbolic *symbolic;
   std::map<std::string, std::map<std::string, int64_t>>
@@ -118,11 +127,18 @@ protected:
   void init(MachineFunction *MF);
   // Logic to dump the dot
   // void dumpInterferenceGraph(MachineFunction &mf);
+  std::string captureInterferenceGraph();
+
   void dumpInterferenceGraph();
 
   // Custom RL allocator
   void allocatePhysRegsViaRL();
 
+  void training_flow(MachineFunction &mf);
+  
+  void inference(MachineFunction &mf);
+  
+  void mlregalloc(MachineFunction &mf);
   // get the Phyical register based upon virtual register type
   // like 8 bit, 16 bit, 32 bit, 64 bits and other more
   // For our reference see the X86RegisterInfo.td
@@ -130,24 +146,10 @@ protected:
   unsigned getPhyRegForColor(LiveInterval &VirtReg, unsigned color,
                              SmallVector<unsigned, 4> &SplitVRegs);
 
-  std::set<std::string> regClassSupported4_MLRA; //{"GR8", "GR16", "GR32",
-                                                 //  "GR64"};
-
-  std::map<std::string, std::map<std::string, int64_t>>
-  setPredictionFromFile(std::string pred_file) {
-    assert(pred_file != "" && "Path is empty.");
-    LLVM_DEBUG(errs() << pred_file << "\n");
-    std::ifstream predColorFile(pred_file);
-    if (predColorFile.fail()) {
-      errs() << "setPredictionFromFile- file does not exist at the location "
-             << pred_file << "\n";
-      return this->FunctionVirtRegToColorMap;
-    }
-    std::string jsonString;
-    jsonString.assign((std::istreambuf_iterator<char>(predColorFile)),
-                      (std::istreambuf_iterator<char>()));
-    // LLVM_DEBUG(errs() << jsonString << "\n");
-    if (Expected<json::Value> E = json::parse(jsonString)) {
+  std::set<std::string> regClassSupported4_MLRA; 
+    std::map<std::string, std::map<std::string, int64_t>> parsePredictionJson(std::string jsonString){
+      // LLVM_DEBUG(errs() << jsonString << "\n");
+      if (Expected<json::Value> E = json::parse(jsonString)) {
 
       if (json::Object *J = E->getAsObject()) {
         if (json::Array *S = J->getArray("Predictions")) {
@@ -175,6 +177,21 @@ protected:
       }
     }
     return this->FunctionVirtRegToColorMap;
+  }
+
+  std::map<std::string, std::map<std::string, int64_t>>
+  setPredictionFromFile(std::string pred_file) {
+    assert(pred_file != "" && "Path is empty.");
+    LLVM_DEBUG(errs() << pred_file << "\n");
+    std::ifstream predColorFile(pred_file);
+    if(predColorFile.fail()){
+        errs () << "setPredictionFromFile- file does not exist at the location " << pred_file << "\n";
+        return this->FunctionVirtRegToColorMap;
+    }
+    std::string jsonString;
+    jsonString.assign((std::istreambuf_iterator<char>(predColorFile)),
+                      (std::istreambuf_iterator<char>()));
+    return parsePredictionJson(jsonString);
   }
 
   void loadTargetRegisterConfig(std::string config_colorMap) {
@@ -251,6 +268,12 @@ protected:
   }
 
   std::string targetName;
+
+private:
+  grpc::Status getGraphs(grpc::ServerContext *context,
+                         const registerallocation::Path *request,
+                         registerallocation::GraphList *response) override;
+  void startServer();
 };
 
 } // namespace llvm

@@ -18,14 +18,15 @@ then
   
 fi
 
-BUILD_TYPE="build_release"
+BUILD_TYPE="${TARGET}_release_build"
 
-LLVM_BUILD="${HOME}/llvm-project/${BUILD_TYPE}"
+LLVM_BUILD="${HOME}/${BUILD_TYPE}"
 echo "LLVM Build used for the data generation: ${LLVM_BUILD}"
 [[ ! -d ${LLVM_BUILD} ]] && echo "LLVM build directory does not exist" && exit
 
 # INP_DIR=${HOME}/data/gcc-c-torture
-INP_DIR=${HOME}/data/PE-benchmarks
+# INP_DIR=${HOME}/data/PE-benchmarks
+INP_DIR=/home/cs18mtech11030/project/ML-Register-Allocation/data/gcc-c-torture
 
 # PE-benchmarks
 # gcc-c-torture
@@ -60,17 +61,17 @@ then
 fi
 
 # IP_FLR_NAME=execute
-# IP_FLR_NAME=execute_basic_filter_timeout
-IP_FLR_NAME=level-O0-llfiles
-INP_TYPE=llfiles
-# INP_TYPE=src
+IP_FLR_NAME=execute_basic_filter_timeout
+# IP_FLR_NAME=level-O0-llfiles
+# INP_TYPE=llfiles
+INP_TYPE=src
 SRCH_FLR=${INP_DIR}/${IP_FLR_NAME}
 [[ ! -d ${SRCH_FLR} ]] && echo " directory does not exist : ${SRCH_FLR}" && exit
 
 echo "Data will generated from ${SRCH_FLR}"
 echo ""
 
-WD=${SRCH_FLR}_${MODE}_${MODEL}_${TARGET}
+WD=${SRCH_FLR}_${MODE}_${MODEL}_${TARGET}_temp
 echo "Data will generated at : ${WD}"
 
 mkdir -p "${WD}"

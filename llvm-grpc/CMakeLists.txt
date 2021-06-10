@@ -15,6 +15,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -fno-rtti")
 
 find_package(Protobuf CONFIG REQUIRED)
 message(STATUS "Using protobuf ${Protobuf_VERSION}")
+message(STATUS "Using protobuf ${Protobuf_INCLUDE_DIRS}")
 
 set(_PROTOBUF_LIBPROTOBUF protobuf::libprotobuf)
 set(_REFLECTION gRPC::grpc++_reflection)
@@ -44,11 +45,11 @@ file(GLOB proto_list ${CMAKE_CURRENT_SOURCE_DIR}/Protos/*.proto)
 
 set(proto_dir ${CMAKE_CURRENT_SOURCE_DIR}/Protos)
 
-file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/Include/Service)
+file(MAKE_DIRECTORY ${LLVM_INCLUDE_DIR}/Service)
 
 #set(LLVM_GRPC_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/Include" CACHE PATH "llvm-gRPC include directories")
 
-#message(STATUS "include dirs:" ${LLVM_GRPC_INCLUDE_DIRS})
+# message(STATUS "include dirs:" ${LLVM_INCLUDE_DIR})
 
 
 foreach(proto ${proto_list})
@@ -57,22 +58,27 @@ foreach(proto ${proto_list})
   set(cc_files ${cc_files} ${cc_file})
   file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/Include/Service/${proto_name})
   set(header_files ${header_files} "${CMAKE_CURRENT_SOURCE_DIR}/Include/Service/${proto_name}")
-  set(proto_srcs_list ${proto_srcs_list} "${CMAKE_CURRENT_SOURCE_DIR}/Include/Service/${proto_name}/${proto_name}.pb.cc")
-  set(grpc_srcs_list ${grpc_srcs_list} "${CMAKE_CURRENT_SOURCE_DIR}/Include/Service/${proto_name}/${proto_name}.grpc.pb.cc")
+  set(proto_srcs_list ${proto_srcs_list} "${LLVM_INCLUDE_DIR}/Service/${proto_name}.pb.cc")
+  set(grpc_srcs_list ${grpc_srcs_list} "${LLVM_INCLUDE_DIR}/Service/${proto_name}.grpc.pb.cc")
   add_custom_command(
       OUTPUT "${CMAKE_CURRENT_SOURCE_DIR}/Include/Service/${proto_name}/${proto_name}.pb.cc"
              "${CMAKE_CURRENT_SOURCE_DIR}/Include/Service/${proto_name}/${proto_name}.pb.h"
+             "${LLVM_INCLUDE_DIR}/Service/${proto_name}.pb.cc"
+             "${LLVM_INCLUDE_DIR}/Service/${proto_name}.pb.h"
              "${CMAKE_CURRENT_SOURCE_DIR}/Include/Service/${proto_name}/${proto_name}.grpc.pb.cc"
              "${CMAKE_CURRENT_SOURCE_DIR}/Include/Service/${proto_name}/${proto_name}.grpc.pb.h"
+             "${LLVM_INCLUDE_DIR}/Service/${proto_name}.grpc.pb.cc"
+             "${LLVM_INCLUDE_DIR}/Service/${proto_name}.grpc.pb.h"
       COMMAND ${_PROTOBUF_PROTOC}
-      ARGS --grpc_out "${CMAKE_CURRENT_SOURCE_DIR}/Include/Service/${proto_name}"
-      --cpp_out "${CMAKE_CURRENT_SOURCE_DIR}/Include/Service/${proto_name}"
+      ARGS --grpc_out "${LLVM_INCLUDE_DIR}/Service"
+      --cpp_out "${LLVM_INCLUDE_DIR}/Service"
       -I "${proto_dir}"
       --plugin=protoc-gen-grpc="${_GRPC_CPP_PLUGIN_EXECUTABLE}"
       "${proto}"
       DEPENDS "${proto}"
   )
 endforeach()
+
 
 foreach(proto ${proto_list})
   get_filename_component(proto_name ${proto} NAME_WLE)
@@ -111,9 +117,10 @@ target_link_libraries(LLVMgRPC
 
 
 
-target_include_directories(LLVMgRPC PRIVATE ${header_files})
-target_include_directories(LLVMgRPC PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-target_include_directories(LLVMgRPC PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/Include)
+target_include_directories(LLVMgRPC PRIVATE ${LLVM_INCLUDE_DIR}/Service)
+target_include_directories(LLVMgRPC PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(LLVMgRPC PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/Include)
+target_include_directories(LLVMgRPC PUBLIC /home/cs18mtech11030/project/grpc_llvm/grpc_install/include)
 
 
 
