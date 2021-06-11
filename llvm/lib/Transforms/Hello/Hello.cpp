@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "RegisterAllocationInference.h"
-#include "gRPCUtil.h"
+#include "grpc/RegisterAllocationInference.h"
+#include "grpc/gRPCUtil.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Pass.h"
