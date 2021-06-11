@@ -5,7 +5,7 @@ HOME=`realpath ${PWD}/../..`
 
 BUILD_TYPE="_release"
 
-LLVM_BUILD="${HOME}/llvm-project/build${BUILD_TYPE}"
+LLVM_BUILD="${HOME}/x86_release_build"
 [[ ! -d ${LLVM_BUILD} ]] && echo "LLVM build directory does not exist" && exit
 
 
@@ -78,6 +78,8 @@ REMARKS=
 BENCHMARK_NAME=${BENCHMARK_NAME}_${MODEL}
 
 BENCHMARK_NAME=benchmarks/${BENCHMARK_NAME}
+
+mkdir -p ${BENCHMARK_NAME}
 
 BENCHMARK_NAME=$(realpath ${BENCHMARK_NAME})
 

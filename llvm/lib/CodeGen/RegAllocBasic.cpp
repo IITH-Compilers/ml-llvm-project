@@ -93,7 +93,7 @@ public:
   void enqueue(LiveInterval *LI) override { Queue.push(LI); }
 
   LiveInterval *dequeue() override {
-    if (Queue.empty())
+    if (Queue.empty()) 
       return nullptr;
     LiveInterval *LI = Queue.top();
     Queue.pop();
@@ -312,32 +312,7 @@ bool RABasic::runOnMachineFunction(MachineFunction &mf) {
 
   SpillerInstance.reset(createInlineSpiller(*this, *MF, *VRM));
 
-  if (enable_experimental_mlra) {
-    MLRA::init(&mf);
-    if (enable_dump_ig_dot) {
-      symbolic->generateSymbolicEncodings(mf);
-      LLVM_DEBUG(errs() << "\n******************* Dump the graphs "
-                           "(START)*************************** \n\n");
-      dumpInterferenceGraph();
-      LLVM_DEBUG(errs() << "\n******************* Dump the graphs "
-                           "(END)*************************** \n\n");
-    }
-
-    if (this->FunctionVirtRegToColorMap.find(mf.getName()) !=
-        this->FunctionVirtRegToColorMap.end()) {
-      LLVM_DEBUG(
-          errs() << "********************************* Running ML "
-                    "allocatePhysRegsViaRL() (START)**********************\n");
-      allocatePhysRegsViaRL();
-      LLVM_DEBUG(
-          errs() << "********************************* Running ML "
-                    "allocatePhysRegsViaRL() (END)**********************\n");
-    }
-    errs() << "The ML allocated virtual registers: /n";
-    for (auto i : mlAllocatedRegs)
-      errs() << printReg(i, TRI) << "\t";
-    errs() << "Done MLRA allocation for : " << mf.getName() << '\n';
-  }
+  mlregalloc(mf);
 
   allocatePhysRegs();
   postOptimization();

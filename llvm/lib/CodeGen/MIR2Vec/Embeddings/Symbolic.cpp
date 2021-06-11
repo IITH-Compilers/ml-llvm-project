@@ -95,10 +95,10 @@ void MIR2Vec_Symbolic::generateSymbolicEncodings(MachineFunction &F,
 Vector
 MIR2Vec_Symbolic::func2Vec(MachineFunction &F,
                            SmallVector<MachineFunction *, 15> &funcStack) {
-  auto It = funcVecMap.find(&F);
+  /*auto It = funcVecMap.find(&F);
   if (It != funcVecMap.end()) {
     return It->second;
-  }
+  }*/
   TRI = F.getSubtarget().getRegisterInfo();
   TII = F.getSubtarget().getInstrInfo();
   funcStack.push_back(&F);

@@ -30,8 +30,10 @@ if __name__ == '__main__':
     # print(client.getGraphs("Python"))
     # print(client.getGraphs("Exit"))
     while True:
-        inp = input("String: ")
-        print(client.getGraphs(inp))
+        msg = input("Message: ")
+        reg = input("Register: ")
+        point = input("SplitPoint: ")        
+        print(client.codeGen(msg, int(reg), int(point)))
     #client.codeGen(jsonFile,testFiles) # generate code from json graphs
     #client.codeGen(jsonFile1,testFiles1) 
     #client.codeGen(jsonFile2,testFiles2)

@@ -37,12 +37,12 @@ def run(agent, config):
     count=0
     #Load the envroinment
     env = GraphColorEnv(config)
-    training_graphs=glob.glob(os.path.join(dataset, 'graphs/IG/json/*.json'))
+    training_graphs=glob.glob(os.path.join(dataset, 'graphs/IG/json/*.json'))[:50000]
     assert len(training_graphs)> 0, 'training set is empty' 
     for episode in range(n_episodes):
         scores = []                        # list containing scores from each episode
         score_tensor = 0
-        random.shuffle(training_graphs)
+        # random.shuffle(training_graphs)
         
         # TODO
         # selected_gs = random.sample(training_graphs, 500)
@@ -89,6 +89,8 @@ def run(agent, config):
                 score += reward
                 score_tensor += reward
                 if done:
+                    logging.debug('final reward : {}'.format(reward))
+                    logging.debug('final score : {}'.format(score))
                     break
             agent.writer.add_scalar('trainInv/rewardStep', score_tensor, count)
             agent.writer.add_scalar('trainInv/rewardWall', score)

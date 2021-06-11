@@ -118,8 +118,9 @@ target_link_libraries(LLVMgRPC
 
 
 target_include_directories(LLVMgRPC PRIVATE ${LLVM_INCLUDE_DIR}/Service)
-target_include_directories(LLVMgRPC PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-target_include_directories(LLVMgRPC PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/Include)
+target_include_directories(LLVMgRPC PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(LLVMgRPC PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/Include)
+# target_include_directories(LLVMgRPC PUBLIC /home/cs18mtech11030/project/grpc_llvm/grpc_install/include)
 
 
 

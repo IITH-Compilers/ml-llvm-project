@@ -1,10 +1,10 @@
 #include "gRPCUtil.h"
-#include "RegisterAllocationInference.h"
+#include "RegisterAllocationInference.grpc.pb.h"
 #include <grpcpp/grpcpp.h>
 #include <string>
 
 using namespace grpc;
-using namespace Inference;
+using namespace registerallocationinference;
 
 // Register Service or Stub
 template int gRPCUtil::SetStub<RegisterAllocationInference>();

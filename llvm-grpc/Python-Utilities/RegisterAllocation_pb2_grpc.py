@@ -22,8 +22,8 @@ class RegisterAllocationStub(object):
                 )
         self.codeGen = channel.unary_unary(
                 '/registerallocation.RegisterAllocation/codeGen',
-                request_serializer=RegisterAllocation__pb2.ColorData.SerializeToString,
-                response_deserializer=RegisterAllocation__pb2.Empty.FromString,
+                request_serializer=RegisterAllocation__pb2.Data.SerializeToString,
+                response_deserializer=RegisterAllocation__pb2.GraphList.FromString,
                 )
 
 
@@ -39,7 +39,7 @@ class RegisterAllocationServicer(object):
         raise NotImplementedError('Method not implemented!')
 
     def codeGen(self, request, context):
-        """RPC function to send register color data for codegen
+        """RPC function to send data for codegen
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -55,8 +55,8 @@ def add_RegisterAllocationServicer_to_server(servicer, server):
             ),
             'codeGen': grpc.unary_unary_rpc_method_handler(
                     servicer.codeGen,
-                    request_deserializer=RegisterAllocation__pb2.ColorData.FromString,
-                    response_serializer=RegisterAllocation__pb2.Empty.SerializeToString,
+                    request_deserializer=RegisterAllocation__pb2.Data.FromString,
+                    response_serializer=RegisterAllocation__pb2.GraphList.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -98,7 +98,7 @@ class RegisterAllocation(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/registerallocation.RegisterAllocation/codeGen',
-            RegisterAllocation__pb2.ColorData.SerializeToString,
-            RegisterAllocation__pb2.Empty.FromString,
+            RegisterAllocation__pb2.Data.SerializeToString,
+            RegisterAllocation__pb2.GraphList.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

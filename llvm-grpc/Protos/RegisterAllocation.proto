@@ -12,8 +12,8 @@ service RegisterAllocation{
 
 	// RPC function to get interference graphs
   rpc getGraphs(Path) returns (GraphList) {}
-  // RPC function to send register color data for codegen
-  rpc codeGen(ColorData) returns (Empty) {}
+  // RPC function to send data for codegen
+  rpc codeGen(Data) returns (GraphList) {}
  
 }
 
@@ -26,9 +26,10 @@ message GraphList {
   bytes payload=1;
 }
 
-message ColorData {
-  string irpath = 1;
-  bytes payload=2;
+message Data {
+  string message = 1;
+  uint32 reg = 2;
+  int64 payload = 3;
 }
 
 message Empty {

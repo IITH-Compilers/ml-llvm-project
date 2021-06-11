@@ -2,42 +2,41 @@ import RegisterAllocationInference_pb2_grpc, RegisterAllocationInference_pb2
 
 from concurrent import futures
 import grpc
+import sys
+import traceback
+import json
 
-#import sys
-#sys.path.append('/home/cs20mtech12003/ML-Register-Allocation/model/ggnn_drl/v0/src')
-
-#import inference
-
-#import traceback
+sys.path.append('../../model/RegAlloc/ggnn_drl/v0/src')
+import inference
 
 
 class service_server(RegisterAllocationInference_pb2_grpc.RegisterAllocationInferenceServicer):
 
     def getColouring(self, request, context):
         
-        print(request.payload) #the interference graph (parse it with appropriate function)
-
-        '''inter_graph_list = request.payload.decode("utf-8")
-        
-        model_path = '/home/cs20mtech12003/ML-Register-Allocation/sample/trained_model/checkpoint-graphs-15.pth'
-        
         try:
-            color_data = inference.allocate_registers(inter_graph_list, model_path)
-            print("Color Data", color_data)
+            inter_graphs = request.payload.decode("utf-8")
+            
+            model_path = '../../model/RegAlloc/ggnn_drl/v0/trained_model/checkpoint-graphs-15.pth'
+            
+            # print(inter_graphs)
+            inter_graph_list = []
+            if type(inter_graphs) is not list:
+                inter_graph_list.append(inter_graphs)
+            # print(inter_graph_list)
+            color_data_list = inference.allocate_registers(inter_graph_list, model_path)
+            color_data = color_data_list[0]
+            # print("Color Data", color_data)
+            # color_data_bt = bytes(color_data, 'utf-8')
+            color_data_bt = json.dumps(color_data).encode('utf-8')
+            reply=RegisterAllocationInference_pb2.ColorData(payload=color_data_bt)
+            # print('replying.....', reply) 
+            return reply
         except:
+            print('Error')
             traceback.print_exc()
-            # print("Exception")'''
-
-        ##This part should be leveraging a trained model##
-        predJSonPath="/media/lavo07/lavo07/LLVM_GRPC/test/jsonfiles/fib.json"
-
-        with open(predJSonPath,'rb') as f:
-            file_content=f.read()
-
-        ##################################################
-        reply=RegisterAllocationInference_pb2.ColorData(payload=file_content)
-
-        return reply
+            raise
+       
 
 class Server:
 
@@ -45,7 +44,7 @@ class Server:
 
     def run():
 
-        server=grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+        server=grpc.server(futures.ThreadPoolExecutor(max_workers=20))
 
         RegisterAllocationInference_pb2_grpc.add_RegisterAllocationInferenceServicer_to_server(service_server(),server)
 

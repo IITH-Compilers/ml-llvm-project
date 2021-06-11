@@ -16,14 +16,17 @@ class GraphColorEnv:
         self.cur_node = None
         self.mode = config.mode
         self.color_assignment_map = {}
+        self.total_reward = 0
         
         
     def reward_formula(self, value, action):
-        reward = value
-
+        # reward = value
+        
+        reward = 0
         if action == self.spill_color_idx:
-            reward = -1000
+            reward = -value
             logging.info('Spill is choosen so rewarded {} to node_id={} with spillcost={}'.format(reward, self.ggnn.idx_nid[self.cur_node], value))
+        self.total_reward = self.total_reward + reward
         return reward
 
 
@@ -74,6 +77,7 @@ class GraphColorEnv:
         if False not in self.topology.discovered:
             response = utils.get_colored_graph(self.fun_id, self.fileName, self.functionName, self.color_assignment_map)
             done = True
+            reward = self.total_reward
             return (next_hidden_state[nodeChoosen], nodeChoosen), reward, done, response
 
         # next_hidden_state = next_hidden_state[possible_next_nodes]
@@ -94,7 +98,8 @@ class GraphColorEnv:
     # return the state of the graph, all the possible starting nodes
     def reset_env(self, graph, path=None):
         self.color_assignment_map = {}
-        
+        self.total_reward = 0
+
         logging.debug('reset the env.')
         if path is not None:
             attr = utils.getllFileAttributes(path)
