@@ -342,10 +342,14 @@ std::string MLRA::captureInterferenceGraph() {
     // File << VirtReg->overlaps(LIS->getInterval(Reg));
 #endif
     auto instVecMap = symbolic->getInstVecMap();
-    LLVM_DEBUG(errs() << "Instructions in map:\n"; for (auto inst
+    /*LLVM_DEBUG(errs() << "Instructions in map:\n"; for (auto inst
                                                         : instVecMap) {
-      inst.first->dump();
-    } errs() << "==========================================\n");
+      if ( inst.first){
+           inst.first->dump();
+      }else{
+      errs () << "Null pointer to instructions\n";
+      }
+    } errs() << "==========================================\n");*/
     std::string segmentInst = "";
     if (!VirtReg->segments.empty()) {
 
@@ -444,7 +448,7 @@ std::string MLRA::captureInterferenceGraph() {
   LLVM_DEBUG(dbgs() << "\n************ LIS **************\n");
   LLVM_DEBUG(LIS->dump());
   LLVM_DEBUG(errs() << "\ncaptureInterference() call ended.\n");
-this->graph = graph;
+// this->graph = graph;
 return graph;
 }
 
@@ -591,6 +595,8 @@ void MLRA::inference(MachineFunction &mf){
 
     std::string graph = captureInterferenceGraph();
     
+    // errs () << "interference graph : " << graph << "\n";
+
     if(graph != ""){
     registerallocationinference::GraphList request;
     registerallocationinference::ColorData reply;
@@ -600,8 +606,12 @@ void MLRA::inference(MachineFunction &mf){
     grpc::ClientContext context;
 
     grpc::Status status = Stub->getColouring(&context, request, &reply);
-    //errs () << "Predictions : " << reply.payload() << "\n";
-    assert(reply.payload() != "" && "Prediction is not valid ");
+    // errs () << "Predictions : " << reply.payload() << " +\n";
+    // assert(reply.payload() != "" && "Prediction is not valid ");
+    if (reply.payload() == ""){
+      	    errs () << "*****Warning -"<< mf.getName() << " - Predictions not generated for the graph\n";
+	    return;
+    }
     parsePredictionJson(reply.payload());
     if (this->FunctionVirtRegToColorMap.find(mf.getName()) !=
         this->FunctionVirtRegToColorMap.end()) {

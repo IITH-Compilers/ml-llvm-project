@@ -13,16 +13,16 @@ import inference
 class service_server(RegisterAllocationInference_pb2_grpc.RegisterAllocationInferenceServicer):
 
     def getColouring(self, request, context):
-        inter_graphs = request.payload.decode("utf-8")
         
-        model_path = '../../model/RegAlloc/ggnn_drl/v0/trained_model/checkpoint-graphs-15.pth'
-        
-        # print(inter_graph_list)
-        inter_graph_list = []
-        if type(inter_graphs) is not list:
-            inter_graph_list.append(inter_graphs)
-
         try:
+            inter_graphs = request.payload.decode("utf-8")
+            
+            model_path = '../../model/RegAlloc/ggnn_drl/v0/trained_model/checkpoint-graphs-15.pth'
+            
+            # print(inter_graphs)
+            inter_graph_list = []
+            if type(inter_graphs) is not list:
+                inter_graph_list.append(inter_graphs)
             # print(inter_graph_list)
             color_data_list = inference.allocate_registers(inter_graph_list, model_path)
             color_data = color_data_list[0]
@@ -30,9 +30,10 @@ class service_server(RegisterAllocationInference_pb2_grpc.RegisterAllocationInfe
             # color_data_bt = bytes(color_data, 'utf-8')
             color_data_bt = json.dumps(color_data).encode('utf-8')
             reply=RegisterAllocationInference_pb2.ColorData(payload=color_data_bt)
-            # print('replying.....') 
+            # print('replying.....', reply) 
             return reply
         except:
+            print('Error')
             traceback.print_exc()
             raise
        
@@ -43,7 +44,7 @@ class Server:
 
     def run():
 
-        server=grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+        server=grpc.server(futures.ThreadPoolExecutor(max_workers=20))
 
         RegisterAllocationInference_pb2_grpc.add_RegisterAllocationInferenceServicer_to_server(service_server(),server)
 

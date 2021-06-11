@@ -77,7 +77,7 @@ void RegAllocBase::seedLiveRegs() {
         std::find(mlAllocatedRegs.begin(), mlAllocatedRegs.end(), Reg) !=
             mlAllocatedRegs.end())
       continue;
-    errs() << "Enqueing -- " << printReg(Reg, TRI) << "\n";
+    // errs() << "Enqueing -- " << printReg(Reg, TRI) << "\n";
     enqueue(&LIS->getInterval(Reg));
   }
 }
