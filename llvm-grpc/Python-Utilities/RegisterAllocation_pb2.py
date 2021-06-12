@@ -19,7 +19,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   syntax='proto3',
   serialized_options=b'\n#io.grpc.examples.registerallocationB\027RegisterAllocationProtoP\001\242\002\003REG',
   create_key=_descriptor._internal_create_key,
-  serialized_pb=b'\n\x18RegisterAllocation.proto\x12\x12registerallocation\"+\n\x04Path\x12\x0e\n\x06IRPath\x18\x01 \x01(\t\x12\x13\n\x0bSeedEmbPath\x18\x02 \x01(\t\"\x1c\n\tGraphList\x12\x0f\n\x07payload\x18\x01 \x01(\x0c\",\n\tColorData\x12\x0e\n\x06irpath\x18\x01 \x01(\t\x12\x0f\n\x07payload\x18\x02 \x01(\x0c\"\x07\n\x05\x45mpty2\xa3\x01\n\x12RegisterAllocation\x12\x46\n\tgetGraphs\x12\x18.registerallocation.Path\x1a\x1d.registerallocation.GraphList\"\x00\x12\x45\n\x07\x63odeGen\x12\x1d.registerallocation.ColorData\x1a\x19.registerallocation.Empty\"\x00\x42\x46\n#io.grpc.examples.registerallocationB\x17RegisterAllocationProtoP\x01\xa2\x02\x03REGb\x06proto3'
+  serialized_pb=b'\n\x18RegisterAllocation.proto\x12\x12registerallocation\"+\n\x04Path\x12\x0e\n\x06IRPath\x18\x01 \x01(\t\x12\x13\n\x0bSeedEmbPath\x18\x02 \x01(\t\"\x1c\n\tGraphList\x12\x0f\n\x07payload\x18\x01 \x01(\x0c\"5\n\x04\x44\x61ta\x12\x0f\n\x07message\x18\x01 \x01(\t\x12\x0b\n\x03reg\x18\x02 \x01(\r\x12\x0f\n\x07payload\x18\x03 \x01(\x03\"\x07\n\x05\x45mpty2\xa2\x01\n\x12RegisterAllocation\x12\x46\n\tgetGraphs\x12\x18.registerallocation.Path\x1a\x1d.registerallocation.GraphList\"\x00\x12\x44\n\x07\x63odeGen\x12\x18.registerallocation.Data\x1a\x1d.registerallocation.GraphList\"\x00\x42\x46\n#io.grpc.examples.registerallocationB\x17RegisterAllocationProtoP\x01\xa2\x02\x03REGb\x06proto3'
 )
 
 
@@ -96,25 +96,32 @@ _GRAPHLIST = _descriptor.Descriptor(
 )
 
 
-_COLORDATA = _descriptor.Descriptor(
-  name='ColorData',
-  full_name='registerallocation.ColorData',
+_DATA = _descriptor.Descriptor(
+  name='Data',
+  full_name='registerallocation.Data',
   filename=None,
   file=DESCRIPTOR,
   containing_type=None,
   create_key=_descriptor._internal_create_key,
   fields=[
     _descriptor.FieldDescriptor(
-      name='irpath', full_name='registerallocation.ColorData.irpath', index=0,
+      name='message', full_name='registerallocation.Data.message', index=0,
       number=1, type=9, cpp_type=9, label=1,
       has_default_value=False, default_value=b"".decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
     _descriptor.FieldDescriptor(
-      name='payload', full_name='registerallocation.ColorData.payload', index=1,
-      number=2, type=12, cpp_type=9, label=1,
-      has_default_value=False, default_value=b"",
+      name='reg', full_name='registerallocation.Data.reg', index=1,
+      number=2, type=13, cpp_type=3, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='payload', full_name='registerallocation.Data.payload', index=2,
+      number=3, type=3, cpp_type=2, label=1,
+      has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
@@ -131,7 +138,7 @@ _COLORDATA = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=123,
-  serialized_end=167,
+  serialized_end=176,
 )
 
 
@@ -155,13 +162,13 @@ _EMPTY = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=169,
-  serialized_end=176,
+  serialized_start=178,
+  serialized_end=185,
 )
 
 DESCRIPTOR.message_types_by_name['Path'] = _PATH
 DESCRIPTOR.message_types_by_name['GraphList'] = _GRAPHLIST
-DESCRIPTOR.message_types_by_name['ColorData'] = _COLORDATA
+DESCRIPTOR.message_types_by_name['Data'] = _DATA
 DESCRIPTOR.message_types_by_name['Empty'] = _EMPTY
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
@@ -179,12 +186,12 @@ GraphList = _reflection.GeneratedProtocolMessageType('GraphList', (_message.Mess
   })
 _sym_db.RegisterMessage(GraphList)
 
-ColorData = _reflection.GeneratedProtocolMessageType('ColorData', (_message.Message,), {
-  'DESCRIPTOR' : _COLORDATA,
+Data = _reflection.GeneratedProtocolMessageType('Data', (_message.Message,), {
+  'DESCRIPTOR' : _DATA,
   '__module__' : 'RegisterAllocation_pb2'
-  # @@protoc_insertion_point(class_scope:registerallocation.ColorData)
+  # @@protoc_insertion_point(class_scope:registerallocation.Data)
   })
-_sym_db.RegisterMessage(ColorData)
+_sym_db.RegisterMessage(Data)
 
 Empty = _reflection.GeneratedProtocolMessageType('Empty', (_message.Message,), {
   'DESCRIPTOR' : _EMPTY,
@@ -203,8 +210,8 @@ _REGISTERALLOCATION = _descriptor.ServiceDescriptor(
   index=0,
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
-  serialized_start=179,
-  serialized_end=342,
+  serialized_start=188,
+  serialized_end=350,
   methods=[
   _descriptor.MethodDescriptor(
     name='getGraphs',
@@ -221,8 +228,8 @@ _REGISTERALLOCATION = _descriptor.ServiceDescriptor(
     full_name='registerallocation.RegisterAllocation.codeGen',
     index=1,
     containing_service=None,
-    input_type=_COLORDATA,
-    output_type=_EMPTY,
+    input_type=_DATA,
+    output_type=_GRAPHLIST,
     serialized_options=None,
     create_key=_descriptor._internal_create_key,
   ),

@@ -93,7 +93,16 @@ class MLRA : public RegAllocBase,
              public registerallocation::RegisterAllocation::Service {
 
   // context
+  SlotIndexes *Indexes;
   MachineFunction *MF;
+  MachineBlockFrequencyInfo *MBFI;
+  MachineDominatorTree *DomTree;
+  MachineLoopInfo *Loops;
+  AAResults *AA;
+  LiveDebugVariables *DebugVars;
+  std::unique_ptr<SplitAnalysis> SA;
+  std::unique_ptr<SplitEditor> SE;
+
   int FunctionCounter = 0;
 
   DenseMap<unsigned, unsigned> VirtRegToColor;
@@ -124,7 +133,10 @@ public:
   }
 
 protected:
-  void init(MachineFunction *MF);
+  // void init(MachineFunction *MF, SlotIndexes *Indexes,
+  //           MachineBlockFrequencyInfo *MBFI, MachineDominatorTree *DomTree,
+  //           MachineLoopInfo *Loops, AAResults *AA,
+  //           LiveDebugVariables *DebugVars);
   // Logic to dump the dot
   // void dumpInterferenceGraph(MachineFunction &mf);
   std::string captureInterferenceGraph();
@@ -134,11 +146,14 @@ protected:
   // Custom RL allocator
   void allocatePhysRegsViaRL();
 
-  void training_flow(MachineFunction &mf);
-  
-  void inference(MachineFunction &mf);
-  
-  void mlregalloc(MachineFunction &mf);
+  void training_flow();
+
+  void inference();
+
+  void MLRegAlloc(MachineFunction &MF, SlotIndexes &Indexes,
+                  MachineBlockFrequencyInfo &MBFI,
+                  MachineDominatorTree &DomTree, MachineLoopInfo &Loops,
+                  AAResults &AA, LiveDebugVariables &DebugVars);
   // get the Phyical register based upon virtual register type
   // like 8 bit, 16 bit, 32 bit, 64 bits and other more
   // For our reference see the X86RegisterInfo.td
@@ -146,10 +161,11 @@ protected:
   unsigned getPhyRegForColor(LiveInterval &VirtReg, unsigned color,
                              SmallVector<unsigned, 4> &SplitVRegs);
 
-  std::set<std::string> regClassSupported4_MLRA; 
-    std::map<std::string, std::map<std::string, int64_t>> parsePredictionJson(std::string jsonString){
-      // LLVM_DEBUG(errs() << jsonString << "\n");
-      if (Expected<json::Value> E = json::parse(jsonString)) {
+  std::set<std::string> regClassSupported4_MLRA;
+  std::map<std::string, std::map<std::string, int64_t>>
+  parsePredictionJson(std::string jsonString) {
+    // LLVM_DEBUG(errs() << jsonString << "\n");
+    if (Expected<json::Value> E = json::parse(jsonString)) {
 
       if (json::Object *J = E->getAsObject()) {
         if (json::Array *S = J->getArray("Predictions")) {
@@ -184,9 +200,10 @@ protected:
     assert(pred_file != "" && "Path is empty.");
     LLVM_DEBUG(errs() << pred_file << "\n");
     std::ifstream predColorFile(pred_file);
-    if(predColorFile.fail()){
-        errs () << "setPredictionFromFile- file does not exist at the location " << pred_file << "\n";
-        return this->FunctionVirtRegToColorMap;
+    if (predColorFile.fail()) {
+      errs() << "setPredictionFromFile- file does not exist at the location "
+             << pred_file << "\n";
+      return this->FunctionVirtRegToColorMap;
     }
     std::string jsonString;
     jsonString.assign((std::istreambuf_iterator<char>(predColorFile)),
@@ -270,10 +287,11 @@ protected:
   std::string targetName;
 
 private:
-  grpc::Status getGraphs(grpc::ServerContext *context,
-                         const registerallocation::Path *request,
-                         registerallocation::GraphList *response) override;
+  grpc::Status codeGen(grpc::ServerContext *context,
+                       const registerallocation::Data *request,
+                       registerallocation::GraphList *response) override;
   void startServer();
+  void splitVirtReg(unsigned VirtReg, int splitPoint);
 };
 
 } // namespace llvm

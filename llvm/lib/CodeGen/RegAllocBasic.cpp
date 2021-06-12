@@ -312,7 +312,12 @@ bool RABasic::runOnMachineFunction(MachineFunction &mf) {
 
   SpillerInstance.reset(createInlineSpiller(*this, *MF, *VRM));
 
-  mlregalloc(mf);
+  MLRegAlloc(*MF, getAnalysis<SlotIndexes>(),
+             getAnalysis<MachineBlockFrequencyInfo>(),
+             getAnalysis<MachineDominatorTree>(),
+             getAnalysis<MachineLoopInfo>(),
+             getAnalysis<AAResultsWrapperPass>().getAAResults(),
+             getAnalysis<LiveDebugVariables>());
 
   allocatePhysRegs();
   postOptimization();

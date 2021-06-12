@@ -3248,7 +3248,7 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
   SetOfBrokenHints.clear();
   LastEvicted.clear();
 
-  mlregalloc(mf);
+  MLRegAlloc(*MF, *Indexes, *MBFI, *DomTree, *Loops, *AA, *DebugVars);
 
   allocatePhysRegs();
   tryHintsRecoloring();
