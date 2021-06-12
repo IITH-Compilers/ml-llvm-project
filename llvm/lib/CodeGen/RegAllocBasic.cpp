@@ -93,7 +93,7 @@ public:
   void enqueue(LiveInterval *LI) override { Queue.push(LI); }
 
   LiveInterval *dequeue() override {
-    if (Queue.empty()) 
+    if (Queue.empty())
       return nullptr;
     LiveInterval *LI = Queue.top();
     Queue.pop();
@@ -312,7 +312,12 @@ bool RABasic::runOnMachineFunction(MachineFunction &mf) {
 
   SpillerInstance.reset(createInlineSpiller(*this, *MF, *VRM));
 
-  mlregalloc(mf);
+  MLRegAlloc(*MF, getAnalysis<SlotIndexes>(),
+             getAnalysis<MachineBlockFrequencyInfo>(),
+             getAnalysis<MachineDominatorTree>(),
+             getAnalysis<MachineLoopInfo>(),
+             getAnalysis<AAResultsWrapperPass>().getAAResults(),
+             getAnalysis<LiveDebugVariables>());
 
   allocatePhysRegs();
   postOptimization();

@@ -130,13 +130,13 @@ MLRA::MLRA() {
     setPredictionFromFile(pred_file);
   }
   std::string config_colorMap =
-      "/home/cs18mtech11030/project/grpc_llvm/ML-Register-Allocation/llvm/lib/"
-      "CodeGen/MLRegAlloc/config_json/RegColorMap_Both.json";
+      "/home/ubuntu/Desktop/pgmEncodingsWorkspace/tmp/ML-Register-Allocation/"
+      "llvm/lib/CodeGen/MLRegAlloc/config_json/RegColorMap_Both.json";
   loadTargetRegisterConfig(config_colorMap);
 
   std::string vocab =
-      "/home/cs18mtech11030/project/grpc_llvm/ML-Register-Allocation/llvm/lib/"
-      "CodeGen/MIR2Vec/Embeddings/seedEmbedding_1500E_300D.txt";
+      "/home/ubuntu/Desktop/pgmEncodingsWorkspace/tmp/ML-Register-Allocation/"
+      "llvm/lib/CodeGen/MIR2Vec/Embeddings/seedEmbedding_1500E_300D.txt";
   symbolic = new MIR2Vec_Symbolic(vocab);
 
   client.SetStub<registerallocationinference::RegisterAllocationInference>();
@@ -158,7 +158,7 @@ grpc::Status MLRA::codeGen(grpc::ServerContext *context,
   if (request->message() == "Exit")
     exit_requested->set_value();
   if (request->message() == "Split") {
-    unsigned splitReg = request->reg();
+    unsigned splitReg = Register::index2VirtReg(request->reg());
     int splitPoint = request->payload();
     splitVirtReg(splitReg, splitPoint);
   }
@@ -185,42 +185,6 @@ void MLRA::startServer() {
   serving_thread.join();
 }
 
-void MLRA::init(MachineFunction *MF, SlotIndexes *Indexes,
-                MachineBlockFrequencyInfo *MBFI, MachineDominatorTree *DomTree,
-                MachineLoopInfo *Loops, AAResults *AA,
-                LiveDebugVariables *DebugVars) {
-  this->MF = MF;
-  this->Indexes = Indexes;
-  this->MBFI = MBFI;
-  this->DomTree = DomTree;
-  this->Loops = Loops;
-  this->AA = AA;
-  this->DebugVars = DebugVars;
-  mlAllocatedRegs.clear();
-  FunctionCounter++;
-
-  SA.reset(new SplitAnalysis(*VRM, *LIS, *Loops));
-  SE.reset(new SplitEditor(*SA, *AA, *LIS, *VRM, *DomTree, *MBFI));
-
-  switch (MF->getTarget().getTargetTriple().getArch()) {
-  case Triple::ArchType::aarch64: {
-    this->targetName = "AArch64";
-    break;
-  }
-  case Triple::ArchType::x86:
-  case Triple::ArchType::x86_64: {
-    this->targetName = "X86";
-    break;
-  }
-  default:
-    this->targetName = "UnKnown";
-  }
-
-  MF->print(errs());
-
-  startServer();
-}
-
 void MLRA::splitVirtReg(unsigned splitReg, int splitPoint) {
   assert(LIS->hasInterval(splitReg) && "VirtReg should be present");
 
@@ -242,7 +206,7 @@ void MLRA::splitVirtReg(unsigned splitReg, int splitPoint) {
   SmallVector<unsigned, 5> NewVRegs;
   LiveRangeEdit LREdit(VirtReg, NewVRegs, *MF, *LIS, VRM);
   SE->reset(LREdit, SplitEditor::SM_Size);
-
+  SlotIndex SegStart;
   for (unsigned i = 0; i != Uses.size(); ++i) {
     if (const MachineInstr *MI = Indexes->getInstructionFromIndex(Uses[i]))
       if (MI->isFullCopy()) {
@@ -251,12 +215,13 @@ void MLRA::splitVirtReg(unsigned splitReg, int splitPoint) {
       }
     if (i == splitPoint) {
       SE->openIntv();
-      SlotIndex SegStart = SE->enterIntvBefore(Uses[i]);
-      SlotIndex SegStop = SE->leaveIntvAfter(Uses[i]);
-      SE->useIntv(SegStart, SegStop);
+      SegStart = SE->enterIntvBefore(Uses[i]);
       break;
     }
   }
+  assert(SegStart);
+  SlotIndex SegStop = SE->leaveIntvAfter(*Uses.end());
+  SE->useIntv(SegStart, SegStop);
 
   if (LREdit.empty()) {
     LLVM_DEBUG(dbgs() << "All uses were copies.\n");
@@ -266,6 +231,10 @@ void MLRA::splitVirtReg(unsigned splitReg, int splitPoint) {
   SmallVector<unsigned, 8> IntvMap;
   SE->finish(&IntvMap);
   DebugVars->splitRegister(VirtReg->reg, LREdit.regs(), *LIS);
+
+  errs() << "--------------------After "
+            "splitting----------------------------------\n";
+  MF->print(errs());
 }
 
 void MLRA::dumpInterferenceGraph() {
@@ -638,28 +607,27 @@ void MLRA::allocatePhysRegsViaRL() {
                        "allocatePhysRegsViaRL() (END)**********************\n");
 }
 
-void MLRA::training_flow(MachineFunction &mf) {
+void MLRA::training_flow() {
   assert(enable_experimental_mlra && "mlra-experimental should be true.");
-  init(&mf, Indexes, MBFI, DomTree, Loops, AA, DebugVars);
   if (enable_dump_ig_dot) {
-    symbolic->generateSymbolicEncodings(mf);
+    symbolic->generateSymbolicEncodings(*MF);
     dumpInterferenceGraph();
   }
 
-  if (this->FunctionVirtRegToColorMap.find(mf.getName()) !=
+  if (this->FunctionVirtRegToColorMap.find(MF->getName()) !=
       this->FunctionVirtRegToColorMap.end()) {
     allocatePhysRegsViaRL();
   }
   errs() << "The ML allocated virtual registers: /n";
   for (auto i : mlAllocatedRegs)
     errs() << printReg(i, TRI) << "\t";
-  errs() << "Done MLRA allocation for : " << mf.getName() << '\n';
+  errs() << "Done MLRA allocation for : " << MF->getName() << '\n';
 }
 
-void MLRA::inference(MachineFunction &mf) {
+void MLRA::inference() {
   assert(enable_mlra_inference && "mlra-inference should be true.");
-  init(&mf, Indexes, MBFI, DomTree, Loops, AA, DebugVars);
-  symbolic->generateSymbolicEncodings(mf);
+
+  symbolic->generateSymbolicEncodings(*MF);
 
   std::string graph = captureInterferenceGraph();
 
@@ -677,12 +645,12 @@ void MLRA::inference(MachineFunction &mf) {
     // errs () << "Predictions : " << reply.payload() << " +\n";
     // assert(reply.payload() != "" && "Prediction is not valid ");
     if (reply.payload() == "") {
-      errs() << "*****Warning -" << mf.getName()
+      errs() << "*****Warning -" << MF->getName()
              << " - Predictions not generated for the graph\n";
       return;
     }
     parsePredictionJson(reply.payload());
-    if (this->FunctionVirtRegToColorMap.find(mf.getName()) !=
+    if (this->FunctionVirtRegToColorMap.find(MF->getName()) !=
         this->FunctionVirtRegToColorMap.end()) {
       allocatePhysRegsViaRL();
     }
@@ -690,74 +658,55 @@ void MLRA::inference(MachineFunction &mf) {
                for (auto i
                     : mlAllocatedRegs) errs()
                << printReg(i, TRI) << "\t";
-               errs() << "Done MLRA allocation for : " << mf.getName() << '\n');
+               errs() << "Done MLRA allocation for : " << MF->getName()
+                      << '\n');
   }
 }
 
-void MLRA::mlregalloc(MachineFunction &mf) {
+void MLRA::MLRegAlloc(MachineFunction &MF, SlotIndexes &Indexes,
+                      MachineBlockFrequencyInfo &MBFI,
+                      MachineDominatorTree &DomTree, MachineLoopInfo &Loops,
+                      AAResults &AA, LiveDebugVariables &DebugVars) {
   assert(!(enable_experimental_mlra && enable_mlra_inference) &&
          "mlra-experimental and mlra-inference both are enabled.");
+
+  this->MF = &MF;
+  this->Indexes = &Indexes;
+  this->MBFI = &MBFI;
+  this->DomTree = &DomTree;
+  this->Loops = &Loops;
+  this->AA = &AA;
+  this->DebugVars = &DebugVars;
+
+  mlAllocatedRegs.clear();
+  FunctionCounter++;
+
+  SA.reset(new SplitAnalysis(*VRM, *LIS, Loops));
+  SE.reset(new SplitEditor(*SA, AA, *LIS, *VRM, DomTree, MBFI));
+
+  switch (MF.getTarget().getTargetTriple().getArch()) {
+  case Triple::ArchType::aarch64: {
+    this->targetName = "AArch64";
+    break;
+  }
+  case Triple::ArchType::x86:
+  case Triple::ArchType::x86_64: {
+    this->targetName = "X86";
+    break;
+  }
+  default:
+    this->targetName = "UnKnown";
+  }
+
+  MF.print(errs());
+
+  startServer();
+
   if (enable_experimental_mlra) {
-    training_flow(mf);
+    training_flow();
   }
 
   if (enable_mlra_inference) {
-    inference(mf);
+    inference();
   }
 }
-// bool MLRA::runOnMachineFunction(MachineFunction &mf) {
-//   LLVM_DEBUG(dbgs() << "********** ML REGISTER ALLOCATION **********\n"
-//                     << "********** Function: " << mf.getName() << '\n');
-//   this->targetName = "X86";
-
-//   FunctionCounter++;
-//   MF = &mf;
-//   TRI = MF->getSubtarget().getRegisterInfo();
-//   TII = MF->getSubtarget().getInstrInfo();
-//   RCI.runOnMachineFunction(mf);
-//   VRM = &getAnalysis<VirtRegMap>();
-//   LIS = &getAnalysis<LiveIntervals>();
-//   Matrix = &getAnalysis<LiveRegMatrix>();
-//   MRI = &VRM->getRegInfo();
-//   MRI->freezeReservedRegs(VRM->getMachineFunction());
-//   RegClassInfo.runOnMachineFunction(VRM->getMachineFunction());
-
-//   // Indexes = &getAnalysis<SlotIndexes>();
-//   // MBFI = &getAnalysis<MachineBlockFrequencyInfo>();
-//   // DomTree = &getAnalysis<MachineDominatorTree>();
-//   ORE = &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
-//   // Loops = &getAnalysis<MachineLoopInfo>();
-//   // Bundles = &getAnalysis<EdgeBundles>();
-//   // SpillPlacer = &getAnalysis<SpillPlacement>();
-//   // DebugVars = &getAnalysis<LiveDebugVariables>();
-//   // AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
-
-//   // Point of change
-//   if (enable_dump_ig_dot) {
-//     symbolic->generateSymbolicEncodings(mf);
-//     LLVM_DEBUG(errs() << "\n******************* Dump the graphs "
-//                          "(START)*************************** \n\n");
-//     dumpInterferenceGraph();
-//     LLVM_DEBUG(errs() << "\n******************* Dump the graphs "
-//                          "(END)*************************** \n\n");
-//   }
-
-//   if (this->FunctionVirtRegToColorMap.find(mf.getName()) !=
-//       this->FunctionVirtRegToColorMap.end()) {
-//     mlAllocatedRegs.clear();
-//     LLVM_DEBUG(
-//         errs() << "********************************* Running ML "
-//                   "allocatePhysRegsViaRL() (START)**********************\n");
-//     allocatePhysRegsViaRL();
-//     LLVM_DEBUG(
-//         errs() << "********************************* Running ML "
-//                   "allocatePhysRegsViaRL() (END)**********************\n");
-//   }
-//   errs() << "The ML allocated virtual registers: /n";
-//   for (auto i : mlAllocatedRegs)
-//     errs() << printReg(i, TRI) << "\t";
-//   errs() << "Done MLRA allocation for : " << mf.getName() << '\n';
-//   MF->verify(this, "After mlra.");
-//   MF->dump();
-//   return true;
-// }
