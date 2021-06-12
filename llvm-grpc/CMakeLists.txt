@@ -45,7 +45,7 @@ file(GLOB proto_list ${CMAKE_CURRENT_SOURCE_DIR}/Protos/*.proto)
 
 set(proto_dir ${CMAKE_CURRENT_SOURCE_DIR}/Protos)
 
-file(MAKE_DIRECTORY ${LLVM_INCLUDE_DIR}/Service)
+file(MAKE_DIRECTORY ${LLVM_INCLUDE_DIR}/grpc)
 
 #set(LLVM_GRPC_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/Include" CACHE PATH "llvm-gRPC include directories")
 
@@ -56,22 +56,18 @@ foreach(proto ${proto_list})
   get_filename_component(proto_name ${proto} NAME_WLE)
   file(GLOB cc_file ${CMAKE_CURRENT_SOURCE_DIR}/Service/${proto_name}/*.cc)
   set(cc_files ${cc_files} ${cc_file})
-  file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/Include/Service/${proto_name})
-  set(header_files ${header_files} "${CMAKE_CURRENT_SOURCE_DIR}/Include/Service/${proto_name}")
-  set(proto_srcs_list ${proto_srcs_list} "${LLVM_INCLUDE_DIR}/Service/${proto_name}.pb.cc")
-  set(grpc_srcs_list ${grpc_srcs_list} "${LLVM_INCLUDE_DIR}/Service/${proto_name}.grpc.pb.cc")
+  file(MAKE_DIRECTORY ${LLVM_INCLUDE_DIR}/grpc/${proto_name})
+  set(header_files ${header_files} "${LLVM_INCLUDE_DIR}/grpc/${proto_name}")
+  set(proto_srcs_list ${proto_srcs_list} "${LLVM_INCLUDE_DIR}/grpc/${proto_name}/${proto_name}.pb.cc")
+  set(grpc_srcs_list ${grpc_srcs_list} "${LLVM_INCLUDE_DIR}/grpc/${proto_name}/${proto_name}.grpc.pb.cc")
   add_custom_command(
-      OUTPUT "${CMAKE_CURRENT_SOURCE_DIR}/Include/Service/${proto_name}/${proto_name}.pb.cc"
-             "${CMAKE_CURRENT_SOURCE_DIR}/Include/Service/${proto_name}/${proto_name}.pb.h"
-             "${LLVM_INCLUDE_DIR}/Service/${proto_name}.pb.cc"
-             "${LLVM_INCLUDE_DIR}/Service/${proto_name}.pb.h"
-             "${CMAKE_CURRENT_SOURCE_DIR}/Include/Service/${proto_name}/${proto_name}.grpc.pb.cc"
-             "${CMAKE_CURRENT_SOURCE_DIR}/Include/Service/${proto_name}/${proto_name}.grpc.pb.h"
-             "${LLVM_INCLUDE_DIR}/Service/${proto_name}.grpc.pb.cc"
-             "${LLVM_INCLUDE_DIR}/Service/${proto_name}.grpc.pb.h"
+      OUTPUT "${LLVM_INCLUDE_DIR}/grpc/${proto_name}/${proto_name}.pb.cc"
+             "${LLVM_INCLUDE_DIR}/grpc/${proto_name}/${proto_name}.pb.h"
+             "${LLVM_INCLUDE_DIR}/grpc/${proto_name}/${proto_name}.grpc.pb.cc"
+             "${LLVM_INCLUDE_DIR}/grpc/${proto_name}/${proto_name}.grpc.pb.h"
       COMMAND ${_PROTOBUF_PROTOC}
-      ARGS --grpc_out "${LLVM_INCLUDE_DIR}/Service"
-      --cpp_out "${LLVM_INCLUDE_DIR}/Service"
+      ARGS --grpc_out "${LLVM_INCLUDE_DIR}/grpc/${proto_name}"
+      --cpp_out "${LLVM_INCLUDE_DIR}/grpc/${proto_name}"
       -I "${proto_dir}"
       --plugin=protoc-gen-grpc="${_GRPC_CPP_PLUGIN_EXECUTABLE}"
       "${proto}"
@@ -114,6 +110,14 @@ target_link_libraries(LLVMgRPC
 	          ${_GRPC_GRPCPP} 
 	          ${_PROTOBUF_LIBPROTOBUF}
 )
+
+file(GLOB publicHeaders ${CMAKE_CURRENT_SOURCE_DIR}/Include/*.h)
+
+add_custom_command(
+   TARGET LLVMgRPC POST_BUILD
+   COMMAND ${CMAKE_COMMAND} -E copy
+           ${publicHeaders}
+           ${LLVM_INCLUDE_DIR}/grpc)
 
 
 

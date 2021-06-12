@@ -64,9 +64,9 @@
 #include "llvm/Target/TargetMachine.h"
 
 // gRPC includes
-#include "Service/RegisterAllocation.grpc.pb.h"
-#include "Service/RegisterAllocationInference.grpc.pb.h"
-#include "gRPCUtil.h"
+#include "grpc/gRPCUtil.h"
+#include "grpc/RegisterAllocation/RegisterAllocation.grpc.pb.h"
+#include "grpc/RegisterAllocationInference/RegisterAllocationInference.grpc.pb.h"
 #include <grpcpp/grpcpp.h>
 
 #include <algorithm>
@@ -90,7 +90,8 @@
 namespace llvm {
 
 class MLRA : public RegAllocBase,
-             public registerallocation::RegisterAllocation::Service {
+             public registerallocation::RegisterAllocation::Service,
+             public gRPCUtil {
 
   // context
   SlotIndexes *Indexes;
@@ -290,7 +291,6 @@ private:
   grpc::Status codeGen(grpc::ServerContext *context,
                        const registerallocation::Data *request,
                        registerallocation::GraphList *response) override;
-  void startServer();
   void splitVirtReg(unsigned VirtReg, int splitPoint);
 };
 

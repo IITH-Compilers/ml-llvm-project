@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "RegisterAllocationInference.h"
-#include "gRPCUtil.h"
+#include "grpc/RegisterAllocationInference/RegisterAllocationInference.grpc.pb.h"
+#include "grpc/gRPCUtil.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Pass.h"
@@ -21,19 +21,25 @@ using namespace llvm;
 
 #define DEBUG_TYPE "hello"
 
+using grpc::Status;
+using grpc::ServerContext;
+using registerallocationinference::GraphList;
+using registerallocationinference::ColorData;
+using registerallocationinference::RegisterAllocationInference;
+
+
 STATISTIC(HelloCounter, "Counts number of functions greeted");
 
 namespace {
 // Hello - The first implementation, without getAnalysisUsage.
-struct Hello : public FunctionPass {
+struct Hello : public FunctionPass,gRPCUtil {
   static char ID; // Pass identification, replacement for typeid
-  Inference::RegisterAllocationInference::Stub *Stub = nullptr;
-  gRPCUtil client;
-  Inference::GraphList request;
-  Inference::ColorData reply;
+  RegisterAllocationInference::Stub *Stub = nullptr;
+  GraphList request;
+  ColorData reply;
   Hello() : FunctionPass(ID) {
-    client.SetStub<Inference::RegisterAllocationInference>();
-    Stub = (Inference::RegisterAllocationInference::Stub *)client.getStub();
+    SetStub<RegisterAllocationInference>();
+    Stub = (RegisterAllocationInference::Stub *)this->getStub();
   }
 
   bool runOnFunction(Function &F) override {
@@ -73,6 +79,9 @@ struct Hello2 : public FunctionPass {
 };
 } // namespace
 
+
+
 char Hello2::ID = 0;
 static RegisterPass<Hello2>
     Y("hello2", "Hello World Pass (with getAnalysisUsage implemented)");
+

@@ -1,0 +1,7 @@
+#ifndef MLRA_CONFIG_H
+#define MLRA_CONFIG_H
+
+#define COLORMAP_PATH "@COLORMAP@"
+#define VOCAB_PATH "@VOCAB@"
+
+#endif // MLRA_CONFIG_H

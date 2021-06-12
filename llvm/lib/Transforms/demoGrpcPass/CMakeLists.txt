@@ -10,7 +10,7 @@ if(WIN32 OR CYGWIN)
   set(LLVM_LINK_COMPONENTS Core Support)
 endif()
 
-add_llvm_library(LLVMHello MODULE BUILDTREE_ONLY
+add_llvm_library(LLVMHelloGRPC MODULE BUILDTREE_ONLY
   Hello.cpp
 
   LINK_COMPONENTS
@@ -21,5 +21,4 @@ add_llvm_library(LLVMHello MODULE BUILDTREE_ONLY
   PLUGIN_TOOL
   opt
   )
-
 

@@ -85,6 +85,7 @@
 #include <utility>
 #include <vector>
 
+#include "Config.h"
 // #include "Service/RegisterAllocationInference/RegisterAllocationInference.h"
 
 #define DIS_SANITY_CHECK 1
@@ -123,26 +124,20 @@ cl::opt<bool> MLRA::enable_mlra_inference("mlra-inference", cl::Hidden,
                                           cl::init(false));
 
 registerallocationinference::RegisterAllocationInference::Stub *Stub = nullptr;
-gRPCUtil client;
+// gRPCUtil client;
 
 MLRA::MLRA() {
   if (pred_file != "") {
     setPredictionFromFile(pred_file);
   }
-  std::string config_colorMap =
-      "/home/ubuntu/Desktop/pgmEncodingsWorkspace/tmp/ML-Register-Allocation/"
-      "llvm/lib/CodeGen/MLRegAlloc/config_json/RegColorMap_Both.json";
-  loadTargetRegisterConfig(config_colorMap);
 
-  std::string vocab =
-      "/home/ubuntu/Desktop/pgmEncodingsWorkspace/tmp/ML-Register-Allocation/"
-      "llvm/lib/CodeGen/MIR2Vec/Embeddings/seedEmbedding_1500E_300D.txt";
-  symbolic = new MIR2Vec_Symbolic(vocab);
+  loadTargetRegisterConfig(std::string(COLORMAP_PATH));
+  symbolic = new MIR2Vec_Symbolic(VOCAB_PATH);
 
-  client.SetStub<registerallocationinference::RegisterAllocationInference>();
+  SetStub<registerallocationinference::RegisterAllocationInference>();
 
   Stub = (registerallocationinference::RegisterAllocationInference::Stub *)
-             client.getStub();
+      getStub();
 }
 
 MLRA::MLRA(DenseMap<unsigned, unsigned> VirtRegToColor) {
@@ -164,25 +159,6 @@ grpc::Status MLRA::codeGen(grpc::ServerContext *context,
   }
 
   return Status::OK;
-}
-
-void MLRA::startServer() {
-  grpc::ServerBuilder builder;
-  std::string server_address("0.0.0.0:50051");
-  builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
-  builder.RegisterService(this);
-  exit_requested = new std::promise<void>();
-  std::unique_ptr<grpc::Server> server(builder.BuildAndStart());
-  errs() << "Server Listening on " << server_address << "\n";
-  auto serveFn = [&]() { server->Wait(); };
-
-  std::thread serving_thread(serveFn);
-
-  auto f = exit_requested->get_future();
-  f.wait();
-  server->Shutdown();
-  delete exit_requested;
-  serving_thread.join();
 }
 
 void MLRA::splitVirtReg(unsigned splitReg, int splitPoint) {
@@ -700,7 +676,7 @@ void MLRA::MLRegAlloc(MachineFunction &MF, SlotIndexes &Indexes,
 
   MF.print(errs());
 
-  startServer();
+  RunService(this);
 
   if (enable_experimental_mlra) {
     training_flow();
