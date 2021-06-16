@@ -359,37 +359,33 @@ void MLRA::findOverlapingInterval(LiveInterval *VirtReg1,
                                   SmallVector<SlotIndex, 8> &startpts,
                                   SmallVector<SlotIndex, 8> &endpts) {
   for (auto first : VirtReg1->segments) {
-    errs() << "First: ";
-    first.dump();
+    LLVM_DEBUG(errs() << "First: "; first.dump());
     for (auto sec : VirtReg2->segments) {
-      errs() << "Sec: ";
-      sec.dump();
+      LLVM_DEBUG(errs() << "Sec: "; sec.dump());
       if (first.containsInterval(sec.start, sec.end)) {
-        errs() << "Overlap -- contains: ";
-        sec.start.print(errs());
-        // sec.end.print(errs());
-        errs() << "\n";
-        startpts.push_back(sec.start);
+        LLVM_DEBUG(errs() << "Overlap -- first contains second: ";
+                   first.start.print(errs());
+                   // sec.end.print(errs());
+                   errs() << "\nPushing it to startpts\n");
+        startpts.push_back(first.start);
+        // startpts.push_back(sec.start);
         // endpts.push_back(sec.end);
       } else if (sec.containsInterval(first.start, first.end)) {
-        errs() << "Overlap -- contains: ";
-        first.start.print(errs());
-        // first.end.print(errs());
-        errs() << "\n";
-        startpts.push_back(first.start);
+        LLVM_DEBUG(errs() << "Overlap -- second contains first: ";
+                   sec.start.print(errs());
+                   // first.end.print(errs());
+                   errs() << "\nPushing it to endpts\n");
+        endpts.push_back(sec.start);
+        // startpts.push_back(first.start);
         // endpts.push_back(first.end);
       } else if (sec.start < first.end && sec.end > first.end) {
-        errs() << "Overlap: ";
-        sec.start.print(errs());
-        first.end.print(errs());
-        errs() << "\n";
+        LLVM_DEBUG(errs() << "Overlap: "; sec.start.print(errs());
+                   first.end.print(errs()); errs() << "\n");
         startpts.push_back(sec.start);
         endpts.push_back(first.end);
       } else if (first.start < sec.end && sec.start < first.start) {
-        errs() << "Overlap: ";
-        first.start.print(errs());
-        sec.end.print(errs());
-        errs() << "\n";
+        LLVM_DEBUG(errs() << "Overlap: "; first.start.print(errs());
+                   sec.end.print(errs()); errs() << "\n");
         startpts.push_back(first.start);
         endpts.push_back(sec.end);
       }
@@ -468,6 +464,8 @@ void MLRA::captureRegisterProfile() {
   for (unsigned i = 0, e = MRI->getNumVirtRegs(); i < e; ++i) {
     RegisterProfile regProf;
     unsigned Reg = Register::index2VirtReg(i);
+    LLVM_DEBUG(errs() << "Starting to process - " << printReg(Reg, TRI)
+                      << "\n");
     LiveInterval *VirtReg = &LIS->getInterval(Reg);
     if (MRI->reg_nodbg_empty(Reg))
       continue;
@@ -488,6 +486,7 @@ void MLRA::captureRegisterProfile() {
     SmallMapVector<unsigned, SmallVector<SlotIndex, 8>, 8> overlapsEnd;
 
     for (unsigned j = i + 1; j < MRI->getNumVirtRegs(); ++j) {
+      LLVM_DEBUG(errs() << "%" << j << " under consideration\n");
       unsigned Reg1 = Register::index2VirtReg(j);
       if (MRI->reg_nodbg_empty(Reg1))
         continue;
@@ -544,7 +543,7 @@ void MLRA::captureRegisterProfile() {
 }
 
 void MLRA::printRegisterProfile() const {
-  LLVM_DEBUG(errs() << "\nPRinting regProfMap\n");
+  errs() << "\nPRinting regProfMap\n";
   for (auto rpi : regProfMap) {
     errs() << "ID = " << rpi.first << "\n";
     auto rp = rpi.second;
@@ -583,8 +582,8 @@ void MLRA::updateRegisterProfileAfterSplit(unsigned OldVReg,
   for (unsigned i = 0; i < 2; i++) {
     RegisterProfile rp;
     unsigned NewVRegIdx = Register::virtReg2Index(NewVRegs[i]);
-    errs() << "Updating RP for " << printReg(NewVRegs[i], TRI) << "--"
-           << NewVRegIdx + step << "\n";
+    LLVM_DEBUG(errs() << "Updating RP for " << printReg(NewVRegs[i], TRI)
+                      << "--" << NewVRegIdx + step << "\n");
 
     // unsigned Reg = Register::index2VirtReg(NewVRegs[i]);
     LiveInterval *VirtReg = &LIS->getInterval(NewVRegs[i]);
@@ -593,7 +592,8 @@ void MLRA::updateRegisterProfileAfterSplit(unsigned OldVReg,
     rp.spillWeight = VirtReg->weight;
 
     for (auto interference : oldRP.interferences) {
-      errs() << "Processing interference -- " << interference << "\n";
+      LLVM_DEBUG(errs() << "Processing interference -- " << interference
+                        << "\n");
       if (regProfMap[interference].cls.equals("Phy")) {
         if (Matrix->checkInterference(*VirtReg, interference)) {
           rp.interferences.insert(interference);
@@ -602,15 +602,14 @@ void MLRA::updateRegisterProfileAfterSplit(unsigned OldVReg,
         }
       } else {
         unsigned Reg = Register::index2VirtReg(interference - step);
-        errs() << "\t In virtual register: " << printReg(Reg, TRI) << "--"
-               << interference << "\n";
+        LLVM_DEBUG(errs() << "\t In virtual register: " << printReg(Reg, TRI)
+                          << "--" << interference << "\n");
         LiveInterval *VReg = &LIS->getInterval(Reg);
-        errs() << "\tWhose Live Interval is: ";
-        VReg->print(errs());
-        errs() << "\n\tAnd, the Live Interval of NewVirtReg is: ";
-        VirtReg->print(errs());
+        LLVM_DEBUG(errs() << "\tWhose Live Interval is: "; VReg->print(errs());
+                   errs() << "\n\tAnd, the Live Interval of NewVirtReg is: ";
+                   VirtReg->print(errs()));
         if (VirtReg->overlapsFrom(VReg, VReg->begin())) {
-          errs() << "\n\t It overlaps\n";
+          LLVM_DEBUG(errs() << "\n\t It overlaps\n");
           rp.interferences.insert(interference);
           regProfMap[interference].interferences.remove(OldVRegIdx + step);
           regProfMap[interference].interferences.insert(NewVRegIdx + step);
@@ -762,9 +761,10 @@ void MLRA::training_flow() {
       this->FunctionVirtRegToColorMap.end()) {
     allocatePhysRegsViaRL();
   }
-  errs() << "The ML allocated virtual registers: /n";
-  for (auto i : mlAllocatedRegs)
-    errs() << printReg(i, TRI) << "\t";
+  LLVM_DEBUG(errs() << "The ML allocated virtual registers: /n";
+             for (auto i
+                  : mlAllocatedRegs) errs()
+             << printReg(i, TRI) << "\t");
   errs() << "Done MLRA allocation for : " << MF->getName() << '\n';
 }
 
@@ -844,7 +844,7 @@ void MLRA::MLRegAlloc(MachineFunction &MF, SlotIndexes &Indexes,
     this->targetName = "UnKnown";
   }
 
-  MF.print(errs());
+  LLVM_DEBUG(MF.print(errs()));
 
   captureRegisterProfile();
 
