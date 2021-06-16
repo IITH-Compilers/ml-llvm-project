@@ -64,9 +64,9 @@
 #include "llvm/Target/TargetMachine.h"
 
 // gRPC includes
-#include "grpc/gRPCUtil.h"
 #include "grpc/RegisterAllocation/RegisterAllocation.grpc.pb.h"
 #include "grpc/RegisterAllocationInference/RegisterAllocationInference.grpc.pb.h"
+#include "grpc/gRPCUtil.h"
 #include <grpcpp/grpcpp.h>
 
 #include <algorithm>
@@ -76,7 +76,6 @@
 #include <iostream>
 #include <map>
 #include <memory>
-#include <queue>
 #include <set>
 #include <sstream>
 #include <tuple>
@@ -101,18 +100,14 @@ class MLRA : public RegAllocBase,
   MachineLoopInfo *Loops;
   AAResults *AA;
   LiveDebugVariables *DebugVars;
+  SpillPlacement *SpillPlacer;
   std::unique_ptr<SplitAnalysis> SA;
   std::unique_ptr<SplitEditor> SE;
 
   int FunctionCounter = 0;
-
   DenseMap<unsigned, unsigned> VirtRegToColor;
-
-protected:
-  static cl::opt<bool> enable_dump_ig_dot;
-  static cl::opt<std::string> pred_file;
-  static cl::opt<bool> enable_experimental_mlra;
-  static cl::opt<bool> enable_mlra_inference;
+  std::set<std::string> regClassSupported4_MLRA;
+  std::string targetName;
 
   MIR2Vec_Symbolic *symbolic;
   std::map<std::string, std::map<std::string, int64_t>>
@@ -120,41 +115,50 @@ protected:
 
   std::map<std::string, std::map<int64_t, int64_t>> target_Color2PhyRegMap;
   std::map<std::string, std::map<int64_t, int64_t>> target_PhyReg2ColorMap;
-  std::string graph;
-  std::map<std::string, std::string> Function2Graphs;
-
-public:
-  MLRA();
-  MLRA(DenseMap<unsigned, unsigned> VirtRegToColor);
-
-  std::string &getGraph() { return graph; }
-
-  std::map<std::string, std::string> &getGraphsForFunctions() {
-    return Function2Graphs;
-  }
 
 protected:
-  // void init(MachineFunction *MF, SlotIndexes *Indexes,
-  //           MachineBlockFrequencyInfo *MBFI, MachineDominatorTree *DomTree,
-  //           MachineLoopInfo *Loops, AAResults *AA,
-  //           LiveDebugVariables *DebugVars);
-  // Logic to dump the dot
-  // void dumpInterferenceGraph(MachineFunction &mf);
-  std::string captureInterferenceGraph();
-
-  void dumpInterferenceGraph();
-
-  // Custom RL allocator
-  void allocatePhysRegsViaRL();
-
-  void training_flow();
-
-  void inference();
-
+  MLRA();
+  MLRA(DenseMap<unsigned, unsigned> VirtRegToColor);
+  static cl::opt<bool> enable_dump_ig_dot;
+  static cl::opt<std::string> pred_file;
+  static cl::opt<bool> enable_experimental_mlra;
+  static cl::opt<bool> enable_mlra_inference;
   void MLRegAlloc(MachineFunction &MF, SlotIndexes &Indexes,
                   MachineBlockFrequencyInfo &MBFI,
                   MachineDominatorTree &DomTree, MachineLoopInfo &Loops,
-                  AAResults &AA, LiveDebugVariables &DebugVars);
+                  AAResults &AA, LiveDebugVariables &DebugVars,
+                  SpillPlacement &SpillPlacer);
+
+private:
+  struct RegisterProfile {
+    StringRef cls;
+    float spillWeight;
+    unsigned color;
+    SmallSetVector<unsigned, 8> interferences;
+    SmallMapVector<unsigned, SmallVector<SlotIndex, 8>, 8> overlapsStart;
+    SmallMapVector<unsigned, SmallVector<SlotIndex, 8>, 8> overlapsEnd;
+  };
+  SmallMapVector<unsigned, RegisterProfile, 16> regProfMap;
+
+  grpc::Status codeGen(grpc::ServerContext *context,
+                       const registerallocation::Data *request,
+                       registerallocation::GraphList *response) override;
+  bool splitVirtReg(unsigned VirtReg, int splitPoint,
+                    SmallVectorImpl<unsigned> &NewVRegs);
+  SmallVector<SlotIndex, 8> vecUnion(SmallVectorImpl<SlotIndex> const &,
+                                     SmallVectorImpl<SlotIndex> const &);
+  void findOverlapingInterval(LiveInterval *VirtReg1, LiveInterval *VirtReg2,
+                              SmallVector<SlotIndex, 8> &startpts,
+                              SmallVector<SlotIndex, 8> &endpts);
+  void captureRegisterProfile();
+  void printRegisterProfile() const;
+
+  void updateRegisterProfileAfterSplit(unsigned OldVReg,
+                                       SmallVector<unsigned, 2> NewVRegs);
+  void dumpInterferenceGraph();
+  void allocatePhysRegsViaRL();
+  void training_flow();
+  void inference();
   // get the Phyical register based upon virtual register type
   // like 8 bit, 16 bit, 32 bit, 64 bits and other more
   // For our reference see the X86RegisterInfo.td
@@ -162,7 +166,6 @@ protected:
   unsigned getPhyRegForColor(LiveInterval &VirtReg, unsigned color,
                              SmallVector<unsigned, 4> &SplitVRegs);
 
-  std::set<std::string> regClassSupported4_MLRA;
   std::map<std::string, std::map<std::string, int64_t>>
   parsePredictionJson(std::string jsonString) {
     // LLVM_DEBUG(errs() << jsonString << "\n");
@@ -263,9 +266,9 @@ protected:
                 if (color2PhyRegmap.size() > 0) {
                   this->target_Color2PhyRegMap[targetName] = color2PhyRegmap;
                   this->target_PhyReg2ColorMap[targetName] = PhyReg2Colormap;
-                  /* LLVM_DEBUG(errs () << "target Name " << targetName << "\n";
-                      for (auto entry : color2PhyRegmap)
-                      errs()<< entry.first << " " << entry.second << "\n");*/
+                  /* LLVM_DEBUG(errs () << "target Name " << targetName <<
+                     "\n"; for (auto entry : color2PhyRegmap) errs()<<
+                     entry.first << " " << entry.second << "\n");*/
                 }
               }
             }
@@ -284,14 +287,6 @@ protected:
                          FunctionVirtRegToColorMap) {
     this->FunctionVirtRegToColorMap = FunctionVirtRegToColorMap;
   }
-
-  std::string targetName;
-
-private:
-  grpc::Status codeGen(grpc::ServerContext *context,
-                       const registerallocation::Data *request,
-                       registerallocation::GraphList *response) override;
-  void splitVirtReg(unsigned VirtReg, int splitPoint);
 };
 
 } // namespace llvm

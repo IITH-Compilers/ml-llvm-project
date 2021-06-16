@@ -137,6 +137,7 @@ INITIALIZE_PASS_DEPENDENCY(LiveStacks)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
 INITIALIZE_PASS_DEPENDENCY(VirtRegMap)
+INITIALIZE_PASS_DEPENDENCY(SpillPlacement)
 INITIALIZE_PASS_DEPENDENCY(LiveRegMatrix)
 INITIALIZE_PASS_END(RABasic, "regallocbasic", "Basic Register Allocator", false,
                     false)
@@ -189,6 +190,7 @@ void RABasic::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<VirtRegMap>();
   AU.addRequired<LiveRegMatrix>();
   AU.addPreserved<LiveRegMatrix>();
+  AU.addRequired<SpillPlacement>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -317,7 +319,9 @@ bool RABasic::runOnMachineFunction(MachineFunction &mf) {
              getAnalysis<MachineDominatorTree>(),
              getAnalysis<MachineLoopInfo>(),
              getAnalysis<AAResultsWrapperPass>().getAAResults(),
-             getAnalysis<LiveDebugVariables>());
+             getAnalysis<LiveDebugVariables>(),
+             getAnalysis<SpillPlacement>()
+             );
 
   allocatePhysRegs();
   postOptimization();

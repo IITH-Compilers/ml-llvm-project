@@ -155,13 +155,23 @@ grpc::Status MLRA::codeGen(grpc::ServerContext *context,
   if (request->message() == "Split") {
     unsigned splitReg = Register::index2VirtReg(request->reg());
     int splitPoint = request->payload();
-    splitVirtReg(splitReg, splitPoint);
+    SmallVector<unsigned, 2> NewVRegs;
+    splitVirtReg(splitReg, splitPoint, NewVRegs);
+    updateRegisterProfileAfterSplit(splitReg, NewVRegs);
+  }
+  if (request->message() == "check") {
+    unsigned splitReg = Register::index2VirtReg(request->reg());
+    int splitPoint = request->payload();
+    SmallVector<unsigned, 2> NewVRegs;
+    splitVirtReg(splitReg, splitPoint, NewVRegs);
+    captureRegisterProfile();
   }
 
   return Status::OK;
 }
 
-void MLRA::splitVirtReg(unsigned splitReg, int splitPoint) {
+bool MLRA::splitVirtReg(unsigned splitReg, int splitPoint,
+                        SmallVectorImpl<unsigned> &NewVRegs) {
   assert(LIS->hasInterval(splitReg) && "VirtReg should be present");
 
   LiveInterval *VirtReg = &LIS->getInterval(splitReg);
@@ -169,17 +179,16 @@ void MLRA::splitVirtReg(unsigned splitReg, int splitPoint) {
 
   if (MRI->reg_nodbg_empty(VirtReg->reg)) {
     assert(VirtReg->empty() && "Non-empty but used interval");
-    LLVM_DEBUG(dbgs() << "not queueing unused  " << *VirtReg << '\n');
-    aboutToRemoveInterval(*VirtReg);
-    LIS->removeInterval(VirtReg->reg);
-    return;
+    // LLVM_DEBUG(dbgs() << "not queueing unused  " << *VirtReg << '\n');
+    // aboutToRemoveInterval(*VirtReg);
+    // LIS->removeInterval(VirtReg->reg);
+    return false;
   }
 
   SA->analyze(VirtReg);
   ArrayRef<SplitAnalysis::BlockInfo> UseBlocks = SA->getUseBlocks();
   ArrayRef<SlotIndex> Uses = SA->getUseSlots();
 
-  SmallVector<unsigned, 5> NewVRegs;
   LiveRangeEdit LREdit(VirtReg, NewVRegs, *MF, *LIS, VRM);
   SE->reset(LREdit, SplitEditor::SM_Size);
   SlotIndex SegStart;
@@ -201,94 +210,229 @@ void MLRA::splitVirtReg(unsigned splitReg, int splitPoint) {
 
   if (LREdit.empty()) {
     LLVM_DEBUG(dbgs() << "All uses were copies.\n");
-    return;
+    return false;
   }
 
   SmallVector<unsigned, 8> IntvMap;
   SE->finish(&IntvMap);
   DebugVars->splitRegister(VirtReg->reg, LREdit.regs(), *LIS);
 
-  errs() << "--------------------After "
-            "splitting----------------------------------\n";
-  MF->print(errs());
+  LLVM_DEBUG(dbgs() << "--------------------`"
+                       "splitting----------------------------------\n");
+  LLVM_DEBUG(MF->print(errs()));
+  LLVM_DEBUG(dbgs() << "------------------------------------------\n");
+  LLVM_DEBUG(dbgs() << "After splitting -- " << printReg(splitReg, TRI) << "--"
+                    << Register::virtReg2Index(splitReg) + TRI->getNumRegs() + 1
+                    << "\n");
+  LLVM_DEBUG(for (auto i
+                  : NewVRegs) dbgs()
+                 << "\tNew Regs: " << printReg(i, TRI) << "--"
+                 << Register::virtReg2Index(i) + TRI->getNumRegs() + 1 << "\n";
+             dbgs() << "------------------------------------------\n");
+  // captureRegisterProfile();
+  return true;
 }
 
 void MLRA::dumpInterferenceGraph() {
   LLVM_DEBUG(errs() << "\n******************* Dump the graphs "
                        "(START)*************************** \n\n");
-  std::string graph = captureInterferenceGraph();
-  if (graph != "") {
-    std::string funName = MF->getName();
-    StringRef moduleName = MF->getFunction().getParent()->getName();
-    if (llvm::sys::path::is_relative(moduleName)) {
-      SmallString<1024> temp = moduleName;
-      llvm::sys::fs::make_absolute(temp);
-      moduleName = StringRef(temp);
+  unsigned step = TRI->getNumRegs() + 1;
+  std::string nodes = "";
+  for (auto rpi : regProfMap) {
+    unsigned id = rpi.first;
+    RegisterProfile rp = rpi.second;
+    std::string node_str = std::to_string(id) + " [label=\" {" + rp.cls.str() +
+                           "} {" + std::to_string(rp.spillWeight) + "}";
+
+    if (rp.cls.equals("Phy")) {
+      std::string reginfo = " {PhyColor=" + std::to_string(rp.color) +
+                            ";PhyReg=" + std::to_string(id) + "} ";
+      node_str = node_str + reginfo + "\"];\n";
+    } else {
+      bool is_atleastoneinstruction = false;
+      std::string reginfo = " {Vir} ";
+      node_str = node_str + reginfo;
+
+      auto instVecMap = symbolic->getInstVecMap();
+
+      std::string segmentInst = "";
+      unsigned Reg = Register::index2VirtReg(id - step);
+      LiveInterval *VirtReg = &LIS->getInterval(Reg);
+      VirtRegAuxInfo VRAI(*MF, *LIS, VRM, *Loops, *MBFI);
+
+      for (auto &S : VirtReg->segments) {
+        // ToDo: Change this loop to capture the uses of definition
+        auto startIdx = S.start.getBaseIndex();
+        for (SlotIndex I = startIdx, E = S.end.getBaseIndex(); I != E;
+             I = I.getNextIndex()) {
+          auto *MIR = LIS->getInstructionFromIndex(I);
+          if (!MIR)
+            continue;
+          auto spillWt = VRAI.futureWeight(*VirtReg, startIdx, I);
+          IR2Vec::Vector vec = instVecMap[MIR];
+          if (vec.size() <= 0) {
+            LLVM_DEBUG(errs() << "Value not found in the map \n");
+            continue;
+          }
+          LLVM_DEBUG(errs() << "---------------MIR Vector--------------------";
+                     MIR->dump());
+          std::string str = "";
+          for (unsigned idx = 0; idx < DIM - 1; idx++) {
+            str += std::to_string(vec[idx]) + ", ";
+          }
+          str += std::to_string(vec[DIM - 1]);
+          LLVM_DEBUG(errs() << "\n");
+          if (!is_atleastoneinstruction) {
+            segmentInst = segmentInst + "[ " + str + " ]" + "[ " +
+                          std::to_string(spillWt) + " ]";
+          } else {
+            segmentInst = segmentInst + ", \n[ " + str + " ]" + "[ " +
+                          std::to_string(spillWt) + " ]";
+          }
+          is_atleastoneinstruction = true;
+        }
+      }
+
+      if (segmentInst != "") {
+        node_str = node_str + "[" + segmentInst + "]\"];\n";
+      } else {
+        node_str = node_str + "\"];\n";
+      }
     }
-    std::string absmoduleName = moduleName.str();
-
-    std::string input_fileName =
-        absmoduleName.substr(absmoduleName.rfind('/') + 1);
-
-    std::error_code EC;
-    raw_fd_ostream File(input_fileName + "_F" +
-                            std::to_string(FunctionCounter) + ".dot",
-                        EC, sys::fs::F_Text);
-    File << graph;
-    LLVM_DEBUG(errs() << "Dump done : " << graph << "\n");
+    std::string edges = "";
+    for (unsigned i = 0; i < rp.interferences.size(); ++i) {
+      auto interference = rp.interferences[i];
+      edges = edges + std::to_string(id) + "--" + std::to_string(interference);
+      auto overlaps = rp.overlapsStart[interference];
+      if (overlaps.size() == 0) {
+        edges += "\n";
+        continue;
+      }
+      edges += " [";
+      std::string val;
+      raw_string_ostream SS(val);
+      for (unsigned j = 0; j < overlaps.size() - 1; ++j) {
+        overlaps[j].print(SS);
+        edges += SS.str() + ",";
+      }
+      overlaps[overlaps.size() - 1].print(SS);
+      edges += SS.str() + "];\n";
+    }
+    nodes = nodes + node_str + edges;
   }
-  LLVM_DEBUG(errs() << "\n******************* Dump the graphs "
-                       "(END)*************************** \n\n");
+  std::string graph = "";
+  std::string funName = MF->getName();
+  StringRef moduleName = MF->getFunction().getParent()->getName();
+  if (llvm::sys::path::is_relative(moduleName)) {
+    SmallString<1024> temp = moduleName;
+    llvm::sys::fs::make_absolute(temp);
+    moduleName = StringRef(temp);
+  }
+  std::string absmoduleName = moduleName.str();
+
+  if (nodes != "") {
+    graph = "graph G {\nFileName=\"" + absmoduleName + "\";\nFunction=\"" +
+            funName + "\";\n" +
+            "Function_ID=" + std::to_string(FunctionCounter) + ";\n" +
+            "Registers=" + std::to_string(TRI->getNumRegs()) + ";\n";
+
+    graph = graph + nodes + "}";
+  } else {
+    errs() << MF->getName()
+           << " *********No Interference graph created*******\n";
+    return;
+  }
+
+  std::string input_fileName =
+      absmoduleName.substr(absmoduleName.rfind('/') + 1);
+
+  std::error_code EC;
+  raw_fd_ostream File(input_fileName + "_F" + std::to_string(FunctionCounter) +
+                          ".dot",
+                      EC, sys::fs::F_Text);
+  File << graph;
+  LLVM_DEBUG(errs() << "Dump done : " << graph << "\n");
 }
 
-std::string MLRA::captureInterferenceGraph() {
+void MLRA::findOverlapingInterval(LiveInterval *VirtReg1,
+                                  LiveInterval *VirtReg2,
+                                  SmallVector<SlotIndex, 8> &startpts,
+                                  SmallVector<SlotIndex, 8> &endpts) {
+  for (auto first : VirtReg1->segments) {
+    errs() << "First: ";
+    first.dump();
+    for (auto sec : VirtReg2->segments) {
+      errs() << "Sec: ";
+      sec.dump();
+      if (first.containsInterval(sec.start, sec.end)) {
+        errs() << "Overlap -- contains: ";
+        sec.start.print(errs());
+        // sec.end.print(errs());
+        errs() << "\n";
+        startpts.push_back(sec.start);
+        // endpts.push_back(sec.end);
+      } else if (sec.containsInterval(first.start, first.end)) {
+        errs() << "Overlap -- contains: ";
+        first.start.print(errs());
+        // first.end.print(errs());
+        errs() << "\n";
+        startpts.push_back(first.start);
+        // endpts.push_back(first.end);
+      } else if (sec.start < first.end && sec.end > first.end) {
+        errs() << "Overlap: ";
+        sec.start.print(errs());
+        first.end.print(errs());
+        errs() << "\n";
+        startpts.push_back(sec.start);
+        endpts.push_back(first.end);
+      } else if (first.start < sec.end && sec.start < first.start) {
+        errs() << "Overlap: ";
+        first.start.print(errs());
+        sec.end.print(errs());
+        errs() << "\n";
+        startpts.push_back(first.start);
+        endpts.push_back(sec.end);
+      }
+    }
+  }
+}
 
+SmallVector<SlotIndex, 8> MLRA::vecUnion(SmallVectorImpl<SlotIndex> const &A,
+                                         SmallVectorImpl<SlotIndex> const &B) {
+  SmallSet<SlotIndex, 8> idxSet;
+  idxSet.insert(A.begin(), A.end());
+  idxSet.insert(B.begin(), B.end());
+  return SmallVector<SlotIndex, 8>(idxSet.begin(), idxSet.end());
+}
+
+void MLRA::captureRegisterProfile() {
   LLVM_DEBUG(errs() << "\nStarting capturing \n");
-  LLVM_DEBUG(LIS->dump());
 
-  std::string nodes = "";
+  regProfMap.clear();
+
   for (unsigned i = 0, e = MRI->getNumVirtRegs(); i != e; ++i) {
     unsigned Reg = Register::index2VirtReg(i);
     LIS->getInterval(Reg);
   }
 
-  LLVM_DEBUG(errs() << "Dumping LIS after interating over allover and before "
-                       "pr -- vr interference check\n");
-  // LLVM_DEBUG(LIS->dump());
   unsigned step = TRI->getNumRegs() + 1;
   for (unsigned i = 1, e = TRI->getNumRegs(); i != e; ++i) {
     LLVM_DEBUG(errs() << "Starting to process - " << printReg(i, TRI) << "\n");
-    LLVM_DEBUG(
-        errs()
-        << "Dumping LIS before Live Range check -- vr interference check\n");
-    LLVM_DEBUG(
-        errs()
-        << "Dumping LIS After Live Range check -- vr interference check\n");
-    // LLVM_DEBUG(LIS->dump());
     LLVM_DEBUG(errs() << "Already physical register assigned idx:" << i
                       << "  name:" << printReg(i, TRI) << "\n");
+    RegisterProfile regProf;
+    regProf.cls = "Phy";
+    regProf.spillWeight = 0;
 
-    std::string regClass = "Phy";
-    std::string node_str =
-        std::to_string(i) + " [label=\" {" + regClass + "} {0.00}";
-    std::string reginfo;
-    unsigned color = 0;
-    unsigned preg = i;
-
-    if (this->target_PhyReg2ColorMap[targetName].find(preg) !=
+    if (this->target_PhyReg2ColorMap[targetName].find(i) !=
         this->target_PhyReg2ColorMap[targetName].end()) {
-      color = this->target_PhyReg2ColorMap[targetName][preg];
-    }
-    if (color == 0) {
+      regProf.color = this->target_PhyReg2ColorMap[targetName][i];
+    } else {
       LLVM_DEBUG(errs() << "Unsupported registers so continued.\n");
       continue;
     }
-    reginfo = " {PhyColor=" + std::to_string(color) +
-              ";PhyReg=" + std::to_string(preg) + "} ";
-    node_str = node_str + reginfo + "\"];\n";
 
-    bool isInterfaced = false;
-    std::string edges = "";
+    SmallSetVector<unsigned, 8> interferences;
     for (unsigned j = 0, ev = MRI->getNumVirtRegs(); j < ev; ++j) {
       unsigned Reg = Register::index2VirtReg(j);
       LiveInterval *VirtReg = &LIS->getInterval(Reg);
@@ -305,165 +449,189 @@ std::string MLRA::captureInterferenceGraph() {
 
       if (Matrix->checkInterference(*VirtReg, i)) {
         LLVM_DEBUG(errs() << "Interference happened\n");
-        isInterfaced = true;
-        edges =
-            edges + std::to_string(i) + "--" + std::to_string(step + j) + "\n";
+        interferences.insert(step + j);
       }
-
       LLVM_DEBUG(errs() << "\n");
     }
-    if (isInterfaced) {
-      nodes = nodes + node_str + edges;
-    }
-    LLVM_DEBUG(errs() << "\n");
+    if (interferences.empty())
+      continue;
+    regProf.interferences = interferences;
+    regProfMap[i] = regProf;
   }
   LLVM_DEBUG(errs() << "Interference for physical register ended ...\n");
 
-  LLVM_DEBUG(
-      errs()
-      << "Dumping LIS AFTER pr -- vr & before vr -- vr interference check\n");
-  // LLVM_DEBUG(LIS->dump());
   /*
    * Iterating over the virtual registers.
    *
    * */
-  LLVM_DEBUG(errs() << "Interference for virtaul register started ...\n");
+  LLVM_DEBUG(errs() << "Interference for virtual register started ...\n");
   for (unsigned i = 0, e = MRI->getNumVirtRegs(); i < e; ++i) {
+    RegisterProfile regProf;
     unsigned Reg = Register::index2VirtReg(i);
     LiveInterval *VirtReg = &LIS->getInterval(Reg);
     if (MRI->reg_nodbg_empty(Reg))
       continue;
     // Check for the supported register class.
-    std::string regClass = TRI->getRegClassName(MRI->getRegClass(VirtReg->reg));
-    if (this->regClassSupported4_MLRA.find(regClass) ==
+    regProf.cls = TRI->getRegClassName(MRI->getRegClass(VirtReg->reg));
+    if (this->regClassSupported4_MLRA.find(regProf.cls) ==
         regClassSupported4_MLRA.end()) {
-      LLVM_DEBUG(errs() << "Register class(" << regClass
+      LLVM_DEBUG(errs() << "Register class(" << regProf.cls
                         << ") is not supported.\n");
       continue;
     }
-    bool is_atleastoneinstruction = false;
-    int node_id = step + i;
-    std::string node_str = std::to_string(node_id) + " [label=\" {" + regClass +
-                           "} {" + std::to_string(VirtReg->weight) + "} ";
-    std::string reginfo;
-    reginfo = " {Vir} ";
-    node_str = node_str + reginfo;
 
-    LLVM_DEBUG(VirtReg->print(dbgs()));
-    LLVM_DEBUG(dbgs() << "\n");
-#if PRINT_MRI_INST
-    // VirtReg->print(File);
-    // File << VirtReg->overlaps(LIS->getInterval(Reg));
-#endif
-    auto instVecMap = symbolic->getInstVecMap();
-    /*LLVM_DEBUG(errs() << "Instructions in map:\n"; for (auto inst
-                                                        : instVecMap) {
-      if ( inst.first){
-           inst.first->dump();
-      }else{
-      errs () << "Null pointer to instructions\n";
+    regProf.spillWeight = VirtReg->weight;
+    SmallSetVector<unsigned, 8> interference;
+    // SmallVector<SmallVector<SlotIndex, 8>, 8> overlapsStart;
+    // SmallVector<SmallVector<SlotIndex, 8>, 8> overlapsEnd;
+    SmallMapVector<unsigned, SmallVector<SlotIndex, 8>, 8> overlapsStart;
+    SmallMapVector<unsigned, SmallVector<SlotIndex, 8>, 8> overlapsEnd;
+
+    for (unsigned j = i + 1; j < MRI->getNumVirtRegs(); ++j) {
+      unsigned Reg1 = Register::index2VirtReg(j);
+      if (MRI->reg_nodbg_empty(Reg1))
+        continue;
+      // Support for interference for supportedRegister Only
+      std::string regClass_j = TRI->getRegClassName(MRI->getRegClass(Reg1));
+      if (this->regClassSupported4_MLRA.find(regClass_j) ==
+          regClassSupported4_MLRA.end()) {
+        continue;
       }
-    } errs() << "==========================================\n");*/
-    std::string segmentInst = "";
-    if (!VirtReg->segments.empty()) {
+      if (VirtReg->overlaps(LIS->getInterval(Reg1))) {
+        interference.insert(j + step);
 
-      for (auto &S : VirtReg->segments) {
-        // ToDo: Change this loop to capture the uses of definition
-        for (SlotIndex I = S.start.getBaseIndex(), E = S.end.getBaseIndex();
-             I != E; I = I.getNextIndex()) {
-          auto *MIR = LIS->getInstructionFromIndex(I);
-          if (!MIR)
-            continue;
-          IR2Vec::Vector vec = instVecMap[MIR];
-          if (vec.size() <= 0) {
-            LLVM_DEBUG(errs() << "Value not found in the map \n");
-            continue;
-          }
-          LLVM_DEBUG(errs() << "---------------MIR Vector--------------------";
-                     MIR->dump());
-          std::string str = "";
-          for (unsigned idx = 0; idx < DIM - 1; idx++) {
-            str += std::to_string(vec[idx]) + ", ";
-          }
-          str += std::to_string(vec[DIM - 1]);
-          LLVM_DEBUG(errs() << "\n");
-#if PRINT_MRI_INST
-          // MIR->print(File);
-#endif
-          if (!is_atleastoneinstruction) {
-            segmentInst = segmentInst + "[ " + str + " ]";
-          } else {
-            segmentInst = segmentInst + ", \n[ " + str + " ]";
-          }
-          is_atleastoneinstruction = true;
-        }
+        // SmallVector<std::pair<SlotIndex, SlotIndex>, 8> updatedSegments;
+        // for (auto seg1 : VirtReg->segments) {
+        //   for(auto seg2 : VirtReg->segments){
+        //     if(seg1 != seg2 && seg1.end == seg2.start){
+        //       updatedSegments.push_back()
+        //     }
+        //   }
+        // }
+        SmallVector<SlotIndex, 8> startpts;
+        SmallVector<SlotIndex, 8> endpts;
+        findOverlapingInterval(VirtReg, &LIS->getInterval(Reg1), startpts,
+                               endpts);
+        overlapsStart[j + step] = startpts;
+        overlapsEnd[j + step] = endpts;
       }
     }
+    regProf.interferences = interference;
+    regProf.overlapsStart = overlapsStart;
+    regProf.overlapsEnd = overlapsEnd;
+    regProfMap[step + i] = regProf;
+  }
 
-    if (!VirtReg->segments.empty()) {
-      if (segmentInst != "") {
-        node_str = node_str + "[" + segmentInst + "]\"];\n";
+  // Adding interferences in other direction
+  for (auto rpi : regProfMap) {
+    auto id = rpi.first;
+    auto rp = rpi.second;
+    for (auto interference : rp.interferences) {
+      auto it = regProfMap.find(interference);
+      if (it != regProfMap.end()) {
+        regProfMap[interference].interferences.insert(id);
+        regProfMap[interference].overlapsEnd[id] =
+            vecUnion(regProfMap[interference].overlapsEnd[id],
+                     rp.overlapsStart[interference]);
+        regProfMap[interference].overlapsStart[id] =
+            vecUnion(regProfMap[interference].overlapsStart[id],
+                     rp.overlapsEnd[interference]);
+      }
+    }
+  }
+  LLVM_DEBUG(errs() << "\ncaptureRegisterProfile() call ended.\n");
+  LLVM_DEBUG(printRegisterProfile());
+}
+
+void MLRA::printRegisterProfile() const {
+  LLVM_DEBUG(errs() << "\nPRinting regProfMap\n");
+  for (auto rpi : regProfMap) {
+    errs() << "ID = " << rpi.first << "\n";
+    auto rp = rpi.second;
+    errs() << "Interferences: ";
+    for (auto interference : rp.interferences)
+      errs() << interference << ", ";
+    errs() << "\nOverlaps start: \n";
+    for (auto o : rp.overlapsStart) {
+      errs() << "\n\tInterf: " << o.first << "\nOverlaps: ";
+      for (auto val : o.second) {
+        val.dump();
+      }
+    }
+    errs() << "\nOverlaps end: \n";
+    for (auto o : rp.overlapsEnd) {
+      errs() << "\n\tInterf: " << o.first << "\nOverlaps: ";
+      for (auto val : o.second) {
+        val.dump();
+      }
+    }
+    errs() << "\n--------------------------------\n";
+  }
+}
+
+void MLRA::updateRegisterProfileAfterSplit(unsigned OldVReg,
+                                           SmallVector<unsigned, 2> NewVRegs) {
+  LLVM_DEBUG(errs() << "Updating Register Profile after spliting\n");
+
+  assert(Register::isVirtualRegister(OldVReg) && "Expected a virtual register");
+
+  unsigned step = TRI->getNumRegs() + 1;
+  unsigned OldVRegIdx = Register::virtReg2Index(OldVReg);
+  auto oldRP = regProfMap[OldVRegIdx + step];
+  assert(NewVRegs.size() == 2);
+
+  for (unsigned i = 0; i < 2; i++) {
+    RegisterProfile rp;
+    unsigned NewVRegIdx = Register::virtReg2Index(NewVRegs[i]);
+    errs() << "Updating RP for " << printReg(NewVRegs[i], TRI) << "--"
+           << NewVRegIdx + step << "\n";
+
+    // unsigned Reg = Register::index2VirtReg(NewVRegs[i]);
+    LiveInterval *VirtReg = &LIS->getInterval(NewVRegs[i]);
+
+    rp.cls = oldRP.cls;
+    rp.spillWeight = VirtReg->weight;
+
+    for (auto interference : oldRP.interferences) {
+      errs() << "Processing interference -- " << interference << "\n";
+      if (regProfMap[interference].cls.equals("Phy")) {
+        if (Matrix->checkInterference(*VirtReg, interference)) {
+          rp.interferences.insert(interference);
+          regProfMap[interference].interferences.remove(OldVRegIdx + step);
+          regProfMap[interference].interferences.insert(NewVRegIdx + step);
+        }
       } else {
-        node_str = node_str + "\"];\n";
-      }
-      std::string edges = "";
-      for (unsigned j = i + 1; j < MRI->getNumVirtRegs(); ++j) {
-        unsigned Reg1 = Register::index2VirtReg(j);
-        if (MRI->reg_nodbg_empty(Reg1))
-          continue;
-        // Support for interference for supportedRegister Only
-        std::string regClass_j = TRI->getRegClassName(MRI->getRegClass(Reg1));
-        if (this->regClassSupported4_MLRA.find(regClass_j) ==
-            regClassSupported4_MLRA.end()) {
-          continue;
+        unsigned Reg = Register::index2VirtReg(interference - step);
+        errs() << "\t In virtual register: " << printReg(Reg, TRI) << "--"
+               << interference << "\n";
+        LiveInterval *VReg = &LIS->getInterval(Reg);
+        errs() << "\tWhose Live Interval is: ";
+        VReg->print(errs());
+        errs() << "\n\tAnd, the Live Interval of NewVirtReg is: ";
+        VirtReg->print(errs());
+        if (VirtReg->overlapsFrom(VReg, VReg->begin())) {
+          errs() << "\n\t It overlaps\n";
+          rp.interferences.insert(interference);
+          regProfMap[interference].interferences.remove(OldVRegIdx + step);
+          regProfMap[interference].interferences.insert(NewVRegIdx + step);
+
+          SmallVector<SlotIndex, 8> startpts, endpts;
+          findOverlapingInterval(VirtReg, VReg, startpts, endpts);
+          rp.overlapsStart[interference] = startpts;
+          rp.overlapsEnd[interference] = endpts;
+          regProfMap[interference].overlapsStart[NewVRegIdx + step] = endpts;
+          regProfMap[interference].overlapsEnd[NewVRegIdx + step] = startpts;
+
+          regProfMap[interference].overlapsStart.erase(OldVRegIdx + step);
+          regProfMap[interference].overlapsEnd.erase(OldVRegIdx + step);
         }
-        std::string edge = "";
-        if (VirtReg->overlaps(LIS->getInterval(Reg1))) {
-          edge = std::to_string(node_id) + " -- " + std::to_string(j + step) +
-                 ";\n";
-          LLVM_DEBUG(errs() << edge << "\n");
-          edges = edges + edge;
-        }
       }
-      if (edges != "") {
-        node_str = node_str + edges;
-      }
-    } else {
-      node_str = node_str + "\"];\n";
     }
-    nodes = nodes + node_str;
+    regProfMap[NewVRegIdx + step] = rp;
   }
-
-  std::string graph = "";
-  if (nodes != "") {
-    std::string funName = MF->getName();
-    StringRef moduleName = MF->getFunction().getParent()->getName();
-    if (llvm::sys::path::is_relative(moduleName)) {
-      SmallString<1024> temp = moduleName;
-      llvm::sys::fs::make_absolute(temp);
-      moduleName = StringRef(temp);
-    }
-    std::string absmoduleName = moduleName.str();
-
-    graph = "graph G {\nFileName=\"" + absmoduleName + "\";\nFunction=\"" +
-            funName + "\";\n" +
-            "Function_ID=" + std::to_string(FunctionCounter) + ";\n" +
-            "Registers=" + std::to_string(TRI->getNumRegUnits()) + ";\n";
-
-    graph = graph + nodes + "}";
-    this->Function2Graphs[funName] = graph;
-  } else {
-    errs() << MF->getName()
-           << " *********No Interference graph created*******\n";
-  }
-  LLVM_DEBUG(errs() << "\nFinish capturing and some stats after it. \n");
-  LLVM_DEBUG(dbgs() << "\n***********Slot Indexes***********\n");
-  LLVM_DEBUG(LIS->getSlotIndexes()->dump());
-  LLVM_DEBUG(dbgs() << "\n************ LIS **************\n");
-  LLVM_DEBUG(LIS->dump());
-  LLVM_DEBUG(errs() << "\ncaptureInterference() call ended.\n");
-  // this->graph = graph;
-  return graph;
+  regProfMap.erase(OldVRegIdx + step);
+  LLVM_DEBUG(errs() << "Register Profile map after splitting -- \n");
+  LLVM_DEBUG(printRegisterProfile());
 }
 
 unsigned MLRA::getPhyRegForColor(LiveInterval &VirtReg, unsigned color,
@@ -601,48 +769,49 @@ void MLRA::training_flow() {
 }
 
 void MLRA::inference() {
-  assert(enable_mlra_inference && "mlra-inference should be true.");
+  // assert(enable_mlra_inference && "mlra-inference should be true.");
 
-  symbolic->generateSymbolicEncodings(*MF);
+  // symbolic->generateSymbolicEncodings(*MF);
 
-  std::string graph = captureInterferenceGraph();
+  // std::string graph = captureInterferenceGraph();
 
-  // errs () << "interference graph : " << graph << "\n";
+  // // errs () << "interference graph : " << graph << "\n";
 
-  if (graph != "") {
-    registerallocationinference::GraphList request;
-    registerallocationinference::ColorData reply;
+  // if (graph != "") {
+  //   registerallocationinference::GraphList request;
+  //   registerallocationinference::ColorData reply;
 
-    request.set_payload(graph);
+  //   request.set_payload(graph);
 
-    grpc::ClientContext context;
+  //   grpc::ClientContext context;
 
-    grpc::Status status = Stub->getColouring(&context, request, &reply);
-    // errs () << "Predictions : " << reply.payload() << " +\n";
-    // assert(reply.payload() != "" && "Prediction is not valid ");
-    if (reply.payload() == "") {
-      errs() << "*****Warning -" << MF->getName()
-             << " - Predictions not generated for the graph\n";
-      return;
-    }
-    parsePredictionJson(reply.payload());
-    if (this->FunctionVirtRegToColorMap.find(MF->getName()) !=
-        this->FunctionVirtRegToColorMap.end()) {
-      allocatePhysRegsViaRL();
-    }
-    LLVM_DEBUG(errs() << "The ML allocated virtual registers: /n";
-               for (auto i
-                    : mlAllocatedRegs) errs()
-               << printReg(i, TRI) << "\t";
-               errs() << "Done MLRA allocation for : " << MF->getName()
-                      << '\n');
-  }
+  //   grpc::Status status = Stub->getColouring(&context, request, &reply);
+  //   // errs () << "Predictions : " << reply.payload() << " +\n";
+  //   // assert(reply.payload() != "" && "Prediction is not valid ");
+  //   if (reply.payload() == "") {
+  //     errs() << "*****Warning -" << MF->getName()
+  //            << " - Predictions not generated for the graph\n";
+  //     return;
+  //   }
+  //   parsePredictionJson(reply.payload());
+  //   if (this->FunctionVirtRegToColorMap.find(MF->getName()) !=
+  //       this->FunctionVirtRegToColorMap.end()) {
+  //     allocatePhysRegsViaRL();
+  //   }
+  //   LLVM_DEBUG(errs() << "The ML allocated virtual registers: /n";
+  //              for (auto i
+  //                   : mlAllocatedRegs) errs()
+  //              << printReg(i, TRI) << "\t";
+  //              errs() << "Done MLRA allocation for : " << MF->getName()
+  //                     << '\n');
+  // }
 }
 
 void MLRA::MLRegAlloc(MachineFunction &MF, SlotIndexes &Indexes,
                       MachineBlockFrequencyInfo &MBFI,
                       MachineDominatorTree &DomTree, MachineLoopInfo &Loops,
-                      AAResults &AA, LiveDebugVariables &DebugVars) {
+                      AAResults &AA, LiveDebugVariables &DebugVars,
+                      SpillPlacement &SpillPlacer) {
   assert(!(enable_experimental_mlra && enable_mlra_inference) &&
          "mlra-experimental and mlra-inference both are enabled.");
 
@@ -653,6 +822,7 @@ void MLRA::MLRegAlloc(MachineFunction &MF, SlotIndexes &Indexes,
   this->Loops = &Loops;
   this->AA = &AA;
   this->DebugVars = &DebugVars;
+  this->SpillPlacer = &SpillPlacer;
 
   mlAllocatedRegs.clear();
   FunctionCounter++;
@@ -675,6 +845,8 @@ void MLRA::MLRegAlloc(MachineFunction &MF, SlotIndexes &Indexes,
   }
 
   MF.print(errs());
+
+  captureRegisterProfile();
 
   RunService(this);
 
