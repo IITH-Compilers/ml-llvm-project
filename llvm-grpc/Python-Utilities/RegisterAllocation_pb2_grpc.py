@@ -23,7 +23,7 @@ class RegisterAllocationStub(object):
         self.codeGen = channel.unary_unary(
                 '/registerallocation.RegisterAllocation/codeGen',
                 request_serializer=RegisterAllocation__pb2.Data.SerializeToString,
-                response_deserializer=RegisterAllocation__pb2.GraphList.FromString,
+                response_deserializer=RegisterAllocation__pb2.RegisterProfileList.FromString,
                 )
 
 
@@ -56,7 +56,7 @@ def add_RegisterAllocationServicer_to_server(servicer, server):
             'codeGen': grpc.unary_unary_rpc_method_handler(
                     servicer.codeGen,
                     request_deserializer=RegisterAllocation__pb2.Data.FromString,
-                    response_serializer=RegisterAllocation__pb2.GraphList.SerializeToString,
+                    response_serializer=RegisterAllocation__pb2.RegisterProfileList.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -99,6 +99,6 @@ class RegisterAllocation(object):
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/registerallocation.RegisterAllocation/codeGen',
             RegisterAllocation__pb2.Data.SerializeToString,
-            RegisterAllocation__pb2.GraphList.FromString,
+            RegisterAllocation__pb2.RegisterProfileList.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

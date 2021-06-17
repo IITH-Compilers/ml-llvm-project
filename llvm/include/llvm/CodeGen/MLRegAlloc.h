@@ -134,15 +134,18 @@ private:
     StringRef cls;
     float spillWeight;
     unsigned color;
+    unsigned numUses;
     SmallSetVector<unsigned, 8> interferences;
+    SmallSetVector<unsigned, 8> frwdInterferences;
+    SmallSetVector<unsigned, 8> splitSlots;
     SmallMapVector<unsigned, SmallVector<SlotIndex, 8>, 8> overlapsStart;
     SmallMapVector<unsigned, SmallVector<SlotIndex, 8>, 8> overlapsEnd;
   };
   SmallMapVector<unsigned, RegisterProfile, 16> regProfMap;
 
-  grpc::Status codeGen(grpc::ServerContext *context,
-                       const registerallocation::Data *request,
-                       registerallocation::GraphList *response) override;
+  grpc::Status
+  codeGen(grpc::ServerContext *context, const registerallocation::Data *request,
+          registerallocation::RegisterProfileList *response) override;
   bool splitVirtReg(unsigned VirtReg, int splitPoint,
                     SmallVectorImpl<unsigned> &NewVRegs);
   SmallVector<SlotIndex, 8> vecUnion(SmallVectorImpl<SlotIndex> const &,
@@ -150,11 +153,20 @@ private:
   void findOverlapingInterval(LiveInterval *VirtReg1, LiveInterval *VirtReg2,
                               SmallVector<SlotIndex, 8> &startpts,
                               SmallVector<SlotIndex, 8> &endpts);
+  void findLastUseBefore(const SmallVector<SlotIndex, 8> startpts,
+                         const ArrayRef<SlotIndex> useSlots,
+                         SmallSetVector<unsigned, 8> &lastUseSlots);
   void captureRegisterProfile();
   void printRegisterProfile() const;
 
-  void updateRegisterProfileAfterSplit(unsigned OldVReg,
-                                       SmallVector<unsigned, 2> NewVRegs);
+  void
+  updateRegisterProfileAfterSplit(unsigned OldVReg,
+                                  SmallVector<unsigned, 2> NewVRegs,
+                                  SmallSetVector<unsigned, 8> &updatedRegs);
+
+  void splitResponse(SmallSetVector<unsigned, 8> &updatedRegs,
+                     SmallVector<unsigned, 2> NewVRegs,
+                     registerallocation::RegisterProfileList *response);
   void dumpInterferenceGraph();
   void allocatePhysRegsViaRL();
   void training_flow();

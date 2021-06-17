@@ -13,7 +13,7 @@ service RegisterAllocation{
 	// RPC function to get interference graphs
   rpc getGraphs(Path) returns (GraphList) {}
   // RPC function to send data for codegen
-  rpc codeGen(Data) returns (GraphList) {}
+  rpc codeGen(Data) returns (RegisterProfileList) {}
  
 }
 
@@ -24,6 +24,19 @@ message Path {
 
 message GraphList {
   bytes payload=1;
+}
+
+
+message RegisterProfileList {
+  message RegisterProfile {
+    float spillWeight=1;
+    message interferenceOverlapsMap {
+      uint32 interference = 1;
+      repeated string overlaps = 2;
+    }
+    repeated interferenceOverlapsMap ioMap = 2;
+  }
+  repeated RegisterProfile regProf=1;
 }
 
 message Data {
