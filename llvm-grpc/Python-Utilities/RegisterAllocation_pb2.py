@@ -19,7 +19,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   syntax='proto3',
   serialized_options=b'\n#io.grpc.examples.registerallocationB\027RegisterAllocationProtoP\001\242\002\003REG',
   create_key=_descriptor._internal_create_key,
-  serialized_pb=b'\n\x18RegisterAllocation.proto\x12\x12registerallocation\"+\n\x04Path\x12\x0e\n\x06IRPath\x18\x01 \x01(\t\x12\x13\n\x0bSeedEmbPath\x18\x02 \x01(\t\"\x1c\n\tGraphList\x12\x0f\n\x07payload\x18\x01 \x01(\x0c\"\xab\x02\n\x13RegisterProfileList\x12H\n\x07regProf\x18\x01 \x03(\x0b\x32\x37.registerallocation.RegisterProfileList.RegisterProfile\x1a\xc9\x01\n\x0fRegisterProfile\x12\x13\n\x0bspillWeight\x18\x01 \x01(\x02\x12^\n\x05ioMap\x18\x02 \x03(\x0b\x32O.registerallocation.RegisterProfileList.RegisterProfile.interferenceOverlapsMap\x1a\x41\n\x17interferenceOverlapsMap\x12\x14\n\x0cinterference\x18\x01 \x01(\r\x12\x10\n\x08overlaps\x18\x02 \x03(\t\"5\n\x04\x44\x61ta\x12\x0f\n\x07message\x18\x01 \x01(\t\x12\x0b\n\x03reg\x18\x02 \x01(\r\x12\x0f\n\x07payload\x18\x03 \x01(\x03\"\x07\n\x05\x45mpty2\xac\x01\n\x12RegisterAllocation\x12\x46\n\tgetGraphs\x12\x18.registerallocation.Path\x1a\x1d.registerallocation.GraphList\"\x00\x12N\n\x07\x63odeGen\x12\x18.registerallocation.Data\x1a\'.registerallocation.RegisterProfileList\"\x00\x42\x46\n#io.grpc.examples.registerallocationB\x17RegisterAllocationProtoP\x01\xa2\x02\x03REGb\x06proto3'
+  serialized_pb=b'\n\x18RegisterAllocation.proto\x12\x12registerallocation\"+\n\x04Path\x12\x0e\n\x06IRPath\x18\x01 \x01(\t\x12\x13\n\x0bSeedEmbPath\x18\x02 \x01(\t\"\x1c\n\tGraphList\x12\x0f\n\x07payload\x18\x01 \x01(\x0c\"\xab\x02\n\x13RegisterProfileList\x12H\n\x07regProf\x18\x01 \x03(\x0b\x32\x37.registerallocation.RegisterProfileList.RegisterProfile\x1a\xc9\x01\n\x0fRegisterProfile\x12\x13\n\x0bspillWeight\x18\x01 \x01(\x02\x12^\n\x05ioMap\x18\x02 \x03(\x0b\x32O.registerallocation.RegisterProfileList.RegisterProfile.interferenceOverlapsMap\x1a\x41\n\x17interferenceOverlapsMap\x12\x14\n\x0cinterference\x18\x01 \x01(\r\x12\x10\n\x08overlaps\x18\x02 \x03(\t\"8\n\x04\x44\x61ta\x12\x0f\n\x07message\x18\x01 \x01(\t\x12\x0e\n\x06regidx\x18\x02 \x01(\r\x12\x0f\n\x07payload\x18\x03 \x01(\x03\"\x07\n\x05\x45mpty2\xac\x01\n\x12RegisterAllocation\x12\x46\n\tgetGraphs\x12\x18.registerallocation.Path\x1a\x1d.registerallocation.GraphList\"\x00\x12N\n\x07\x63odeGen\x12\x18.registerallocation.Data\x1a\'.registerallocation.RegisterProfileList\"\x00\x42\x46\n#io.grpc.examples.registerallocationB\x17RegisterAllocationProtoP\x01\xa2\x02\x03REGb\x06proto3'
 )
 
 
@@ -220,7 +220,7 @@ _DATA = _descriptor.Descriptor(
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
     _descriptor.FieldDescriptor(
-      name='reg', full_name='registerallocation.Data.reg', index=1,
+      name='regidx', full_name='registerallocation.Data.regidx', index=1,
       number=2, type=13, cpp_type=3, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
@@ -246,7 +246,7 @@ _DATA = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=425,
-  serialized_end=478,
+  serialized_end=481,
 )
 
 
@@ -270,8 +270,8 @@ _EMPTY = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=480,
-  serialized_end=487,
+  serialized_start=483,
+  serialized_end=490,
 )
 
 _REGISTERPROFILELIST_REGISTERPROFILE_INTERFERENCEOVERLAPSMAP.containing_type = _REGISTERPROFILELIST_REGISTERPROFILE
@@ -346,8 +346,8 @@ _REGISTERALLOCATION = _descriptor.ServiceDescriptor(
   index=0,
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
-  serialized_start=490,
-  serialized_end=662,
+  serialized_start=493,
+  serialized_end=665,
   methods=[
   _descriptor.MethodDescriptor(
     name='getGraphs',

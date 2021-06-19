@@ -41,7 +41,7 @@ message RegisterProfileList {
 
 message Data {
   string message = 1;
-  uint32 reg = 2;
+  uint32 regidx = 2;
   int64 payload = 3;
 }
 

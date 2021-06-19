@@ -47,7 +47,7 @@ class RegisterAllocationClient(object):
         #    file_content=f.read()
         
 
-        request=RegisterAllocation_pb2.Data(message=message, reg=register, payload=payload)
+        request=RegisterAllocation_pb2.Data(message=message, regidx=register, payload=payload)
         
         return self.stub.codeGen(request) 
 

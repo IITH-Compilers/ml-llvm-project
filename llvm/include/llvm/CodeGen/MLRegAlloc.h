@@ -123,6 +123,7 @@ protected:
   static cl::opt<std::string> pred_file;
   static cl::opt<bool> enable_experimental_mlra;
   static cl::opt<bool> enable_mlra_inference;
+  static cl::opt<bool> enable_mlra_checks;
   void MLRegAlloc(MachineFunction &MF, SlotIndexes &Indexes,
                   MachineBlockFrequencyInfo &MBFI,
                   MachineDominatorTree &DomTree, MachineLoopInfo &Loops,
@@ -142,7 +143,9 @@ private:
     SmallMapVector<unsigned, SmallVector<SlotIndex, 8>, 8> overlapsEnd;
   };
   SmallMapVector<unsigned, RegisterProfile, 16> regProfMap;
+  SmallVector<unsigned, 16> splitInvalidRegs;
 
+  bool isSafeVReg(unsigned);
   grpc::Status
   codeGen(grpc::ServerContext *context, const registerallocation::Data *request,
           registerallocation::RegisterProfileList *response) override;
@@ -171,6 +174,7 @@ private:
   void allocatePhysRegsViaRL();
   void training_flow();
   void inference();
+  void verifyRegisterProfile();
   // get the Phyical register based upon virtual register type
   // like 8 bit, 16 bit, 32 bit, 64 bits and other more
   // For our reference see the X86RegisterInfo.td
