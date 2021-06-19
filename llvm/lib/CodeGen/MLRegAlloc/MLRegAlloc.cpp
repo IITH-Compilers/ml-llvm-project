@@ -1003,10 +1003,6 @@ void MLRA::allocatePhysRegsViaRL() {
 
 void MLRA::training_flow() {
   assert(enable_experimental_mlra && "mlra-experimental should be true.");
-  if (enable_dump_ig_dot) {
-    symbolic->generateSymbolicEncodings(*MF);
-    dumpInterferenceGraph();
-  }
 
   if (this->FunctionVirtRegToColorMap.find(MF->getName()) !=
       this->FunctionVirtRegToColorMap.end()) {
@@ -1096,10 +1092,15 @@ void MLRA::MLRegAlloc(MachineFunction &MF, SlotIndexes &Indexes,
 
   captureRegisterProfile();
 
-  RunService(this);
 
   if (enable_experimental_mlra) {
+    RunService(this);
     training_flow();
+  }
+
+  if (enable_dump_ig_dot) {
+    symbolic->generateSymbolicEncodings(MF);
+    dumpInterferenceGraph();
   }
 
   if (enable_mlra_inference) {
