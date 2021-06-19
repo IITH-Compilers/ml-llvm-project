@@ -12,7 +12,7 @@ from topologicalSort import Graph
 import logging
 import re
 from argparse import Namespace
-
+import json
 logger = logging.getLogger(__file__) 
 device ='cpu' #torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -239,7 +239,7 @@ class GatedGraphNeuralNetwork(nn.Module):
     #     return state
   
    # input graph jsonnx
-def praseProp(val):
+def parseProp(val):
     val = val.strip()
     return val[1: len(val) - 1]
 
@@ -258,16 +258,27 @@ def get_observations(graph):
     spill_cost_list = []
     reg_class_list = []
     allocate_type_list = []
-    
+    split_points_list = []
     for idx, node in enumerate(nodes):
         
         nodeId = node['id']
-        properties = re.search("{.*}", node['label']).group()
-        properties = properties.split()
+        properties = re.findall("{[^}]*}", node['label'])
+        # print(properties)
+        # properties = properties.split()
         logging.debug('Node idx={} | {}'.format(idx, properties))
-        regClass = praseProp(properties[0]) 
-        spill_cost = praseProp(properties[1])
-        allocate_type = praseProp(properties[2])
+        regClass = parseProp(properties[0]) 
+        spill_cost = parseProp(properties[1])
+        allocate_type = parseProp(properties[2])
+        split_points = []
+        if len(properties) > 3:
+            # print(properties)
+            split_points = parseProp(properties[3])
+            # print(split_points)
+            if len(split_points) > 0:
+                split_points = sorted(list(map(lambda x : int(x), split_points.split(', '))))
+
+        split_points_list.append(split_points)
+
 
         logging.debug('Allocation type : {}'.format(allocate_type))
         if spill_cost not in ["inf", "INF"]:
@@ -277,11 +288,21 @@ def get_observations(graph):
         node['label'] = re.sub(" {.*} ", '', node['label'])
         
         if node['label'] != "\"\"":
-            node_mat = eval(node['label'].replace("\"",""))
+            matr = node['label'].replace("\"","")
+            # print(matr)
+
+            matr = node['label'].replace(" ][",",").replace('\n','')
+            # print(matr)
+
+            node_mat = json.loads(eval(matr))
+            # node_mat = json.loads(matr)
         else:
-            node_mat = [[1]*300]
+            node_mat = [[1]*300 + [1]]
         
+        # print(node_mat)
+        # print(type(node_mat)) 
         node_tansor_matrix = torch.FloatTensor(node_mat)
+        # print(node_tansor_matrix.shape)
         nodeVec = constructVectorFromMatrix(node_tansor_matrix)
         reg_class_list.append(regClass)
         spill_cost_list.append(spill_cost)
@@ -309,7 +330,7 @@ def get_observations(graph):
     logging.debug("num_nodes : {}".format(num_nodes) )
     logging.debug('All edges num : {}'.format(len(all_edges)))
     
-    annotation_zero = np.zeros((num_nodes, 2))
+    annotation_zero = np.zeros((num_nodes, 3))
     annotation_zero[:, 0] = spill_cost_list
     annotations = torch.FloatTensor(annotation_zero)# .to(device)
     
@@ -324,7 +345,8 @@ def get_observations(graph):
             color, phyReg = map( lambda x : int(x.split('=')[-1]), allocate_type_list[node_idx].split(';'))
             logging.debug('creating graph; Marking node_idx={} with color={}'.format(node_idx, color))
             
-            graph_topology.UpdateVisitList(node_idx, color)
+            graph_topology.UpdateVisitList(node_idx)
+            graph_topology.UpdateColorVisitedNode(node_idx, color) 
             # ggnn.updateAnnotation(node_idx, color)
             annotations[node_idx][0] =  torch.tensor(0)# .to(device)
             # set the color assigned to the node
@@ -336,7 +358,7 @@ def get_observations(graph):
     Main call to the compute representation
     '''
     eligibleNodes = list(filter(lambda x : not graph_topology.discovered[x], range(num_nodes)))
-    obs = {'initial_node_representation':initial_node_representation, 'annotations':annotations, 'adjacency_lists' : adjacency_lists,  'graph_topology':graph_topology, 'spill_cost_list' : spill_cost_list, 'reg_class_list' : reg_class_list, 'eligibleNodes' : eligibleNodes, 'nid_idx':nid_idx, 'idx_nid':idx_nid}
+    obs = {'initial_node_representation':initial_node_representation, 'annotations':annotations, 'adjacency_lists' : adjacency_lists,  'graph_topology':graph_topology, 'spill_cost_list' : spill_cost_list, 'reg_class_list' : reg_class_list, 'eligibleNodes' : eligibleNodes, 'nid_idx':nid_idx, 'idx_nid':idx_nid, 'split_points' : split_points_list}
     obs = Namespace(**obs) 
     return obs
 

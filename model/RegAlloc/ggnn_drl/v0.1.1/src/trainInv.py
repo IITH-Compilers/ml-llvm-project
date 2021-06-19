@@ -69,28 +69,30 @@ def run(agent, config):
                 # action is
                 # return the color index for a node
                 action_map = {0 : 'selectnode', 1 : 'selectTask', 2 : {0 : 'colorTask', 1 : 'splitTask'}}
+                # print(state.stage)
                 for i in range(3):
-                    if state.selectTask is not None:
-                        action = agent.act(state, eps, action_map[2][state.selectTask])
-                    else:
-                        action = agent.act(state, eps, action_map[i])
+                    print('{} --> {} '.format(state.stage, state.next_stage))
+                    # if state.stage == 'selectTask' :
+                    #     action = agent.act(state, action_map[2][state.next_state], eps)
+                    # else:
+                    action = agent.act(state, state.next_stage, eps)
                 
                     # Get the next the next state from the action
                     # reward is 0 till we reach the end node
                     # reward will be -negative, maximize  the reward
                     
                     next_state, reward, done, response  = env.step(action)
-                   
+                    
                     # put the state transitionin memory buffer
                     agent.step(state, action, reward, next_state, done)
                 
+                    state = next_state
 
                 # logging.debug('state : {}'.format(state))
                 logging.debug('reward : {}'.format(reward))
                 # logging.debug('next_state : {}'.format(next_state))
                 # logging.debug('done : {}'.format(done))
                 
-                state = next_state
                 score += reward
                 score_tensor += reward
                 if done:

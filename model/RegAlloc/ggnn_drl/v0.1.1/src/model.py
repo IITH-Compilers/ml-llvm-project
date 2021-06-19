@@ -140,7 +140,7 @@ class QNetwork(nn.Module):
          return select_out
 
     def computeTask(self, state):
-         self.hidden_state =  self.ggnn(initial_node_representation=state.initial_node_representation, annotations=state.annotations, adjacency_lists=state.adjacency_lists)
+        self.hidden_state =  self.ggnn(initial_node_representation=state.initial_node_representation, annotations=state.annotations, adjacency_lists=state.adjacency_lists)
         node_index = state.focus_node
         task_out = selectTaskNet(self.hidden_state[node_index])
         return task_out

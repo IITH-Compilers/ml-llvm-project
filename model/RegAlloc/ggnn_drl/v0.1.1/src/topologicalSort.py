@@ -42,7 +42,7 @@ class Graph:
             assert False, 'discovered node visited.'
 
     def UpdateColorVisitedNode(self, v, color):
-        if self.discovered[v] and self.colored[v] = -1 :
+        if self.discovered[v] and self.colored[v] == -1 :
 
             # for every adjacent vertex u of v, reduce in-degree of u by 1
             self.colored[v] = color

@@ -60,6 +60,7 @@ class GraphColorEnv:
         
         reward = 0
         done = False
+        self.obs.next_stage = 'selectTask'
         return copy.deepcopy(self.obs), reward, done, None
     
     def step_selectTask(self, action):
@@ -71,12 +72,14 @@ class GraphColorEnv:
         reward = 0
         done = False
         
+        self.obs.next_stage = 'colorTask' if action == 0 else 'splitTask'
         return copy.deepcopy(self.obs), reward, done, None
 
     
     def step_colorTask(self, action):
         reg_allocated = action
         # add the node to the visited list
+        nodeChoosen = self.cur_node
         self.obs.graph_topology.UpdateColorVisitedNode(nodeChoosen, reg_allocated)
         
         nodeChoosen = self.cur_node 
@@ -99,8 +102,10 @@ class GraphColorEnv:
             response = utils.get_colored_graph(self.fun_id, self.fileName, self.functionName, self.color_assignment_map)
             done = True
             reward = self.total_reward
+            self.oba.next_state = 'end'
             return copy.deepcopy(self.obs), reward, done, response
 
+        self.obs.next_stage = 'selectnode'
         return copy.deepcopy(self.obs), reward, done, response
 
     #TODO - Call to the gRPC routine 
@@ -125,25 +130,26 @@ class GraphColorEnv:
         response = None 
         # updat eh graph sue to the split
         self.update_obs_split(split_idx)
-
+        self.obs.next_stage = 'selectnode'
         return copy.deepcopy(self.obs), reward, done, None
 
     def step(self, action):
        
         task = action['task']
         task_action  = action['action']
+        self.obs.stage = task
         if task == 'selectnode':
-            response = step_selectNode(task_action)
+            response = self.step_selectNode(task_action)
         elif task == 'selectTask':
-            response = step_selectTask(task_action)
+            response = self.step_selectTask(task_action)
         elif task == 'colorTask':
-            response = step_ColorNode(task_action)
+            response = self.step_colorTask(task_action)
         elif task == 'splitTask':
-            response = step_splitNode(task_action)
+            response = self.step_splitTask(task_action)
         else:
             assert False, "Not supported task"
         
-        return reponse
+        return response
 
     # input graph : jsonnx
     # return the state of the graph, all the possible starting nodes
@@ -164,7 +170,9 @@ class GraphColorEnv:
         self.num_nodes = len(self.graph['nodes'])
         
         self.obs = get_observations(self.graph)
-         
+        
+        self.obs.stage = 'start'
+        self.obs.next_stage = 'selectnode'
         # self.spill_cost_list = self.obs.spill_cost_list
         # self.reg_class_list = self.obs.reg_class_list
         # self.topology = self.obs.graph_topology

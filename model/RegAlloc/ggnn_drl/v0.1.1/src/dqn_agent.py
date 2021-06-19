@@ -69,6 +69,33 @@ class Agent():
                 experiences = self.memory.sample()
                 self.learn(experiences, GAMMA)
     
+    def constraint_selectNode(self, state, out):
+        masked_select_out = out[state.eligiblenodes]
+        rel_indexchoose = torch.argmax(masked_select_out)
+        Qvalue, rel_indexchoose = self.getMaxQvalueAndActions(masked_select_out)
+        node_index = state.eligiblenodes[rel_indexchoose]
+        return node_index, Qvalue
+
+    def constraint_selectTask(self, state, out):
+        # taskchoose = torch.argmax(out)
+        Qvalue, taskchoose = self.getMaxQvalueAndActions(out)
+
+        return taskchoose, Qvalue
+
+    def constraint_selectTask(self, state, out, action_space):
+        out = out[action_space]
+        Qvalue, actions_idx = self.getMaxQvalueAndActions(out)
+        actions_idx = actions_idx.cpu().numpy()
+        reg_allocated = action_space[actions_idx]
+        return reg_allocated, Qvalue
+
+    def constraint_splitTask(self, state, out, splitpoints):
+        out = out[splitpoints]
+        Qvalue, split_idx = self.getMaxQvalueAndActions(out)
+        split_idx = split_idx.cpu().numpy()
+        return split_idx, Qvalue
+
+
     def act_selectNode(self, state, eps=0.):
         if random.random() > eps:
             logging.debug('EXP: Model decision')
@@ -76,10 +103,7 @@ class Agent():
             self.qnetwork_local.eval()
             with torch.no_grad():
                 node_out = self.qnetwork_local.computeNode(state)
-                masked_select_out = select_out[state.eligiblenodes]
-                rel_indexchoose = torch.argmax(masked_select_out)
-                node_index = state.eligiblenodes[rel_indexchoose]
-            
+                node_index, _ = self.constraint_selectNode(state, node_out) 
             self.qnetwork_local.train()
         else:
             node_index = random.choice(state.eligibleNodes)
@@ -92,53 +116,48 @@ class Agent():
             self.qnetwork_local.eval()
             with torch.no_grad():
                 task_out = self.qnetwork_local.computeTask(state)
-                taskchoose = torch.argmax(task_out)
+                taskchoose, _ = self.constraint_selectTask(task_out)
             self.qnetwork_local.train()
         else:
             taskchoose = random.choice(range(2))
         return int(taskchoose)
 
     def act_ColorNode(self, state, eps=0.):
-       regclass = state.reg_class_list[state.focus]
-       adj_colors = state.graph_topology.getColorOfVisitedAdjNodes(node_index)
 
-       action_space = self.registerAS.maskActionSpace(regclass, adj_colors)
-       if action_space is None or len(action_space) == 0:
-           return self.spill_color_idx
+        regclass = state.reg_class_list[state.focus]
+        adj_colors = state.graph_topology.getColorOfVisitedAdjNodes(state.focus)
 
-       if random.random() > eps:
-           logging.debug('EXP: Model decision')
-           state = state# .to(device)
-           self.qnetwork_local.eval()
-           with torch.no_grad():
-               color_out = self.qnetwork_local.computeColor(state)
-               color_out = color_out[action_space]
-               _, actions_idx = self.getMaxQvalueAndActions(color_out)
-               actions_idx = actions_idx.cpu().numpy()
-               reg_allocated = action_space[actions_idx]
-           
-           self.qnetwork_local.train()
+        action_space = self.registerAS.maskActionSpace(regclass, adj_colors)
+        if action_space is None or len(action_space) == 0:
+            return self.spill_color_idx
+
+        if random.random() > eps:
+            logging.debug('EXP: Model decision')
+            state = state# .to(device)
+            self.qnetwork_local.eval()
+            with torch.no_grad():
+                color_out = self.qnetwork_local.computeColor(state)
+                reg_allocated, _ = self.constraint_selectTask(state, color_out, action_space) 
+            self.qnetwork_local.train()
         else:
-           reg_allocated = random.choice(action_space)
-        
+            reg_allocated = random.choice(action_space)
+         
         return int(reg_allocated)
 
+    
     def act_splitNode(self, state, eps=0.):
         #TODO
-        spillpoints = state.spill_point[state.focus]
+        splitpoints = state.split_points[state.focus]
         if random.random() > eps:
             logging.debug('EXP: Model decision')
             state = state# .to(device)
             self.qnetwork_local.eval()
             with torch.no_grad():
                 split_out = self.qnetwork_local.computeSplit(state)
-                split_out = split_out[spillpoints]
-               _, split_idx = self.getMaxQvalueAndActions(split_out)
-               split_idx = split_idx.cpu().numpy()
-             
+                split_idx, _ = self.constraint_splitTask(state, split_out, splitpoints)
             self.qnetwork_local.train()
         else:
-            split_idx = random.choice(spillpoints)
+            split_idx = random.choice(splitpoints)
         return int(split_idx)
 
     def act(self, state, task, eps=0.):
@@ -150,15 +169,15 @@ class Agent():
             eps (float): epsilon, for epsilon-greedy action selection
         """
         if task == 'selectnode':
-            action = act_selectNode(state, eps)
+            action = self.act_selectNode(state, eps)
         elif task == 'selectTask':
-            action = act_selectTask(state, eps)
+            action = self.act_selectTask(state, eps)
         elif task == 'colorTask':
-            action = act_ColorNode(state, eps)
+            action = self.act_ColorNode(state, eps)
         elif task == 'splitTask':
-            action = act_splitNode(state, eps)
+            action = self.act_splitNode(state, eps)
         else:
-            assert False, "Not supported task"
+            assert False, "Not supported task : {}".format(task)
         return {'task' : task, 'action' : action}
 
     def getMaxQvalueAndActions(self, out):
@@ -174,37 +193,54 @@ class Agent():
     def getMaxQvalue(self, next_state):
         
         # print('MaxQvalue - ',next_state.eligibleNodes)
-        if len(next_state.eligibleNodes) == 0:
-            return torch.zeros(1)
+        #if len(next_state.eligibleNodes) == 0:
+        #    return torch.zeros(1)
         # next_state = torch.from_numpy(next_state).float().to(device)
         next_state = next_state# .to(device)
-        
-        node_out, node_idx, color_out, action_space = self.qnetwork_target(next_state)
-        # TODO:: Add a check for masking
-        if action_space is None or len(action_space) == 0:
-            return node_out[node_idx]
+        if next_state.next_stage == 'selectnode':
+            node_out = self.qnetwork_target.computeNode(next_state)
+            _, Qvalue = self.constraint_selectNode(state, node_out)
+        elif next_state.next_stage == 'selectTask':
+            task_out = self.qnetwork_target.computeTask(next_state)
+            _, Qvalue = self.constraint_selectTask(task_out)
+        elif next_state.next_stage == 'colorTask':
+            color_out = self.qnetwork_target.computeColor(next_state)
+            regclass = state.reg_class_list[state.focus]
+            adj_colors = state.graph_topology.getColorOfVisitedAdjNodes(node_index)
+            action_space = self.registerAS.maskActionSpace(regclass, adj_colors)
+            _, Qvalue = self.constraint_selectTask(state, color_out, action_space) 
+        elif next_state.next_stage == 'splitTask':
+            splitpoints = state.split_point[state.focus]
+            split_out = self.qnetwork_target.computeSplit(next_state)
+            _, Qvalue = self.constraint_splitTask(state, split_out, splitpoints)
+        else:
+            return torch.zeros(1)
 
-        color_out = color_out[action_space]
-        QMax_color, _ = self.getMaxQvalueAndActions(color_out)
-        QMax = node_out[node_idx] + QMax_color
-        return QMax
+        return Qvalue
  
  
     def getQvalueForAction(self, state, action):
         try:
-            node_idx_t, reg_allocated_t = action 
+            # node_idx_t, reg_allocated_t = action 
             # logging.debug(state.shape, type(state))
+            task = action['task']
+            task_action  = action['action']
 
             # state = torch.from_numpy(state).float().to(device)
             state = state#.to(device)
             # print('local - ', state.eligibleNodes) 
-            node_out, node_idx, color_out, action_space = self.qnetwork_local(state)
-            Qvalue_node = node_out[node_idx_t]
-            Qvalue_color = torch.zeros(1)
-            if color_out is not None:
-                Qvalue_color = color_out[reg_allocated_t]
-            # print(Qvalue)
-            Qvalue = Qvalue_node + Qvalue_color
+            if task == 'selectnode':
+                out = self.qnetwork_local.computeNode(state)
+            elif task == 'selectTask':
+                out = self.qnetwork_local.computeTask(state)
+            elif next_state.next_stage == 'colorTask':
+                out = self.qnetwork_local.computeColor(state)
+            elif next_state.next_stage == 'splitTask':
+                out = self.qnetwork_local.computeSplit(state)
+            else:
+                return torch.zeros(1)
+            Qvalue = out[task_action]
+            
             return Qvalue
         except:
             logging.error('Error int getQvalueForAction')
