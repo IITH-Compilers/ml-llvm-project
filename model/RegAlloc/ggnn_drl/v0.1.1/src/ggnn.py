@@ -50,9 +50,9 @@ class GatedGraphNeuralNetwork(nn.Module):
         self.state_to_message_dropout = state_to_message_dropout
         self.rnn_dropout = rnn_dropout
         self.use_bias_for_message_linear = use_bias_for_message_linear
-        self.annotation_size = annotation_size 
+        # self.annotation_size = annotation_size 
 
-        self.hidden_layer = nn.Linear(self.hidden_size + self.annotation_size, self.hidden_size)
+        self.hidden_layer = nn.Linear(self.hidden_size + annotation_size, self.hidden_size)
         # Prepare linear transformations from node states to messages, for each layer and each edge type
         # Prepare rnn cells for each layer
         self.state_to_message_linears = []

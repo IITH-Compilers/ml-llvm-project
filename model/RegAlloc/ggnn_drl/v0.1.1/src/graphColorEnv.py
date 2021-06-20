@@ -102,7 +102,7 @@ class GraphColorEnv:
             response = utils.get_colored_graph(self.fun_id, self.fileName, self.functionName, self.color_assignment_map)
             done = True
             reward = self.total_reward
-            self.oba.next_state = 'end'
+            self.obs.next_stage = 'end'
             return copy.deepcopy(self.obs), reward, done, response
 
         self.obs.next_stage = 'selectnode'
@@ -128,8 +128,15 @@ class GraphColorEnv:
         done = False
         
         response = None 
-        # updat eh graph sue to the split
-        self.update_obs_split(split_idx)
+        # TODO updat eh graph sue to the split
+        # self.update_obs_split(split_idx)
+        if False not in self.obs.graph_topology.discovered:
+            response = utils.get_colored_graph(self.fun_id, self.fileName, self.functionName, self.color_assignment_map)
+            done = True
+            reward = self.total_reward
+            self.obs.next_stage = 'end'
+            return copy.deepcopy(self.obs), reward, done, response
+        
         self.obs.next_stage = 'selectnode'
         return copy.deepcopy(self.obs), reward, done, None
 

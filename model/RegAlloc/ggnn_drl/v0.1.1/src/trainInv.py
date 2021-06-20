@@ -71,7 +71,7 @@ def run(agent, config):
                 action_map = {0 : 'selectnode', 1 : 'selectTask', 2 : {0 : 'colorTask', 1 : 'splitTask'}}
                 # print(state.stage)
                 for i in range(3):
-                    print('{} --> {} '.format(state.stage, state.next_stage))
+                    #print('{} --> {} '.format(state.stage, state.next_stage))
                     # if state.stage == 'selectTask' :
                     #     action = agent.act(state, action_map[2][state.next_state], eps)
                     # else:
@@ -96,6 +96,7 @@ def run(agent, config):
                 score += reward
                 score_tensor += reward
                 if done:
+                    #print('{} --> {} '.format(state.stage, state.next_stage))
                     logging.debug('final reward : {}'.format(reward))
                     logging.debug('final score : {}'.format(score))
                     break

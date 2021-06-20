@@ -128,11 +128,11 @@ class QNetwork(nn.Module):
         self.registerAS = action_space
         action_size = self.registerAS.ac_sp_normlize_size
         
-        self.ggnn = GatedGraphNeuralNetwork(hidden_size=state_size, annotation_size=2, num_edge_types=1, layer_timesteps=[1], residual_connections={}, nodelevel=True)
-        self.selectNodeNet = SelectNodeNetwork(state_size, seed, 1)
-        self.selectTaskNet = SelectTaskNetwork(state_size, seed, 2)
-        self.colorNet = ColorNetwork(state_size, seed, action_size)
-        self.splitNodeNet = SplitNodeNetwork(state_size, seed, 100)
+        self.ggnn = GatedGraphNeuralNetwork(hidden_size=state_size+1, annotation_size=3, num_edge_types=1, layer_timesteps=[1], residual_connections={}, nodelevel=True)
+        self.selectNodeNet = SelectNodeNetwork(state_size+1, seed, 1)
+        self.selectTaskNet = SelectTaskNetwork(state_size+1, seed, 2)
+        self.colorNet = ColorNetwork(state_size+1, seed, action_size)
+        self.splitNodeNet = SplitNodeNetwork(state_size+1, seed, 100)
 
     def computeNode(self, state):
          self.hidden_state =  self.ggnn(initial_node_representation=state.initial_node_representation, annotations=state.annotations, adjacency_lists=state.adjacency_lists)
@@ -141,13 +141,13 @@ class QNetwork(nn.Module):
 
     def computeTask(self, state):
         self.hidden_state =  self.ggnn(initial_node_representation=state.initial_node_representation, annotations=state.annotations, adjacency_lists=state.adjacency_lists)
-        node_index = state.focus_node
-        task_out = selectTaskNet(self.hidden_state[node_index])
+        node_index = state.focus
+        task_out = self.selectTaskNet(self.hidden_state[node_index])
         return task_out
     
     def computeColor(self, state):
         self.hidden_state =  self.ggnn(initial_node_representation=state.initial_node_representation, annotations=state.annotations, adjacency_lists=state.adjacency_lists)
-        node_index = state.focus_node
+        node_index = state.focus
         color_out = self.colorNet(self.hidden_state[node_index])
 
         return color_out
@@ -167,11 +167,11 @@ class QNetwork(nn.Module):
         select_out = self.selectNodeNet(hidden_state)
         # print('select_out ', select_out)
         #print('eligibleNodes', state.eligibleNodes)
-        masked_select_out = select_out[state.eligiblenodes]
+        masked_select_out = select_out[state.eligibleNodes]
         #print('masked ',masked_select_out)
         rel_indexchoose = torch.argmax(masked_select_out)
         # select_qvalue = torch.max(select_out)
-        node_index = state.eligiblenodes[rel_indexchoose]
+        node_index = state.eligibleNodes[rel_indexchoose]
         
         task_out = selectTaskNet(hidden_state[node_index])
         taskchoose = torch.argmax(task_out)

@@ -70,10 +70,10 @@ class Agent():
                 self.learn(experiences, GAMMA)
     
     def constraint_selectNode(self, state, out):
-        masked_select_out = out[state.eligiblenodes]
+        masked_select_out = out[state.eligibleNodes]
         rel_indexchoose = torch.argmax(masked_select_out)
         Qvalue, rel_indexchoose = self.getMaxQvalueAndActions(masked_select_out)
-        node_index = state.eligiblenodes[rel_indexchoose]
+        node_index = state.eligibleNodes[rel_indexchoose]
         return node_index, Qvalue
 
     def constraint_selectTask(self, state, out):
@@ -82,7 +82,7 @@ class Agent():
 
         return taskchoose, Qvalue
 
-    def constraint_selectTask(self, state, out, action_space):
+    def constraint_colorTask(self, state, out, action_space):
         out = out[action_space]
         Qvalue, actions_idx = self.getMaxQvalueAndActions(out)
         actions_idx = actions_idx.cpu().numpy()
@@ -110,13 +110,17 @@ class Agent():
         return int(node_index)
 
     def act_selectTask(self, state, eps=0.):
+        splitpoints = state.split_points[state.focus]
+        if splitpoints is None or len(splitpoints) == 0:
+            return 0
+
         if random.random() > eps:
             logging.debug('EXP: Model decision')
             state = state# .to(device)
             self.qnetwork_local.eval()
             with torch.no_grad():
                 task_out = self.qnetwork_local.computeTask(state)
-                taskchoose, _ = self.constraint_selectTask(task_out)
+                taskchoose, _ = self.constraint_selectTask(state, task_out)
             self.qnetwork_local.train()
         else:
             taskchoose = random.choice(range(2))
@@ -137,7 +141,7 @@ class Agent():
             self.qnetwork_local.eval()
             with torch.no_grad():
                 color_out = self.qnetwork_local.computeColor(state)
-                reg_allocated, _ = self.constraint_selectTask(state, color_out, action_space) 
+                reg_allocated, _ = self.constraint_colorTask(state, color_out, action_space) 
             self.qnetwork_local.train()
         else:
             reg_allocated = random.choice(action_space)
