@@ -175,6 +175,7 @@ void RABasic::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<AAResultsWrapperPass>();
   AU.addRequired<LiveIntervals>();
   AU.addPreserved<LiveIntervals>();
+  AU.addRequired<SlotIndexes>();
   AU.addPreserved<SlotIndexes>();
   AU.addRequired<LiveDebugVariables>();
   AU.addPreserved<LiveDebugVariables>();
@@ -191,6 +192,8 @@ void RABasic::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<LiveRegMatrix>();
   AU.addPreserved<LiveRegMatrix>();
   AU.addRequired<SpillPlacement>();
+  AU.addRequired<MachineDominatorTree>();
+  AU.addPreserved<MachineDominatorTree>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -313,15 +316,14 @@ bool RABasic::runOnMachineFunction(MachineFunction &mf) {
                                 getAnalysis<MachineBlockFrequencyInfo>());
 
   SpillerInstance.reset(createInlineSpiller(*this, *MF, *VRM));
-
-  MLRegAlloc(*MF, getAnalysis<SlotIndexes>(),
-             getAnalysis<MachineBlockFrequencyInfo>(),
-             getAnalysis<MachineDominatorTree>(),
-             getAnalysis<MachineLoopInfo>(),
-             getAnalysis<AAResultsWrapperPass>().getAAResults(),
-             getAnalysis<LiveDebugVariables>(),
-             getAnalysis<SpillPlacement>()
-             );
+  if (enable_dump_ig_dot || enable_mlra_inference || enable_mlra_training) {
+    MLRegAlloc(
+        *MF, getAnalysis<SlotIndexes>(),
+        getAnalysis<MachineBlockFrequencyInfo>(),
+        getAnalysis<MachineDominatorTree>(), getAnalysis<MachineLoopInfo>(),
+        getAnalysis<AAResultsWrapperPass>().getAAResults(),
+        getAnalysis<LiveDebugVariables>(), getAnalysis<SpillPlacement>());
+  }
 
   allocatePhysRegs();
   postOptimization();
