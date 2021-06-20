@@ -221,8 +221,8 @@ void MLRA::splitResponse(SmallSetVector<unsigned, 8> &updatedRegIdxs,
     regprofResponse->set_regid(reg);
 
     // Copying the interferences
-    google::protobuf::RepeatedField<unsigned> interf(rp.interferences.begin(),
-                                                     rp.interferences.end());
+    google::protobuf::RepeatedField<unsigned> interf(
+        rp.frwdInterferences.begin(), rp.frwdInterferences.end());
     regprofResponse->mutable_interferences()->Swap(&interf);
 
     // Copying the splitslots
@@ -232,6 +232,11 @@ void MLRA::splitResponse(SmallSetVector<unsigned, 8> &updatedRegIdxs,
 
     // Set spillweights
     regprofResponse->set_spillweight(rp.spillWeight);
+
+    // Copying the positional spill weights
+    google::protobuf::RepeatedField<float> posSpillWeights(
+        rp.spillWeights.begin(), rp.spillWeights.end());
+    regprofResponse->mutable_positionalspillweights()->Swap(&posSpillWeights);
   }
 }
 
@@ -335,7 +340,6 @@ void MLRA::dumpInterferenceGraph() {
       std::string segmentInst = "";
       unsigned Reg = Register::index2VirtReg(id - step);
       LiveInterval *VirtReg = &LIS->getInterval(Reg);
-      VirtRegAuxInfo VRAI(*MF, *LIS, VRM, *Loops, *MBFI);
 
       for (auto &S : VirtReg->segments) {
         // ToDo: Change this loop to capture the uses of definition
@@ -345,6 +349,7 @@ void MLRA::dumpInterferenceGraph() {
           auto *MIR = LIS->getInstructionFromIndex(I);
           if (!MIR)
             continue;
+          VirtRegAuxInfo VRAI(*MF, *LIS, VRM, *Loops, *MBFI);
           auto spillWt = VRAI.futureWeight(*VirtReg, startIdx, I);
           IR2Vec::Vector vec = instVecMap[MIR];
           if (vec.size() <= 0) {
@@ -551,6 +556,21 @@ void MLRA::findLastUseBefore(const SmallVector<SlotIndex, 8> startpts,
   }
 }
 
+void MLRA::calculatePositionalSpillWeights(
+    LiveInterval *VirtReg, SmallVector<float, 8> &spillWeights) {
+  VirtRegAuxInfo VRAI(*MF, *LIS, VRM, *Loops, *MBFI);
+  for (auto &S : VirtReg->segments) {
+    auto startIdx = S.start.getBaseIndex();
+    for (SlotIndex I = startIdx, E = S.end.getBaseIndex(); I != E;
+         I = I.getNextIndex()) {
+      auto *MIR = LIS->getInstructionFromIndex(I);
+      if (!MIR)
+        continue;
+      spillWeights.push_back(VRAI.futureWeight(*VirtReg, startIdx, I));
+    }
+  }
+}
+
 void MLRA::captureRegisterProfile() {
   LLVM_DEBUG(errs() << "\nStarting capturing \n");
 
@@ -638,6 +658,10 @@ void MLRA::captureRegisterProfile() {
       continue;
     }
 
+    SmallVector<float, 8> positionalSpillWeights;
+    calculatePositionalSpillWeights(VirtReg, positionalSpillWeights);
+
+    regProf.spillWeights = positionalSpillWeights;
     regProf.spillWeight = VirtReg->weight;
     SmallSetVector<unsigned, 8> interference;
     SmallSetVector<unsigned, 8> frwdInterference;
@@ -840,7 +864,12 @@ void MLRA::updateRegisterProfileAfterSplit(
           findLastUseBefore(startpts, Uses, lastUseIdx);
           rp.splitSlots.insert(lastUseIdx.begin(), lastUseIdx.end());
 
+          SmallVector<float, 8> positionalSpillWeights;
+          calculatePositionalSpillWeights(NewVirtReg, positionalSpillWeights);
+          rp.spillWeights = positionalSpillWeights;
+
           regProfMap[interference].splitSlots.clear();
+          regProfMap[interference].spillWeights.clear();
           for (auto overlaps : regProfMap[interference].overlapsStart) {
             if (overlaps.second.size() == 0)
               continue;
@@ -856,6 +885,10 @@ void MLRA::updateRegisterProfileAfterSplit(
             findLastUseBefore(overlaps.second, Uses, lastUseIdx);
             regProfMap[interference].splitSlots.insert(lastUseIdx.begin(),
                                                        lastUseIdx.end());
+
+            SmallVector<float, 8> positionalSpillWeights;
+            calculatePositionalSpillWeights(VirtReg, positionalSpillWeights);
+            regProfMap[interference].spillWeights = positionalSpillWeights;
           }
 
           // SA->analyze(InterVReg);
@@ -947,8 +980,8 @@ void MLRA::allocatePhysRegsViaRL() {
     VirtRegVec SplitVRegs;
 
     // TODO selectOrSplit
-    // Check for the supported register class. if not supported class then call
-    // Greedy selectOrsplit
+    // Check for the supported register class. if not supported class then
+    // call Greedy selectOrsplit
     std::string regClass = TRI->getRegClassName(MRI->getRegClass(VirtReg->reg));
     unsigned AvailablePhysReg;
     if (this->regClassSupported4_MLRA.find(regClass) ==
@@ -964,14 +997,14 @@ void MLRA::allocatePhysRegsViaRL() {
       // enqueue(&LIS->getInterval(Reg));
       continue;
     } else {
-      LLVM_DEBUG(
-          errs() << "\ngetPhyRegForColor "
-                 << TRI->getRegClassName(MRI->getRegClass(VirtReg->reg)) << ':'
-                 << *VirtReg << " w=" << VirtReg->weight << '\n';
-          // auto rci_order = RCI.getOrder(MRI->getRegClass(VirtReg->reg));
-          // for (auto O
-          //      : rci_order) { errs() << ' ' << printReg(O, TRI) << "=" << O;
-          // }
+      LLVM_DEBUG(errs() << "\ngetPhyRegForColor "
+                        << TRI->getRegClassName(MRI->getRegClass(VirtReg->reg))
+                        << ':' << *VirtReg << " w=" << VirtReg->weight << '\n';
+                 // auto rci_order =
+                 // RCI.getOrder(MRI->getRegClass(VirtReg->reg)); for (auto O
+                 //      : rci_order) { errs() << ' ' << printReg(O, TRI) << "="
+                 //      << O;
+                 // }
       );
       // LastEvicted.clearEvicteeInfo(VirtReg->reg);
 

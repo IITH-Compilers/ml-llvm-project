@@ -138,6 +138,7 @@ private:
     float spillWeight;
     unsigned color;
     unsigned numUses;
+    SmallVector<float, 8> spillWeights;
     SmallSetVector<unsigned, 8> interferences;
     SmallSetVector<unsigned, 8> frwdInterferences;
     SmallSetVector<unsigned, 8> splitSlots;
@@ -161,6 +162,8 @@ private:
   void findLastUseBefore(const SmallVector<SlotIndex, 8> startpts,
                          const ArrayRef<SlotIndex> useSlots,
                          SmallSetVector<unsigned, 8> &lastUseSlots);
+  void calculatePositionalSpillWeights(LiveInterval *VirtReg,
+                                       SmallVector<float, 8> &spillWeights);
   void captureRegisterProfile();
   void printRegisterProfile() const;
 
