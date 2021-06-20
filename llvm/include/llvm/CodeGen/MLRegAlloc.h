@@ -121,9 +121,11 @@ protected:
   MLRA(DenseMap<unsigned, unsigned> VirtRegToColor);
   static cl::opt<bool> enable_dump_ig_dot;
   static cl::opt<std::string> pred_file;
-  static cl::opt<bool> enable_experimental_mlra;
+  // static cl::opt<bool> enable_experimental_mlra;
   static cl::opt<bool> enable_mlra_inference;
+  static cl::opt<bool> enable_mlra_training;
   static cl::opt<bool> enable_mlra_checks;
+  static cl::opt<unsigned> funcID;
   void MLRegAlloc(MachineFunction &MF, SlotIndexes &Indexes,
                   MachineBlockFrequencyInfo &MBFI,
                   MachineDominatorTree &DomTree, MachineLoopInfo &Loops,

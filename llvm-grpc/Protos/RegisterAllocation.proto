@@ -35,6 +35,7 @@ message RegisterProfileList {
     repeated uint32 splitSlots=4;
   }
   repeated RegisterProfile regProf=1;
+  bool result=2;
 }
 
 message Data {

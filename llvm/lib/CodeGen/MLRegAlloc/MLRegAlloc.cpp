@@ -116,9 +116,13 @@ cl::opt<std::string> MLRA::pred_file("mlra-pred-file", cl::Hidden,
                                      cl::desc("File Path of color-target map."),
                                      cl::init(""));
 
-cl::opt<bool> MLRA::enable_experimental_mlra("mlra-experimental", cl::Hidden,
-                                             cl::desc("Turn on MLRA ."),
-                                             cl::init(false));
+cl::opt<unsigned> MLRA::funcID("mlra-funcID", cl::Hidden,
+                               cl::desc("Function name for training"),
+                               cl::init(0));
+
+cl::opt<bool> MLRA::enable_mlra_training("mlra-training", cl::Hidden,
+                                         cl::desc("turn on mlra training ."),
+                                         cl::init(false));
 
 cl::opt<bool> MLRA::enable_mlra_inference("mlra-inference", cl::Hidden,
                                           cl::desc("turn on mlra inference ."),
@@ -127,6 +131,7 @@ cl::opt<bool> MLRA::enable_mlra_inference("mlra-inference", cl::Hidden,
 cl::opt<bool> MLRA::enable_mlra_checks("enable-mlra-checks", cl::Hidden,
                                        cl::desc("turn on mlra checks"),
                                        cl::init(false));
+
 registerallocationinference::RegisterAllocationInference::Stub *Stub = nullptr;
 // gRPCUtil client;
 
@@ -192,15 +197,16 @@ grpc::Status MLRA::codeGen(grpc::ServerContext *context,
     unsigned splitRegIdx = request->regidx();
     int splitPoint = request->payload();
     SmallVector<unsigned, 2> NewVRegs;
-    splitVirtReg(splitRegIdx, splitPoint, NewVRegs);
+    if (splitVirtReg(splitRegIdx, splitPoint, NewVRegs)) {
+      SmallSetVector<unsigned, 8> updatedRegIdxs;
+      updateRegisterProfileAfterSplit(splitRegIdx, NewVRegs, updatedRegIdxs);
 
-    SmallSetVector<unsigned, 8> updatedRegIdxs;
-    updateRegisterProfileAfterSplit(splitRegIdx, NewVRegs, updatedRegIdxs);
+      if (enable_mlra_checks)
+        verifyRegisterProfile();
 
-    if (enable_mlra_checks)
-      verifyRegisterProfile();
-
-    splitResponse(updatedRegIdxs, response);
+      splitResponse(updatedRegIdxs, response);
+    } else
+      response->set_result(false);
   }
 
   return Status::OK;
@@ -254,12 +260,13 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
   SE->reset(LREdit, SplitEditor::SM_Size);
   SlotIndex SegStart;
   for (unsigned i = 0; i != Uses.size(); ++i) {
-    if (const MachineInstr *MI = Indexes->getInstructionFromIndex(Uses[i]))
-      if (MI->isFullCopy()) {
-        LLVM_DEBUG(dbgs() << "    skip:\t" << Uses[i] << '\t' << *MI);
-        continue;
-      }
-    if (i == splitPoint) {
+    // To-Do: Can try skipping splitting at copy instructions later
+    // if (const MachineInstr *MI = Indexes->getInstructionFromIndex(Uses[i]))
+    //   if (MI->isFullCopy()) {
+    //     LLVM_DEBUG(dbgs() << "    skip:\t" << Uses[i] << '\t' << *MI);
+    //     continue;
+    //   }
+    if (i == splitPoint - 1) {
       SE->openIntv();
       SegStart = SE->enterIntvBefore(Uses[i]);
       break;
@@ -990,8 +997,6 @@ void MLRA::allocatePhysRegsViaRL() {
 }
 
 void MLRA::training_flow() {
-  assert(enable_experimental_mlra && "mlra-experimental should be true.");
-
   if (this->FunctionVirtRegToColorMap.find(MF->getName()) !=
       this->FunctionVirtRegToColorMap.end()) {
     allocatePhysRegsViaRL();
@@ -1047,6 +1052,12 @@ void MLRA::MLRegAlloc(MachineFunction &MF, SlotIndexes &Indexes,
                       MachineDominatorTree &DomTree, MachineLoopInfo &Loops,
                       AAResults &AA, LiveDebugVariables &DebugVars,
                       SpillPlacement &SpillPlacer) {
+
+  assert(enable_mlra_training && funcID != 0 &&
+         "Function ID is expected in training flow");
+  FunctionCounter++;
+  if (FunctionCounter != funcID)
+    return;
   this->MF = &MF;
   this->Indexes = &Indexes;
   this->MBFI = &MBFI;
@@ -1057,7 +1068,6 @@ void MLRA::MLRegAlloc(MachineFunction &MF, SlotIndexes &Indexes,
   this->SpillPlacer = &SpillPlacer;
 
   mlAllocatedRegs.clear();
-  FunctionCounter++;
 
   SA.reset(new SplitAnalysis(*VRM, *LIS, Loops));
   SE.reset(new SplitEditor(*SA, AA, *LIS, *VRM, DomTree, MBFI));
@@ -1080,8 +1090,7 @@ void MLRA::MLRegAlloc(MachineFunction &MF, SlotIndexes &Indexes,
 
   captureRegisterProfile();
 
-
-  if (enable_experimental_mlra) {
+  if (enable_mlra_training) {
     RunService(this);
     training_flow();
   }
