@@ -33,6 +33,9 @@ from ray.rllib.utils.test_utils import check_learning_achieved
 
 config_path=None
 
+logger = logging.getLogger(__file__)
+logging.basicConfig(filename=os.path.join("/home/cs20mtech12003/Compilers/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib-basic/src", 'running.log'), format='%(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
+
 class GraphColorEnv(gym.Env):
     """Example of a custom env in which you have to walk down a corridor.
 
@@ -51,7 +54,7 @@ class GraphColorEnv(gym.Env):
             -100000.0, 100000.0, shape=(config["state_size"], ), dtype=np.float32)
         self.graph_path = config["path"]
         self.adj_colors = None
-        temp_config = { 'mode' :'test', 'dump_type':'One', 'dump_color_graph':True, 'intermediate_data' : '/home/cs20mtech12003/Compilers/ML-Register-Allocation/model/ggnn_drl/v3/src/tmp'}
+        temp_config = { 'mode' :'inference', 'dump_type':'One', 'dump_color_graph':True, 'intermediate_data' : '/home/cs20mtech12003/Compilers/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib-basic/src/tmp'}
         utils.set_config(temp_config)
 
     def reward_formula(self, value, action):
@@ -131,7 +134,10 @@ class GraphColorEnv(gym.Env):
         logging.debug('regClass of Nodes : {}'.format(self.regClass))
         # return (next_obs, next_node, self.adj_colors, self.regClass), reward, done, response 
         if next_obs is not None and not isinstance(next_obs, np.ndarray):
-            next_obs = np.array(next_obs)            
+            next_obs = np.array(next_obs) 
+
+        if response is None:
+            response = {}           
 
         return next_obs, reward, done, response 
 

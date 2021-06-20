@@ -13,6 +13,9 @@ import utils
 from register_action_space import RegisterActionSpace
 from ray.rllib.models import ModelCatalog
 from model import CustomTorchModel
+import logging
+logger = logging.getLogger(__file__)
+logging.basicConfig(filename=os.path.join("/home/cs20mtech12003/Compilers/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib-basic/src", 'running.log'), format='%(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
 
 
 if __name__ == "__main__":
@@ -38,7 +41,7 @@ if __name__ == "__main__":
         checkpoint = "/home/cs20mtech12003/ray_results/experiment_2021-06-19_12-22-08/experiment_GraphColorEnv_dd6e7_00000_0_2021-06-19_12-22-08/checkpoint_000050/checkpoint-50"
         train_agent.restore(checkpoint)            
         
-        utils_config = { 'mode' :'test', 'dump_type':'One', 'dump_color_graph':True, 'intermediate_data' : '/home/cs20mtech12003/Compilers/ML-Register-Allocation/model/ggnn_drl/v3/src/tmp'}
+        utils_config = { 'mode' :'inference', 'dump_type':'One', 'dump_color_graph':True, 'intermediate_data' : '/home/cs20mtech12003/Compilers/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib-basic/src/tmp'}
         utils_config = utils.set_config(utils_config)
 
         env_config =  config["env_config"]

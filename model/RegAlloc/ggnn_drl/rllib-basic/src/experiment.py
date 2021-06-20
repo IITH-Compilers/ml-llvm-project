@@ -14,6 +14,7 @@ from env import GraphColorEnv, set_config
 from register_action_space import RegisterActionSpace
 from ray.rllib.models import ModelCatalog
 from model import CustomTorchModel
+import logging
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--train-iterations", type=int, default=10)
@@ -59,6 +60,17 @@ def experiment(config):
 
 if __name__ == "__main__":
     args = parser.parse_args()
+    logger = logging.getLogger('__file__')
+    log_level=logging.DEBUG
+    # if args.log_level == 'WARN':
+    #     log_level=logging.WARNING
+    # elif args.log_level == 'INFO':
+    #     log_level=logging.INFO
+
+    logging.basicConfig(filename=os.path.join("/home/cs20mtech12003/Compilers/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib-basic/src", 'running.log'), format='%(levelname)s - %(filename)s - %(message)s', level=log_level)
+    logging.info('Starting training')
+    logging.info(args)
+
 
     ray.init()
     config = DEFAULT_CONFIG.copy()

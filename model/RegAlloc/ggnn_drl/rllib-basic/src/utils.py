@@ -16,6 +16,7 @@ import json
 from argparse import Namespace
 
 logger = logging.getLogger(__file__) 
+logging.basicConfig(filename=os.path.join("/home/cs20mtech12003/Compilers/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib-basic/src", 'running.log'), format='%(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
 
 LL_DIR_CONST='llfiles'
 OUT_DIR_CONST='outfiles'

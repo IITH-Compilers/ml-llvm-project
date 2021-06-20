@@ -10,6 +10,7 @@ https://docs.ray.io/en/master/rllib-algorithms.html#deep-q-networks-dqn-rainbow-
 """  # noqa: E501
 
 import logging
+import os
 from typing import List, Optional, Type
 
 from ray.rllib.agents.dqn.dqn_tf_policy import DQNTFPolicy
@@ -29,7 +30,8 @@ from ray.rllib.utils.typing import TrainerConfigDict
 from ray.util.iter import LocalIterator
 from ray.rllib.utils.deprecation import deprecation_warning, DEPRECATED_VALUE
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__file__)
+logging.basicConfig(filename=os.path.join("/home/cs20mtech12003/Compilers/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib-basic/src", 'running.log'), format='%(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
 
 # yapf: disable
 # __sphinx_doc_begin__
@@ -143,15 +145,22 @@ DEFAULT_CONFIG = with_common_config({
     # Number of workers for collecting samples with. This only makes sense
     # to increase if your environment is particularly slow to sample, or if
     # you"re using the Async or Ape-X optimizers.
-    "num_workers": 0,
+    "num_workers": 20,
 
-    "num_cpus_per_worker": 1,
+    "num_cpus_per_worker": 0,
+
+    "num_gpus": 0,
+
+    "num_gpus_per_worker": .1,
+
     # Whether to compute priorities on workers.
     "worker_side_prioritization": False,
     # Prevent iterations from going lower than this time span
     "min_iter_time_s": 1,
     
     "framework": "torch",
+
+    # "log_level": "DEBUG",
 })
 # __sphinx_doc_end__
 # yapf: enable
