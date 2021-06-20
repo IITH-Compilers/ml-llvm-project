@@ -199,46 +199,34 @@ grpc::Status MLRA::codeGen(grpc::ServerContext *context,
 
     if (enable_mlra_checks)
       verifyRegisterProfile();
+
+    splitResponse(updatedRegIdxs, response);
   }
 
   return Status::OK;
 }
 
 void MLRA::splitResponse(SmallSetVector<unsigned, 8> &updatedRegIdxs,
-                         SmallVector<unsigned, 2> NewVRegs,
                          registerallocation::RegisterProfileList *response) {
-  // unsigned step = TRI->getNumRegs() + 1;
-  // for (auto reg : updatedRegIdxs) {
-  //   auto regprofResponse = response->add_regprof();
-  //   auto rp = regProfMap[reg];
-  //   if (std::find(NewVRegs.begin(), NewVRegs.end(), reg - step) !=
-  //       NewVRegs.end()) {
+  for (auto reg : updatedRegIdxs) {
+    auto regprofResponse = response->add_regprof();
+    auto rp = regProfMap[reg];
 
-  //     for (auto i : rp.interferences) {
-  //       auto iomap = regprofResponse->add_iomap();
-  //       iomap->set_interference(i);
-  //       auto overlaps = rp.overlapsStart[i];
+    regprofResponse->set_regid(reg);
 
-  //       iomap
+    // Copying the interferences
+    google::protobuf::RepeatedField<unsigned> interf(rp.interferences.begin(),
+                                                     rp.interferences.end());
+    regprofResponse->mutable_interferences()->Swap(&interf);
 
-  //     }
+    // Copying the splitslots
+    google::protobuf::RepeatedField<unsigned> splitSlots(rp.splitSlots.begin(),
+                                                         rp.splitSlots.end());
+    regprofResponse->mutable_splitslots()->Swap(&splitSlots);
 
-  //     // Copying the interferences
-  //     google::protobuf::RepeatedField<unsigned>
-  //     interf(rp.interferences.begin(),
-  //                                                      rp.interferences.end());
-  //     regprofResponse->mutable_interferences()->Swap(&interf);
-
-  //     // Copying the overlaps
-  //     auto overlaps = rp.overlapsStart;
-
-  //     google::protobuf::RepeatedField<unsigned> overlaps(
-  //         rp.overlapsStart.begin(), rp.overlapsStart.end());
-  //     regprofResponse->mutable_overlaps()->Swap(&overlaps);
-
-  //     regprofResponse->set_spillweight(rp.spillWeight);
-  //   }
-  // }
+    // Set spillweights
+    regprofResponse->set_spillweight(rp.spillWeight);
+  }
 }
 
 bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
