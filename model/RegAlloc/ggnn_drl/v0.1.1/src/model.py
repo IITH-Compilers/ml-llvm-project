@@ -149,12 +149,14 @@ class QNetwork(nn.Module):
         self.hidden_state =  self.ggnn(initial_node_representation=state.initial_node_representation, annotations=state.annotations, adjacency_lists=state.adjacency_lists)
         node_index = state.focus
         color_out = self.colorNet(self.hidden_state[node_index])
-
+        
+        # color_out = color_out.reshape(color_out.shape[0])
+        
         return color_out
     
     def computeSplit(self, state):
         self.hidden_state =  self.ggnn(initial_node_representation=state.initial_node_representation, annotations=state.annotations, adjacency_lists=state.adjacency_lists)
-        node_index = state.focus_node
+        node_index = state.focus
         split_out = self.splitNodeNet(self.hidden_state[node_index])
 
         return split_out

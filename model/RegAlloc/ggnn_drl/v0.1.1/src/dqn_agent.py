@@ -188,6 +188,8 @@ class Agent():
         action_out = out
         # print(action_out.shape) 
         # action, action_Qvalue = torch.argmax(action_out, dim=0), torch.max(action_out, dim=0)
+        # print(action_out.shape, action_out)
+        # print(action_out.shape)
         action_Qvalue , action = torch.max(action_out, dim=0)
 
         QMax = action_Qvalue
@@ -203,23 +205,28 @@ class Agent():
         next_state = next_state# .to(device)
         if next_state.next_stage == 'selectnode':
             node_out = self.qnetwork_target.computeNode(next_state)
-            _, Qvalue = self.constraint_selectNode(state, node_out)
+            _, Qvalue = self.constraint_selectNode(next_state, node_out)
+            Qvalue = Qvalue[0]
         elif next_state.next_stage == 'selectTask':
             task_out = self.qnetwork_target.computeTask(next_state)
-            _, Qvalue = self.constraint_selectTask(task_out)
+            _, Qvalue = self.constraint_selectTask(next_state, task_out)
+            # Qvalue = Qvalue.unsqueeze(0)
         elif next_state.next_stage == 'colorTask':
             color_out = self.qnetwork_target.computeColor(next_state)
-            regclass = state.reg_class_list[state.focus]
-            adj_colors = state.graph_topology.getColorOfVisitedAdjNodes(node_index)
+            regclass = next_state.reg_class_list[next_state.focus]
+            adj_colors = next_state.graph_topology.getColorOfVisitedAdjNodes(next_state.focus)
             action_space = self.registerAS.maskActionSpace(regclass, adj_colors)
-            _, Qvalue = self.constraint_selectTask(state, color_out, action_space) 
+            _, Qvalue = self.constraint_colorTask(next_state, color_out, action_space)
+            # Qvalue = Qvalue[0]
         elif next_state.next_stage == 'splitTask':
-            splitpoints = state.split_point[state.focus]
+            splitpoints = next_state.split_points[next_state.focus]
             split_out = self.qnetwork_target.computeSplit(next_state)
-            _, Qvalue = self.constraint_splitTask(state, split_out, splitpoints)
+            _, Qvalue = self.constraint_splitTask(next_state, split_out, splitpoints)
+            # Qvalue = Qvalue[0]
         else:
-            return torch.zeros(1)
-
+            Qvalue = torch.tensor(0)# torch.zeros(1)
+        
+        # print(next_state.next_stage, Qvalue, Qvalue.shape)
         return Qvalue
  
  
@@ -237,14 +244,16 @@ class Agent():
                 out = self.qnetwork_local.computeNode(state)
             elif task == 'selectTask':
                 out = self.qnetwork_local.computeTask(state)
-            elif next_state.next_stage == 'colorTask':
+            elif task == 'colorTask':
                 out = self.qnetwork_local.computeColor(state)
-            elif next_state.next_stage == 'splitTask':
+            elif task == 'splitTask':
                 out = self.qnetwork_local.computeSplit(state)
             else:
                 return torch.zeros(1)
             Qvalue = out[task_action]
-            
+            if len(Qvalue.shape) !=0 :
+                Qvalue = Qvalue[0]
+            # print(state.next_stage, task, Qvalue, Qvalue.shape)
             return Qvalue
         except:
             logging.error('Error int getQvalueForAction')
@@ -267,18 +276,20 @@ class Agent():
         # Q_targets_next = self.qnetwork_target(next_states, start)[0].detach().unsqueeze(1)
         
         # print(next_states)
-
-        Q_targets_next = torch.stack([self.getMaxQvalue(next_state) for next_state in next_states]).detach()#.unsqueeze(1)
+        
+        Q_targets_next = torch.stack([self.getMaxQvalue(next_state) for next_state in next_states]).detach().unsqueeze(1)
+        # print(Q_targets_next)
         # logging.debug('V2: Q_targets_shape : ', Q_targets_next.shape)
-        # Compute Q targets for current states 
+        # Compute Q targets for current states
+        # print('Reward_shape :', rewards.shape)
+        # print('Q_targets_next_shape : ', Q_targets_next.shape)
         Q_targets = rewards + (gamma * Q_targets_next * (1 - dones))
 
-        # print('Q_targets_shape : ', Q_targets_next.shape)
-        # print('Q_targets', Q_targets.shape)
+        # print('Q_targets_shape', Q_targets.shape)
         # Get expected Q values from local model
         # Q_expected = self.qnetwork_local(states, start).gather(1, actions)
 
-        Q_expected = torch.stack([ self.getQvalueForAction(state,  action) for state, action in zip(states, actions)])
+        Q_expected = torch.stack([ self.getQvalueForAction(state,  action) for state, action in zip(states, actions)]).unsqueeze(1)
  
         # print('Q_expected', Q_expected.shape)
         # Trans_Qvalue,_ = self.qnetwork_local.transitionNet(states)

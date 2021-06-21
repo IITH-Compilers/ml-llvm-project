@@ -6,7 +6,12 @@ import os
 import logging
 import torch
 import copy
+import glob
+from tqdm import tqdm
+import traceback
+import json
 logger = logging.getLogger(__file__) 
+
 class GraphColorEnv:
 
     def __init__(self, config):
@@ -20,7 +25,17 @@ class GraphColorEnv:
         self.color_assignment_map = {}
         self.total_reward = 0
         
-        
+        dataset=config.dataset
+        self.graphs_num = config.graphs_num
+
+        self.graph_counter = 0
+        self.training_graphs=glob.glob(os.path.join(dataset, 'graphs/IG/json/*.json'))
+        assert len(self.training_graphs) > 0, 'training set is empty' 
+        if len(self.training_graphs) > self.graphs_num:
+            self.training_graphs = self.training_graphs[:self.graphs_num]
+        else:
+            self.graphs_num = len(self.training_graphs)
+        config.graphs_num = self.graphs_num  
     def reward_formula(self, value, action):
         # reward = value
         
@@ -160,7 +175,20 @@ class GraphColorEnv:
 
     # input graph : jsonnx
     # return the state of the graph, all the possible starting nodes
-    def reset_env(self, graph, path=None):
+    def reset(self):
+        path=self.training_graphs[self.graph_counter%self.graphs_num]
+        logging.debug('Graphs selected : {}'.format(path))
+        self.graph_counter+=1
+        try:
+            with open(path) as f:
+               graph = json.load(f)
+        except Exception as ex:
+            # print(traceback.format_exc())
+            logging.error(path)
+            logging.error(traceback.format_exc())
+            # traceback.print_exc()
+            # traceback.print_exception(*sys.exc_info())
+            return None
         self.color_assignment_map = {}
         self.total_reward = 0
 

@@ -111,6 +111,7 @@ def get_parse_args():
 
     parser.add_argument('--target', dest='target', required=True,  help='Architecture supported.')
 
+    parser.add_argument('--graphs_num', dest='graphs_num', required=False, type=int, help='Almost number of graphs from the env.', default=50000)
     global config 
     config = parser.parse_args()
     return config
