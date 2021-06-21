@@ -1086,11 +1086,13 @@ void MLRA::MLRegAlloc(MachineFunction &MF, SlotIndexes &Indexes,
                       AAResults &AA, LiveDebugVariables &DebugVars,
                       SpillPlacement &SpillPlacer) {
 
-  assert(enable_mlra_training && funcID != 0 &&
-         "Function ID is expected in training flow");
   FunctionCounter++;
+  if(enable_mlra_training){
+  assert(funcID != 0 &&
+         "Function ID is expected in training flow");
   if (FunctionCounter != funcID)
     return;
+  }
   this->MF = &MF;
   this->Indexes = &Indexes;
   this->MBFI = &MBFI;
