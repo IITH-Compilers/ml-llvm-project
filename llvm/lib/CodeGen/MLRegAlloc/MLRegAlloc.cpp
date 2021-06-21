@@ -264,21 +264,24 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
   LiveRangeEdit LREdit(VirtReg, NewVRegs, *MF, *LIS, VRM);
   SE->reset(LREdit, SplitEditor::SM_Size);
   SlotIndex SegStart;
-  for (unsigned i = 0; i != Uses.size(); ++i) {
+  for (unsigned i = 1; i <= Uses.size(); ++i) {
     // To-Do: Can try skipping splitting at copy instructions later
     // if (const MachineInstr *MI = Indexes->getInstructionFromIndex(Uses[i]))
     //   if (MI->isFullCopy()) {
     //     LLVM_DEBUG(dbgs() << "    skip:\t" << Uses[i] << '\t' << *MI);
     //     continue;
     //   }
-    if (i == splitPoint - 1) {
+    if (i == splitPoint) {
       SE->openIntv();
-      SegStart = SE->enterIntvBefore(Uses[i]);
+      SegStart = SE->enterIntvAfter(Uses[i - 1]);
       break;
     }
   }
   assert(SegStart);
-  SlotIndex SegStop = SE->leaveIntvAfter(*Uses.end());
+  // if(SegStart == Uses.back()){
+  //   LLVM_DEBUG(dbgs() << "Nothing to split -- ")
+  // }
+  SlotIndex SegStop = SE->leaveIntvAfter(Uses.back());
   SE->useIntv(SegStart, SegStop);
 
   if (LREdit.empty()) {
@@ -485,20 +488,19 @@ void MLRA::findLastUseBefore(const SmallVector<SlotIndex, 8> startpts,
     LLVM_DEBUG(errs() << "Processing idx: "; pt.dump());
     // Corner cases
     if (pt == useSlots[0]) {
-      LLVM_DEBUG(errs() << "1 Found last use -- "; useSlots.front().dump();
-                 errs() << "; Idx -- 1\n");
-      lastUsePt.insert(1);
+      LLVM_DEBUG(errs() << "1 Found last use as the first point; skipping -- ";
+                 useSlots.front().dump(); errs() << "; Idx -- 1\n");
       continue;
     }
-    if (pt < useSlots[0]) {
+    if (pt < useSlots[0] || pt > useSlots.back()) {
       llvm_unreachable("Illegal case");
       // lastUsePt.push_back(1);
       // continue;
     }
-    if (pt >= useSlots.back()) {
+    if (pt == useSlots.back()) {
       LLVM_DEBUG(errs() << "2 Found last use -- "; useSlots.back().dump();
-                 errs() << "; Idx -- " << useSlots.size() << "\n");
-      lastUsePt.insert(useSlots.size());
+                 errs() << "; Idx -- " << useSlots.size() - 1 << "\n");
+      lastUsePt.insert(useSlots.size() - 1);
       continue;
     }
     // Doing binary search
@@ -509,8 +511,8 @@ void MLRA::findLastUseBefore(const SmallVector<SlotIndex, 8> startpts,
 
       if (useSlots[mid] == pt) {
         LLVM_DEBUG(errs() << "3 Found last use -- "; useSlots[mid].dump();
-                   errs() << "; Idx -- " << mid + 1 << "\n");
-        lastUsePt.insert(mid + 1);
+                   errs() << "; Idx -- " << mid + 1 - 1 << "\n");
+        lastUsePt.insert(mid + 1 - 1);
         found = true;
         break;
       }
@@ -550,8 +552,8 @@ void MLRA::findLastUseBefore(const SmallVector<SlotIndex, 8> startpts,
     if (!found) {
       // Only single element left after search
       LLVM_DEBUG(errs() << "6 Found last use -- "; useSlots[mid].dump();
-                 errs() << "; Idx -- " << mid + 1 << "\n");
-      lastUsePt.insert(mid + 1);
+                 errs() << "; Idx -- " << mid - 1 << "\n");
+      lastUsePt.insert(mid - 1);
     }
   }
 }
