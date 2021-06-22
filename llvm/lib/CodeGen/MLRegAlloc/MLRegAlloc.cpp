@@ -217,7 +217,6 @@ void MLRA::splitResponse(SmallSetVector<unsigned, 8> &updatedRegIdxs,
   for (auto reg : updatedRegIdxs) {
     auto regprofResponse = response->add_regprof();
     auto rp = regProfMap[reg];
-
     regprofResponse->set_regid(reg);
 
     // Copying the interferences
@@ -823,8 +822,11 @@ void MLRA::updateRegisterProfileAfterSplit(
         if (Matrix->checkInterference(*NewVirtReg, interference)) {
           rp.interferences.insert(interference);
           rp.frwdInterferences.insert(interference);
+
           regProfMap[interference].interferences.remove(OldVRegIdx);
+          regProfMap[interference].frwdInterferences.remove(OldVRegIdx);
           regProfMap[interference].interferences.insert(NewVRegIdx + step);
+
           regProfMap[interference].overlapsStart.erase(OldVRegIdx);
           regProfMap[interference].overlapsEnd.erase(OldVRegIdx);
           updatedRegs.insert(interference);
@@ -846,7 +848,9 @@ void MLRA::updateRegisterProfileAfterSplit(
           LLVM_DEBUG(errs() << "\n\t It overlaps\n");
           rp.interferences.insert(interference);
           rp.frwdInterferences.insert(interference);
+
           regProfMap[interference].interferences.remove(OldVRegIdx);
+          regProfMap[interference].frwdInterferences.remove(OldVRegIdx);
           regProfMap[interference].interferences.insert(NewVRegIdx + step);
 
           SmallVector<SlotIndex, 8> startpts, endpts;
@@ -1089,11 +1093,10 @@ void MLRA::MLRegAlloc(MachineFunction &MF, SlotIndexes &Indexes,
                       SpillPlacement &SpillPlacer) {
 
   FunctionCounter++;
-  if(enable_mlra_training){
-  assert(funcID != 0 &&
-         "Function ID is expected in training flow");
-  if (FunctionCounter != funcID)
-    return;
+  if (enable_mlra_training) {
+    assert(funcID != 0 && "Function ID is expected in training flow");
+    if (FunctionCounter != funcID)
+      return;
   }
   this->MF = &MF;
   this->Indexes = &Indexes;
