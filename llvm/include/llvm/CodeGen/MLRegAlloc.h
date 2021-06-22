@@ -172,8 +172,8 @@ private:
                                   SmallVector<unsigned, 2> NewVRegs,
                                   SmallSetVector<unsigned, 8> &updatedRegs);
 
-  void splitResponse(SmallSetVector<unsigned, 8> &updatedRegs,
-                     registerallocation::RegisterProfileList *response);
+  void splitResponse(registerallocation::RegisterProfileList *response,
+                     SmallSetVector<unsigned, 8> *updatedRegs = nullptr);
   void dumpInterferenceGraph();
   void allocatePhysRegsViaRL();
   void training_flow();

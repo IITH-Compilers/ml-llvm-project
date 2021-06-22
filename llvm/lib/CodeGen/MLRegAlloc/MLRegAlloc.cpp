@@ -193,7 +193,8 @@ grpc::Status MLRA::codeGen(grpc::ServerContext *context,
   // response->set_payload(str);
   if (request->message() == "Exit")
     exit_requested->set_value();
-  if (request->message() == "Split") {
+  if (request->message() == "Split" ||
+      request->message() == "SplitAndCapture") {
     unsigned splitRegIdx = request->regidx();
     int splitPoint = request->payload();
     SmallVector<unsigned, 2> NewVRegs;
@@ -203,8 +204,10 @@ grpc::Status MLRA::codeGen(grpc::ServerContext *context,
 
       if (enable_mlra_checks)
         verifyRegisterProfile();
-
-      splitResponse(updatedRegIdxs, response);
+      if (request->message() == "Split")
+        splitResponse(response, &updatedRegIdxs);
+      else
+        splitResponse(response);
     } else
       response->set_result(false);
   }
@@ -212,9 +215,18 @@ grpc::Status MLRA::codeGen(grpc::ServerContext *context,
   return Status::OK;
 }
 
-void MLRA::splitResponse(SmallSetVector<unsigned, 8> &updatedRegIdxs,
-                         registerallocation::RegisterProfileList *response) {
-  for (auto reg : updatedRegIdxs) {
+void MLRA::splitResponse(registerallocation::RegisterProfileList *response,
+                         SmallSetVector<unsigned, 8> *updatedRegIdxs) {
+  // Temporary - to be removed later
+  SmallSetVector<unsigned, 8> regIdxs;
+  if (!updatedRegIdxs) {
+    for (auto i : regProfMap) {
+      regIdxs.insert(i.first);
+    }
+  } else
+    regIdxs = *updatedRegIdxs;
+
+  for (auto reg : regIdxs) {
     auto regprofResponse = response->add_regprof();
     auto rp = regProfMap[reg];
     regprofResponse->set_regid(reg);
