@@ -70,10 +70,10 @@ class Agent():
                 self.learn(experiences, GAMMA)
     
     def constraint_selectNode(self, state, out):
-        masked_select_out = out[state.eligibleNodes]
+        masked_select_out = out[state.graph_topology.get_eligibleNodes()]
         rel_indexchoose = torch.argmax(masked_select_out)
         Qvalue, rel_indexchoose = self.getMaxQvalueAndActions(masked_select_out)
-        node_index = state.eligibleNodes[rel_indexchoose]
+        node_index = state.graph_topology.get_eligibleNodes()[rel_indexchoose]
         return node_index, Qvalue
 
     def constraint_selectTask(self, state, out):
@@ -90,10 +90,14 @@ class Agent():
         return reg_allocated, Qvalue
 
     def constraint_splitTask(self, state, out, splitpoints):
+        print(out.shape)
+        print(splitpoints)
         out = out[splitpoints]
         Qvalue, split_idx = self.getMaxQvalueAndActions(out)
         split_idx = split_idx.cpu().numpy()
-        return split_idx, Qvalue
+        print(state.focus, splitpoints, type(split_idx))
+        split_point = splitpoints[split_idx]
+        return split_point, Qvalue
 
 
     def act_selectNode(self, state, eps=0.):
@@ -106,13 +110,10 @@ class Agent():
                 node_index, _ = self.constraint_selectNode(state, node_out) 
             self.qnetwork_local.train()
         else:
-            node_index = random.choice(state.eligibleNodes)
+            node_index = random.choice(state.graph_topology.get_eligibleNodes())
         return int(node_index)
 
     def act_selectTask(self, state, eps=0.):
-        splitpoints = state.split_points[state.focus]
-        if splitpoints is None or len(splitpoints) == 0:
-            return 0
 
         if random.random() > eps:
             logging.debug('EXP: Model decision')
@@ -151,7 +152,16 @@ class Agent():
     
     def act_splitNode(self, state, eps=0.):
         #TODO
+
         splitpoints = state.split_points[state.focus]
+        
+        # print(splitpoints)
+        
+        # print(type(splitpoints), splitpoints.shape, splitpoints.ndim, splitpoints.size)
+        
+        if splitpoints is None or splitpoints.ndim == 0 or splitpoints.size == 0:
+            return 0
+        
         if random.random() > eps:
             logging.debug('EXP: Model decision')
             state = state# .to(device)
@@ -161,6 +171,7 @@ class Agent():
                 split_idx, _ = self.constraint_splitTask(state, split_out, splitpoints)
             self.qnetwork_local.train()
         else:
+            # print(splitpoints)
             split_idx = random.choice(splitpoints)
         return int(split_idx)
 
@@ -172,6 +183,7 @@ class Agent():
             state (array_like): current state
             eps (float): epsilon, for epsilon-greedy action selection
         """
+        logging.debug("Performing task = {}".format(task))
         if task == 'selectnode':
             action = self.act_selectNode(state, eps)
         elif task == 'selectTask':
@@ -182,14 +194,15 @@ class Agent():
             action = self.act_splitNode(state, eps)
         else:
             assert False, "Not supported task : {}".format(task)
+        logging.debug("action taken = {}".format(action))
         return {'task' : task, 'action' : action}
 
     def getMaxQvalueAndActions(self, out):
         action_out = out
         # print(action_out.shape) 
         # action, action_Qvalue = torch.argmax(action_out, dim=0), torch.max(action_out, dim=0)
-        # print(action_out.shape, action_out)
-        # print(action_out.shape)
+        print(action_out)
+        print(action_out.shape)
         action_Qvalue , action = torch.max(action_out, dim=0)
 
         QMax = action_Qvalue
@@ -198,8 +211,8 @@ class Agent():
  
     def getMaxQvalue(self, next_state):
         
-        # print('MaxQvalue - ',next_state.eligibleNodes)
-        #if len(next_state.eligibleNodes) == 0:
+        # print('MaxQvalue - ',next_state.graph_topology.get_eligibleNodes())
+        #if len(next_state.graph_topology.get_eligibleNodes()) == 0:
         #    return torch.zeros(1)
         # next_state = torch.from_numpy(next_state).float().to(device)
         next_state = next_state# .to(device)
@@ -220,6 +233,8 @@ class Agent():
             # Qvalue = Qvalue[0]
         elif next_state.next_stage == 'splitTask':
             splitpoints = next_state.split_points[next_state.focus]
+            if splitpoints is None or splitpoints.ndim == 0 or splitpoints.size == 0:
+                return torch.tensor(-1)
             split_out = self.qnetwork_target.computeSplit(next_state)
             _, Qvalue = self.constraint_splitTask(next_state, split_out, splitpoints)
             # Qvalue = Qvalue[0]
@@ -239,7 +254,7 @@ class Agent():
 
             # state = torch.from_numpy(state).float().to(device)
             state = state#.to(device)
-            # print('local - ', state.eligibleNodes) 
+            # print('local - ', state.graph_topology.get_eligibleNodes()) 
             if task == 'selectnode':
                 out = self.qnetwork_local.computeNode(state)
             elif task == 'selectTask':

@@ -10,8 +10,13 @@ import glob
 from tqdm import tqdm
 import traceback
 import json
+import sys
+from ggnn import constructVectorFromMatrix
+from ggnn import AdjacencyList
+import numpy as np
+sys.path.append('../../../../../llvm-grpc/Python-Utilities/')
 logger = logging.getLogger(__file__) 
-
+from client import *
 class GraphColorEnv:
 
     def __init__(self, config):
@@ -35,7 +40,11 @@ class GraphColorEnv:
             self.training_graphs = self.training_graphs[:self.graphs_num]
         else:
             self.graphs_num = len(self.training_graphs)
-        config.graphs_num = self.graphs_num  
+        config.graphs_num = self.graphs_num
+
+        self.server_pid = None
+        self.queryllvm = RegisterAllocationClient()
+
     def reward_formula(self, value, action):
         # reward = value
         
@@ -70,7 +79,6 @@ class GraphColorEnv:
         
         # Remove the remove node
         # TODO Remove elibleNodes data strucre and use topoplogy for Sync
-        self.obs.eligibleNodes.remove(nodeChoosen) 
         self.obs.focus = nodeChoosen
         
         reward = 0
@@ -118,20 +126,113 @@ class GraphColorEnv:
             done = True
             reward = self.total_reward
             self.obs.next_stage = 'end'
+            print('Exit the server after last color ')
+            # print('Seerver : {}'.format(self.server_pid))
+            self.queryllvm.codeGen('Exit', 0, 0)
+            # self.server_pid.join()# terminate()
+            self.server_pid.kill()
+            self.server_pid.communicate()
+            if self.server_pid.poll() is not None:
+                print('Force stop')
+            self.server_pid = None
+            print('Stop server')
+            logging.debug('All visited and colored graph visisted')
             return copy.deepcopy(self.obs), reward, done, response
 
         self.obs.next_stage = 'selectnode'
         return copy.deepcopy(self.obs), reward, done, response
 
     #TODO - Call to the gRPC routine 
-    def get_updated_graph_info(self, split_idx):
-        return grpc.split(self.cur_node, split_idx)
     
     #TODO 
-    def update_obs_split(self, split_idx):
-        newgraph = self.get_updated_graph_info(split_idx)
-        
+    def update_obs_split(self, register_id, split_point):
+        # print('Split register {} on point {}'.format(register_id, split_point))
+        updated_graphs = self.queryllvm.codeGen('Split', int(register_id), int(split_point))
+        # print(type(updated_graphs))
+        # print(updated_graphs.regProf)
+        # print(self.obs.nid_idx)
+        # print(updated_graphs.result)
 
+        # print('-----', updated_graphs.regProf[0].regID)
+        # print('-----', updated_graphs.regProf[0].interferences)
+        # print('-----', updated_graphs.regProf[0].spillWeight)
+        # print('-----', updated_graphs.regProf[0].positionalSpillWeights)
+        # print('-----', updated_graphs.regProf[0].splitSlots)
+        
+        if updated_graphs.result:
+            splited_node_idx = self.obs.nid_idx[str(register_id)]
+            self.obs.graph_topology.indegree[splited_node_idx] = 0
+            self.obs.graph_topology.adjList[splited_node_idx] = []
+            
+            # print('node_idx ', splited_node_idx)
+            split_mtrix = self.obs.raw_graph_mat[splited_node_idx]
+            # print(len(split_mtrix))
+            for node_prof in updated_graphs.regProf:
+                nodeId = str(node_prof.regID)
+                
+                if nodeId not in self.obs.nid_idx.keys():
+                    # print('New', nodeId)
+                    self.obs.nid_idx[nodeId] = self.obs.graph_topology.num_nodes
+                    self.obs.idx_nid[self.obs.graph_topology.num_nodes] = nodeId
+                    self.obs.graph_topology.num_nodes = self.obs.graph_topology.num_nodes + 1
+                    self.obs.graph_topology.discovered.append(False)
+                    self.obs.graph_topology.adjList.append([])
+                    self.obs.graph_topology.indegree.append(0)
+                    self.obs.graph_topology.colored.append(-1)
+                    
+                    self.obs.spill_cost_list.append(node_prof.spillWeight)
+                    self.obs.reg_class_list.append(self.obs.reg_class_list[splited_node_idx])
+                    self.obs.split_points.append(sorted(node_prof.splitSlots))
+                    
+                    annotation_zero = torch.zeros((1, 3))
+                    self.obs.annotations = torch.cat((self.obs.annotations, annotation_zero),0)
+                    self.obs.raw_graph_mat.append(split_mtrix)
+                    node_tansor_matrix = torch.FloatTensor(split_mtrix)
+                    # print(node_tansor_matrix.shape)
+                    nodeVec = constructVectorFromMatrix(node_tansor_matrix).view(1,-1)
+                    # print(nodeVec.shape)
+                    # print(self.obs.initial_node_representation.shape)
+                    self.obs.initial_node_representation = torch.cat((self.obs.initial_node_representation, nodeVec),0)
+
+                    #self.obs.initial_node_representation[]
+
+                    # interfering_node_idx = self.obs.nid_idx[nodeId]
+
+                    # self.obs.graph_topology.adjList[interfering_node_idx] = list(map(lambda x: self.obs.nid_idx[str(x)], node_prof.interferences))
+
+            for node_prof in updated_graphs.regProf:
+                nodeId = str(node_prof.regID)
+                interfering_node_idx = self.obs.nid_idx[nodeId]
+
+
+                self.obs.graph_topology.adjList[interfering_node_idx] = list(map(lambda x: self.obs.nid_idx[str(x)], node_prof.interferences))
+                self.obs.graph_topology.indegree[interfering_node_idx] = len(self.obs.graph_topology.adjList[interfering_node_idx])
+                
+                self.obs.spill_cost_list[interfering_node_idx] = node_prof.spillWeight
+                self.obs.split_points[interfering_node_idx] = np.array(sorted(node_prof.splitSlots))
+
+                # self.obs.adjacency_lists[0][ self.obs.adjacency_lists[0][:,0] == interfering_node_idx,1] = tensor()
+            # def topo
+            a = list(map(lambda x:list(map(lambda y: (x[0], y) , x[1])) , enumerate(self.obs.graph_topology.adjList)))
+            edges = []
+            for i, adj in enumerate(self.obs.graph_topology.adjList):
+                for node in adj:
+                    edges.append((i, node))
+                    edges.append((node, i))
+            print(len(edges))
+            edges = list(set(edges))
+            # print(len(edges))
+
+            # print(edges)
+
+            self.obs.adjacency_lists = [ AdjacencyList(node_num=self.obs.graph_topology.num_nodes, adj_list=edges, device=self.obs.adjacency_lists[0].device)]
+
+
+
+
+
+        return updated_graphs.result
+    
     def step_splitTask(self, action):
         split_idx= action
         nodeChoosen = self.cur_node 
@@ -144,33 +245,46 @@ class GraphColorEnv:
         
         response = None 
         # TODO updat eh graph sue to the split
-        # self.update_obs_split(split_idx)
+
+        if split_idx == 0 or not self.update_obs_split(node_id, split_idx):
+            self.obs.graph_topology.markNodeAsNotVisited(nodeChoosen)
+        
         if False not in self.obs.graph_topology.discovered:
             response = utils.get_colored_graph(self.fun_id, self.fileName, self.functionName, self.color_assignment_map)
             done = True
             reward = self.total_reward
             self.obs.next_stage = 'end'
+            self.queryllvm.codeGen('Exit', 0, 0)
+            
+            # self.server_pid.join()#terminate()
             return copy.deepcopy(self.obs), reward, done, response
         
         self.obs.next_stage = 'selectnode'
         return copy.deepcopy(self.obs), reward, done, None
 
     def step(self, action):
-       
-        task = action['task']
-        task_action  = action['action']
-        self.obs.stage = task
-        if task == 'selectnode':
-            response = self.step_selectNode(task_action)
-        elif task == 'selectTask':
-            response = self.step_selectTask(task_action)
-        elif task == 'colorTask':
-            response = self.step_colorTask(task_action)
-        elif task == 'splitTask':
-            response = self.step_splitTask(task_action)
-        else:
-            assert False, "Not supported task"
         
+        try:
+            task = action['task']
+            task_action  = action['action']
+            self.obs.stage = task
+            
+            if task == 'selectnode':
+                response = self.step_selectNode(task_action)
+            elif task == 'selectTask':
+                response = self.step_selectTask(task_action)
+            elif task == 'colorTask':
+                response = self.step_colorTask(task_action)
+            elif task == 'splitTask':
+                response = self.step_splitTask(task_action)
+            else:
+                assert False, "Not supported task"
+        except Exception as ex:
+            self.server_pid.kill()
+            self.server_pid.communicate()
+            if self.server_pid.poll() is not None:
+                print('Force stop in reset')
+            raise
         return response
 
     # input graph : jsonnx
@@ -203,8 +317,17 @@ class GraphColorEnv:
         self.functionName = graph['graph'][1][1]['Function'].strip('\"')
         self.fun_id = graph['graph'][1][1]['Function_ID']
         self.num_nodes = len(self.graph['nodes'])
-        
         self.obs = get_observations(self.graph)
+        
+        if self.server_pid is not None:
+           print('terminate the pid if alive : {}'.format(self.server_pid))
+           # self.server_pid.terminate()
+           self.server_pid.kill()
+           self.server_pid.communicate()
+           if self.server_pid.poll() is not None:
+               print('Force stop in reset')
+        self.server_pid = utils.startServer(self.fileName, self.fun_id)
+        print(self.server_pid)
         
         self.obs.stage = 'start'
         self.obs.next_stage = 'selectnode'
