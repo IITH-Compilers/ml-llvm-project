@@ -270,29 +270,32 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
   }
 
   SA->analyze(VirtReg);
-  ArrayRef<SlotIndex> Uses = SA->getUseSlots();
-
   LiveRangeEdit LREdit(VirtReg, NewVRegs, *MF, *LIS, VRM);
   SE->reset(LREdit, SplitEditor::SM_Size);
+
   SlotIndex SegStart;
-  for (unsigned i = 1; i <= Uses.size(); ++i) {
-    // To-Do: Can try skipping splitting at copy instructions later
-    // if (const MachineInstr *MI = Indexes->getInstructionFromIndex(Uses[i]))
-    //   if (MI->isFullCopy()) {
-    //     LLVM_DEBUG(dbgs() << "    skip:\t" << Uses[i] << '\t' << *MI);
-    //     continue;
-    //   }
-    if (i == splitPoint) {
-      SE->openIntv();
-      SegStart = SE->enterIntvAfter(Uses[i - 1]);
-      break;
+  unsigned pos = 1;
+  bool found = false;
+  for (auto &S : VirtReg->segments) {
+    auto startIdx = S.start.getBaseIndex();
+    for (SlotIndex I = startIdx, E = S.end.getBaseIndex(); I != E;
+         I = I.getNextIndex()) {
+      if (!LIS->getInstructionFromIndex(I))
+        continue;
+      if (pos == splitPoint) {
+        SE->openIntv();
+        SegStart = SE->enterIntvAfter(I);
+        found = true;
+        break;
+      }
+      pos++;
     }
+    if (found == true)
+      break;
   }
+
   assert(SegStart);
-  // if(SegStart == Uses.back()){
-  //   LLVM_DEBUG(dbgs() << "Nothing to split -- ")
-  // }
-  SlotIndex SegStop = SE->leaveIntvAfter(Uses.back());
+  SlotIndex SegStop = SE->leaveIntvAfter(SA->getUseSlots().back());
   SE->useIntv(SegStart, SegStop);
 
   if (LREdit.empty()) {
@@ -484,9 +487,54 @@ SmallVector<SlotIndex, 8> MLRA::vecUnion(SmallVectorImpl<SlotIndex> const &A,
   return SmallVector<SlotIndex, 8>(idxSet.begin(), idxSet.end());
 }
 
-void MLRA::findLastUseBefore(const SmallVector<SlotIndex, 8> startpts,
+unsigned MLRA::mapUseToPosition(LiveInterval *VirtReg, const SlotIndex &usept) {
+  unsigned pos = 1;
+  for (auto &S : VirtReg->segments) {
+    auto startIdx = S.start.getBaseIndex();
+    LLVM_DEBUG(errs() << "Instr in start index = ";
+               LIS->getInstructionFromIndex(startIdx)->dump());
+
+    for (SlotIndex I = startIdx, E = S.end.getBaseIndex(); I != E;
+         I = I.getNextIndex()) {
+      if (!LIS->getInstructionFromIndex(I))
+        continue;
+      LLVM_DEBUG(errs() << "\t pos - " << pos << "Inst: ";
+                 LIS->getInstructionFromIndex(I)->dump());
+      if (usept == I)
+        return pos;
+      pos++;
+    }
+  }
+  llvm_unreachable("Unable to find the usept");
+}
+
+void MLRA::findSplitSlots(LiveInterval *VirtReg,
+                          const SmallVector<SlotIndex, 8> &overlapSlots,
+                          SmallVector<unsigned, 8> &splitSlots) {
+  SA->analyze(VirtReg);
+  ArrayRef<SlotIndex> Uses = SA->getUseSlots();
+
+  SmallSet<SlotIndex, 8> lastUseIdx;
+  findLastUseBefore(overlapSlots, Uses, lastUseIdx);
+  LLVM_DEBUG(
+      errs() << "==================findSplitSlots begin===================\n";
+      MF->dump(); errs() << "Last usepositions of "; VirtReg->dump();
+      errs() << "\n");
+
+  for (auto i : lastUseIdx) {
+    LLVM_DEBUG(i.dump(); errs() << "This corresponds to : ";
+               LIS->getInstructionFromIndex(i)->dump());
+    auto pos = mapUseToPosition(VirtReg, i);
+    LLVM_DEBUG(errs() << "pos -->" << pos << "\n");
+    splitSlots.push_back(pos);
+  }
+  LLVM_DEBUG(
+      errs() << "==================findSplitSlots end===================\n");
+}
+
+void MLRA::findLastUseBefore(const SmallVector<SlotIndex, 8> &startpts,
                              const ArrayRef<SlotIndex> useSlots,
-                             SmallSetVector<unsigned, 8> &lastUsePt) {
+                             SmallSet<SlotIndex, 8> &lastUseSlot) {
   LLVM_DEBUG(errs() << "Before sorting Useslots:\n";
              for (auto i
                   : useSlots) { i.dump(); });
@@ -511,7 +559,8 @@ void MLRA::findLastUseBefore(const SmallVector<SlotIndex, 8> startpts,
     if (pt == useSlots.back()) {
       LLVM_DEBUG(errs() << "2 Found last use -- "; useSlots.back().dump();
                  errs() << "; Idx -- " << useSlots.size() - 1 << "\n");
-      lastUsePt.insert(useSlots.size() - 1);
+      // lastUsePt.insert(useSlots.size() - 1);
+      lastUseSlot.insert(pt.getBaseIndex());
       continue;
     }
     // Doing binary search
@@ -523,7 +572,8 @@ void MLRA::findLastUseBefore(const SmallVector<SlotIndex, 8> startpts,
       if (useSlots[mid] == pt) {
         LLVM_DEBUG(errs() << "3 Found last use -- "; useSlots[mid].dump();
                    errs() << "; Idx -- " << mid + 1 - 1 << "\n");
-        lastUsePt.insert(mid + 1 - 1);
+        lastUseSlot.insert(pt.getBaseIndex());
+        // lastUsePt.insert(mid + 1 - 1);
         found = true;
         break;
       }
@@ -537,7 +587,8 @@ void MLRA::findLastUseBefore(const SmallVector<SlotIndex, 8> startpts,
         if (mid > 0 && pt > useSlots[mid - 1]) {
           LLVM_DEBUG(errs() << "4 Found last use -- "; useSlots[mid - 1].dump();
                      errs() << "; Idx -- " << mid - 1 + 1 << "\n");
-          lastUsePt.insert(mid - 1 + 1);
+          lastUseSlot.insert(useSlots[mid - 1].getBaseIndex());
+          // lastUsePt.insert(mid - 1 + 1);
           found = true;
           break;
         }
@@ -551,7 +602,8 @@ void MLRA::findLastUseBefore(const SmallVector<SlotIndex, 8> startpts,
         if (mid < useSlots.size() - 1 && pt < useSlots[mid + 1]) {
           LLVM_DEBUG(errs() << "5 Found last use -- "; useSlots[mid].dump();
                      errs() << "; Idx -- " << mid + 1 << "\n");
-          lastUsePt.insert(mid + 1);
+          lastUseSlot.insert(useSlots[mid].getBaseIndex());
+          // lastUsePt.insert(mid + 1);
           found = true;
           break;
         }
@@ -564,7 +616,8 @@ void MLRA::findLastUseBefore(const SmallVector<SlotIndex, 8> startpts,
       // Only single element left after search
       LLVM_DEBUG(errs() << "6 Found last use -- "; useSlots[mid].dump();
                  errs() << "; Idx -- " << mid - 1 << "\n");
-      lastUsePt.insert(mid - 1);
+      lastUseSlot.insert(useSlots[mid].getBaseIndex());
+      // lastUsePt.insert(mid - 1);
     }
   }
 }
@@ -760,12 +813,10 @@ void MLRA::captureRegisterProfile() {
       LiveInterval *VirtReg = &LIS->getInterval(Reg);
       assert(!VRM->hasPhys(VirtReg->reg) && "Register already assigned");
 
-      SA->analyze(VirtReg);
-      ArrayRef<SlotIndex> Uses = SA->getUseSlots();
-      SmallSetVector<unsigned, 8> lastUseIdx;
-      findLastUseBefore(overlaps.second, Uses, lastUseIdx);
-      regProfMap[rpi.first].splitSlots.insert(lastUseIdx.begin(),
-                                              lastUseIdx.end());
+      SmallVector<unsigned, 8> splitSlots;
+      findSplitSlots(VirtReg, overlaps.second, splitSlots);
+      regProfMap[rpi.first].splitSlots.insert(splitSlots.begin(),
+                                              splitSlots.end());
     }
   }
   LLVM_DEBUG(errs() << "\ncaptureRegisterProfile() call ended.\n");
@@ -876,11 +927,9 @@ void MLRA::updateRegisterProfileAfterSplit(
           regProfMap[interference].overlapsEnd.erase(OldVRegIdx);
 
           // Updating splitslots
-          SA->analyze(NewVirtReg);
-          ArrayRef<SlotIndex> Uses = SA->getUseSlots();
-          SmallSetVector<unsigned, 8> lastUseIdx;
-          findLastUseBefore(startpts, Uses, lastUseIdx);
-          rp.splitSlots.insert(lastUseIdx.begin(), lastUseIdx.end());
+          SmallVector<unsigned, 8> splitSlots;
+          findSplitSlots(NewVirtReg, startpts, splitSlots);
+          rp.splitSlots.insert(splitSlots.begin(), splitSlots.end());
 
           SmallVector<float, 8> positionalSpillWeights;
           calculatePositionalSpillWeights(NewVirtReg, positionalSpillWeights);
@@ -897,12 +946,10 @@ void MLRA::updateRegisterProfileAfterSplit(
             LiveInterval *VirtReg = &LIS->getInterval(Reg);
             assert(!VRM->hasPhys(VirtReg->reg) && "Register already assigned");
 
-            SA->analyze(VirtReg);
-            ArrayRef<SlotIndex> Uses = SA->getUseSlots();
-            SmallSetVector<unsigned, 8> lastUseIdx;
-            findLastUseBefore(overlaps.second, Uses, lastUseIdx);
-            regProfMap[interference].splitSlots.insert(lastUseIdx.begin(),
-                                                       lastUseIdx.end());
+            splitSlots.clear();
+            findSplitSlots(VirtReg, overlaps.second, splitSlots);
+            regProfMap[interference].splitSlots.insert(splitSlots.begin(),
+                                                       splitSlots.end());
 
             SmallVector<float, 8> positionalSpillWeights;
             calculatePositionalSpillWeights(VirtReg, positionalSpillWeights);
@@ -948,11 +995,11 @@ unsigned MLRA::getPhyRegForColor(LiveInterval &VirtReg, unsigned color,
     // //  LIS->dump();
     // // errs () << *LIS << "\n";
     // LiveRangeEdit LRE(&VirtReg, SplitVRegs, *MF, *LIS, VRM, this,
-    // &DeadRemats); spiller().spill(LRE); LLVM_DEBUG(errs() << "LRE splitvar
-    // size :: " << SplitVRegs.size() << "\n"); setStage(SplitVRegs.begin(),
-    // SplitVRegs.end(), RS_Done); DebugVars->splitRegister(VirtReg.reg,
-    // LRE.regs(), *LIS); LLVM_DEBUG(errs() << "Spilling Done\n"); if
-    // (VerifyEnabled) {
+    // &DeadRemats); spiller().spill(LRE); LLVM_DEBUG(errs() << "LRE
+    // splitvar size :: " << SplitVRegs.size() << "\n");
+    // setStage(SplitVRegs.begin(), SplitVRegs.end(), RS_Done);
+    // DebugVars->splitRegister(VirtReg.reg, LRE.regs(), *LIS);
+    // LLVM_DEBUG(errs() << "Spilling Done\n"); if (VerifyEnabled) {
     //   MF->verify(this, "After spilling");
     // }
 
