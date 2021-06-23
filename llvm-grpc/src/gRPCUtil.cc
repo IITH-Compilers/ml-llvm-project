@@ -9,13 +9,13 @@ using namespace Inference;
 // Register Service or Stub
 template int gRPCUtil::SetStub<RegisterAllocationInference>();
 
-template <typename Service> int gRPCUtil::RunService() {
+int gRPCUtil::RunService(Service *s,std::string server_address) {
 
   Service service;
 
   ServerBuilder builder;
 
-  std::string server_address("0.0.0.0:50051");
+  //std::string server_address("0.0.0.0:50051");
 
   builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
 
