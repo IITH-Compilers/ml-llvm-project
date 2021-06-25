@@ -156,12 +156,16 @@ private:
                     SmallVectorImpl<unsigned> &NewVRegs);
   SmallVector<SlotIndex, 8> vecUnion(SmallVectorImpl<SlotIndex> const &,
                                      SmallVectorImpl<SlotIndex> const &);
+  unsigned mapUseToPosition(LiveInterval *VirtReg, const SlotIndex &usepts);
+  void findSplitSlots(LiveInterval *VirtReg,
+                      const SmallVector<SlotIndex, 8> &overlapSlots,
+                      SmallVector<unsigned, 8> &splitSlots);
   void findOverlapingInterval(LiveInterval *VirtReg1, LiveInterval *VirtReg2,
                               SmallVector<SlotIndex, 8> &startpts,
                               SmallVector<SlotIndex, 8> &endpts);
-  void findLastUseBefore(const SmallVector<SlotIndex, 8> startpts,
+  void findLastUseBefore(const SmallVector<SlotIndex, 8> &startpts,
                          const ArrayRef<SlotIndex> useSlots,
-                         SmallSetVector<unsigned, 8> &lastUseSlots);
+                         SmallSet<SlotIndex, 8> &lastUseSlots);
   void calculatePositionalSpillWeights(LiveInterval *VirtReg,
                                        SmallVector<float, 8> &spillWeights);
   void captureRegisterProfile();
