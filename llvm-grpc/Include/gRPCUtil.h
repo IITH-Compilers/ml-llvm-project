@@ -4,7 +4,7 @@
 
 class gRPCUtil{
   public: 
-    int  RunService(grpc::Service *s);
+    int  RunService(grpc::Service *s,std::string server_address); //server_address should be address:port
     template <typename Client> int SetStub() {
 
   		std::shared_ptr<grpc::Channel> channel =

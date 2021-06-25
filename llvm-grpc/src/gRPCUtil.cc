@@ -4,13 +4,13 @@
 using namespace grpc;
 
 
-int gRPCUtil::RunService(Service *s) {
+int gRPCUtil::RunService(Service *s,std::string server_address) {
 
   exit_requested=new std::promise<void>();
 
   ServerBuilder builder;
 
-  std::string server_address("0.0.0.0:50051");
+  //std::string server_address("0.0.0.0:50051");
 
   builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
 
