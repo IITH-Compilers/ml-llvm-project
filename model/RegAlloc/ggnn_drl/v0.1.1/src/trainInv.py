@@ -40,6 +40,9 @@ def run(agent, config):
             score_tensor = 0
 
             state = env.reset()
+            if len(state.graph_topology.get_eligibleNodes()) == 0:
+                logging.warning('No eligible nodes')
+                continue
             count=count+1
             score = 0
             while(True):

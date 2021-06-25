@@ -141,6 +141,6 @@ def startServer(filename, fun_id):
     
     pid = run(filename, fun_id)#multiprocessing.Process(target=run, args=(filename, fun_id,))
     # pid.start()
-    time.sleep(2)
+    # time.sleep(5)
     # print(pid)
     return pid

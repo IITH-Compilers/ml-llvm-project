@@ -90,12 +90,12 @@ class Agent():
         return reg_allocated, Qvalue
 
     def constraint_splitTask(self, state, out, splitpoints):
-        print(out.shape)
-        print(splitpoints)
+        # print(out.shape)
+        # print(splitpoints)
         out = out[splitpoints]
         Qvalue, split_idx = self.getMaxQvalueAndActions(out)
         split_idx = split_idx.cpu().numpy()
-        print(state.focus, splitpoints, type(split_idx))
+        # print(state.focus, splitpoints, type(split_idx))
         split_point = splitpoints[split_idx]
         return split_point, Qvalue
 
@@ -201,8 +201,8 @@ class Agent():
         action_out = out
         # print(action_out.shape) 
         # action, action_Qvalue = torch.argmax(action_out, dim=0), torch.max(action_out, dim=0)
-        print(action_out)
-        print(action_out.shape)
+        # print(action_out)
+        # print(action_out.shape)
         action_Qvalue , action = torch.max(action_out, dim=0)
 
         QMax = action_Qvalue

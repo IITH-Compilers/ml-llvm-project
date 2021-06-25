@@ -17,6 +17,8 @@ import numpy as np
 sys.path.append('../../../../../llvm-grpc/Python-Utilities/')
 logger = logging.getLogger(__file__) 
 from client import *
+import grpc
+import time
 class GraphColorEnv:
 
     def __init__(self, config):
@@ -126,10 +128,10 @@ class GraphColorEnv:
             done = True
             reward = self.total_reward
             self.obs.next_stage = 'end'
-            print('Exit the server after last color ')
+            # print('Exit the server after last color ')
             # print('Seerver : {}'.format(self.server_pid))
-            self.queryllvm.codeGen('Exit', 0, 0)
             # self.server_pid.join()# terminate()
+            self.stable_grpc('Exit', 0, 0)
             self.server_pid.kill()
             self.server_pid.communicate()
             if self.server_pid.poll() is not None:
@@ -144,10 +146,38 @@ class GraphColorEnv:
 
     #TODO - Call to the gRPC routine 
     
+    def stable_grpc(self, op, register_id, split_point):
+        attempt = 0
+        max_retries=10
+        retry_wait_seconds=0.1
+        retry_wait_backoff_exponent=1.5
+        while True:
+            try:
+                updated_graphs = self.queryllvm.codeGen(op, register_id,  split_point)
+                break
+            # except ValueError as e:
+            except grpc.RpcError as e:
+                attempt += 1
+                if attempt > max_retries:
+                    raise ServiceTransportError(
+                        f"{self.url} {e.details()} ({max_retries} retries)"
+                    ) from None
+                remaining = max_retries - attempt
+                # logging.warning(
+                #     "%s %s (%d %s remaining)",
+                #     self.url,
+                #     e.details(),
+                #     remaining,
+                #     plural(remaining, "attempt", "attempts"),
+                # )
+                time.sleep(retry_wait_seconds)
+                retry_wait_seconds *= retry_wait_backoff_exponent
+        return updated_graphs
+
     #TODO 
     def update_obs_split(self, register_id, split_point):
         # print('Split register {} on point {}'.format(register_id, split_point))
-        updated_graphs = self.queryllvm.codeGen('Split', int(register_id), int(split_point))
+        updated_graphs = self.stable_grpc('Split', int(register_id), int(split_point))
         # print(type(updated_graphs))
         # print(updated_graphs.regProf)
         # print(self.obs.nid_idx)
@@ -219,7 +249,7 @@ class GraphColorEnv:
                 for node in adj:
                     edges.append((i, node))
                     edges.append((node, i))
-            print(len(edges))
+            # print(len(edges))
             edges = list(set(edges))
             # print(len(edges))
 
@@ -254,8 +284,16 @@ class GraphColorEnv:
             done = True
             reward = self.total_reward
             self.obs.next_stage = 'end'
-            self.queryllvm.codeGen('Exit', 0, 0)
             
+            self.stable_grpc('Exit', 0, 0)
+            self.server_pid.kill()
+            self.server_pid.communicate()
+            if self.server_pid.poll() is not None:
+                print('Force stop')
+            self.server_pid = None
+            print('Stop server')
+            logging.debug('!!!!!!!!!!!!!!!!!!1All visited Due to Spill!!!!!!!!!!!!!!!')
+           
             # self.server_pid.join()#terminate()
             return copy.deepcopy(self.obs), reward, done, response
         
@@ -327,7 +365,7 @@ class GraphColorEnv:
            if self.server_pid.poll() is not None:
                print('Force stop in reset')
         self.server_pid = utils.startServer(self.fileName, self.fun_id)
-        print(self.server_pid)
+        # print(self.server_pid)
         
         self.obs.stage = 'start'
         self.obs.next_stage = 'selectnode'

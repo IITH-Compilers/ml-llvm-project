@@ -254,6 +254,7 @@ void MLRA::splitResponse(registerallocation::RegisterProfileList *response,
         rp.spillWeights.begin(), rp.spillWeights.end());
     regprofResponse->mutable_positionalspillweights()->Swap(&posSpillWeights);
   }
+  response->set_result(true);
 }
 
 bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
