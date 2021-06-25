@@ -132,6 +132,11 @@ cl::opt<bool> MLRA::enable_mlra_checks("enable-mlra-checks", cl::Hidden,
                                        cl::desc("turn on mlra checks"),
                                        cl::init(false));
 
+cl::opt<std::string> MLRA::mlra_server_address(
+    "mlra-server-address", cl::Hidden,
+    cl::desc("Starts the server in the given address; format <ip>:<port>"),
+    cl::init("0.0.0.0:50051"));
+
 registerallocationinference::RegisterAllocationInference::Stub *Stub = nullptr;
 // gRPCUtil client;
 
@@ -1190,7 +1195,7 @@ void MLRA::MLRegAlloc(MachineFunction &MF, SlotIndexes &Indexes,
   captureRegisterProfile();
 
   if (enable_mlra_training) {
-    RunService(this);
+    RunService(this, mlra_server_address);
     training_flow();
   }
 
