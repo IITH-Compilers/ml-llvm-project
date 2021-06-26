@@ -298,7 +298,7 @@ def get_observations(graph):
             node_mat = json.loads(eval(matr))
             # node_mat = json.loads(matr)
         else:
-            node_mat = [[1]*300 + [1]]
+            node_mat = [[0]*300 + [0]]
         
         # print(node_mat)
         # print(type(node_mat)) 

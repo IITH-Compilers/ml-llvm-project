@@ -19,6 +19,8 @@ logger = logging.getLogger(__file__)
 from client import *
 import grpc
 import time
+import threading
+import multiprocessing as process
 class GraphColorEnv:
 
     def __init__(self, config):
@@ -45,7 +47,7 @@ class GraphColorEnv:
         config.graphs_num = self.graphs_num
 
         self.server_pid = None
-        self.queryllvm = RegisterAllocationClient()
+        self.queryllvm = None
 
     def reward_formula(self, value, action):
         # reward = value
@@ -176,7 +178,7 @@ class GraphColorEnv:
 
     #TODO 
     def update_obs_split(self, register_id, split_point):
-        # print('Split register {} on point {}'.format(register_id, split_point))
+        logging.info('try Split register {} on point {}'.format(register_id, split_point))
         updated_graphs = self.stable_grpc('Split', int(register_id), int(split_point))
         # print(type(updated_graphs))
         # print(updated_graphs.regProf)
@@ -190,18 +192,27 @@ class GraphColorEnv:
         # print('-----', updated_graphs.regProf[0].splitSlots)
         
         if updated_graphs.result:
+            # logging.info(updated_graphs)
             splited_node_idx = self.obs.nid_idx[str(register_id)]
             self.obs.graph_topology.indegree[splited_node_idx] = 0
             self.obs.graph_topology.adjList[splited_node_idx] = []
             
-            # print('node_idx ', splited_node_idx)
+            logging.info('register splilted : {} '.format(register_id))
             split_mtrix = self.obs.raw_graph_mat[splited_node_idx]
-            # print(len(split_mtrix))
+            CPY_INST_VEC=[0.001]*300 + [0.001]
+            new_nodes_matrix = split_mtrix[:split_point] + [CPY_INST_VEC], [CPY_INST_VEC] + split_mtrix[split_point:]
+            logging.info('length of the matrix : {} '.format(len(split_mtrix)))
+            new_nodes = 0
+            def sc(vec, sw):
+                vec[-1] = sw
+                return vec
             for node_prof in updated_graphs.regProf:
                 nodeId = str(node_prof.regID)
                 
                 if nodeId not in self.obs.nid_idx.keys():
-                    # print('New', nodeId)
+                    new_nodes+=1
+                    logging.info('{}th New node {} '.format(new_nodes, nodeId))
+                    assert new_nodes < 3, "Splitting having more than 2 intervals"
                     self.obs.nid_idx[nodeId] = self.obs.graph_topology.num_nodes
                     self.obs.idx_nid[self.obs.graph_topology.num_nodes] = nodeId
                     self.obs.graph_topology.num_nodes = self.obs.graph_topology.num_nodes + 1
@@ -213,11 +224,20 @@ class GraphColorEnv:
                     self.obs.spill_cost_list.append(node_prof.spillWeight)
                     self.obs.reg_class_list.append(self.obs.reg_class_list[splited_node_idx])
                     self.obs.split_points.append(sorted(node_prof.splitSlots))
+                    logging.info('new slots : {}'.format(sorted(node_prof.splitSlots)))
+                    logging.info('new positionalSpillWeights length : {}'.format(len(node_prof.positionalSpillWeights)))
                     
+
                     annotation_zero = torch.zeros((1, 3))
                     self.obs.annotations = torch.cat((self.obs.annotations, annotation_zero),0)
-                    self.obs.raw_graph_mat.append(split_mtrix)
-                    node_tansor_matrix = torch.FloatTensor(split_mtrix)
+                    new_matrix = new_nodes_matrix[new_nodes-1]
+                    if len(new_matrix) == len(node_prof.positionalSpillWeights):
+                        new_matrix = [ sc(vec, sw) for vec,sw in zip(new_matrix, node_prof.positionalSpillWeights)]
+                    else:
+                        logging.warning('Spill weight not updated')
+                    self.obs.raw_graph_mat.append(new_matrix)
+                    node_tansor_matrix = torch.FloatTensor(new_matrix)
+                    logging.info('shape of new matrix {} '.format(node_tansor_matrix.shape)) 
                     # print(node_tansor_matrix.shape)
                     nodeVec = constructVectorFromMatrix(node_tansor_matrix).view(1,-1)
                     # print(nodeVec.shape)
@@ -240,7 +260,12 @@ class GraphColorEnv:
                 
                 self.obs.spill_cost_list[interfering_node_idx] = node_prof.spillWeight
                 self.obs.split_points[interfering_node_idx] = np.array(sorted(node_prof.splitSlots))
-
+                logging.info('{} updated slots : {}'.format(nodeId, sorted(node_prof.splitSlots)))
+                if len(new_matrix) == len(node_prof.positionalSpillWeights):
+                    self.obs.raw_graph_mat[interfering_node_idx] = [ sc(vec,sw) for vec,sw in zip(self.obs.raw_graph_mat[interfering_node_idx], node_prof.positionalSpillWeights)]
+                else:
+                    logging.warning('Spill weight not updated')
+                
                 # self.obs.adjacency_lists[0][ self.obs.adjacency_lists[0][:,0] == interfering_node_idx,1] = tensor()
             # def topo
             a = list(map(lambda x:list(map(lambda y: (x[0], y) , x[1])) , enumerate(self.obs.graph_topology.adjList)))
@@ -364,7 +389,16 @@ class GraphColorEnv:
            self.server_pid.communicate()
            if self.server_pid.poll() is not None:
                print('Force stop in reset')
-        self.server_pid = utils.startServer(self.fileName, self.fun_id)
+        hostip = "0.0.0.0"
+        hostport="50054"
+        ipadd = "{}:{}".format(hostip, hostport)
+        # print('Active thread before the server starts : ', threading.active_count())
+        self.server_pid = utils.startServer(self.fileName, self.fun_id, ipadd)
+        # print('Active thread mid the server starts : ', threading.active_count())
+        self.queryllvm = RegisterAllocationClient(hostport=hostport)
+        # print('Active thread after the server starts : ', threading.active_count())
+        # print(threading.active_count(), threading.current_thread(), threading.get_ident(), threading.main_thread(), threading.local())
+        # print(process.current_process())
         # print(self.server_pid)
         
         self.obs.stage = 'start'

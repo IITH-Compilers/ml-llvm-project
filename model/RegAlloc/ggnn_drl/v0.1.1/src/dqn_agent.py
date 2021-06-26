@@ -10,8 +10,8 @@ from torch.utils.tensorboard import SummaryWriter
 import os
 import logging
 from register_action_space import RegisterActionSpace 
-
-logger = logging.getLogger('dqn_agent.py') 
+import threading
+logger = logging.getLogger(__file__) 
 
 BUFFER_SIZE = int(80000)  # replay buffer size
 BATCH_SIZE = 64         # minibatch size
@@ -54,6 +54,8 @@ class Agent():
         # Initialize time step (for updating every UPDATE_EVERY steps)
         self.t_step = 0
         self.updateDone = 0
+        # print('Active thread in dqn ', threading.active_count())
+        
         self.writer = SummaryWriter(os.path.join(config.intermediate_data, 'log/tensorboard'))    
 
     def step(self, state, action, reward, next_state, done):
@@ -83,6 +85,8 @@ class Agent():
         return taskchoose, Qvalue
 
     def constraint_colorTask(self, state, out, action_space):
+        if action_space is None or len(action_space) == 0:
+            return self.spill_color_idx,torch.tensor(-1)
         out = out[action_space]
         Qvalue, actions_idx = self.getMaxQvalueAndActions(out)
         actions_idx = actions_idx.cpu().numpy()
@@ -155,11 +159,12 @@ class Agent():
 
         splitpoints = state.split_points[state.focus]
         
-        # print(splitpoints)
+        logging.info('split points for focus node({}): {}'.format(state.focus, splitpoints))
         
         # print(type(splitpoints), splitpoints.shape, splitpoints.ndim, splitpoints.size)
         
         if splitpoints is None or splitpoints.ndim == 0 or splitpoints.size == 0:
+            logging.debug('EXP: Empty split point list')
             return 0
         
         if random.random() > eps:
@@ -171,6 +176,7 @@ class Agent():
                 split_idx, _ = self.constraint_splitTask(state, split_out, splitpoints)
             self.qnetwork_local.train()
         else:
+            logging.debug('EXP: Random decision')
             # print(splitpoints)
             split_idx = random.choice(splitpoints)
         return int(split_idx)
@@ -194,7 +200,7 @@ class Agent():
             action = self.act_splitNode(state, eps)
         else:
             assert False, "Not supported task : {}".format(task)
-        logging.debug("action taken = {}".format(action))
+        logging.debug("action taken (relative index)= {}".format(action))
         return {'task' : task, 'action' : action}
 
     def getMaxQvalueAndActions(self, out):
@@ -239,7 +245,7 @@ class Agent():
             _, Qvalue = self.constraint_splitTask(next_state, split_out, splitpoints)
             # Qvalue = Qvalue[0]
         else:
-            Qvalue = torch.tensor(0)# torch.zeros(1)
+            Qvalue = torch.tensor(-1)# torch.zeros(1)
         
         # print(next_state.next_stage, Qvalue, Qvalue.shape)
         return Qvalue

@@ -15,15 +15,16 @@ import datetime
 from tqdm import tqdm
 import traceback
 import sys
-
+import threading
 def run(agent, config):
-    
+
     env = GraphColorEnv(config)
     n_episodes=config.epochs * config.graphs_num
     max_t=1000
     eps_start=1.0
     eps_end=0.01
     eps_decay=(2*eps_start)/config.epochs
+    print('decay in the epsilon : {}'.format(eps_decay))
     scores_window = deque(maxlen=100)  # last 100 scores
     eps = eps_start
     score_per_episode = []
@@ -89,9 +90,12 @@ def run(agent, config):
             scores_window.append(score)       # save most recent score
             scores.append(score)              # save most recent score
             
+            print('the epsilon : {}'.format(eps))
+            
             if count % config.graphs_num:
                 eps = max(eps_end, eps-eps_decay) # decrease epsilon
-
+                
+                print('the epsilon count : {}'.format(eps))
                 logging.debug('\n------------------------------------------------------------------------------------------------')
                 torch.save(agent.qnetwork_local.state_dict(), os.path.join(trained_model, 'checkpoint-graphs-{episode}.pth'.format(episode=count//config.graphs_num)))
                 score_per_episode.append(np.sum(scores))
@@ -109,6 +113,7 @@ def run(agent, config):
 
 if __name__ == '__main__':
 
+    print('Active thread in main: ', threading.active_count())
     config = get_parse_args()
     logger = logging.getLogger('__file__')
     log_level=logging.DEBUG
@@ -117,11 +122,14 @@ if __name__ == '__main__':
     elif config.log_level == 'INFO':
         log_level=logging.INFO
 
+    # print('Active thread befire ', threading.active_count())
 
     logging.basicConfig(filename=os.path.join(config.logdir, 'running.log'), format='%(levelname)s - %(filename)s - %(message)s', level=log_level)
     logging.info('Starting training')
     logging.info(config)
+    # print('Active thread befire ', threading.active_count())
     dqn_agent = Agent(config=config, seed=0)
+    # print('Active thread befire ', threading.active_count())
 
     run(dqn_agent, config)
     dqn_agent.writer.flush()
