@@ -421,6 +421,9 @@ void MLRA::dumpInterferenceGraph(std::string ID) {
       edges = edges + std::to_string(id) + "--" + std::to_string(interference) +
               "\n";
     }
+    if ( edges == "" && rp.interferences.size() == 0 && rp.cls.equals("Phy")){
+    	continue;
+    }
     nodes = nodes + node_str + edges;
   }
   std::string graph = "";
