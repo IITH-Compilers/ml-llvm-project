@@ -206,7 +206,8 @@ grpc::Status MLRA::codeGen(grpc::ServerContext *context,
     if (splitVirtReg(splitRegIdx, splitPoint, NewVRegs)) {
       SmallSetVector<unsigned, 8> updatedRegIdxs;
       updateRegisterProfileAfterSplit(splitRegIdx, NewVRegs, updatedRegIdxs);
-
+      if (enable_dump_ig_dot)
+        dumpInterferenceGraph(std::to_string(SplitCounter));
       if (enable_mlra_checks)
         verifyRegisterProfile();
       if (request->message() == "Split")
@@ -259,7 +260,7 @@ void MLRA::splitResponse(registerallocation::RegisterProfileList *response,
 
 bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
                         SmallVectorImpl<unsigned> &NewVRegs) {
-
+  SplitCounter++;
   unsigned step = TRI->getNumRegs() + 1;
   unsigned splitReg = Register::index2VirtReg(splitRegIdx - step);
   assert(LIS->hasInterval(splitReg) && "VirtReg should be present");
@@ -330,7 +331,7 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
   return true;
 }
 
-void MLRA::dumpInterferenceGraph() {
+void MLRA::dumpInterferenceGraph(std::string ID) {
   LLVM_DEBUG(errs() << "\n******************* Dump the graphs "
                        "(START)*************************** \n\n");
   unsigned step = TRI->getNumRegs() + 1;
@@ -367,12 +368,22 @@ void MLRA::dumpInterferenceGraph() {
       for (auto &S : VirtReg->segments) {
         // ToDo: Change this loop to capture the uses of definition
         auto startIdx = S.start.getBaseIndex();
+        auto startInst = LIS->getInstructionFromIndex(startIdx);
         for (SlotIndex I = startIdx, E = S.end.getBaseIndex(); I != E;
              I = I.getNextIndex()) {
           auto *MIR = LIS->getInstructionFromIndex(I);
           if (!MIR)
             continue;
+          if (MIR->getParent() != startInst->getParent()) {
+            startInst = &MIR->getParent()->front();
+            startIdx = LIS->getInstructionIndex(*startInst);
+          }
+          assert(MIR->getParent() == startInst->getParent());
           VirtRegAuxInfo VRAI(*MF, *LIS, VRM, *Loops, *MBFI);
+          LLVM_DEBUG(errs() << "Instr in start index = ";
+                     LIS->getInstructionFromIndex(startIdx)->dump());
+          LLVM_DEBUG(errs() << "Instr in current index = ";
+                     LIS->getInstructionFromIndex(I)->dump());
           auto spillWt = VRAI.futureWeight(*VirtReg, startIdx, I);
           IR2Vec::Vector vec = instVecMap[MIR];
           if (vec.size() <= 0) {
@@ -439,8 +450,11 @@ void MLRA::dumpInterferenceGraph() {
       absmoduleName.substr(absmoduleName.rfind('/') + 1);
 
   std::error_code EC;
+  std::string newID = "";
+  if (ID != "")
+    newID = "_" + ID;
   raw_fd_ostream File(input_fileName + "_F" + std::to_string(FunctionCounter) +
-                          ".dot",
+                          newID + ".dot",
                       EC, sys::fs::F_Text);
   File << graph;
   LLVM_DEBUG(errs() << "Dump done : " << graph << "\n");
@@ -633,11 +647,17 @@ void MLRA::calculatePositionalSpillWeights(
   VirtRegAuxInfo VRAI(*MF, *LIS, VRM, *Loops, *MBFI);
   for (auto &S : VirtReg->segments) {
     auto startIdx = S.start.getBaseIndex();
+    auto startInst = LIS->getInstructionFromIndex(startIdx);
     for (SlotIndex I = startIdx, E = S.end.getBaseIndex(); I != E;
          I = I.getNextIndex()) {
       auto *MIR = LIS->getInstructionFromIndex(I);
       if (!MIR)
         continue;
+      if (MIR->getParent() != startInst->getParent()) {
+        startInst = &MIR->getParent()->front();
+        startIdx = LIS->getInstructionIndex(*startInst);
+      }
+      assert(MIR->getParent() == startInst->getParent());
       spillWeights.push_back(VRAI.futureWeight(*VirtReg, startIdx, I));
     }
   }

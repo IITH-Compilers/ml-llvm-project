@@ -105,6 +105,7 @@ class MLRA : public RegAllocBase,
   std::unique_ptr<SplitEditor> SE;
 
   int FunctionCounter = 0;
+  int SplitCounter = 0;
   DenseMap<unsigned, unsigned> VirtRegToColor;
   std::set<std::string> regClassSupported4_MLRA;
   std::string targetName;
@@ -179,7 +180,7 @@ private:
 
   void splitResponse(registerallocation::RegisterProfileList *response,
                      SmallSetVector<unsigned, 8> *updatedRegs = nullptr);
-  void dumpInterferenceGraph();
+  void dumpInterferenceGraph(std::string ID = "");
   void allocatePhysRegsViaRL();
   void training_flow();
   void inference();
