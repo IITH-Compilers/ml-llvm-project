@@ -89,7 +89,7 @@ DEFAULT_CONFIG = with_common_config({
 
     # Minimum env steps to optimize for per train call. This value does
     # not affect learning, only the length of iterations.
-    "timesteps_per_iteration": 1000,
+    "timesteps_per_iteration": 10,
     # Update the target network every `target_network_update_freq` steps.
     "target_network_update_freq": 500,
     # === Replay buffer ===
@@ -145,13 +145,13 @@ DEFAULT_CONFIG = with_common_config({
     # Number of workers for collecting samples with. This only makes sense
     # to increase if your environment is particularly slow to sample, or if
     # you"re using the Async or Ape-X optimizers.
-    "num_workers": 20,
+    "num_workers": 1,
 
-    "num_cpus_per_worker": 0,
+    "num_cpus_per_worker": 1,
 
     "num_gpus": 0,
 
-    "num_gpus_per_worker": .1,
+    "num_gpus_per_worker": 0,
 
     # Whether to compute priorities on workers.
     "worker_side_prioritization": False,

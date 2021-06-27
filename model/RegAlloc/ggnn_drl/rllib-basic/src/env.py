@@ -30,6 +30,9 @@ from ray.rllib.models.torch.torch_modelv2 import TorchModelV2
 from ray.rllib.models.torch.fcnet import FullyConnectedNetwork as TorchFC
 from ray.rllib.utils.framework import try_import_tf, try_import_torch
 from ray.rllib.utils.test_utils import check_learning_achieved
+import glob
+from tqdm import tqdm
+import traceback
 
 config_path=None
 
@@ -52,10 +55,24 @@ class GraphColorEnv(gym.Env):
         self.color_assignment_map = {}
         self.observation_space = Box(
             -100000.0, 100000.0, shape=(config["state_size"], ), dtype=np.float32)
-        self.graph_path = config["path"]
+        # self.graph_path = config["path"]
         self.adj_colors = None
         temp_config = { 'mode' :'inference', 'dump_type':'One', 'dump_color_graph':True, 'intermediate_data' : '/home/cs20mtech12003/Compilers/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib-basic/src/tmp'}
         utils.set_config(temp_config)
+
+        dataset=config["dataset"]
+        self.graphs_num = config["graphs_num"]
+
+        self.graph_counter = 0
+        self.training_graphs=glob.glob(os.path.join(dataset, 'graphs/IG/json/*.json'))
+        assert len(self.training_graphs) > 0, 'training set is empty' 
+        if len(self.training_graphs) > self.graphs_num:
+            self.training_graphs = self.training_graphs[:self.graphs_num]
+        else:
+            self.graphs_num = len(self.training_graphs)
+        config["graphs_num"] = self.graphs_num
+        print("Number of Graphs", self.graphs_num)
+        self.reset_count = 0
 
     def reward_formula(self, value, action):
         reward = value
@@ -143,25 +160,41 @@ class GraphColorEnv(gym.Env):
 
 
     def reset(self, graph=None, path=None):
-        self.color_assignment_map = {}
-        global config_path
-        logging.debug('reset the env.')
-        if path is not None:
-            attr = utils.getllFileAttributes(path)
-            self.path = path
-            self.home_dir = attr['HOME_DIR']
-        else:
-            path = self.graph_path
+        self.reset_count += 1
+        path=self.training_graphs[self.graph_counter%self.graphs_num]
+        logging.debug('Graphs selected : {}'.format(path))
+        self.graph_counter+=1
+        try:
+            with open(path) as f:
+               graph = json.load(f)
+        except Exception as ex:
+            # print(traceback.format_exc())
+            logging.error(path)
+            logging.error(traceback.format_exc())
+            # traceback.print_exc()
+            # traceback.print_exception(*sys.exc_info())
+            return None
 
-        if graph is None:        
-            try:
+
+        self.color_assignment_map = {}
+        # global config_path
+        logging.debug('reset the env.')
+        # if path is not None:
+        #     attr = utils.getllFileAttributes(path)
+        #     self.path = path
+        #     self.home_dir = attr['HOME_DIR']
+        # else:
+        #     path = self.graph_path
+
+        # if graph is None:        
+        #     try:
                 
-                with open(path) as f:
-                    graph = json.load(f)
-            except Exception as ex:
-                # print(traceback.format_exc())
-                logging.error(path)
-                logging.error(traceback.format_exc())
+        #         with open(path) as f:
+        #             graph = json.load(f)
+        #     except Exception as ex:
+        #         # print(traceback.format_exc())
+        #         logging.error(path)
+        #         logging.error(traceback.format_exc())
             
 
         self.graph = graph
@@ -192,6 +225,7 @@ class GraphColorEnv(gym.Env):
         if obs is not None and not isinstance(obs, np.ndarray):
             obs = np.array(obs)
 
+        print("Reset count", self.reset_count, os.getpid(), path)
         return obs
 
     def seed(self, seed=None):

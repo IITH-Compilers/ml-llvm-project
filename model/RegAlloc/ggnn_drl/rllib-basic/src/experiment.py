@@ -82,18 +82,19 @@ if __name__ == "__main__":
     config["env_config"]["action_space_size"] = config["env_config"]["registerAS"].ac_sp_normlize_size
     config["env_config"]["state_size"] = 300
 
-    dataset = "/home/cs20mtech12003/Compilers/ML-Register-Allocation/data/level-O0-llfiles_test_mlra_x86_LITE/"
-    training_graphs=glob.glob(os.path.join(dataset, 'graphs/IG/json_new/*.json'))
+    config["env_config"]["dataset"] = "/home/cs20mtech12003/Compilers/ML-Register-Allocation/data/level-O0-llfiles_test_mlra_x86_LITE/"
+    config["env_config"]["graphs_num"] = 10
+    # training_graphs=glob.glob(os.path.join(dataset, 'graphs/IG/json_new/*.json'))
 
-    ModelCatalog.register_custom_model("my_torch_model", CustomTorchModel)
-    file_count = 0
+    # ModelCatalog.register_custom_model("my_torch_model", CustomTorchModel)
+    # file_count = 0
     start_time = time.time()
-    for path in tqdm (training_graphs, desc="Running..."): # Number of the iterations        
+    # for path in tqdm (training_graphs, desc="Running..."): # Number of the iterations        
         # set_config(path)
-        config["env_config"]["path"] = path
-        tune.run(
-            experiment,
-            config=config,
-            resources_per_trial=DQNTrainer.default_resource_request(config))
-        file_count += 1
-    print("Total time in seconds for ", file_count, " files is: ", (time.time() - start_time))
+        # config["env_config"]["path"] = path
+    tune.run(
+        experiment,
+        config=config,
+        resources_per_trial=DQNTrainer.default_resource_request(config), stop={"episodes_total": 10})
+        # file_count += 1
+    print("Total time in seconds is: ", (time.time() - start_time))
