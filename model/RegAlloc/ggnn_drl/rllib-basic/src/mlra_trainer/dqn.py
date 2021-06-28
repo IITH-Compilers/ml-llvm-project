@@ -89,9 +89,9 @@ DEFAULT_CONFIG = with_common_config({
 
     # Minimum env steps to optimize for per train call. This value does
     # not affect learning, only the length of iterations.
-    "timesteps_per_iteration": 10,
+    "timesteps_per_iteration": 0,
     # Update the target network every `target_network_update_freq` steps.
-    "target_network_update_freq": 500,
+    "target_network_update_freq": 256,
     # === Replay buffer ===
     # Size of the replay buffer. Note that if async_updates is set, then
     # each worker will have a replay buffer of this size.

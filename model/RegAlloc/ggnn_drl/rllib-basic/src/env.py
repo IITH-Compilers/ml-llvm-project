@@ -33,6 +33,7 @@ from ray.rllib.utils.test_utils import check_learning_achieved
 import glob
 from tqdm import tqdm
 import traceback
+import random
 
 config_path=None
 
@@ -155,13 +156,13 @@ class GraphColorEnv(gym.Env):
 
         if response is None:
             response = {}           
-
+        
         return next_obs, reward, done, response 
 
 
     def reset(self, graph=None, path=None):
-        self.reset_count += 1
-        path=self.training_graphs[self.graph_counter%self.graphs_num]
+        self.reset_count = random.randint(1,self.graphs_num)
+        path=self.training_graphs[self.reset_count%self.graphs_num]
         logging.debug('Graphs selected : {}'.format(path))
         self.graph_counter+=1
         try:

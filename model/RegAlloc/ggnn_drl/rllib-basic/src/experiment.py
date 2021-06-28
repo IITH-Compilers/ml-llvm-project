@@ -55,7 +55,7 @@ def experiment(config):
         eval_results["eval_reward"] += reward
         eval_results["eval_eps_length"] += 1
     results = {**train_results, **eval_results}
-    tune.report(results)
+    # tune.report(results)
 
 
 if __name__ == "__main__":

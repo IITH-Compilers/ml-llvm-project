@@ -29,23 +29,26 @@ if __name__ == "__main__":
     config["env_config"]["action_space_size"] = config["env_config"]["registerAS"].ac_sp_normlize_size
     config["env_config"]["state_size"] = 300
 
-    dataset = "/home/cs20mtech12003/ML-Register-Allocation/data/level-O0-llfiles_test_mlra_x86_LITE/"
-    training_graphs=glob.glob(os.path.join(dataset, 'graphs/IG/json_new/*.json'))
+    # dataset = "/home/cs20mtech12003/Compilers/ML-Register-Allocation/data/level-O0-llfiles_test_mlra_x86_LITE/"
+    # training_graphs=glob.glob(os.path.join(dataset, 'graphs/IG/json_new/*.json'))
+    config["env_config"]["dataset"] = "/home/cs20mtech12003/Compilers/ML-Register-Allocation/data/level-O0-llfiles_test_mlra_x86_LITE/"
+    config["env_config"]["graphs_num"] = 1000
 
     ModelCatalog.register_custom_model("my_torch_model", CustomTorchModel)
     
-    for path in tqdm (training_graphs, desc="Running..."): # Number of the iterations
-        config["env_config"]["path"] = path
+    
+    train_agent = DQNTrainer(config=config, env=GraphColorEnv)
+    checkpoint = "/home/cs20mtech12003/ray_results/experiment_2021-06-27_23-29-08/experiment_GraphColorEnv_5efd2_00000_0_2021-06-27_23-29-09/checkpoint_001000/checkpoint-1000"
+    train_agent.restore(checkpoint)            
+    
+    utils_config = { 'mode' :'inference', 'dump_type':'One', 'dump_color_graph':True, 'intermediate_data' : '/home/cs20mtech12003/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib-basic/src/tmp'}
+    utils_config = utils.set_config(utils_config)
 
-        train_agent = DQNTrainer(config=config, env=GraphColorEnv)
-        checkpoint = "/home/cs20mtech12003/ray_results/experiment_2021-06-19_12-22-08/experiment_GraphColorEnv_dd6e7_00000_0_2021-06-19_12-22-08/checkpoint_000050/checkpoint-50"
-        train_agent.restore(checkpoint)            
-        
-        utils_config = { 'mode' :'inference', 'dump_type':'One', 'dump_color_graph':True, 'intermediate_data' : '/home/cs20mtech12003/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib-basic/src/tmp'}
-        utils_config = utils.set_config(utils_config)
+    env_config =  config["env_config"]
+    env = GraphColorEnv(env_config)
 
-        env_config =  config["env_config"]
-        env = GraphColorEnv(env_config)
+    for i in range(10): # Number of the iterations
+
         # run until episode ends
         episode_reward = 0
         done = False
