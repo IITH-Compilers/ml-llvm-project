@@ -37,7 +37,7 @@ import traceback
 config_path=None
 
 logger = logging.getLogger(__file__)
-logging.basicConfig(filename=os.path.join("/home/cs20mtech12003/Compilers/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib-basic/src", 'running.log'), format='%(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
+logging.basicConfig(filename=os.path.join("/home/cs20mtech12003/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib-basic/src", 'running.log'), format='%(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
 
 class GraphColorEnv(gym.Env):
     """Example of a custom env in which you have to walk down a corridor.
@@ -57,7 +57,7 @@ class GraphColorEnv(gym.Env):
             -100000.0, 100000.0, shape=(config["state_size"], ), dtype=np.float32)
         # self.graph_path = config["path"]
         self.adj_colors = None
-        temp_config = { 'mode' :'inference', 'dump_type':'One', 'dump_color_graph':True, 'intermediate_data' : '/home/cs20mtech12003/Compilers/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib-basic/src/tmp'}
+        temp_config = { 'mode' :'inference', 'dump_type':'One', 'dump_color_graph':True, 'intermediate_data' : '/home/cs20mtech12003/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib-basic/src/tmp'}
         utils.set_config(temp_config)
 
         dataset=config["dataset"]
@@ -225,7 +225,7 @@ class GraphColorEnv(gym.Env):
         if obs is not None and not isinstance(obs, np.ndarray):
             obs = np.array(obs)
 
-        print("Reset count", self.reset_count, os.getpid(), path)
+        # print("Reset count", self.reset_count, os.getpid(), path)
         return obs
 
     def seed(self, seed=None):

@@ -5,7 +5,7 @@ import json
 import itertools
 
 logger = logging.getLogger(__file__)
-logging.basicConfig(filename=os.path.join("/home/cs20mtech12003/Compilers/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib-basic/src", 'running.log'), format='%(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
+logging.basicConfig(filename=os.path.join("/home/cs20mtech12003/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib-basic/src", 'running.log'), format='%(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
 
 class RegisterActionSpace:
     
@@ -139,7 +139,7 @@ class RegisterActionSpace:
 
     @staticmethod
     def loadRegConfig(target):
-        baseDir = '/home/cs20mtech12003/Compilers/ML-Register-Allocation/llvm/lib/CodeGen/MLRegAlloc/config_json'
+        baseDir = '/home/cs20mtech12003/ML-Register-Allocation/llvm/lib/CodeGen/MLRegAlloc/config_json'
         if target == "X86":
             fileName= os.path.join(baseDir, 'X86_supported_RegClasses.json')
             overlapfile = os.path.join(baseDir, 'X86_overlaps_info.json')

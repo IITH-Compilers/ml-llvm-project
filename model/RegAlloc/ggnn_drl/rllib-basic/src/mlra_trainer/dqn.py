@@ -31,7 +31,7 @@ from ray.util.iter import LocalIterator
 from ray.rllib.utils.deprecation import deprecation_warning, DEPRECATED_VALUE
 
 logger = logging.getLogger(__file__)
-logging.basicConfig(filename=os.path.join("/home/cs20mtech12003/Compilers/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib-basic/src", 'running.log'), format='%(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
+logging.basicConfig(filename=os.path.join("/home/cs20mtech12003/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib-basic/src", 'running.log'), format='%(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
 
 # yapf: disable
 # __sphinx_doc_begin__
@@ -145,7 +145,7 @@ DEFAULT_CONFIG = with_common_config({
     # Number of workers for collecting samples with. This only makes sense
     # to increase if your environment is particularly slow to sample, or if
     # you"re using the Async or Ape-X optimizers.
-    "num_workers": 1,
+    "num_workers": 60,
 
     "num_cpus_per_worker": 1,
 
