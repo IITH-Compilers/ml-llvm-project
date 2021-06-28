@@ -3248,9 +3248,11 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
   SetOfBrokenHints.clear();
   LastEvicted.clear();
 
-  if (enable_experimental_mlra)
+  if (enable_dump_ig_dot || enable_mlra_inference || enable_mlra_training){
     MLRegAlloc(*MF, *Indexes, *MBFI, *DomTree, *Loops, *AA, *DebugVars,
                *SpillPlacer);
+  }
+
 
   allocatePhysRegs();
   tryHintsRecoloring();

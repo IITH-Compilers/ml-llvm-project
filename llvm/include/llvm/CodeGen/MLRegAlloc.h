@@ -30,6 +30,7 @@
 #include "llvm/CodeGen/LiveRegMatrix.h"
 #include "llvm/CodeGen/LiveStacks.h"
 #include "llvm/CodeGen/MIR2Vec/Symbolic.h"
+#include "llvm/CodeGen/MIR2Vec/utils.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
@@ -82,7 +83,7 @@
 #include <utility>
 #include <vector>
 
-#define DEBUG_TYPE "regalloc"
+#define DEBUG_TYPE "mlra-regalloc"
 
 #define PRINT_MRI_INST 0
 
@@ -105,11 +106,13 @@ class MLRA : public RegAllocBase,
   std::unique_ptr<SplitEditor> SE;
 
   int FunctionCounter = 0;
+  int SplitCounter = 0;
   DenseMap<unsigned, unsigned> VirtRegToColor;
   std::set<std::string> regClassSupported4_MLRA;
   std::string targetName;
 
   MIR2Vec_Symbolic *symbolic;
+  SmallMapVector<const llvm::MachineInstr *, IR2Vec::Vector, 128> instVecMap;
   std::map<std::string, std::map<std::string, int64_t>>
       FunctionVirtRegToColorMap;
 
@@ -121,9 +124,12 @@ protected:
   MLRA(DenseMap<unsigned, unsigned> VirtRegToColor);
   static cl::opt<bool> enable_dump_ig_dot;
   static cl::opt<std::string> pred_file;
-  static cl::opt<bool> enable_experimental_mlra;
+  // static cl::opt<bool> enable_experimental_mlra;
   static cl::opt<bool> enable_mlra_inference;
+  static cl::opt<bool> enable_mlra_training;
   static cl::opt<bool> enable_mlra_checks;
+  static cl::opt<unsigned> funcID;
+  static cl::opt<std::string> mlra_server_address;
   void MLRegAlloc(MachineFunction &MF, SlotIndexes &Indexes,
                   MachineBlockFrequencyInfo &MBFI,
                   MachineDominatorTree &DomTree, MachineLoopInfo &Loops,
@@ -136,8 +142,10 @@ private:
     float spillWeight;
     unsigned color;
     unsigned numUses;
+    SmallVector<float, 8> spillWeights;
     SmallSetVector<unsigned, 8> interferences;
     SmallSetVector<unsigned, 8> frwdInterferences;
+    SmallVector<IR2Vec::Vector, 12> vecRep;
     SmallSetVector<unsigned, 8> splitSlots;
     SmallMapVector<unsigned, SmallVector<SlotIndex, 8>, 8> overlapsStart;
     SmallMapVector<unsigned, SmallVector<SlotIndex, 8>, 8> overlapsEnd;
@@ -153,12 +161,21 @@ private:
                     SmallVectorImpl<unsigned> &NewVRegs);
   SmallVector<SlotIndex, 8> vecUnion(SmallVectorImpl<SlotIndex> const &,
                                      SmallVectorImpl<SlotIndex> const &);
+  unsigned mapUseToPosition(LiveInterval *VirtReg, const SlotIndex &usepts);
+  void findSplitSlots(LiveInterval *VirtReg,
+                      const SmallVector<SlotIndex, 8> &overlapSlots,
+                      SmallVector<unsigned, 8> &splitSlots);
   void findOverlapingInterval(LiveInterval *VirtReg1, LiveInterval *VirtReg2,
                               SmallVector<SlotIndex, 8> &startpts,
                               SmallVector<SlotIndex, 8> &endpts);
-  void findLastUseBefore(const SmallVector<SlotIndex, 8> startpts,
+  void findLastUseBefore(const SmallVector<SlotIndex, 8> &startpts,
                          const ArrayRef<SlotIndex> useSlots,
-                         SmallSetVector<unsigned, 8> &lastUseSlots);
+                         SmallSet<SlotIndex, 8> &lastUseSlots);
+  void calculatePositionalSpillWeights(LiveInterval *VirtReg,
+                                       SmallVector<float, 8> &spillWeights);
+  void calculatePositionalSpillWeightsAndVectors(
+      LiveInterval *VirtReg, SmallVector<float, 8> &spillWeights,
+      SmallVector<IR2Vec::Vector, 12> &vectors);
   void captureRegisterProfile();
   void printRegisterProfile() const;
 
@@ -167,10 +184,9 @@ private:
                                   SmallVector<unsigned, 2> NewVRegs,
                                   SmallSetVector<unsigned, 8> &updatedRegs);
 
-  void splitResponse(SmallSetVector<unsigned, 8> &updatedRegs,
-                     SmallVector<unsigned, 2> NewVRegs,
-                     registerallocation::RegisterProfileList *response);
-  void dumpInterferenceGraph();
+  void splitResponse(registerallocation::RegisterProfileList *response,
+                     SmallSetVector<unsigned, 8> *updatedRegs = nullptr);
+  void dumpInterferenceGraph(std::string ID = "");
   void allocatePhysRegsViaRL();
   void training_flow();
   void inference();

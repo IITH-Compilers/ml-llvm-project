@@ -66,7 +66,7 @@ struct Hello : public FunctionPass,demoPass::Service,gRPCUtil {
   bool runOnFunction(Function &F) override {
     LI=&getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
     this->F=&F;
-    RunService(this);
+    RunService(this,"0.0.0.0:50051");
     if(exit_requested)
       free(exit_requested);
     return false;

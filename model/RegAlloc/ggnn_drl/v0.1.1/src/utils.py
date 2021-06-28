@@ -14,7 +14,8 @@ import pandas as pd
 import logging
 import json
 from argparse import Namespace
-
+import multiprocessing
+import subprocess
 logger = logging.getLogger(__file__) 
 
 LL_DIR_CONST='llfiles'
@@ -111,6 +112,7 @@ def get_parse_args():
 
     parser.add_argument('--target', dest='target', required=True,  help='Architecture supported.')
 
+    parser.add_argument('--graphs_num', dest='graphs_num', required=False, type=int, help='Almost number of graphs from the env.', default=50000)
     global config 
     config = parser.parse_args()
     return config
@@ -125,3 +127,20 @@ def set_config(config_):
 def log_subprocess_output(pipe):
     for line in iter(pipe.readline, b''): # b'\n'-separated lines
         logging.debug('got line from subprocess: {}'.format(line))
+
+
+import time
+def startServer(filename, fun_id, ip):
+    def run(filename, fun_id):
+        cmd = "{clang} -O3 -mllvm -regalloc=greedy   -mllvm -mlra-training -mllvm -mlra-funcID={fun_id} -mllvm -mlra-server-address={ip} {src_file} -o /dev/null".format(clang=os.environ['CLANG'], src_file=filename, fun_id=fun_id, ip=ip)
+        # print(cmd)
+        #os.system(cmd)
+        pid = subprocess.Popen(cmd, executable='/bin/bash', shell=True)
+        return pid
+        
+    
+    pid = run(filename, fun_id)#multiprocessing.Process(target=run, args=(filename, fun_id,))
+    # pid.start()
+    # time.sleep(5)
+    # print(pid)
+    return pid

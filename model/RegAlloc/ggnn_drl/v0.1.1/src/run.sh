@@ -4,7 +4,7 @@
 
 PWD=`pwd`
 
-EPOCHS=1
+EPOCHS=100
 # set the llvm Build and other paramter
 # REL or DEBUG 
 BUILD_TYPE=release
@@ -13,9 +13,9 @@ BUILD_TYPE=release
 
 # if [ ${BUILD_TYPE} = "REL" ]
 # then
-LLVM_BUILD=`realpath ${PWD}/../../../../llvm-project/build_${BUILD_TYPE}`
+LLVM_BUILD=`realpath ${PWD}/../../../../../x86_release_build/`
 # fi
-
+assert [[ -d ${LLVM_BUILD} ]], "${LLVM_BUILD} is not present."
 echo "LLVM build directory selected for training : ${LLVM_BUILD}"
 export LLVM=${LLVM_BUILD}
 export OPT=${LLVM_BUILD}/bin/opt

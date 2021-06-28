@@ -10,10 +10,10 @@ import RegisterAllocation_pb2_grpc, RegisterAllocation_pb2
 
 class RegisterAllocationClient(object):
 
-    def __init__(self):
+    def __init__(self, hostip='localhost', hostport=50051):
 
-        self.host='localhost'
-        self.server_port = 50051
+        self.host=hostip
+        self.server_port = hostport
 
         self.process=None
 

@@ -50,9 +50,9 @@ class GatedGraphNeuralNetwork(nn.Module):
         self.state_to_message_dropout = state_to_message_dropout
         self.rnn_dropout = rnn_dropout
         self.use_bias_for_message_linear = use_bias_for_message_linear
-        self.annotation_size = annotation_size 
+        # self.annotation_size = annotation_size 
 
-        self.hidden_layer = nn.Linear(self.hidden_size + self.annotation_size, self.hidden_size)
+        self.hidden_layer = nn.Linear(self.hidden_size + annotation_size, self.hidden_size)
         # Prepare linear transformations from node states to messages, for each layer and each edge type
         # Prepare rnn cells for each layer
         self.state_to_message_linears = []
@@ -259,6 +259,7 @@ def get_observations(graph):
     reg_class_list = []
     allocate_type_list = []
     split_points_list = []
+    raw_graph_mat = []
     for idx, node in enumerate(nodes):
         
         nodeId = node['id']
@@ -277,7 +278,7 @@ def get_observations(graph):
             if len(split_points) > 0:
                 split_points = sorted(list(map(lambda x : int(x), split_points.split(', '))))
 
-        split_points_list.append(split_points)
+        split_points_list.append(np.array(split_points))
 
 
         logging.debug('Allocation type : {}'.format(allocate_type))
@@ -297,10 +298,11 @@ def get_observations(graph):
             node_mat = json.loads(eval(matr))
             # node_mat = json.loads(matr)
         else:
-            node_mat = [[1]*300 + [1]]
+            node_mat = [[0]*300 + [0]]
         
         # print(node_mat)
         # print(type(node_mat)) 
+        raw_graph_mat.append(node_mat)
         node_tansor_matrix = torch.FloatTensor(node_mat)
         # print(node_tansor_matrix.shape)
         nodeVec = constructVectorFromMatrix(node_tansor_matrix)
@@ -357,8 +359,7 @@ def get_observations(graph):
     '''
     Main call to the compute representation
     '''
-    eligibleNodes = list(filter(lambda x : not graph_topology.discovered[x], range(num_nodes)))
-    obs = {'initial_node_representation':initial_node_representation, 'annotations':annotations, 'adjacency_lists' : adjacency_lists,  'graph_topology':graph_topology, 'spill_cost_list' : spill_cost_list, 'reg_class_list' : reg_class_list, 'eligibleNodes' : eligibleNodes, 'nid_idx':nid_idx, 'idx_nid':idx_nid, 'split_points' : split_points_list}
+    obs = {'raw_graph_mat':raw_graph_mat, 'initial_node_representation':initial_node_representation, 'annotations':annotations, 'adjacency_lists' : adjacency_lists,  'graph_topology':graph_topology, 'spill_cost_list' : spill_cost_list, 'reg_class_list' : reg_class_list, 'nid_idx':nid_idx, 'idx_nid':idx_nid, 'split_points' : split_points_list}
     obs = Namespace(**obs) 
     return obs
 

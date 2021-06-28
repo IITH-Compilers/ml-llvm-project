@@ -3,7 +3,6 @@ import numpy as np
 import json
 from graphColorEnv import GraphColorEnv
 from dqn_agent import Agent
-import glob
 import json
 import torch
 from collections import deque
@@ -16,14 +15,17 @@ import datetime
 from tqdm import tqdm
 import traceback
 import sys
-
+import threading
+import grpc
 def run(agent, config):
-    
-    n_episodes=config.epochs
+
+    env = GraphColorEnv(config)
+    n_episodes=config.epochs * config.graphs_num
     max_t=1000
     eps_start=1.0
     eps_end=0.01
-    eps_decay=(2*eps_start)/n_episodes
+    eps_decay=(2*eps_start)/config.epochs
+    print('decay in the epsilon : {}'.format(eps_decay))
     scores_window = deque(maxlen=100)  # last 100 scores
     eps = eps_start
     score_per_episode = []
@@ -32,33 +34,16 @@ def run(agent, config):
     if not os.path.exists(trained_model):
             os.makedirs(trained_model)
     
-    dataset=config.dataset
-
     count=0
-    #Load the envroinment
-    env = GraphColorEnv(config)
-    training_graphs=glob.glob(os.path.join(dataset, 'graphs/IG/json/*.json'))[:50000]
-    assert len(training_graphs)> 0, 'training set is empty' 
     for episode in range(n_episodes):
-        scores = []                        # list containing scores from each episode
-        score_tensor = 0
-        # random.shuffle(training_graphs)
-        
-        # TODO
-        # selected_gs = random.sample(training_graphs, 500)
-        for path in tqdm (training_graphs, desc="Running..."): # Number of the iterations
+        #Load the envroinment
+        try:
+            scores = []                        # list containing scores from each episode
+            score_tensor = 0
 
-            logging.info('Loading new graph into the env --> {} '.format(os.path.split(path)[1]))
-            try:
-                with open(path) as f:
-                   graph = json.load(f)
-                state = env.reset_env(graph, path)
-            except Exception as ex:
-                # print(traceback.format_exc())
-                logging.error(path)
-                logging.error(traceback.format_exc())
-                # traceback.print_exc()
-                # traceback.print_exception(*sys.exc_info())
+            state = env.reset()
+            if len(state.graph_topology.get_eligibleNodes()) == 0:
+                logging.warning('No eligible nodes')
                 continue
             count=count+1
             score = 0
@@ -71,7 +56,7 @@ def run(agent, config):
                 action_map = {0 : 'selectnode', 1 : 'selectTask', 2 : {0 : 'colorTask', 1 : 'splitTask'}}
                 # print(state.stage)
                 for i in range(3):
-                    print('{} --> {} '.format(state.stage, state.next_stage))
+                    #print('{} --> {} '.format(state.stage, state.next_stage))
                     # if state.stage == 'selectTask' :
                     #     action = agent.act(state, action_map[2][state.next_state], eps)
                     # else:
@@ -96,6 +81,7 @@ def run(agent, config):
                 score += reward
                 score_tensor += reward
                 if done:
+                    #print('{} --> {} '.format(state.stage, state.next_stage))
                     logging.debug('final reward : {}'.format(reward))
                     logging.debug('final score : {}'.format(score))
                     break
@@ -104,18 +90,35 @@ def run(agent, config):
 
             scores_window.append(score)       # save most recent score
             scores.append(score)              # save most recent score
-            eps = max(eps_end, eps-eps_decay) # decrease epsilon
+            
+            print('the epsilon : {}'.format(eps))
+            
+            if count % config.graphs_num == 0:
+                eps = max(eps_end, eps-eps_decay) # decrease epsilon
+                
+                print('the epsilon count : {}'.format(eps))
+                logging.debug('--------------------------------------------{}th iteration completed -----------------------------------------------'.format(count//config.graphs_num))
+                torch.save(agent.qnetwork_local.state_dict(), os.path.join(trained_model, 'checkpoint-graphs-{episode}.pth'.format(episode=count//config.graphs_num)))
+                score_per_episode.append(np.sum(scores))
+                agent.writer.add_scalar('trainInv/total_score', np.sum(scores) , count/config.graphs_num)
+            
+        except grpc.RpcError as e:
+            pass
+            #if e.code() == grpc.StatusCode.UNAVAILABLE:
 
-            logging.debug('\n------------------------------------------------------------------------------------------------')
-        torch.save(agent.qnetwork_local.state_dict(), os.path.join(trained_model, 'checkpoint-graphs-{episode}.pth'.format(episode=episode)))
-        score_per_episode.append(np.sum(scores))
-        agent.writer.add_scalar('trainInv/total_score', np.sum(scores) ,episode) 
-        
+        except Exception as ex:
+            env.queryllvm.codeGen('Exit', 0, 0)
+            env.server_pid.kill()
+            env.server_pid.communicate()
+            if env.server_pid.poll() is not None:
+                print('Force stop in run trainInv')
+            # raise
+
     torch.save(agent.qnetwork_local.state_dict(), os.path.join(trained_model, 'final-model.pth'))
-    
 
 if __name__ == '__main__':
 
+    print('Active thread in main: ', threading.active_count())
     config = get_parse_args()
     logger = logging.getLogger('__file__')
     log_level=logging.DEBUG
@@ -124,11 +127,14 @@ if __name__ == '__main__':
     elif config.log_level == 'INFO':
         log_level=logging.INFO
 
+    # print('Active thread befire ', threading.active_count())
 
     logging.basicConfig(filename=os.path.join(config.logdir, 'running.log'), format='%(levelname)s - %(filename)s - %(message)s', level=log_level)
     logging.info('Starting training')
     logging.info(config)
+    # print('Active thread befire ', threading.active_count())
     dqn_agent = Agent(config=config, seed=0)
+    # print('Active thread befire ', threading.active_count())
 
     run(dqn_agent, config)
     dqn_agent.writer.flush()
