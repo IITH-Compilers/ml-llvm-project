@@ -30,6 +30,7 @@
 #include "llvm/CodeGen/LiveRegMatrix.h"
 #include "llvm/CodeGen/LiveStacks.h"
 #include "llvm/CodeGen/MIR2Vec/Symbolic.h"
+#include "llvm/CodeGen/MIR2Vec/utils.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
@@ -82,7 +83,7 @@
 #include <utility>
 #include <vector>
 
-#define DEBUG_TYPE "regalloc"
+#define DEBUG_TYPE "mlra-regalloc"
 
 #define PRINT_MRI_INST 0
 
@@ -111,6 +112,7 @@ class MLRA : public RegAllocBase,
   std::string targetName;
 
   MIR2Vec_Symbolic *symbolic;
+  SmallMapVector<const llvm::MachineInstr *, IR2Vec::Vector, 128> instVecMap;
   std::map<std::string, std::map<std::string, int64_t>>
       FunctionVirtRegToColorMap;
 
@@ -143,6 +145,7 @@ private:
     SmallVector<float, 8> spillWeights;
     SmallSetVector<unsigned, 8> interferences;
     SmallSetVector<unsigned, 8> frwdInterferences;
+    SmallVector<IR2Vec::Vector, 12> vecRep;
     SmallSetVector<unsigned, 8> splitSlots;
     SmallMapVector<unsigned, SmallVector<SlotIndex, 8>, 8> overlapsStart;
     SmallMapVector<unsigned, SmallVector<SlotIndex, 8>, 8> overlapsEnd;
@@ -170,6 +173,9 @@ private:
                          SmallSet<SlotIndex, 8> &lastUseSlots);
   void calculatePositionalSpillWeights(LiveInterval *VirtReg,
                                        SmallVector<float, 8> &spillWeights);
+  void calculatePositionalSpillWeightsAndVectors(
+      LiveInterval *VirtReg, SmallVector<float, 8> &spillWeights,
+      SmallVector<IR2Vec::Vector, 12> &vectors);
   void captureRegisterProfile();
   void printRegisterProfile() const;
 

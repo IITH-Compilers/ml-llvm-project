@@ -285,7 +285,7 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
   bool found = false;
   for (auto &S : VirtReg->segments) {
     auto startIdx = S.start.getBaseIndex();
-    for (SlotIndex I = startIdx, E = S.end.getBaseIndex(); I != E;
+    for (SlotIndex I = startIdx, E = S.end.getBaseIndex(); I <= E;
          I = I.getNextIndex()) {
       if (!LIS->getInstructionFromIndex(I))
         continue;
@@ -350,7 +350,6 @@ void MLRA::dumpInterferenceGraph(std::string ID) {
       bool is_atleastoneinstruction = false;
       std::string reginfo = " {Vir} ";
       node_str = node_str + reginfo;
-
       node_str += " {";
       if (rp.splitSlots.size() > 0) {
         for (unsigned i = 0; i < rp.splitSlots.size() - 1; i++)
@@ -358,55 +357,34 @@ void MLRA::dumpInterferenceGraph(std::string ID) {
         node_str += std::to_string(rp.splitSlots.back());
       }
       node_str += "} ";
-
-      auto instVecMap = symbolic->getInstVecMap();
+      // auto instVecMap = symbolic->getInstVecMap();
 
       std::string segmentInst = "";
       unsigned Reg = Register::index2VirtReg(id - step);
       LiveInterval *VirtReg = &LIS->getInterval(Reg);
-
-      for (auto &S : VirtReg->segments) {
-        // ToDo: Change this loop to capture the uses of definition
-        auto startIdx = S.start.getBaseIndex();
-        auto startInst = LIS->getInstructionFromIndex(startIdx);
-        for (SlotIndex I = startIdx, E = S.end.getBaseIndex(); I != E;
-             I = I.getNextIndex()) {
-          auto *MIR = LIS->getInstructionFromIndex(I);
-          if (!MIR)
-            continue;
-          if (MIR->getParent() != startInst->getParent()) {
-            startInst = &MIR->getParent()->front();
-            startIdx = LIS->getInstructionIndex(*startInst);
-          }
-          assert(MIR->getParent() == startInst->getParent());
-          VirtRegAuxInfo VRAI(*MF, *LIS, VRM, *Loops, *MBFI);
-          LLVM_DEBUG(errs() << "Instr in start index = ";
-                     LIS->getInstructionFromIndex(startIdx)->dump());
-          LLVM_DEBUG(errs() << "Instr in current index = ";
-                     LIS->getInstructionFromIndex(I)->dump());
-          auto spillWt = VRAI.futureWeight(*VirtReg, startIdx, I);
-          IR2Vec::Vector vec = instVecMap[MIR];
-          if (vec.size() <= 0) {
-            LLVM_DEBUG(errs() << "Value not found in the map \n");
-            continue;
-          }
-          LLVM_DEBUG(errs() << "---------------MIR Vector--------------------";
-                     MIR->dump());
-          std::string str = "";
-          for (unsigned idx = 0; idx < DIM - 1; idx++) {
-            str += std::to_string(vec[idx]) + ", ";
-          }
-          str += std::to_string(vec[DIM - 1]);
-          LLVM_DEBUG(errs() << "\n");
-          if (!is_atleastoneinstruction) {
-            segmentInst = segmentInst + "[ " + str + " ]" + "[ " +
-                          std::to_string(spillWt) + " ]";
-          } else {
-            segmentInst = segmentInst + ", \n[ " + str + " ]" + "[ " +
-                          std::to_string(spillWt) + " ]";
-          }
-          is_atleastoneinstruction = true;
+      assert(rp.spillWeights.size() == rp.vecRep.size());
+      for (unsigned k = 0; k < rp.spillWeights.size(); k++) {
+        std::string str = "";
+        auto vec = rp.vecRep[k];
+        if (vec.size() == 0) {
+          LLVM_DEBUG(errs() << "No MIR2Vec Inst in map\n");
+          vec = SmallVector<double, 300>(DIM, 0);
+        } else {
+          LLVM_DEBUG(errs() << "Inst present in MIR2Vec map\n");
         }
+        auto spillWt = rp.spillWeights[k];
+        for (unsigned idx = 0; idx < DIM - 1; idx++) {
+          str += std::to_string(vec[idx]) + ", ";
+        }
+        str += std::to_string(vec[DIM - 1]);
+        if (!is_atleastoneinstruction) {
+          segmentInst = segmentInst + "[ " + str + " ]" + "[ " +
+                        std::to_string(spillWt) + " ]";
+        } else {
+          segmentInst = segmentInst + ", \n[ " + str + " ]" + "[ " +
+                        std::to_string(spillWt) + " ]";
+        }
+        is_atleastoneinstruction = true;
       }
 
       if (segmentInst != "") {
@@ -421,8 +399,8 @@ void MLRA::dumpInterferenceGraph(std::string ID) {
       edges = edges + std::to_string(id) + "--" + std::to_string(interference) +
               "\n";
     }
-    if ( edges == "" && rp.interferences.size() == 0 && rp.cls.equals("Phy")){
-    	continue;
+    if (edges == "" && rp.interferences.size() == 0 && rp.cls.equals("Phy")) {
+      continue;
     }
     nodes = nodes + node_str + edges;
   }
@@ -515,9 +493,11 @@ unsigned MLRA::mapUseToPosition(LiveInterval *VirtReg, const SlotIndex &usept) {
   for (auto &S : VirtReg->segments) {
     auto startIdx = S.start.getBaseIndex();
     LLVM_DEBUG(errs() << "Instr in start index = ";
-               LIS->getInstructionFromIndex(startIdx)->dump());
+               if (LIS->getInstructionFromIndex(startIdx))
+                   LIS->getInstructionFromIndex(startIdx)
+                       ->dump());
 
-    for (SlotIndex I = startIdx, E = S.end.getBaseIndex(); I != E;
+    for (SlotIndex I = startIdx, E = S.end.getBaseIndex(); I <= E;
          I = I.getNextIndex()) {
       if (!LIS->getInstructionFromIndex(I))
         continue;
@@ -536,17 +516,19 @@ void MLRA::findSplitSlots(LiveInterval *VirtReg,
                           SmallVector<unsigned, 8> &splitSlots) {
   SA->analyze(VirtReg);
   ArrayRef<SlotIndex> Uses = SA->getUseSlots();
+  LLVM_DEBUG(errs() << "Uses of the virt reg: "; VirtReg->dump());
 
   SmallSet<SlotIndex, 8> lastUseIdx;
   findLastUseBefore(overlapSlots, Uses, lastUseIdx);
   LLVM_DEBUG(
       errs() << "==================findSplitSlots begin===================\n";
-      MF->dump(); errs() << "Last usepositions of "; VirtReg->dump();
-      errs() << "\n");
+      errs() << "Last usepositions of "; VirtReg->dump(); errs() << "\n");
 
   for (auto i : lastUseIdx) {
-    LLVM_DEBUG(i.dump(); errs() << "This corresponds to : ";
-               LIS->getInstructionFromIndex(i)->dump());
+    LLVM_DEBUG(i.dump(); if (LIS->getInstructionFromIndex(i)) {
+      errs() << "This corresponds to : ";
+      LIS->getInstructionFromIndex(i)->dump();
+    } else errs() << "No inst corresponding to lastuse\n";);
     auto pos = mapUseToPosition(VirtReg, i);
     LLVM_DEBUG(errs() << "pos -->" << pos << "\n");
     splitSlots.push_back(pos);
@@ -558,7 +540,8 @@ void MLRA::findSplitSlots(LiveInterval *VirtReg,
 void MLRA::findLastUseBefore(const SmallVector<SlotIndex, 8> &startpts,
                              const ArrayRef<SlotIndex> useSlots,
                              SmallSet<SlotIndex, 8> &lastUseSlot) {
-  LLVM_DEBUG(errs() << "Before sorting Useslots:\n";
+  LLVM_DEBUG(errs() << "[funcID=" << FunctionCounter
+                    << "]Before sorting Useslots:\n";
              for (auto i
                   : useSlots) { i.dump(); });
   // std::sort(useSlots.begin(), useSlots.end());
@@ -569,21 +552,23 @@ void MLRA::findLastUseBefore(const SmallVector<SlotIndex, 8> &startpts,
   for (auto pt : startpts) {
     LLVM_DEBUG(errs() << "Processing idx: "; pt.dump());
     // Corner cases
-    if (pt == useSlots[0]) {
-      LLVM_DEBUG(errs() << "1 Found last use as the first point; skipping -- ";
-                 useSlots.front().dump(); errs() << "; Idx -- 1\n");
+    if (pt == useSlots[0] || pt < useSlots[0]) {
+      LLVM_DEBUG(
+          errs()
+              << "1 Found last use as the first point or earlier; skipping -- ";
+          useSlots.front().dump(); errs() << "; Idx -- 1\n");
       continue;
     }
-    if (pt < useSlots[0] || pt > useSlots.back()) {
-      llvm_unreachable("Illegal case");
-      // lastUsePt.push_back(1);
-      // continue;
-    }
-    if (pt == useSlots.back()) {
+    // if (pt < useSlots[0] || pt > useSlots.back()) {
+    //   llvm_unreachable("Illegal case");
+    //   // lastUsePt.push_back(1);
+    //   // continue;
+    // }
+    if (pt == useSlots.back() || pt > useSlots.back()) {
       LLVM_DEBUG(errs() << "2 Found last use -- "; useSlots.back().dump();
                  errs() << "; Idx -- " << useSlots.size() - 1 << "\n");
       // lastUsePt.insert(useSlots.size() - 1);
-      lastUseSlot.insert(pt.getBaseIndex());
+      lastUseSlot.insert(useSlots.back().getBaseIndex());
       continue;
     }
     // Doing binary search
@@ -595,7 +580,7 @@ void MLRA::findLastUseBefore(const SmallVector<SlotIndex, 8> &startpts,
       if (useSlots[mid] == pt) {
         LLVM_DEBUG(errs() << "3 Found last use -- "; useSlots[mid].dump();
                    errs() << "; Idx -- " << mid + 1 - 1 << "\n");
-        lastUseSlot.insert(pt.getBaseIndex());
+        lastUseSlot.insert(useSlots[mid].getBaseIndex());
         // lastUsePt.insert(mid + 1 - 1);
         found = true;
         break;
@@ -650,24 +635,48 @@ void MLRA::calculatePositionalSpillWeights(
   VirtRegAuxInfo VRAI(*MF, *LIS, VRM, *Loops, *MBFI);
   for (auto &S : VirtReg->segments) {
     auto startIdx = S.start.getBaseIndex();
-    auto startInst = LIS->getInstructionFromIndex(startIdx);
-    for (SlotIndex I = startIdx, E = S.end.getBaseIndex(); I != E;
+    for (SlotIndex I = startIdx, E = S.end.getBaseIndex(); I <= E;
          I = I.getNextIndex()) {
       auto *MIR = LIS->getInstructionFromIndex(I);
       if (!MIR)
         continue;
-      if (MIR->getParent() != startInst->getParent()) {
-        startInst = &MIR->getParent()->front();
-        startIdx = LIS->getInstructionIndex(*startInst);
+      if (MIR->getParent() != LIS->getMBBFromIndex(startIdx)) {
+        startIdx = LIS->getMBBStartIdx(LIS->getMBBFromIndex(I));
       }
-      assert(MIR->getParent() == startInst->getParent());
       spillWeights.push_back(VRAI.futureWeight(*VirtReg, startIdx, I));
     }
   }
 }
 
+void MLRA::calculatePositionalSpillWeightsAndVectors(
+    LiveInterval *VirtReg, SmallVector<float, 8> &spillWeights,
+    SmallVector<IR2Vec::Vector, 12> &vectors) {
+  VirtRegAuxInfo VRAI(*MF, *LIS, VRM, *Loops, *MBFI);
+  for (auto &S : VirtReg->segments) {
+    auto startIdx = S.start.getBaseIndex();
+    for (SlotIndex I = startIdx, E = S.end.getBaseIndex(); I <= E;
+         I = I.getNextIndex()) {
+      auto *MIR = LIS->getInstructionFromIndex(I);
+      if (!MIR)
+        continue;
+      if (MIR->getParent() != LIS->getMBBFromIndex(startIdx)) {
+        startIdx = LIS->getMBBStartIdx(LIS->getMBBFromIndex(I));
+      }
+      spillWeights.push_back(VRAI.futureWeight(*VirtReg, startIdx, I));
+
+      IR2Vec::Vector vec = instVecMap[MIR];
+      vectors.push_back(vec);
+      if (vec.size() <= 0) {
+        LLVM_DEBUG(errs() << "Value not found in the map \n");
+        continue;
+      }
+    }
+  }
+}
+
 void MLRA::captureRegisterProfile() {
-  LLVM_DEBUG(errs() << "\nStarting capturing \n");
+  LLVM_DEBUG(errs() << "captureRegProf Processing function ID: "
+                    << FunctionCounter << "\n");
 
   regProfMap.clear();
 
@@ -754,9 +763,12 @@ void MLRA::captureRegisterProfile() {
     }
 
     SmallVector<float, 8> positionalSpillWeights;
-    calculatePositionalSpillWeights(VirtReg, positionalSpillWeights);
+    SmallVector<IR2Vec::Vector, 12> vectors;
+    calculatePositionalSpillWeightsAndVectors(VirtReg, positionalSpillWeights,
+                                              vectors);
 
     regProf.spillWeights = positionalSpillWeights;
+    regProf.vecRep = vectors;
     regProf.spillWeight = VirtReg->weight;
     SmallSetVector<unsigned, 8> interference;
     SmallSetVector<unsigned, 8> frwdInterference;
@@ -885,7 +897,9 @@ void MLRA::printRegisterProfile() const {
 void MLRA::updateRegisterProfileAfterSplit(
     unsigned OldVRegIdx, SmallVector<unsigned, 2> NewVRegs,
     SmallSetVector<unsigned, 8> &updatedRegs) {
-  LLVM_DEBUG(errs() << "Updating Register Profile after spliting\n");
+  LLVM_DEBUG(
+      errs() << "Updating Register Profile after spliting for function ID: "
+             << FunctionCounter << "\n");
 
   // assert(Register::isVirtualRegister(OldVReg) && "Expected a virtual
   // register");
@@ -1179,12 +1193,17 @@ void MLRA::MLRegAlloc(MachineFunction &MF, SlotIndexes &Indexes,
                       MachineDominatorTree &DomTree, MachineLoopInfo &Loops,
                       AAResults &AA, LiveDebugVariables &DebugVars,
                       SpillPlacement &SpillPlacer) {
-
   FunctionCounter++;
   if (enable_mlra_training) {
     assert(funcID != 0 && "Function ID is expected in training flow");
     if (FunctionCounter != funcID)
       return;
+  }
+  if (enable_dump_ig_dot) {
+    if (funcID != 0 && FunctionCounter != funcID)
+      return;
+    else if (funcID == 0)
+      ;
   }
   this->MF = &MF;
   this->Indexes = &Indexes;
@@ -1214,8 +1233,8 @@ void MLRA::MLRegAlloc(MachineFunction &MF, SlotIndexes &Indexes,
     this->targetName = "UnKnown";
   }
 
-  LLVM_DEBUG(MF.print(errs()));
-
+  symbolic->generateSymbolicEncodings(MF);
+  instVecMap = symbolic->getInstVecMap();
   captureRegisterProfile();
 
   if (enable_mlra_training) {
@@ -1224,7 +1243,6 @@ void MLRA::MLRegAlloc(MachineFunction &MF, SlotIndexes &Indexes,
   }
 
   if (enable_dump_ig_dot) {
-    symbolic->generateSymbolicEncodings(MF);
     dumpInterferenceGraph();
   }
 
