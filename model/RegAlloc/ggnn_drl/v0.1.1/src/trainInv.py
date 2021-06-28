@@ -16,6 +16,7 @@ from tqdm import tqdm
 import traceback
 import sys
 import threading
+import grpc
 def run(agent, config):
 
     env = GraphColorEnv(config)
@@ -33,10 +34,10 @@ def run(agent, config):
     if not os.path.exists(trained_model):
             os.makedirs(trained_model)
     
-    try:
-        count=0
+    count=0
+    for episode in range(n_episodes):
         #Load the envroinment
-        for episode in range(n_episodes):
+        try:
             scores = []                        # list containing scores from each episode
             score_tensor = 0
 
@@ -92,24 +93,28 @@ def run(agent, config):
             
             print('the epsilon : {}'.format(eps))
             
-            if count % config.graphs_num:
+            if count % config.graphs_num == 0:
                 eps = max(eps_end, eps-eps_decay) # decrease epsilon
                 
                 print('the epsilon count : {}'.format(eps))
-                logging.debug('\n------------------------------------------------------------------------------------------------')
+                logging.debug('--------------------------------------------{}th iteration completed -----------------------------------------------'.format(count//config.graphs_num))
                 torch.save(agent.qnetwork_local.state_dict(), os.path.join(trained_model, 'checkpoint-graphs-{episode}.pth'.format(episode=count//config.graphs_num)))
                 score_per_episode.append(np.sum(scores))
                 agent.writer.add_scalar('trainInv/total_score', np.sum(scores) , count/config.graphs_num)
             
-        torch.save(agent.qnetwork_local.state_dict(), os.path.join(trained_model, 'final-model.pth'))
-    except Exception as ex:
-        env.queryllvm.codeGen('Exit', 0, 0)
-        env.server_pid.kill()
-        env.server_pid.communicate()
-        if env.server_pid.poll() is not None:
-            print('Force stop in run trainInv')
-        raise
+        except grpc.RpcError as e:
+            pass
+            #if e.code() == grpc.StatusCode.UNAVAILABLE:
 
+        except Exception as ex:
+            env.queryllvm.codeGen('Exit', 0, 0)
+            env.server_pid.kill()
+            env.server_pid.communicate()
+            if env.server_pid.poll() is not None:
+                print('Force stop in run trainInv')
+            # raise
+
+    torch.save(agent.qnetwork_local.state_dict(), os.path.join(trained_model, 'final-model.pth'))
 
 if __name__ == '__main__':
 

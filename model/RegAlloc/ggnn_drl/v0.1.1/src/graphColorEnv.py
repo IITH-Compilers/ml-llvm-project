@@ -55,7 +55,7 @@ class GraphColorEnv:
         reward = 0
         if action == self.spill_color_idx:
             reward = -value
-            logging.info('Spill is choosen so rewarded {} to node_id={} with spillcost={}'.format(reward, self.obs.idx_nid[self.cur_node], value))
+            logging.warning('Spill is choosen so rewarded {} to node_id={} with spillcost={}'.format(reward, self.obs.idx_nid[self.cur_node], value))
         self.total_reward = self.total_reward + reward
         return reward
 
@@ -150,7 +150,7 @@ class GraphColorEnv:
     
     def stable_grpc(self, op, register_id, split_point):
         attempt = 0
-        max_retries=10
+        max_retries=5
         retry_wait_seconds=0.1
         retry_wait_backoff_exponent=1.5
         while True:
@@ -159,21 +159,23 @@ class GraphColorEnv:
                 break
             # except ValueError as e:
             except grpc.RpcError as e:
-                attempt += 1
-                if attempt > max_retries:
-                    raise ServiceTransportError(
-                        f"{self.url} {e.details()} ({max_retries} retries)"
-                    ) from None
-                remaining = max_retries - attempt
-                # logging.warning(
-                #     "%s %s (%d %s remaining)",
-                #     self.url,
-                #     e.details(),
-                #     remaining,
-                #     plural(remaining, "attempt", "attempts"),
-                # )
-                time.sleep(retry_wait_seconds)
-                retry_wait_seconds *= retry_wait_backoff_exponent
+                if e.code() == grpc.StatusCode.UNAVAILABLE:
+                    attempt += 1
+                    if attempt > max_retries:
+                        raise #ServiceTransportError( f"{self.url} {e.details()} ({max_retries} retries)") from None
+                    remaining = max_retries - attempt
+                    # logging.warning(
+                    #     "%s %s (%d %s remaining)",
+                    #     self.url,
+                    #     e.details(),
+                    #     remaining,
+                    #     plural(remaining, "attempt", "attempts"),
+                    # )
+                    time.sleep(retry_wait_seconds)
+                    retry_wait_seconds *= retry_wait_backoff_exponent
+                else:
+                    raise
+
         return updated_graphs
 
     #TODO 
@@ -234,7 +236,7 @@ class GraphColorEnv:
                     if len(new_matrix) == len(node_prof.positionalSpillWeights):
                         new_matrix = [ sc(vec, sw) for vec,sw in zip(new_matrix, node_prof.positionalSpillWeights)]
                     else:
-                        logging.warning('Spill weight not updated')
+                        logging.warning('Spill weight not updated {} : {}'.format(len(new_matrix), len(node_prof.positionalSpillWeights)))
                     self.obs.raw_graph_mat.append(new_matrix)
                     node_tansor_matrix = torch.FloatTensor(new_matrix)
                     logging.info('shape of new matrix {} '.format(node_tansor_matrix.shape)) 
@@ -250,6 +252,7 @@ class GraphColorEnv:
 
                     # self.obs.graph_topology.adjList[interfering_node_idx] = list(map(lambda x: self.obs.nid_idx[str(x)], node_prof.interferences))
 
+            logging.debug('update the interfering node data.')
             for node_prof in updated_graphs.regProf:
                 nodeId = str(node_prof.regID)
                 interfering_node_idx = self.obs.nid_idx[nodeId]
@@ -261,10 +264,12 @@ class GraphColorEnv:
                 self.obs.spill_cost_list[interfering_node_idx] = node_prof.spillWeight
                 self.obs.split_points[interfering_node_idx] = np.array(sorted(node_prof.splitSlots))
                 logging.info('{} updated slots : {}'.format(nodeId, sorted(node_prof.splitSlots)))
-                if len(new_matrix) == len(node_prof.positionalSpillWeights):
+                
+                inter_node_matrix = self.obs.raw_graph_mat[interfering_node_idx]
+                if len(inter_node_matrix) == len(node_prof.positionalSpillWeights):
                     self.obs.raw_graph_mat[interfering_node_idx] = [ sc(vec,sw) for vec,sw in zip(self.obs.raw_graph_mat[interfering_node_idx], node_prof.positionalSpillWeights)]
                 else:
-                    logging.warning('Spill weight not updated')
+                    logging.warning('Spill weight not updated {} : {}'.format(len(inter_node_matrix), len(node_prof.positionalSpillWeights)))
                 
                 # self.obs.adjacency_lists[0][ self.obs.adjacency_lists[0][:,0] == interfering_node_idx,1] = tensor()
             # def topo
@@ -304,6 +309,7 @@ class GraphColorEnv:
         if split_idx == 0 or not self.update_obs_split(node_id, split_idx):
             self.obs.graph_topology.markNodeAsNotVisited(nodeChoosen)
         
+        assert False in self.obs.graph_topology.discovered, "After Split, all node not be finished"
         if False not in self.obs.graph_topology.discovered:
             response = utils.get_colored_graph(self.fun_id, self.fileName, self.functionName, self.color_assignment_map)
             done = True

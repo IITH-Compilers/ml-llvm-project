@@ -105,6 +105,7 @@ class Agent():
 
 
     def act_selectNode(self, state, eps=0.):
+        logging.debug('eligible nodes : {}'.format(state.graph_topology.get_eligibleNodes()))
         if random.random() > eps:
             logging.debug('EXP: Model decision')
             state = state# .to(device)
@@ -114,6 +115,7 @@ class Agent():
                 node_index, _ = self.constraint_selectNode(state, node_out) 
             self.qnetwork_local.train()
         else:
+            logging.debug('EXP: Random decision')
             node_index = random.choice(state.graph_topology.get_eligibleNodes())
         return int(node_index)
 
@@ -128,6 +130,7 @@ class Agent():
                 taskchoose, _ = self.constraint_selectTask(state, task_out)
             self.qnetwork_local.train()
         else:
+            logging.debug('EXP: Random decision')
             taskchoose = random.choice(range(2))
         return int(taskchoose)
 
@@ -138,6 +141,7 @@ class Agent():
 
         action_space = self.registerAS.maskActionSpace(regclass, adj_colors)
         if action_space is None or len(action_space) == 0:
+            logging.warning('No color avialable to color')
             return self.spill_color_idx
 
         if random.random() > eps:
@@ -149,6 +153,7 @@ class Agent():
                 reg_allocated, _ = self.constraint_colorTask(state, color_out, action_space) 
             self.qnetwork_local.train()
         else:
+            logging.debug('EXP: Random decision')
             reg_allocated = random.choice(action_space)
          
         return int(reg_allocated)
@@ -164,7 +169,7 @@ class Agent():
         # print(type(splitpoints), splitpoints.shape, splitpoints.ndim, splitpoints.size)
         
         if splitpoints is None or splitpoints.ndim == 0 or splitpoints.size == 0:
-            logging.debug('EXP: Empty split point list')
+            logging.warning('Empty split point list')
             return 0
         
         if random.random() > eps:

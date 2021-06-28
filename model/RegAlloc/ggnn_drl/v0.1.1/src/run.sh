@@ -4,7 +4,7 @@
 
 PWD=`pwd`
 
-EPOCHS=5
+EPOCHS=100
 # set the llvm Build and other paramter
 # REL or DEBUG 
 BUILD_TYPE=release
