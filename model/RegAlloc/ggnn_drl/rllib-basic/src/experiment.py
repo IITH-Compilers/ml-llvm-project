@@ -55,7 +55,7 @@ def experiment(config):
         eval_results["eval_reward"] += reward
         eval_results["eval_eps_length"] += 1
     results = {**train_results, **eval_results}
-    tune.report(results)
+    # tune.report(results)
 
 
 if __name__ == "__main__":
@@ -67,7 +67,7 @@ if __name__ == "__main__":
     # elif args.log_level == 'INFO':
     #     log_level=logging.INFO
 
-    logging.basicConfig(filename=os.path.join("/home/cs20mtech12003/Compilers/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib-basic/src", 'running.log'), format='%(levelname)s - %(filename)s - %(message)s', level=log_level)
+    logging.basicConfig(filename=os.path.join("/home/cs20mtech12003/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib-basic/src", 'running.log'), format='%(levelname)s - %(filename)s - %(message)s', level=log_level)
     logging.info('Starting training')
     logging.info(args)
 
@@ -83,7 +83,7 @@ if __name__ == "__main__":
     config["env_config"]["state_size"] = 300
 
     config["env_config"]["dataset"] = "/home/cs20mtech12003/Compilers/ML-Register-Allocation/data/level-O0-llfiles_test_mlra_x86_LITE/"
-    config["env_config"]["graphs_num"] = 10
+    config["env_config"]["graphs_num"] = 1000
     # training_graphs=glob.glob(os.path.join(dataset, 'graphs/IG/json_new/*.json'))
 
     # ModelCatalog.register_custom_model("my_torch_model", CustomTorchModel)
@@ -95,6 +95,6 @@ if __name__ == "__main__":
     tune.run(
         experiment,
         config=config,
-        resources_per_trial=DQNTrainer.default_resource_request(config), stop={"episodes_total": 10})
+        resources_per_trial=DQNTrainer.default_resource_request(config))
         # file_count += 1
     print("Total time in seconds is: ", (time.time() - start_time))
