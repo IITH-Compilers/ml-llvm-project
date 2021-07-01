@@ -11,9 +11,10 @@ from typing import List, Tuple, Dict, Sequence, Any
 from topologicalSort import Graph
 import logging
 import re
-
+from argparse import Namespace
+import json
 logger = logging.getLogger(__file__) 
-# device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device ='cpu' #torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 class AdjacencyList:
     """represent the topology of a graph"""
@@ -49,9 +50,9 @@ class GatedGraphNeuralNetwork(nn.Module):
         self.state_to_message_dropout = state_to_message_dropout
         self.rnn_dropout = rnn_dropout
         self.use_bias_for_message_linear = use_bias_for_message_linear
-        self.annotation_size = annotation_size 
+        # self.annotation_size = annotation_size 
 
-        self.hidden_layer = nn.Linear(self.hidden_size + self.annotation_size, self.hidden_size)
+        self.hidden_layer = nn.Linear(self.hidden_size + annotation_size, self.hidden_size)
         # Prepare linear transformations from node states to messages, for each layer and each edge type
         # Prepare rnn cells for each layer
         self.state_to_message_linears = []
@@ -89,8 +90,8 @@ class GatedGraphNeuralNetwork(nn.Module):
                                                  return_all_states=return_all_states)
 
     def compute_node_representations(self,
-            # initial_node_representation=None: Variable, annotations=None:Variable,
-            #                          adjacency_lists=None: List[AdjacencyList],
+            initial_node_representation: Variable, annotations:Variable,
+                                      adjacency_lists: List[AdjacencyList],
                                      return_all_states=False) -> Variable:
         # If the dimension of initial node embedding is smaller, then perform padding first
         # one entry per layer (final state of that layer), shape: number of nodes in batch v x D
@@ -98,24 +99,25 @@ class GatedGraphNeuralNetwork(nn.Module):
         
         # logging.debug('Annotaion shape {shape} and value {value} '.format(shape=annotations.shape, value=annotations))
         # logging.debug(initial_node_representation.shape)
-        self.initial_node_representation = torch.cat([self.initial_node_representation, self.annotations], dim=1)
+        initial_node_representation = torch.cat([initial_node_representation, annotations], dim=1)
         # logging.debug('DLOOP H+A {}'.format(initial_node_representation.shape))
-        self.initial_node_representation = self.hidden_layer(self.initial_node_representation)
+        # print(self.initial_node_representation.device)
+        initial_node_representation = self.hidden_layer(initial_node_representation) #.to(device)
 
 
-        init_node_repr_size = self.initial_node_representation.size(1)
-        device = self.adjacency_lists[0].data.device
+        init_node_repr_size = initial_node_representation.size(1)
+        ndevice = adjacency_lists[0].data.device
         if init_node_repr_size < self.hidden_size:
             pad_size = self.hidden_size - init_node_repr_size
-            zero_pads = torch.zeros(self.initial_node_representation.size(0), pad_size, dtype=torch.float, device=device)
-            self.initial_node_representation = torch.cat([self.initial_node_representation, zero_pads], dim=-1)
+            zero_pads = torch.zeros(initial_node_representation.size(0), pad_size, dtype=torch.float, device=ndevice)
+            initial_node_representation = torch.cat([initial_node_representation, zero_pads], dim=-1)
         
-        node_states_per_layer = [self.initial_node_representation]
+        node_states_per_layer = [initial_node_representation]
 
-        node_num = self.initial_node_representation.size(0)
+        node_num = initial_node_representation.size(0)
 
         message_targets = []  # list of tensors of message targets of shape [E]
-        for edge_type_idx, adjacency_list_for_edge_type in enumerate(self.adjacency_lists):
+        for edge_type_idx, adjacency_list_for_edge_type in enumerate(adjacency_lists):
             if adjacency_list_for_edge_type.edge_num > 0:
                 edge_targets = adjacency_list_for_edge_type[:, 1]
                 message_targets.append(edge_targets)
@@ -123,9 +125,9 @@ class GatedGraphNeuralNetwork(nn.Module):
 
         if len(message_targets) == 0:
             if self.nodelevel:
-                return self.initial_node_representation
+                return initial_node_representation
             else:
-                return torch.sum(self.initial_node_representation ,dim=0)
+                return torch.sum(initial_node_representation ,dim=0)
 
         message_targets = torch.cat(message_targets, dim=0)  # Shape [M]
 
@@ -154,7 +156,7 @@ class GatedGraphNeuralNetwork(nn.Module):
                 # message_source_states: List[torch.FloatTensor] = []  # list of tensors of edge source states of shape [E, D]
 
                 # Collect incoming messages per edge type
-                for edge_type_idx, adjacency_list_for_edge_type in enumerate(self.adjacency_lists):
+                for edge_type_idx, adjacency_list_for_edge_type in enumerate(adjacency_lists):
                     if adjacency_list_for_edge_type.edge_num > 0:
                         # shape [E]
                         edge_sources = adjacency_list_for_edge_type[:, 0]
@@ -174,7 +176,7 @@ class GatedGraphNeuralNetwork(nn.Module):
 
                 # Sum up messages that go to the same target node
                 # shape [V, D]
-                incoming_messages = torch.zeros(node_num, messages.size(1), device=device)
+                incoming_messages = torch.zeros(node_num, messages.size(1), device=ndevice)
                 incoming_messages = incoming_messages.scatter_add_(0,
                                                                    message_targets.unsqueeze(-1).expand_as(messages),
                                                                    messages)
@@ -203,7 +205,7 @@ class GatedGraphNeuralNetwork(nn.Module):
         #     return torch.sum(node_states_per_layer[-1],dim=0)
         # print('return shape {}'.format(node_states_for_this_layer.shape))
 
-        self.initial_node_representation = node_states_for_this_layer.detach()
+        initial_node_representation = node_states_for_this_layer.detach()
         
         return node_states_for_this_layer
 
@@ -222,32 +224,26 @@ class GatedGraphNeuralNetwork(nn.Module):
     # def addPairEdge(self, node1, node2):
     #     self.unique_type_map['pair'].append((node1, node2))
     
-    def propagate(self):
-        # adjacency_lists=[ AdjacencyList(node_num=self.num_nodes, adj_list=adjlist, device=self.device) for adjlist in self.unique_type_map.values()]
-
-        # self.n_state = self.compute_node_representations(initial_node_representation=self.n_state,  annotations=self.annotations, adjacency_lists=self.adjacency_lists, return_all_states=False)
-        self.compute_node_representations(return_all_states=False)
-        
-        
-        # logging.debug("device : {} ".format(self.device))
-        if self.nodelevel:
-            state = self.initial_node_representation
-        else:
-            state = torch.sum(self.initial_node_representation, dim=0)
-        
-        state = state.cpu().detach().numpy()
-        # state = state.detach().numpy()
-        # logging.debug('DLOOP  return from propagate | state : {}'.format(state.shape))
-        # return state.copy()
-        # print('state shape {}'.format(state.shape))
-        return state
+    # def propagate(self):
+    #     self = self.to(device)
+    #     self.compute_node_representations(return_all_states=False)
+    #     
+    #     
+    #     if self.nodelevel:
+    #         state = self.initial_node_representation
+    #     else:
+    #         state = torch.sum(self.initial_node_representation, dim=0)
+    #     
+    #     state = state.cpu().detach().numpy()
+    #     self = self.cpu()
+    #     return state
   
    # input graph jsonnx
-def praseProp(val):
+def parseProp(val):
     val = val.strip()
     return val[1: len(val) - 1]
 
-def constructGraph(graph):
+def get_observations(graph):
     nodes = graph['nodes']
     adjlist = graph['adjacency']
 
@@ -262,30 +258,53 @@ def constructGraph(graph):
     spill_cost_list = []
     reg_class_list = []
     allocate_type_list = []
-    
+    split_points_list = []
+    raw_graph_mat = []
     for idx, node in enumerate(nodes):
         
         nodeId = node['id']
-        properties = re.search("{.*}", node['label']).group()
-        properties = properties.split()
+        properties = re.findall("{[^}]*}", node['label'])
+        # print(properties)
+        # properties = properties.split()
         logging.debug('Node idx={} | {}'.format(idx, properties))
-        regClass = praseProp(properties[0]) 
-        spill_cost = praseProp(properties[1])
-        allocate_type = praseProp(properties[2])
+        regClass = parseProp(properties[0]) 
+        spill_cost = parseProp(properties[1])
+        allocate_type = parseProp(properties[2])
+        split_points = []
+        if len(properties) > 3:
+            # print(properties)
+            split_points = parseProp(properties[3])
+            # print(split_points)
+            if len(split_points) > 0:
+                split_points = sorted(list(map(lambda x : int(x), split_points.split(', '))))
+
+        split_points_list.append(np.array(split_points))
+
 
         logging.debug('Allocation type : {}'.format(allocate_type))
         if spill_cost not in ["inf", "INF"]:
             spill_cost = eval(spill_cost)
         else:
-            spill_cost = float(1000)
+            spill_cost = float(1)
         node['label'] = re.sub(" {.*} ", '', node['label'])
         
         if node['label'] != "\"\"":
-            node_mat = eval(node['label'].replace("\"",""))
+            matr = node['label'].replace("\"","")
+            # print(matr)
+
+            matr = node['label'].replace(" ][",",").replace('\n','')
+            # print(matr)
+
+            node_mat = json.loads(eval(matr))
+            # node_mat = json.loads(matr)
         else:
-            node_mat = [[1]*300]
+            node_mat = [[0]*300 + [0]]
         
+        # print(node_mat)
+        # print(type(node_mat)) 
+        raw_graph_mat.append(node_mat)
         node_tansor_matrix = torch.FloatTensor(node_mat)
+        # print(node_tansor_matrix.shape)
         nodeVec = constructVectorFromMatrix(node_tansor_matrix)
         reg_class_list.append(regClass)
         spill_cost_list.append(spill_cost)
@@ -302,67 +321,47 @@ def constructGraph(graph):
             if i != neighId:
                 all_edges.append((i, neighId))
 
-    initial_node_representation = torch.stack(initial_node_representation, dim=0)#.to(device)
+    initial_node_representation = torch.stack(initial_node_representation, dim=0)# .to(device)
     
     # print(initial_node_representation)
     logging.debug("Shape of the hidden nodes matrix N X D : {}".format(initial_node_representation.shape)) 
     # Create aGraph obj for getting the Zero incoming egdes nodes
-    graphObj = Graph(all_edges,  num_nodes)
+    graph_topology = Graph(all_edges,  num_nodes)
 
     logging.debug('All links : {}'.format(all_edges))
     logging.debug("num_nodes : {}".format(num_nodes) )
     logging.debug('All edges num : {}'.format(len(all_edges)))
-    ggnn = GatedGraphNeuralNetwork(hidden_size=initial_node_representation.shape[1], annotation_size=2, num_edge_types=1, layer_timesteps=[1], residual_connections={}, nodelevel=True)
     
-    annotation_zero = np.zeros((num_nodes, 2))
+    annotation_zero = np.zeros((num_nodes, 3))
     annotation_zero[:, 0] = spill_cost_list
-    ggnn.annotations = torch.FloatTensor(annotation_zero) # .to(device)
+    annotations = torch.FloatTensor(annotation_zero)# .to(device)
     
     '''
     Support for already allocated registers.
     Mark the nodes as visted in the graph and 
     ggnn so that removed from action space
     '''
+    
     for node_idx in range(num_nodes):
         if reg_class_list[node_idx] == 'Phy':
             color, phyReg = map( lambda x : int(x.split('=')[-1]), allocate_type_list[node_idx].split(';'))
             logging.debug('creating graph; Marking node_idx={} with color={}'.format(node_idx, color))
             
-            graphObj.UpdateVisitList(node_idx, color)
-            ggnn.updateAnnotation(node_idx, color)
+            graph_topology.UpdateVisitList(node_idx)
+            graph_topology.UpdateColorVisitedNode(node_idx, color) 
+            # ggnn.updateAnnotation(node_idx, color)
+            annotations[node_idx][0] =  torch.tensor(0)# .to(device)
+            # set the color assigned to the node
+            annotations[node_idx][1] = torch.tensor(color)# .to(device)
     
-    # ggnn.annotations = torch.FloatTensor(annotations_list)
-    # ggnn.annotations = ggnn.annotations.reshape((ggnn.annotations.shape[0], 1))
-    
-    ggnn.num_nodes = num_nodes
-    ggnn.adjacency_lists = [ AdjacencyList(node_num=num_nodes, adj_list=all_edges, device=ggnn.device)]
-    # adjacency_lists=[ AdjacencyList(node_num=num_nodes, adj_list=adjlist, device=ggnn.device) for adjlist in unique_type_map.values()]
-    # logging.debug("unique_type_map : {}".format(unique_type_map)) 
-    # ggnn.unique_type_map = unique_type_map
-    # TODO maps values have same behvior as append
-    
-    # print(ggnn.annotations)
-    # print(ggnn.adjacency_lists)
-    ggnn.initial_node_representation = initial_node_representation
-    
+    adjacency_lists = [ AdjacencyList(node_num=num_nodes, adj_list=all_edges, device=device)]
+     
     '''
     Main call to the compute representation
     '''
-    ggnn.compute_node_representations(return_all_states=False) #.to(device)
-    
-    ggnn.spill_cost_list  = spill_cost_list 
-    # print(ggnn.n_state)
-    ggnn.reg_class_list = reg_class_list
-    
-    # state = torch.sum(ggnn.n_state, dim=0)
-    
-    ggnn.nid_idx = nid_idx
-    ggnn.idx_nid = idx_nid
-
-
-    # TODO detach the obj from the 
-    state = ggnn.initial_node_representation.cpu().detach().numpy()
-    return  state, graphObj, ggnn
+    obs = {'raw_graph_mat':raw_graph_mat, 'initial_node_representation':initial_node_representation, 'annotations':annotations, 'adjacency_lists' : adjacency_lists,  'graph_topology':graph_topology, 'spill_cost_list' : spill_cost_list, 'reg_class_list' : reg_class_list, 'nid_idx':nid_idx, 'idx_nid':idx_nid, 'split_points' : split_points_list}
+    obs = Namespace(**obs) 
+    return obs
 
 def constructVectorFromMatrix(node_tansor_matrix):
     vector = torch.mean(node_tansor_matrix, 0)
