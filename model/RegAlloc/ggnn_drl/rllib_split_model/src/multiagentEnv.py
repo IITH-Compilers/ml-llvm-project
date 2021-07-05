@@ -15,6 +15,7 @@ import random
 import utils
 import logging
 import json
+import math
 from gym.spaces import Discrete, Box
 
 from ggnn import constructGraph
@@ -208,6 +209,7 @@ class GraphColorEnv(gym.Env):
         
         # Consider Node with index with node with index 0
         self.spill_cost_list = self.ggnn.spill_cost_list
+        print("Spill const list", self.spill_cost_list)
         self.reg_class_list = self.ggnn.reg_class_list
         self.cur_node = 0
         
@@ -253,16 +255,17 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
     def step(self, action_dict):
 
         if "select_node_agent" in action_dict:
-            return _select_node_step(action_dict["select_node_agent"])
+            return self._select_node_step(action_dict["select_node_agent"])
         elif "select_task_agent" in action_dict:
-            return _select_task_step(action_dict["select_task_agent"])
+            return self._select_task_step(action_dict["select_task_agent"])
         elif "colour_node_agent" in action_dict:
-            return _colour_node_step(action_dict["colour_node_agent"])
+            return self._colour_node_step(action_dict["colour_node_agent"])
         elif "split_node_agent" in action_dict:
-            return _split_node_step(action_dict["split_node_agent"])
+            return self._split_node_step(action_dict["split_node_agent"])
 
 
     def constraint_selectNode(self, state, out):
+        print("&&&&&&&&&&&& state, action &&&&&&&&", state.shape, out)
         masked_select_out = out[state.graph_topology.get_eligibleNodes()]
         rel_indexchoose = torch.argmax(masked_select_out)
         Qvalue, rel_indexchoose = self.getMaxQvalueAndActions(masked_select_out)
@@ -270,28 +273,36 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         return node_index, Qvalue
 
     def _select_node_step(self, action):        
-        node_index, _ = self.constraint_selectNode(self.cur_obs, action)
-        self.obs.graph_topology.UpdateVisitList(node_index)
-        self.obs.focus = node_index
+        # node_index, _ = self.constraint_selectNode(self.cur_obs, action)
+        # node_index = int(math.ceil(((action + 1)*0.01)*self.obs.graph_topology.num_nodes))
+        # self.obs.graph_topology.UpdateVisitList(node_index)
+        # self.obs.focus = node_index
         
-        reward = 0
-        done = False
-        self.obs.next_stage = 'selectTask'
-        self.hidden_state =  self.ggnn(initial_node_representation=state.initial_node_representation, annotations=state.annotations, adjacency_lists=state.adjacency_lists)
-        obs = {
-            "select_task_agent": self.hidden_state[node_index]
+        reward = {
+            "select_task_agent": 0
         }
-        self.cur_obs = self.hidden_state[node_index]
+        done = {"__all__": False}
+        # self.obs.next_stage = 'selectTask'
+        # self.hidden_state =  self.ggnn(initial_node_representation=state.initial_node_representation, annotations=state.annotations, adjacency_lists=state.adjacency_lists)
+        obs = {
+            "select_task_agent": self.cur_obs
+        }
+        # self.cur_obs = self.hidden_state[node_index]
         return obs, reward, done, {}
 
     def _select_task_step(self, action):
-        reward = 0
-        done = False
+        done = {"__all__": False}
         if action == 0: # Colour node
+            reward = {
+                "colour_node_agent" : 0
+            }
             obs = {
                 "colour_node_agent" : self.cur_obs
             }
         else:
+            reward = {
+                "split_node_agent" : 0
+            }
             obs = {
                 "split_node_agent" : self.cur_obs
             }
@@ -299,15 +310,25 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
     def _colour_node_step(self, action):
         next_obs, reward, done, response  = self.flat_env.step(action)
+        done = {"__all__": done}
+        reward = {
+            "select_node_agent": reward
+        }
         obs = {
             "select_node_agent": next_obs
         }
 
         return obs, reward, done, response
 
-    def _splitnode_step(self, action):
+    def _split_node_step(self, action):
         self.cur_obs = self.flat_env.reset()
-
-        return {
+        
+        done = {"__all__": False}
+        reward = {
+            "select_node_agent": 0
+        }
+        obs = {
             "select_node_agent" : self.cur_obs
         }
+
+        return obs, reward, done, {}

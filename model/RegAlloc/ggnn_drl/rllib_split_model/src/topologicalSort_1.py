@@ -30,17 +30,38 @@ class Graph:
         interfering_nodes = self.adjList[v]
         return list(set([self.colored[u] for u in interfering_nodes if self.discovered[u]]))
     
-    def UpdateVisitList(self, v, color):
+    def UpdateVisitList(self, v):
         if not self.discovered[v]:
 
             # for every adjacent vertex u of v, reduce in-degree of u by 1
             for u in self.adjList[v]:
                 self.indegree[u] = self.indegree[u] - 1
             self.discovered[v] = True
+            # self.colored[v] = color
+        else:
+            assert False, 'discovered node visited.'
+
+    def markNodeAsNotVisited(self, v):
+        if self.discovered[v]:
+
+            # for every adjacent vertex u of v, reduce in-degree of u by 1
+            for u in self.adjList[v]:
+                self.indegree[u] = self.indegree[u] + 1
+            self.discovered[v] = False
+            # self.colored[v] = color
+        else:
+            assert False, 'discovered is node visited.'
+
+    def UpdateColorVisitedNode(self, v, color):
+        if self.discovered[v] and self.colored[v] == -1 :
+
+            # for every adjacent vertex u of v, reduce in-degree of u by 1
             self.colored[v] = color
         else:
-            assert(0)
-
+            assert False, 'Trying reassign the color to already colored or not visited node'
+    
+    def get_eligibleNodes(self):
+        return list(filter(lambda x : not self.discovered[x], range(self.num_nodes)))
 
     def findAllVertaxWithZeroWeights(self):
     

@@ -11,8 +11,9 @@ import ray
 from ray import tune
 from ray.tune import function
 from ray.rllib.agents import ppo
+from ray.rllib.agents.dqn.simple_q_torch_policy import SimpleQTorchPolicy
 from gym.spaces import Discrete, Box
-from dqn import DQNTrainer, DEFAULT_CONFIG
+from simple_q import SimpleQTrainer, DEFAULT_CONFIG
 # from env import GraphColorEnv, set_config
 from multiagentEnv import HierarchicalGraphColorEnv
 from register_action_space import RegisterActionSpace
@@ -29,10 +30,10 @@ def experiment(config):
     global checkpoint
     train_results = {}
     # config["env_config"]["path"] = path
-    train_agent = DQNTrainer(config=config, env=HierarchicalGraphColorEnv)
+    train_agent = SimpleQTrainer(config=config, env=HierarchicalGraphColorEnv)
     # Train
     
-    # train_agent = DQNTrainer(config=config, env=GraphColorEnv)
+    # train_agent = SimpleQTrainer(config=config, env=GraphColorEnv)
     if checkpoint is not None:
         train_agent.restore(checkpoint)            
 
@@ -45,31 +46,22 @@ def experiment(config):
     train_agent.stop()
 
     # Manual Eval
-    config["num_workers"] = 0
-    eval_agent = DQNTrainer(config=config, env=HierarchicalGraphColorEnv)
-    eval_agent.restore(checkpoint)
-    env = eval_agent.workers.local_worker().env
+    # config["num_workers"] = 0
+    # eval_agent = SimpleQTrainer(config=config, env=HierarchicalGraphColorEnv)
+    # eval_agent.restore(checkpoint)
+    # env = eval_agent.workers.local_worker().env
 
-    obs = env.reset()
-    done = False
-    eval_results = {"eval_reward": 0, "eval_eps_length": 0}
-    while not done:
-        action = eval_agent.compute_action(obs)
-        next_obs, reward, done, info = env.step(action)
-        eval_results["eval_reward"] += reward
-        eval_results["eval_eps_length"] += 1
-    results = {**train_results, **eval_results}
+    # obs = env.reset()
+    # done = False
+    # eval_results = {"eval_reward": 0, "eval_eps_length": 0}
+    # while not done:
+    #     action = eval_agent.compute_action(obs, policy_id="select_node_policy")
+    #     next_obs, reward, done, info = env.step(action)
+    #     eval_results["eval_reward"] += reward
+    #     eval_results["eval_eps_length"] += 1
+    # results = {**train_results, **eval_results}
     # tune.report(results)
 
-def policy_mapping_fn(agent_id, episode, **kwargs):
-    if agent_id == "select_node_agent":
-        return "select_node_policy"
-    elif agent_id == "select_task_agent":
-        return "select_task_policy"
-    elif agent_id == "colour_node_agent":
-        return "colour_node_policy"
-    else:
-        return "split_node_policy"
 
 if __name__ == "__main__":
     args = parser.parse_args()
@@ -109,6 +101,17 @@ if __name__ == "__main__":
     box_1d = Box(
             0, 1.0, shape=(1, ), dtype=np.float32)
     
+    def policy_mapping_fn(agent_id, episode=None, **kwargs):
+        if agent_id == "select_node_agent":
+            return "select_node_policy"
+        elif agent_id == "select_task_agent":
+            return "select_task_policy"
+        elif agent_id == "colour_node_agent":
+            return "colour_node_policy"
+        else:
+            return "split_node_policy"
+
+
     policies = {
         "select_node_policy": (None, box_obs,
                                 Discrete(100), {
@@ -173,6 +176,6 @@ if __name__ == "__main__":
     tune.run(
         experiment,
         config=config,
-        resources_per_trial=DQNTrainer.default_resource_request(config))
+        resources_per_trial=SimpleQTrainer.default_resource_request(config))
         # file_count += 1
     print("Total time in seconds is: ", (time.time() - start_time))

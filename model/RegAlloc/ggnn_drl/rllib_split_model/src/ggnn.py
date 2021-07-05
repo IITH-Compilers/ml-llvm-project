@@ -327,7 +327,6 @@ def constructGraph(graph):
         if reg_class_list[node_idx] == 'Phy':
             color, phyReg = map( lambda x : int(x.split('=')[-1]), allocate_type_list[node_idx].split(';'))
             logging.debug('creating graph; Marking node_idx={} with color={}'.format(node_idx, color))
-            
             graphObj.UpdateVisitList(node_idx, color)
             ggnn.updateAnnotation(node_idx, color)
     

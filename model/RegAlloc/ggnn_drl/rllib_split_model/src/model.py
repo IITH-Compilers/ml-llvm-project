@@ -7,7 +7,7 @@ from register_action_space import RegisterActionSpace
 from ray.rllib.models.torch.torch_modelv2 import TorchModelV2
 
 logger = logging.getLogger(__file__) 
-class SelectTaskNetwork(TorchModelV2):
+class SelectTaskNetwork(TorchModelV2, nn.Module):
     """Actor (Policy) Model."""
 
     def __init__(self, obs_space, action_space, num_outputs, model_config, name):
@@ -38,7 +38,7 @@ class SelectTaskNetwork(TorchModelV2):
         
         return x, state
 
-class SelectNodeNetwork(TorchModelV2):
+class SelectNodeNetwork(TorchModelV2, nn.Module):
     """Actor (Policy) Model."""
 
     def __init__(self, obs_space, action_space, num_outputs, model_config, name):
@@ -68,7 +68,7 @@ class SelectNodeNetwork(TorchModelV2):
         
         return x, state
 
-class ColorNetwork(TorchModelV2):
+class ColorNetwork(TorchModelV2, nn.Module):
     """Actor (Policy) Model."""
 
     def __init__(self, obs_space, action_space, num_outputs, model_config, name):
@@ -99,7 +99,7 @@ class ColorNetwork(TorchModelV2):
         
         return x, state
 
-class SplitNodeNetwork(TorchModelV2):
+class SplitNodeNetwork(TorchModelV2, nn.Module):
     """Actor (Policy) Model."""
 
     def __init__(self, obs_space, action_space, num_outputs, model_config, name):
