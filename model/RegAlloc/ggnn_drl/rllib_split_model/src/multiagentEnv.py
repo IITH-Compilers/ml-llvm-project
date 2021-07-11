@@ -209,7 +209,7 @@ class GraphColorEnv(gym.Env):
         
         # Consider Node with index with node with index 0
         self.spill_cost_list = self.ggnn.spill_cost_list
-        print("Spill const list", self.spill_cost_list)
+        # print("Spill const list", self.spill_cost_list)
         self.reg_class_list = self.ggnn.reg_class_list
         self.cur_node = 0
         
@@ -288,6 +288,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             "select_task_agent": self.cur_obs
         }
         # self.cur_obs = self.hidden_state[node_index]
+        print("Select Node Reward", reward)
         return obs, reward, done, {}
 
     def _select_task_step(self, action):
@@ -306,19 +307,41 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             obs = {
                 "split_node_agent" : self.cur_obs
             }
+        # reward = {
+        #     "colour_node_agent" : 0
+        # }
+        # obs = {
+        #     "colour_node_agent" : self.cur_obs
+        # }
+        print("Select Task Reward", reward)
         return obs, reward, done, {}
 
     def _colour_node_step(self, action):
-        next_obs, reward, done, response  = self.flat_env.step(action)
+        print("Colouring Action", action)
+        next_obs, colour_reward, done, response  = self.flat_env.step(action)
         done = {"__all__": done}
         reward = {
-            "select_node_agent": reward
+            "select_node_agent": colour_reward
         }
         obs = {
             "select_node_agent": next_obs
         }
 
-        return obs, reward, done, response
+        if done:
+            obs = {
+                "colour_node_agent": next_obs,
+                "select_node_agent": next_obs,
+                "select_task_agent": next_obs,
+                "split_node_agent": next_obs
+            }
+            reward = {
+                "colour_node_agent": colour_reward,
+                "select_node_agent": colour_reward,
+                "select_task_agent": colour_reward,
+                "split_node_agent": colour_reward
+            }
+        print("Color Node Reward", reward)
+        return obs, reward, done, {}
 
     def _split_node_step(self, action):
         self.cur_obs = self.flat_env.reset()
@@ -330,5 +353,5 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         obs = {
             "select_node_agent" : self.cur_obs
         }
-
+        print("Split node Reward", reward)
         return obs, reward, done, {}

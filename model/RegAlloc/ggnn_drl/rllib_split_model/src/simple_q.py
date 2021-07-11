@@ -101,7 +101,7 @@ DEFAULT_CONFIG = with_common_config({
     # Number of workers for collecting samples with. This only makes sense
     # to increase if your environment is particularly slow to sample, or if
     # you"re using the Async or Ape-X optimizers.
-    "num_workers": 2,
+    "num_workers": 0,
     # Prevent iterations from going lower than this time span
     "min_iter_time_s": 1,
 
