@@ -87,7 +87,8 @@ if __name__ == "__main__":
     config["env_config"]["action_space_size"] = config["env_config"]["registerAS"].ac_sp_normlize_size
     config["env_config"]["state_size"] = 300
 
-    config["env_config"]["dataset"] = "/home/cs20mtech12003/ML-Register-Allocation/data/level-O0-llfiles_train_mlra_x86_LITE/"
+    # config["env_config"]["dataset"] = "/home/cs20mtech12003/ML-Register-Allocation/data/level-O0-llfiles_train_mlra_x86_LITE/"
+    config["env_config"]["dataset"] = "/home/cs20mtech12003/Compilers/ML-Register-Allocation/data/level-O0-llfiles_test_mlra_x86_LITE/"
     config["env_config"]["graphs_num"] = 50000
     # training_graphs=glob.glob(os.path.join(dataset, 'graphs/IG/json_new/*.json'))
 
@@ -115,7 +116,7 @@ if __name__ == "__main__":
     policies = {
         "select_node_policy": (None, box_obs,
                                 Discrete(100), {
-                                    "gamma": 0.9,
+                                    "gamma": 0.0,
                                     "model": {
                                         "custom_model": "select_node_model",
                                         "custom_model_config": {
@@ -127,7 +128,7 @@ if __name__ == "__main__":
                                 }),
         "select_task_policy": (None, box_obs,
                                 Discrete(2), {
-                                    "gamma": 0.9,
+                                    "gamma": 0.0,
                                     "model": {
                                         "custom_model": "select_task_model",
                                         "custom_model_config": {

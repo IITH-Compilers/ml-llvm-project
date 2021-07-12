@@ -25,7 +25,7 @@ class SelectTaskNetwork(TorchModelV2, nn.Module):
         """
         # super(SelectTaskNetwork, self).__init__()
 
-        self.seed = torch.manual_seed(0)
+        # self.seed = torch.manual_seed(0)
         self.fc1 = nn.Linear(custom_config["state_size"], custom_config["fc1_units"])
         self.fc2 = nn.Linear(custom_config["fc1_units"], custom_config["fc2_units"])
         self.fc3 = nn.Linear( custom_config["fc2_units"], num_outputs)
@@ -35,7 +35,7 @@ class SelectTaskNetwork(TorchModelV2, nn.Module):
         x = F.relu(self.fc1(input_dict["obs"]))
         x = F.relu(self.fc2(x))
         x = self.fc3(x)
-        
+        # print("Select Task Model out", x)
         return x, state
 
 class SelectNodeNetwork(TorchModelV2, nn.Module):
@@ -55,7 +55,7 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
             fc2_units (int): Number of nodes in second hidden layer
         """
         # super(SelectNodeNetwork, self).__init__()
-        self.seed = torch.manual_seed(0)
+        # self.seed = torch.manual_seed(0)
         self.fc1 = nn.Linear(custom_config["state_size"], custom_config["fc1_units"])
         self.fc2 = nn.Linear(custom_config["fc1_units"], custom_config["fc2_units"])
         self.fc3 = nn.Linear( custom_config["fc2_units"], 1)
@@ -85,7 +85,7 @@ class ColorNetwork(TorchModelV2, nn.Module):
             fc2_units (int): Number of nodes in second hidden layer
         """
         # super(ColorNetwork, self).__init__()
-        self.seed = torch.manual_seed(0)
+        # self.seed = torch.manual_seed(0)
         self.fc1 = nn.Linear(custom_config["state_size"], custom_config["fc1_units"])
         self.fc2 = nn.Linear(custom_config["fc1_units"], custom_config["fc2_units"])
         self.fc3 = nn.Linear( custom_config["fc2_units"], num_outputs)
@@ -116,7 +116,7 @@ class SplitNodeNetwork(TorchModelV2, nn.Module):
             fc2_units (int): Number of nodes in second hidden layer
         """
         # super(SplitNodeNetwork, self).__init__()
-        self.seed = torch.manual_seed(0)
+        # self.seed = torch.manual_seed(0)
         self.fc1 = nn.Linear(custom_config["state_size"], custom_config["fc1_units"])
         self.fc2 = nn.Linear(custom_config["fc1_units"], custom_config["fc2_units"])
         self.fc3 = nn.Linear( custom_config["fc2_units"], num_outputs)
