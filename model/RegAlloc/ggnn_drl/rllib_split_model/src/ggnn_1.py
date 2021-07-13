@@ -8,7 +8,7 @@ import torch.nn.functional as F
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
 
 from typing import List, Tuple, Dict, Sequence, Any
-from topologicalSort import Graph
+from topologicalSort_1 import Graph
 import logging
 import re
 from argparse import Namespace

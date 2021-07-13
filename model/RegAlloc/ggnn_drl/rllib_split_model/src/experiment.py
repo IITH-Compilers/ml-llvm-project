@@ -87,6 +87,11 @@ if __name__ == "__main__":
     config["env_config"]["action_space_size"] = config["env_config"]["registerAS"].ac_sp_normlize_size
     config["env_config"]["state_size"] = 300
 
+    config["env_config"]["mode"] = 'inference'
+    config["env_config"]["dump_type"] = 'One'
+    config["env_config"]["dump_color_graph"] = True
+    config["env_config"]["intermediate_data"] = './temp'
+
     # config["env_config"]["dataset"] = "/home/cs20mtech12003/ML-Register-Allocation/data/level-O0-llfiles_train_mlra_x86_LITE/"
     config["env_config"]["dataset"] = "/home/cs20mtech12003/Compilers/ML-Register-Allocation/data/level-O0-llfiles_test_mlra_x86_LITE/"
     config["env_config"]["graphs_num"] = 50000
