@@ -444,6 +444,44 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         # print("Split node Reward", reward)
         return obs, reward, done, {}
 
+    def step_splitTask(self, action):
+        split_idx= action
+        nodeChoosen = self.cur_node 
+        node_id =  self.obs.idx_nid[nodeChoosen]
+
+        self.obs.annotations[nodeChoosen][1] = torch.tensor(split_idx)# .to(device)
+       
+        reward = 0
+        done = False
+        
+        response = None 
+        # TODO updat eh graph sue to the split
+
+        if split_idx == 0 or not self.update_obs_split(node_id, split_idx):
+            self.obs.graph_topology.markNodeAsNotVisited(nodeChoosen)
+        
+        assert False in self.obs.graph_topology.discovered, "After Split, all node not be finished"
+        if False not in self.obs.graph_topology.discovered:
+            response = utils.get_colored_graph(self.fun_id, self.fileName, self.functionName, self.color_assignment_map)
+            done = True
+            reward = self.total_reward
+            self.obs.next_stage = 'end'
+            
+            self.stable_grpc('Exit', 0, 0)
+            self.server_pid.kill()
+            self.server_pid.communicate()
+            if self.server_pid.poll() is not None:
+                print('Force stop')
+            self.server_pid = None
+            print('Stop server')
+            logging.debug('!!!!!!!!!!!!!!!!!!1All visited Due to Spill!!!!!!!!!!!!!!!')
+           
+            # self.server_pid.join()#terminate()
+            return copy.deepcopy(self.obs), reward, done, response
+        
+        self.obs.next_stage = 'selectnode'
+        return copy.deepcopy(self.obs), reward, done, None
+
     def step_colorTask(self, action):
         reg_allocated = action
         # add the node to the visited list
@@ -474,13 +512,13 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             # print('Exit the server after last color ')
             # print('Seerver : {}'.format(self.server_pid))
             # self.server_pid.join()# terminate()
-            # self.stable_grpc('Exit', 0, 0)
-            # self.server_pid.kill()
-            # self.server_pid.communicate()
-            # if self.server_pid.poll() is not None:
-            #     print('Force stop')
-            # self.server_pid = None
-            # print('Stop server')
+            self.stable_grpc('Exit', 0, 0)
+            self.server_pid.kill()
+            self.server_pid.communicate()
+            if self.server_pid.poll() is not None:
+                print('Force stop')
+            self.server_pid = None
+            print('Stop server')
             logging.debug('All visited and colored graph visisted')
             return reward, done, response
 
@@ -518,23 +556,166 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.num_nodes = len(self.graph['nodes'])
         self.obs = get_observations(self.graph)
         
-        # if self.server_pid is not None:
-        #    print('terminate the pid if alive : {}'.format(self.server_pid))
-        #    # self.server_pid.terminate()
-        #    self.server_pid.kill()
-        #    self.server_pid.communicate()
-        #    if self.server_pid.poll() is not None:
-        #        print('Force stop in reset')
-        # hostip = "0.0.0.0"
-        # hostport="50054"
-        # ipadd = "{}:{}".format(hostip, hostport)
-        # # print('Active thread before the server starts : ', threading.active_count())
-        # self.server_pid = utils_1.startServer(self.fileName, self.fun_id, ipadd)
-        # # print('Active thread mid the server starts : ', threading.active_count())
-        # self.queryllvm = RegisterAllocationClient(hostport=hostport)
+        if self.server_pid is not None:
+           print('terminate the pid if alive : {}'.format(self.server_pid))
+           # self.server_pid.terminate()
+           self.server_pid.kill()
+           self.server_pid.communicate()
+           if self.server_pid.poll() is not None:
+               print('Force stop in reset')
+        hostip = "0.0.0.0"
+        hostport="50054"
+        ipadd = "{}:{}".format(hostip, hostport)
+        # print('Active thread before the server starts : ', threading.active_count())
+        self.server_pid = utils_1.startServer(self.fileName, self.fun_id, ipadd)
+        # print('Active thread mid the server starts : ', threading.active_count())
+        self.queryllvm = RegisterAllocationClient(hostport=hostport)
         
         self.obs.stage = 'start'
         self.obs.next_stage = 'selectnode'
+
+        self.server_pid = None
+        self.queryllvm = None
         
         # state = self.obs # (self.obs.initial_node_representation, self.obs.annotations, self.obs.adjacency_lists, self.obs.graph_topology, self.obs.eligibleNodes, self.obs.reg_class_list, self.obs.spill_cost_list)
         # return copy.deepcopy(state)
+
+    def stable_grpc(self, op, register_id, split_point):
+        attempt = 0
+        max_retries=5
+        retry_wait_seconds=0.1
+        retry_wait_backoff_exponent=1.5
+        while True:
+            try:
+                updated_graphs = self.queryllvm.codeGen(op, register_id,  split_point)
+                break
+            # except ValueError as e:
+            except grpc.RpcError as e:
+                if e.code() == grpc.StatusCode.UNAVAILABLE:
+                    attempt += 1
+                    if attempt > max_retries:
+                        raise #ServiceTransportError( f"{self.url} {e.details()} ({max_retries} retries)") from None
+                    remaining = max_retries - attempt
+                    # logging.warning(
+                    #     "%s %s (%d %s remaining)",
+                    #     self.url,
+                    #     e.details(),
+                    #     remaining,
+                    #     plural(remaining, "attempt", "attempts"),
+                    # )
+                    time.sleep(retry_wait_seconds)
+                    retry_wait_seconds *= retry_wait_backoff_exponent
+                else:
+                    raise
+
+        return updated_graphs
+
+    def update_obs_split(self, register_id, split_point):
+        logging.info('try Split register {} on point {}'.format(register_id, split_point))
+        updated_graphs = self.stable_grpc('Split', int(register_id), int(split_point))
+        # print(type(updated_graphs))
+        # print(updated_graphs.regProf)
+        # print(self.obs.nid_idx)
+        # print(updated_graphs.result)
+
+        # print('-----', updated_graphs.regProf[0].regID)
+        # print('-----', updated_graphs.regProf[0].interferences)
+        # print('-----', updated_graphs.regProf[0].spillWeight)
+        # print('-----', updated_graphs.regProf[0].positionalSpillWeights)
+        # print('-----', updated_graphs.regProf[0].splitSlots)
+        
+        if updated_graphs.result:
+            # logging.info(updated_graphs)
+            splited_node_idx = self.obs.nid_idx[str(register_id)]
+            self.obs.graph_topology.indegree[splited_node_idx] = 0
+            self.obs.graph_topology.adjList[splited_node_idx] = []
+            
+            logging.info('register splilted : {} '.format(register_id))
+            split_mtrix = self.obs.raw_graph_mat[splited_node_idx]
+            CPY_INST_VEC=[0.001]*300 + [0.001]
+            new_nodes_matrix = split_mtrix[:split_point] + [CPY_INST_VEC], [CPY_INST_VEC] + split_mtrix[split_point:]
+            logging.info('length of the matrix : {} '.format(len(split_mtrix)))
+            new_nodes = 0
+            def sc(vec, sw):
+                vec[-1] = sw
+                return vec
+            for node_prof in updated_graphs.regProf:
+                nodeId = str(node_prof.regID)
+                
+                if nodeId not in self.obs.nid_idx.keys():
+                    new_nodes+=1
+                    logging.info('{}th New node {} '.format(new_nodes, nodeId))
+                    assert new_nodes < 3, "Splitting having more than 2 intervals"
+                    self.obs.nid_idx[nodeId] = self.obs.graph_topology.num_nodes
+                    self.obs.idx_nid[self.obs.graph_topology.num_nodes] = nodeId
+                    self.obs.graph_topology.num_nodes = self.obs.graph_topology.num_nodes + 1
+                    self.obs.graph_topology.discovered.append(False)
+                    self.obs.graph_topology.adjList.append([])
+                    self.obs.graph_topology.indegree.append(0)
+                    self.obs.graph_topology.colored.append(-1)
+                    
+                    self.obs.spill_cost_list.append(node_prof.spillWeight)
+                    self.obs.reg_class_list.append(self.obs.reg_class_list[splited_node_idx])
+                    self.obs.split_points.append(sorted(node_prof.splitSlots))
+                    logging.info('new slots : {}'.format(sorted(node_prof.splitSlots)))
+                    logging.info('new positionalSpillWeights length : {}'.format(len(node_prof.positionalSpillWeights)))
+                    
+
+                    annotation_zero = torch.zeros((1, 3))
+                    self.obs.annotations = torch.cat((self.obs.annotations, annotation_zero),0)
+                    new_matrix = new_nodes_matrix[new_nodes-1]
+                    if len(new_matrix) == len(node_prof.positionalSpillWeights):
+                        new_matrix = [ sc(vec, sw) for vec,sw in zip(new_matrix, node_prof.positionalSpillWeights)]
+                    else:
+                        logging.warning('Spill weight not updated {} : {}'.format(len(new_matrix), len(node_prof.positionalSpillWeights)))
+                    self.obs.raw_graph_mat.append(new_matrix)
+                    node_tansor_matrix = torch.FloatTensor(new_matrix)
+                    logging.info('shape of new matrix {} '.format(node_tansor_matrix.shape)) 
+                    # print(node_tansor_matrix.shape)
+                    nodeVec = constructVectorFromMatrix(node_tansor_matrix).view(1,-1)
+                    # print(nodeVec.shape)
+                    # print(self.obs.initial_node_representation.shape)
+                    self.obs.initial_node_representation = torch.cat((self.obs.initial_node_representation, nodeVec),0)
+
+                    #self.obs.initial_node_representation[]
+
+                    # interfering_node_idx = self.obs.nid_idx[nodeId]
+
+                    # self.obs.graph_topology.adjList[interfering_node_idx] = list(map(lambda x: self.obs.nid_idx[str(x)], node_prof.interferences))
+
+            logging.debug('update the interfering node data.')
+            for node_prof in updated_graphs.regProf:
+                nodeId = str(node_prof.regID)
+                interfering_node_idx = self.obs.nid_idx[nodeId]
+
+
+                self.obs.graph_topology.adjList[interfering_node_idx] = list(map(lambda x: self.obs.nid_idx[str(x)], node_prof.interferences))
+                self.obs.graph_topology.indegree[interfering_node_idx] = len(self.obs.graph_topology.adjList[interfering_node_idx])
+                
+                self.obs.spill_cost_list[interfering_node_idx] = node_prof.spillWeight
+                self.obs.split_points[interfering_node_idx] = np.array(sorted(node_prof.splitSlots))
+                logging.info('{} updated slots : {}'.format(nodeId, sorted(node_prof.splitSlots)))
+                
+                inter_node_matrix = self.obs.raw_graph_mat[interfering_node_idx]
+                if len(inter_node_matrix) == len(node_prof.positionalSpillWeights):
+                    self.obs.raw_graph_mat[interfering_node_idx] = [ sc(vec,sw) for vec,sw in zip(self.obs.raw_graph_mat[interfering_node_idx], node_prof.positionalSpillWeights)]
+                else:
+                    logging.warning('Spill weight not updated {} : {}'.format(len(inter_node_matrix), len(node_prof.positionalSpillWeights)))
+                
+                # self.obs.adjacency_lists[0][ self.obs.adjacency_lists[0][:,0] == interfering_node_idx,1] = tensor()
+            # def topo
+            a = list(map(lambda x:list(map(lambda y: (x[0], y) , x[1])) , enumerate(self.obs.graph_topology.adjList)))
+            edges = []
+            for i, adj in enumerate(self.obs.graph_topology.adjList):
+                for node in adj:
+                    edges.append((i, node))
+                    edges.append((node, i))
+            # print(len(edges))
+            edges = list(set(edges))
+            # print(len(edges))
+
+            # print(edges)
+
+            self.obs.adjacency_lists = [ AdjacencyList(node_num=self.obs.graph_topology.num_nodes, adj_list=edges, device=self.obs.adjacency_lists[0].device)]
+
+        return updated_graphs.result
