@@ -19,7 +19,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   syntax='proto3',
   serialized_options=b'\n#io.grpc.examples.registerallocationB\027RegisterAllocationProtoP\001\242\002\003REG',
   create_key=_descriptor._internal_create_key,
-  serialized_pb=b'\n\x18RegisterAllocation.proto\x12\x12registerallocation\"+\n\x04Path\x12\x0e\n\x06IRPath\x18\x01 \x01(\t\x12\x13\n\x0bSeedEmbPath\x18\x02 \x01(\t\"\x1c\n\tGraphList\x12\x0f\n\x07payload\x18\x01 \x01(\x0c\"\xab\x02\n\x13RegisterProfileList\x12H\n\x07regProf\x18\x01 \x03(\x0b\x32\x37.registerallocation.RegisterProfileList.RegisterProfile\x1a\xc9\x01\n\x0fRegisterProfile\x12\x13\n\x0bspillWeight\x18\x01 \x01(\x02\x12^\n\x05ioMap\x18\x02 \x03(\x0b\x32O.registerallocation.RegisterProfileList.RegisterProfile.interferenceOverlapsMap\x1a\x41\n\x17interferenceOverlapsMap\x12\x14\n\x0cinterference\x18\x01 \x01(\r\x12\x10\n\x08overlaps\x18\x02 \x03(\t\"8\n\x04\x44\x61ta\x12\x0f\n\x07message\x18\x01 \x01(\t\x12\x0e\n\x06regidx\x18\x02 \x01(\r\x12\x0f\n\x07payload\x18\x03 \x01(\x03\"\x07\n\x05\x45mpty2\xac\x01\n\x12RegisterAllocation\x12\x46\n\tgetGraphs\x12\x18.registerallocation.Path\x1a\x1d.registerallocation.GraphList\"\x00\x12N\n\x07\x63odeGen\x12\x18.registerallocation.Data\x1a\'.registerallocation.RegisterProfileList\"\x00\x42\x46\n#io.grpc.examples.registerallocationB\x17RegisterAllocationProtoP\x01\xa2\x02\x03REGb\x06proto3'
+  serialized_pb=b'\n\x18RegisterAllocation.proto\x12\x12registerallocation\"+\n\x04Path\x12\x0e\n\x06IRPath\x18\x01 \x01(\t\x12\x13\n\x0bSeedEmbPath\x18\x02 \x01(\t\"\x1c\n\tGraphList\x12\x0f\n\x07payload\x18\x01 \x01(\x0c\"\xf2\x01\n\x13RegisterProfileList\x12H\n\x07regProf\x18\x01 \x03(\x0b\x32\x37.registerallocation.RegisterProfileList.RegisterProfile\x12\x0e\n\x06result\x18\x02 \x01(\x08\x1a\x80\x01\n\x0fRegisterProfile\x12\r\n\x05regID\x18\x01 \x01(\r\x12\x13\n\x0bspillWeight\x18\x02 \x01(\x02\x12\x15\n\rinterferences\x18\x03 \x03(\r\x12\x12\n\nsplitSlots\x18\x04 \x03(\r\x12\x1e\n\x16positionalSpillWeights\x18\x05 \x03(\x02\"8\n\x04\x44\x61ta\x12\x0f\n\x07message\x18\x01 \x01(\t\x12\x0e\n\x06regidx\x18\x02 \x01(\r\x12\x0f\n\x07payload\x18\x03 \x01(\x03\"\x07\n\x05\x45mpty2\xac\x01\n\x12RegisterAllocation\x12\x46\n\tgetGraphs\x12\x18.registerallocation.Path\x1a\x1d.registerallocation.GraphList\"\x00\x12N\n\x07\x63odeGen\x12\x18.registerallocation.Data\x1a\'.registerallocation.RegisterProfileList\"\x00\x42\x46\n#io.grpc.examples.registerallocationB\x17RegisterAllocationProtoP\x01\xa2\x02\x03REGb\x06proto3'
 )
 
 
@@ -96,24 +96,45 @@ _GRAPHLIST = _descriptor.Descriptor(
 )
 
 
-_REGISTERPROFILELIST_REGISTERPROFILE_INTERFERENCEOVERLAPSMAP = _descriptor.Descriptor(
-  name='interferenceOverlapsMap',
-  full_name='registerallocation.RegisterProfileList.RegisterProfile.interferenceOverlapsMap',
+_REGISTERPROFILELIST_REGISTERPROFILE = _descriptor.Descriptor(
+  name='RegisterProfile',
+  full_name='registerallocation.RegisterProfileList.RegisterProfile',
   filename=None,
   file=DESCRIPTOR,
   containing_type=None,
   create_key=_descriptor._internal_create_key,
   fields=[
     _descriptor.FieldDescriptor(
-      name='interference', full_name='registerallocation.RegisterProfileList.RegisterProfile.interferenceOverlapsMap.interference', index=0,
+      name='regID', full_name='registerallocation.RegisterProfileList.RegisterProfile.regID', index=0,
       number=1, type=13, cpp_type=3, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
     _descriptor.FieldDescriptor(
-      name='overlaps', full_name='registerallocation.RegisterProfileList.RegisterProfile.interferenceOverlapsMap.overlaps', index=1,
-      number=2, type=9, cpp_type=9, label=3,
+      name='spillWeight', full_name='registerallocation.RegisterProfileList.RegisterProfile.spillWeight', index=1,
+      number=2, type=2, cpp_type=6, label=1,
+      has_default_value=False, default_value=float(0),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='interferences', full_name='registerallocation.RegisterProfileList.RegisterProfile.interferences', index=2,
+      number=3, type=13, cpp_type=3, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='splitSlots', full_name='registerallocation.RegisterProfileList.RegisterProfile.splitSlots', index=3,
+      number=4, type=13, cpp_type=3, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='positionalSpillWeights', full_name='registerallocation.RegisterProfileList.RegisterProfile.positionalSpillWeights', index=4,
+      number=5, type=2, cpp_type=6, label=3,
       has_default_value=False, default_value=[],
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
@@ -130,46 +151,8 @@ _REGISTERPROFILELIST_REGISTERPROFILE_INTERFERENCEOVERLAPSMAP = _descriptor.Descr
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=358,
-  serialized_end=423,
-)
-
-_REGISTERPROFILELIST_REGISTERPROFILE = _descriptor.Descriptor(
-  name='RegisterProfile',
-  full_name='registerallocation.RegisterProfileList.RegisterProfile',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  create_key=_descriptor._internal_create_key,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='spillWeight', full_name='registerallocation.RegisterProfileList.RegisterProfile.spillWeight', index=0,
-      number=1, type=2, cpp_type=6, label=1,
-      has_default_value=False, default_value=float(0),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
-    _descriptor.FieldDescriptor(
-      name='ioMap', full_name='registerallocation.RegisterProfileList.RegisterProfile.ioMap', index=1,
-      number=2, type=11, cpp_type=10, label=3,
-      has_default_value=False, default_value=[],
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
-  ],
-  extensions=[
-  ],
-  nested_types=[_REGISTERPROFILELIST_REGISTERPROFILE_INTERFERENCEOVERLAPSMAP, ],
-  enum_types=[
-  ],
-  serialized_options=None,
-  is_extendable=False,
-  syntax='proto3',
-  extension_ranges=[],
-  oneofs=[
-  ],
-  serialized_start=222,
-  serialized_end=423,
+  serialized_start=238,
+  serialized_end=366,
 )
 
 _REGISTERPROFILELIST = _descriptor.Descriptor(
@@ -187,6 +170,13 @@ _REGISTERPROFILELIST = _descriptor.Descriptor(
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='result', full_name='registerallocation.RegisterProfileList.result', index=1,
+      number=2, type=8, cpp_type=7, label=1,
+      has_default_value=False, default_value=False,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
   ],
   extensions=[
   ],
@@ -200,7 +190,7 @@ _REGISTERPROFILELIST = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=124,
-  serialized_end=423,
+  serialized_end=366,
 )
 
 
@@ -245,8 +235,8 @@ _DATA = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=425,
-  serialized_end=481,
+  serialized_start=368,
+  serialized_end=424,
 )
 
 
@@ -270,12 +260,10 @@ _EMPTY = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=483,
-  serialized_end=490,
+  serialized_start=426,
+  serialized_end=433,
 )
 
-_REGISTERPROFILELIST_REGISTERPROFILE_INTERFERENCEOVERLAPSMAP.containing_type = _REGISTERPROFILELIST_REGISTERPROFILE
-_REGISTERPROFILELIST_REGISTERPROFILE.fields_by_name['ioMap'].message_type = _REGISTERPROFILELIST_REGISTERPROFILE_INTERFERENCEOVERLAPSMAP
 _REGISTERPROFILELIST_REGISTERPROFILE.containing_type = _REGISTERPROFILELIST
 _REGISTERPROFILELIST.fields_by_name['regProf'].message_type = _REGISTERPROFILELIST_REGISTERPROFILE
 DESCRIPTOR.message_types_by_name['Path'] = _PATH
@@ -302,13 +290,6 @@ _sym_db.RegisterMessage(GraphList)
 RegisterProfileList = _reflection.GeneratedProtocolMessageType('RegisterProfileList', (_message.Message,), {
 
   'RegisterProfile' : _reflection.GeneratedProtocolMessageType('RegisterProfile', (_message.Message,), {
-
-    'interferenceOverlapsMap' : _reflection.GeneratedProtocolMessageType('interferenceOverlapsMap', (_message.Message,), {
-      'DESCRIPTOR' : _REGISTERPROFILELIST_REGISTERPROFILE_INTERFERENCEOVERLAPSMAP,
-      '__module__' : 'RegisterAllocation_pb2'
-      # @@protoc_insertion_point(class_scope:registerallocation.RegisterProfileList.RegisterProfile.interferenceOverlapsMap)
-      })
-    ,
     'DESCRIPTOR' : _REGISTERPROFILELIST_REGISTERPROFILE,
     '__module__' : 'RegisterAllocation_pb2'
     # @@protoc_insertion_point(class_scope:registerallocation.RegisterProfileList.RegisterProfile)
@@ -320,7 +301,6 @@ RegisterProfileList = _reflection.GeneratedProtocolMessageType('RegisterProfileL
   })
 _sym_db.RegisterMessage(RegisterProfileList)
 _sym_db.RegisterMessage(RegisterProfileList.RegisterProfile)
-_sym_db.RegisterMessage(RegisterProfileList.RegisterProfile.interferenceOverlapsMap)
 
 Data = _reflection.GeneratedProtocolMessageType('Data', (_message.Message,), {
   'DESCRIPTOR' : _DATA,
@@ -346,8 +326,8 @@ _REGISTERALLOCATION = _descriptor.ServiceDescriptor(
   index=0,
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
-  serialized_start=493,
-  serialized_end=665,
+  serialized_start=436,
+  serialized_end=608,
   methods=[
   _descriptor.MethodDescriptor(
     name='getGraphs',
