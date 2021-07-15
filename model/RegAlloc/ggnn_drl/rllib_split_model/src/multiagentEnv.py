@@ -21,7 +21,7 @@ import torch
 from gym.spaces import Discrete, Box
 
 from ggnn import constructGraph
-from ggnn_1 import get_observations, GatedGraphNeuralNetwork
+from ggnn_1 import get_observations, GatedGraphNeuralNetwork, constructVectorFromMatrix, AdjacencyList
 
 import ray
 from ray import tune
@@ -39,6 +39,10 @@ import glob
 from tqdm import tqdm
 import traceback
 import random
+import sys
+
+sys.path.append('../../../../../llvm-grpc/Python-Utilities/')
+from client import *
 
 config_path=None
 
@@ -372,27 +376,27 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
     def _select_task_step(self, action):
         done = {"__all__": False}
-        # print("Select Task action", action)
-        # if action == 0: # Colour node
-        #     reward = {
-        #         "colour_node_agent" : 0
-        #     }
-        #     obs = {
-        #         "colour_node_agent" : self.cur_obs
-        #     }
-        # else:
-        #     reward = {
-        #         "split_node_agent" : 0
-        #     }
-        #     obs = {
-        #         "split_node_agent" : self.cur_obs
-        #     }
-        reward = {
-            "colour_node_agent" : 0
-        }
-        obs = {
-            "colour_node_agent" : self.cur_obs
-        }
+        print("Select Task action", action)
+        if action == 0: # Colour node
+            reward = {
+                "colour_node_agent" : 0
+            }
+            obs = {
+                "colour_node_agent" : self.cur_obs
+            }
+        else:
+            reward = {
+                "split_node_agent" : 0
+            }
+            obs = {
+                "split_node_agent" : self.cur_obs
+            }
+        # reward = {
+        #     "colour_node_agent" : 0
+        # }
+        # obs = {
+        #     "colour_node_agent" : self.cur_obs
+        # }
         # print("Select Task Reward", reward)
         return obs, reward, done, {}
 
@@ -432,7 +436,15 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         return obs, reward, done, {}
 
     def _split_node_step(self, action):
-        self.cur_obs = self.flat_env.reset()
+        # self.cur_obs = self.flat_env.reset()
+
+        splitpoints = self.obs.split_points[self.cur_node]
+        # print("****Split index******", len(splitpoints.shape), splitpoints.size)
+        if len(splitpoints.shape) > 0:
+            split_index = math.ceil(((action + 1)*0.01)*len(splitpoints))
+
+            if split_index > 0:
+                split_reward, done = self.step_splitTask(split_index -1)
         
         done = {"__all__": False}
         reward = {
@@ -480,7 +492,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             return copy.deepcopy(self.obs), reward, done, response
         
         self.obs.next_stage = 'selectnode'
-        return copy.deepcopy(self.obs), reward, done, None
+        return reward, done
 
     def step_colorTask(self, action):
         reg_allocated = action
@@ -529,6 +541,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         
         path=self.training_graphs[self.graph_counter%self.graphs_num]
         logging.debug('Graphs selected : {}'.format(path))
+        print('Graphs selected : {}'.format(path))
         self.graph_counter+=1
         try:
             with open(path) as f:
@@ -564,7 +577,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
            if self.server_pid.poll() is not None:
                print('Force stop in reset')
         hostip = "0.0.0.0"
-        hostport="50054"
+        hostport="50051"
         ipadd = "{}:{}".format(hostip, hostport)
         # print('Active thread before the server starts : ', threading.active_count())
         self.server_pid = utils_1.startServer(self.fileName, self.fun_id, ipadd)
@@ -574,8 +587,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.obs.stage = 'start'
         self.obs.next_stage = 'selectnode'
 
-        self.server_pid = None
-        self.queryllvm = None
+        # self.server_pid = None
+        # self.queryllvm = None
         
         # state = self.obs # (self.obs.initial_node_representation, self.obs.annotations, self.obs.adjacency_lists, self.obs.graph_topology, self.obs.eligibleNodes, self.obs.reg_class_list, self.obs.spill_cost_list)
         # return copy.deepcopy(state)
@@ -612,6 +625,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
     def update_obs_split(self, register_id, split_point):
         logging.info('try Split register {} on point {}'.format(register_id, split_point))
+        # print('try Split register {} on point {}'.format(register_id, split_point))
         updated_graphs = self.stable_grpc('Split', int(register_id), int(split_point))
         # print(type(updated_graphs))
         # print(updated_graphs.regProf)

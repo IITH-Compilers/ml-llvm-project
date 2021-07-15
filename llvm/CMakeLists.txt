@@ -2,6 +2,8 @@
 
 cmake_minimum_required(VERSION 3.4.3)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 if(POLICY CMP0068)
   cmake_policy(SET CMP0068 NEW)
   set(CMAKE_BUILD_WITH_INSTALL_NAME_DIR ON)

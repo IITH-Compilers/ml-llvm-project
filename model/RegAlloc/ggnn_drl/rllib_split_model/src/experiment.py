@@ -65,16 +65,19 @@ def experiment(config):
 
 if __name__ == "__main__":
     args = parser.parse_args()
-    logger = logging.getLogger('__file__')
+    logger = logging.getLogger(__file__)
     log_level=logging.DEBUG
     # if args.log_level == 'WARN':
     #     log_level=logging.WARNING
     # elif args.log_level == 'INFO':
     #     log_level=logging.INFO
+    if os.path.exists('running.log'):
+        os.remove('running.log')
 
-    logging.basicConfig(filename=os.path.join("/home/cs20mtech12003/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib-basic/src", 'running.log'), format='%(levelname)s - %(filename)s - %(message)s', level=log_level)
+    logging.basicConfig(filename='running.log', format='%(levelname)s - %(filename)s - %(message)s', level=log_level)
     logging.info('Starting training')
     logging.info(args)
+
 
 
     ray.init()
@@ -93,7 +96,7 @@ if __name__ == "__main__":
     config["env_config"]["intermediate_data"] = './temp'
 
     # config["env_config"]["dataset"] = "/home/cs20mtech12003/ML-Register-Allocation/data/level-O0-llfiles_train_mlra_x86_LITE/"
-    config["env_config"]["dataset"] = "/home/cs20mtech12003/Compilers/ML-Register-Allocation/data/level-O0-llfiles_test_mlra_x86_LITE/"
+    config["env_config"]["dataset"] = "/home/cs20mtech12003/ML-Register-Allocation/data/test_dict/"
     config["env_config"]["graphs_num"] = 50000
     # training_graphs=glob.glob(os.path.join(dataset, 'graphs/IG/json_new/*.json'))
 
