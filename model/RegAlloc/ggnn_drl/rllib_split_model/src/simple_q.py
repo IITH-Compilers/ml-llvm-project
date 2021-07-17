@@ -55,7 +55,7 @@ DEFAULT_CONFIG = with_common_config({
     # not affect learning, only the length of iterations.
     "timesteps_per_iteration": 0,
     # Update the target network every `target_network_update_freq` steps.
-    "target_network_update_freq": 500,
+    "target_network_update_freq": 256,
 
     # === Replay buffer ===
     # Size of the replay buffer. Note that if async_updates is set, then
@@ -77,7 +77,7 @@ DEFAULT_CONFIG = with_common_config({
     # If not None, clip gradients during optimization at this value
     "grad_clip": 40,
     # How many steps of the model to sample before learning starts.
-    "learning_starts": 1000,
+    "learning_starts": 128,
     # Update the replay buffer with this many samples at once. Note that
     # this setting applies per-worker if num_workers > 1.
     "rollout_fragment_length": 32,
@@ -86,6 +86,8 @@ DEFAULT_CONFIG = with_common_config({
     # batch of this size.
     "train_batch_size": 64,
 
+    "batch_mode": "complete_episodes",
+    
     "model": {
         "custom_model": "my_torch_model",
         # Extra kwargs to be passed to your model's c'tor.
@@ -101,7 +103,7 @@ DEFAULT_CONFIG = with_common_config({
     # Number of workers for collecting samples with. This only makes sense
     # to increase if your environment is particularly slow to sample, or if
     # you"re using the Async or Ape-X optimizers.
-    "num_workers": 2,
+    "num_workers": 0,
     # Prevent iterations from going lower than this time span
     "min_iter_time_s": 1,
 

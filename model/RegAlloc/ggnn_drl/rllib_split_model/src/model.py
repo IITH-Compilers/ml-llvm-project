@@ -5,6 +5,8 @@ import logging
 from ggnn import GatedGraphNeuralNetwork
 from register_action_space import RegisterActionSpace
 from ray.rllib.models.torch.torch_modelv2 import TorchModelV2
+from ray.rllib.utils.torch_ops import FLOAT_MIN
+
 
 logger = logging.getLogger(__file__) 
 class SelectTaskNetwork(TorchModelV2, nn.Module):
@@ -93,9 +95,21 @@ class ColorNetwork(TorchModelV2, nn.Module):
     def forward(self, input_dict, state, seq_lens):
         """Build a network that maps state -> action values."""
 
-        x = F.relu(self.fc1(input_dict["obs"]))
+        x = F.relu(self.fc1(input_dict["obs"]["state"]))
         x = F.relu(self.fc2(x))
         x = self.fc3(x)
+        
+        for i in range(input_dict["obs"]["action_mask"].shape[0]):
+            action_mask = input_dict["obs"]["action_mask"][i, :]            
+            
+            if all(v == 0 for v in action_mask):
+                x[i, :] =  torch.ones_like(action_mask)*FLOAT_MIN
+                x[i, 0] = 1.0
+                
+            else:
+                for j in range(action_mask.shape[0]):
+                    if action_mask[j] == 0:
+                        x[i, j] = FLOAT_MIN             
         
         return x, state
 

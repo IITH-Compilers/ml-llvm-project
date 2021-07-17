@@ -12,7 +12,7 @@ from ray import tune
 from ray.tune import function
 from ray.rllib.agents import ppo
 from ray.rllib.agents.dqn.simple_q_torch_policy import SimpleQTorchPolicy
-from gym.spaces import Discrete, Box
+from gym.spaces import Discrete, Box, Dict
 from simple_q import SimpleQTrainer, DEFAULT_CONFIG
 # from env import GraphColorEnv, set_config
 from multiagentEnv import HierarchicalGraphColorEnv
@@ -95,8 +95,8 @@ if __name__ == "__main__":
     config["env_config"]["dump_color_graph"] = True
     config["env_config"]["intermediate_data"] = './temp'
 
-    # config["env_config"]["dataset"] = "/home/cs20mtech12003/ML-Register-Allocation/data/level-O0-llfiles_train_mlra_x86_LITE/"
-    config["env_config"]["dataset"] = "/home/cs20mtech12003/ML-Register-Allocation/data/test_dict/"
+    config["env_config"]["dataset"] = "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_SPLIT2/"
+    # config["env_config"]["dataset"] = "/home/cs20mtech12003/ML-Register-Allocation/data/test_dict/"
     config["env_config"]["graphs_num"] = 50000
     # training_graphs=glob.glob(os.path.join(dataset, 'graphs/IG/json_new/*.json'))
 
@@ -109,6 +109,11 @@ if __name__ == "__main__":
             -100000.0, 100000.0, shape=(config["env_config"]["state_size"], ), dtype=np.float32)
     box_1d = Box(
             0, 1.0, shape=(1, ), dtype=np.float32)
+
+    obs_space = Dict({
+        "action_mask": Box(0, 1, shape=(config["env_config"]["action_space_size"],)),
+        "state": box_obs
+        })
     
     def policy_mapping_fn(agent_id, episode=None, **kwargs):
         if agent_id == "select_node_agent":
@@ -146,7 +151,7 @@ if __name__ == "__main__":
                                         },
                                     },
                                 }),
-        "colour_node_policy": (None, box_obs,
+        "colour_node_policy": (None, obs_space,
                                 Discrete(config["env_config"]["action_space_size"]), {
                                     "gamma": 0.9,
                                     "model": {

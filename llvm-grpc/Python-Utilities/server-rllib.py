@@ -7,7 +7,8 @@ import traceback
 import json
 import ray
 import os
-sys.path.append('../../model/RegAlloc/ggnn_drl/rllib-v0/src')
+# sys.path.append('../../model/RegAlloc/ggnn_drl/rllib-v0/src')
+sys.path.append('/home/cs20mtech12003/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src')
 import inference
 # import register_action_space
 # import env
