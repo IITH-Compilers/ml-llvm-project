@@ -100,7 +100,9 @@ using registerallocation::Path;
 using registerallocation::RegisterAllocation;
 
 // using registerallocationinference::ColorData;
+// using registerallocationinference::Data;
 // using registerallocationinference::GraphList;
+// using registerallocationinference::RegisterProfileList;
 
 std::promise<void> *exit_requested;
 
@@ -219,9 +221,10 @@ grpc::Status MLRA::codeGen(grpc::ServerContext *context,
       if (enable_mlra_checks)
         verifyRegisterProfile();
       if (request->message() == "Split")
-        splitResponse(response, &updatedRegIdxs);
+        sendRegProfData<registerallocation::RegisterProfileList>(
+            response, &updatedRegIdxs);
       else
-        splitResponse(response);
+        sendRegProfData<registerallocation::RegisterProfileList>(response);
     } else
       response->set_result(false);
   }
@@ -229,8 +232,9 @@ grpc::Status MLRA::codeGen(grpc::ServerContext *context,
   return Status::OK;
 }
 
-void MLRA::splitResponse(registerallocation::RegisterProfileList *response,
-                         SmallSetVector<unsigned, 8> *updatedRegIdxs) {
+template <class T>
+void MLRA::sendRegProfData(T *response,
+                           SmallSetVector<unsigned, 8> *updatedRegIdxs) {
   // Temporary - to be removed later
   SmallSetVector<unsigned, 8> regIdxs;
   if (!updatedRegIdxs) {
@@ -1193,42 +1197,67 @@ void MLRA::training_flow() {
 }
 
 void MLRA::inference() {
-  // assert(enable_mlra_inference && "mlra-inference should be true.");
+  assert(enable_mlra_inference && "mlra-inference should be true.");
 
-  // symbolic->generateSymbolicEncodings(*MF);
+  // errs () << "interference graph : " << graph << "\n";
+  registerallocationinference::RegisterProfileList *request;
+  registerallocationinference::Data *reply;
+  grpc::ClientContext context;
 
-  // std::string graph = captureInterferenceGraph();
+  while (true) {
+    sendRegProfData<registerallocationinference::RegisterProfileList>(request);
+    Stub->getInfo(&context, *request, reply);
 
-  // // errs () << "interference graph : " << graph << "\n";
+    errs() << reply->message();
+    // std::string str = "LLVM\n";
+    // response->set_payload(str);
+    if (reply->message() == "Color") {
+      if (reply->colordata() == "") {
+        errs() << "*****Warning -" << MF->getName()
+               << " - Predictions not generated for the graph\n";
+        return;
+      }
+      parsePredictionJson(reply->colordata());
+      if (this->FunctionVirtRegToColorMap.find(MF->getName()) !=
+          this->FunctionVirtRegToColorMap.end()) {
+        allocatePhysRegsViaRL();
+      }
+      LLVM_DEBUG(errs() << "The ML allocated virtual registers: /n";
+                 for (auto i
+                      : mlAllocatedRegs) errs()
+                 << printReg(i, TRI) << "\t";
+                 errs() << "Done MLRA allocation for : " << MF->getName()
+                        << '\n');
+      return;
+    }
+    if (reply->message() == "Split" || reply->message() == "SplitAndCapture") {
+      unsigned splitRegIdx = reply->regidx();
+      int splitPoint = reply->payload();
+      SmallVector<unsigned, 2> NewVRegs;
+      LLVM_DEBUG(
+          errs() << "==========================BEFORE "
+                    "SPLITTING==================================\n";
+          MF->dump();
+          errs()
+          << "============================================================\n");
 
-  // if (graph != "") {
-  //   registerallocationinference::GraphList request;
-  //   registerallocationinference::ColorData reply;
-
-  //   request.set_payload(graph);
-
-  //   grpc::ClientContext context;
-
-  //   grpc::Status status = Stub->getColouring(&context, request, &reply);
-  //   // errs () << "Predictions : " << reply.payload() << " +\n";
-  //   // assert(reply.payload() != "" && "Prediction is not valid ");
-  //   if (reply.payload() == "") {
-  //     errs() << "*****Warning -" << MF->getName()
-  //            << " - Predictions not generated for the graph\n";
-  //     return;
-  //   }
-  //   parsePredictionJson(reply.payload());
-  //   if (this->FunctionVirtRegToColorMap.find(MF->getName()) !=
-  //       this->FunctionVirtRegToColorMap.end()) {
-  //     allocatePhysRegsViaRL();
-  //   }
-  //   LLVM_DEBUG(errs() << "The ML allocated virtual registers: /n";
-  //              for (auto i
-  //                   : mlAllocatedRegs) errs()
-  //              << printReg(i, TRI) << "\t";
-  //              errs() << "Done MLRA allocation for : " << MF->getName()
-  //                     << '\n');
-  // }
+      if (splitVirtReg(splitRegIdx, splitPoint, NewVRegs)) {
+        SmallSetVector<unsigned, 8> updatedRegIdxs;
+        updateRegisterProfileAfterSplit(splitRegIdx, NewVRegs, updatedRegIdxs);
+        if (enable_dump_ig_dot)
+          dumpInterferenceGraph(std::to_string(SplitCounter));
+        if (enable_mlra_checks)
+          verifyRegisterProfile();
+        if (reply->message() == "Split")
+          sendRegProfData<registerallocationinference::RegisterProfileList>(
+              request, &updatedRegIdxs);
+        else
+          sendRegProfData<registerallocationinference::RegisterProfileList>(
+              request);
+      } else
+        request->set_result(false);
+    }
+  }
 }
 
 void MLRA::MLRegAlloc(MachineFunction &MF, SlotIndexes &Indexes,

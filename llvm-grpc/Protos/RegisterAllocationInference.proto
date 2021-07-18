@@ -11,8 +11,8 @@ package registerallocationinference;
 service RegisterAllocationInference{
 
 // RPC function to send Inference graph data and receive color data for codegen
-  rpc getColouring(GraphList) returns (ColorData) {}
- 
+  rpc getColouring(Empty) returns (ColorData) {}
+  rpc getInfo(RegisterProfileList) returns (Data) {}
 }
 
 message GraphList {
@@ -22,3 +22,24 @@ message GraphList {
 message ColorData {
   bytes payload=2;
 }
+
+message RegisterProfileList {
+  message RegisterProfile {
+    uint32 regID=1;
+    float spillWeight=2;
+    repeated uint32 interferences=3;
+    repeated uint32 splitSlots=4;
+    repeated float positionalSpillWeights=5;
+  }
+  repeated RegisterProfile regProf=1;
+  bool result=2;
+}
+
+message Data {
+  string message = 1;
+  uint32 regidx = 2;
+  int64 payload = 3;
+  bytes colorData = 4;
+}
+
+message Empty {}
