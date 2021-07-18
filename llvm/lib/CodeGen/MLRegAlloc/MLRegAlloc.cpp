@@ -1,3 +1,4 @@
+// Backedup version -- split points based on overlap
 //===- MLRegAlloc.cpp - ML register allocator ---------------------===//
 //
 //
@@ -203,6 +204,13 @@ grpc::Status MLRA::codeGen(grpc::ServerContext *context,
     unsigned splitRegIdx = request->regidx();
     int splitPoint = request->payload();
     SmallVector<unsigned, 2> NewVRegs;
+    LLVM_DEBUG(
+        errs() << "==========================BEFORE "
+                  "SPLITTING==================================\n";
+        MF->dump();
+        errs()
+        << "============================================================\n");
+
     if (splitVirtReg(splitRegIdx, splitPoint, NewVRegs)) {
       SmallSetVector<unsigned, 8> updatedRegIdxs;
       updateRegisterProfileAfterSplit(splitRegIdx, NewVRegs, updatedRegIdxs);
@@ -269,7 +277,7 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
   assert(!VRM->hasPhys(VirtReg->reg) && "Register already assigned");
 
   if (MRI->reg_nodbg_empty(VirtReg->reg)) {
-    assert(VirtReg->empty() && "Non-empty but used interval");
+    // assert(VirtReg->empty() && "Non-empty but used interval");
     // LLVM_DEBUG(dbgs() << "not queueing unused  " << *VirtReg << '\n');
     // aboutToRemoveInterval(*VirtReg);
     // LIS->removeInterval(VirtReg->reg);
@@ -280,18 +288,38 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
   LiveRangeEdit LREdit(VirtReg, NewVRegs, *MF, *LIS, VRM);
   SE->reset(LREdit, SplitEditor::SM_Size);
 
-  SlotIndex SegStart;
+  SlotIndex SegStart, idx;
   unsigned pos = 1;
   bool found = false;
+  SplitAnalysis::BlockInfo BI;
+
   for (auto &S : VirtReg->segments) {
     auto startIdx = S.start.getBaseIndex();
-    for (SlotIndex I = startIdx, E = S.end.getBaseIndex(); I <= E;
+    for (SlotIndex I = startIdx, E = S.end.getBaseIndex(); I < E;
          I = I.getNextIndex()) {
-      if (!LIS->getInstructionFromIndex(I))
+      auto MI = LIS->getInstructionFromIndex(I);
+      if (!MI)
         continue;
+      bool found1 = false;
+      for (auto i : SA->getUseBlocks()) {
+        auto MBB = MI->getParent();
+        assert(MBB);
+        if (MBB == i.MBB) {
+          assert(!found && "Seem to have multiple MBBs in BlockInfo");
+          found1 = true;
+          BI = i;
+        }
+      }
       if (pos == splitPoint) {
-        SE->openIntv();
-        SegStart = SE->enterIntvAfter(I);
+        idx = I;
+        // To-Do: Make this check while populating spill points and skip them
+        if (I.getBoundaryIndex() >=
+            SA->getUseSlots().back().getBoundaryIndex()) {
+          errs()
+              << "No use of splitting at/after the last use slot -- exiting\n";
+          return false;
+        }
+
         found = true;
         break;
       }
@@ -301,9 +329,22 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
       break;
   }
 
+  LLVM_DEBUG(errs() << " Splitting at: "; idx.dump();
+             LIS->getInstructionFromIndex(idx)->dump());
+
+  auto first = SE->openIntv();
+  SegStart = SE->enterIntvAfter(idx);
   assert(SegStart);
-  SlotIndex SegStop = SE->leaveIntvAfter(SA->getUseSlots().back());
-  SE->useIntv(SegStart, SegStop);
+  // SlotIndex SegStop = SE->leaveIntvAfter(SA->getUseSlots().back());
+  if (!BI.LiveOut)
+    SE->useIntv(SegStart, SE->leaveIntvAfter(BI.LastInstr));
+  else {
+    LLVM_DEBUG(errs() << "BI lives out\n");
+    SlotIndex SegStop = SE->leaveIntvAfter(SA->getUseSlots().back());
+
+    SE->useIntv(SegStart, SE->leaveIntvAfter(LIS->getInstructionIndex(
+                              SA->getUseBlocks().back().MBB->back())));
+  }
 
   if (LREdit.empty()) {
     LLVM_DEBUG(dbgs() << "All uses were copies.\n");
@@ -322,11 +363,13 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
   LLVM_DEBUG(dbgs() << "After splitting -- " << printReg(splitReg, TRI) << "--"
                     << Register::virtReg2Index(splitReg) + TRI->getNumRegs() + 1
                     << "\n");
+
   LLVM_DEBUG(for (auto i
-                  : NewVRegs) dbgs()
-                 << "\tNew Regs: " << printReg(i, TRI) << "--"
-                 << Register::virtReg2Index(i) + TRI->getNumRegs() + 1 << "\n";
-             dbgs() << "------------------------------------------\n");
+                  : NewVRegs) {
+    dbgs() << "\tNew Regs: " << printReg(i, TRI) << "--"
+           << Register::virtReg2Index(i) + TRI->getNumRegs() + 1;
+    LIS->getInterval(i).dump();
+  } dbgs() << "------------------------------------------\n");
   // captureRegisterProfile();
   return true;
 }
@@ -497,7 +540,7 @@ unsigned MLRA::mapUseToPosition(LiveInterval *VirtReg, const SlotIndex &usept) {
                    LIS->getInstructionFromIndex(startIdx)
                        ->dump());
 
-    for (SlotIndex I = startIdx, E = S.end.getBaseIndex(); I <= E;
+    for (SlotIndex I = startIdx, E = S.end.getBaseIndex(); I < E;
          I = I.getNextIndex()) {
       if (!LIS->getInstructionFromIndex(I))
         continue;
@@ -635,7 +678,7 @@ void MLRA::calculatePositionalSpillWeights(
   VirtRegAuxInfo VRAI(*MF, *LIS, VRM, *Loops, *MBFI);
   for (auto &S : VirtReg->segments) {
     auto startIdx = S.start.getBaseIndex();
-    for (SlotIndex I = startIdx, E = S.end.getBaseIndex(); I <= E;
+    for (SlotIndex I = startIdx, E = S.end.getBaseIndex(); I < E;
          I = I.getNextIndex()) {
       auto *MIR = LIS->getInstructionFromIndex(I);
       if (!MIR)
@@ -654,7 +697,7 @@ void MLRA::calculatePositionalSpillWeightsAndVectors(
   VirtRegAuxInfo VRAI(*MF, *LIS, VRM, *Loops, *MBFI);
   for (auto &S : VirtReg->segments) {
     auto startIdx = S.start.getBaseIndex();
-    for (SlotIndex I = startIdx, E = S.end.getBaseIndex(); I <= E;
+    for (SlotIndex I = startIdx, E = S.end.getBaseIndex(); I < E;
          I = I.getNextIndex()) {
       auto *MIR = LIS->getInstructionFromIndex(I);
       if (!MIR)
@@ -909,7 +952,7 @@ void MLRA::updateRegisterProfileAfterSplit(
   auto oldRP = regProfMap[OldVRegIdx];
   assert(NewVRegs.size() == 2);
 
-  for (unsigned i = 0; i < 2; i++) {
+  for (unsigned i = 0; i < NewVRegs.size(); i++) {
     RegisterProfile rp;
     unsigned NewVRegIdx = Register::virtReg2Index(NewVRegs[i]);
     LLVM_DEBUG(errs() << "Updating RP for " << printReg(NewVRegs[i], TRI)
