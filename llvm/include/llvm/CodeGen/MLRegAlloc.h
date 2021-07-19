@@ -141,14 +141,14 @@ private:
     StringRef cls;
     float spillWeight;
     unsigned color;
-    unsigned numUses;
     SmallVector<float, 8> spillWeights;
+    SmallVector<int, 8> useDistances;
     SmallSetVector<unsigned, 8> interferences;
-    SmallSetVector<unsigned, 8> frwdInterferences;
+    // SmallSetVector<unsigned, 8> frwdInterferences;
     SmallVector<IR2Vec::Vector, 12> vecRep;
-    SmallSetVector<unsigned, 8> splitSlots;
-    SmallMapVector<unsigned, SmallVector<SlotIndex, 8>, 8> overlapsStart;
-    SmallMapVector<unsigned, SmallVector<SlotIndex, 8>, 8> overlapsEnd;
+    // SmallSetVector<unsigned, 8> splitSlots;
+    // SmallMapVector<unsigned, SmallVector<SlotIndex, 8>, 8> overlapsStart;
+    // SmallMapVector<unsigned, SmallVector<SlotIndex, 8>, 8> overlapsEnd;
   };
   SmallMapVector<unsigned, RegisterProfile, 16> regProfMap;
   SmallVector<unsigned, 16> splitInvalidRegs;
@@ -173,9 +173,8 @@ private:
                          SmallSet<SlotIndex, 8> &lastUseSlots);
   void calculatePositionalSpillWeights(LiveInterval *VirtReg,
                                        SmallVector<float, 8> &spillWeights);
-  void calculatePositionalSpillWeightsAndVectors(
-      LiveInterval *VirtReg, SmallVector<float, 8> &spillWeights,
-      SmallVector<IR2Vec::Vector, 12> &vectors);
+  void computeVectors(LiveInterval *VirtReg,
+                      SmallVector<IR2Vec::Vector, 12> &vectors);
   void captureRegisterProfile();
   void printRegisterProfile() const;
 
@@ -183,9 +182,9 @@ private:
   updateRegisterProfileAfterSplit(unsigned OldVReg,
                                   SmallVector<unsigned, 2> NewVRegs,
                                   SmallSetVector<unsigned, 8> &updatedRegs);
-
-  void splitResponse(registerallocation::RegisterProfileList *response,
-                     SmallSetVector<unsigned, 8> *updatedRegs = nullptr);
+  template <class T>
+  void sendRegProfData(T *response,
+                       SmallSetVector<unsigned, 8> *updatedRegs = nullptr);
   void dumpInterferenceGraph(std::string ID = "");
   void allocatePhysRegsViaRL();
   void training_flow();

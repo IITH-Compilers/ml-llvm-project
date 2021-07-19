@@ -22,7 +22,7 @@ if __name__ == '__main__':
     jsonFile2="/media/lavo07/lavo07/LLVM_GRPC/test/jsonfiles/fib3.json"
     jsonFile3="/media/lavo07/lavo07/LLVM_GRPC/test/newPredColor.json"
 
-    client=RegisterAllocationClient(hostip='localhost', hostport=50052) # Creating register allocation client
+    client=RegisterAllocationClient(hostip='localhost', hostport=50051) # Creating register allocation client
 
     #client.startServer(binaryPath)  # Starting the server
 

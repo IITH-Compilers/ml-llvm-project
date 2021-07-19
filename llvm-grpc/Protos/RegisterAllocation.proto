@@ -32,7 +32,7 @@ message RegisterProfileList {
     uint32 regID=1;
     float spillWeight=2;
     repeated uint32 interferences=3;
-    repeated uint32 splitSlots=4;
+    repeated uint32 useDistances=4;
     repeated float positionalSpillWeights=5;
   }
   repeated RegisterProfile regProf=1;
