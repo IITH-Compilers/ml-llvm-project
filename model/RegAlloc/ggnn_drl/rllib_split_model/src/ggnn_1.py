@@ -276,7 +276,7 @@ def get_observations(graph):
             split_points = parseProp(properties[3])
             # print(split_points)
             if len(split_points) > 0:
-                split_points = sorted(list(map(lambda x : int(x), split_points.split(', '))))
+                split_points = sorted(list(map(lambda x : int(x), split_points.split(', '))))[:-1]
 
         split_points_list.append(np.array(split_points))
 

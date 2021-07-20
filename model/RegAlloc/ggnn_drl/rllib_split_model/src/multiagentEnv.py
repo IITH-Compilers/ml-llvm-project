@@ -79,7 +79,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
         self.graph_counter = 0
         self.reset_count = 0
-        self.training_graphs=glob.glob(os.path.join(dataset, 'graphs/IG/json/*.json'))
+        self.training_graphs=glob.glob(os.path.join(dataset, 'graphs/IG/json_new/*.json'))
         assert len(self.training_graphs) > 0, 'training set is empty' 
         if len(self.training_graphs) > self.graphs_num:
             self.training_graphs = self.training_graphs[:self.graphs_num]
@@ -287,10 +287,11 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         # print("****Split index******", len(splitpoints.shape), splitpoints.size)
         if len(splitpoints.shape) > 0:
             print("Split points possible", splitpoints)
-            split_index = math.ceil(((action + 1)*0.01)*len(splitpoints))
+            split_index = math.ceil(((action + 1)*0.01)*len(splitpoints)) -1
 
             if split_index > 0:
-                split_reward, done = self.step_splitTask(split_index -1)
+                split_point = splitpoints[split_index]
+                split_reward, done = self.step_splitTask(split_point)
         
         reward_value = -0.01
         self.total_reward += reward_value
@@ -390,8 +391,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
     
     def reset_env(self):
         
-        path=self.training_graphs[self.graph_counter%self.graphs_num]
-        # path="/home/cs20mtech12003/ML-Register-Allocation/data/test_dict/graphs/IG/json/test.c_F1.json"
+        # path=self.training_graphs[self.graph_counter%self.graphs_num]
+        path="/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_SPLIT2/graphs/IG/json_new/526.blender_r_756.ll_F15.json"
         logging.debug('Graphs selected : {}'.format(path))
         print('Graphs selected : {}'.format(path))
         self.reset_count+=1
@@ -449,15 +450,17 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
     def stable_grpc(self, op, register_id, split_point):
         attempt = 0
-        max_retries=5
+        max_retries=10
         retry_wait_seconds=0.1
         retry_wait_backoff_exponent=1.5
         while True:
             try:
+                print("Observation {}, register id {} and split point {}".format(op, register_id,  split_point))
                 updated_graphs = self.queryllvm.codeGen(op, register_id,  split_point)
                 break
             # except ValueError as e:
             except grpc.RpcError as e:
+                print("Error in grpc")
                 if e.code() == grpc.StatusCode.UNAVAILABLE:
                     attempt += 1
                     if attempt > max_retries:
@@ -510,6 +513,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             # print("Node Profile", updated_graphs.regProf)
             for node_prof in updated_graphs.regProf:
                 nodeId = str(node_prof.regID)
+                print("Node prof", node_prof)
                 
                 if nodeId not in self.obs.nid_idx.keys():
                     new_nodes+=1
@@ -525,8 +529,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                     
                     self.obs.spill_cost_list.append(node_prof.spillWeight)
                     self.obs.reg_class_list.append(self.obs.reg_class_list[splited_node_idx])
-                    self.obs.split_points.append(sorted(node_prof.splitSlots))
-                    logging.info('new slots : {}'.format(sorted(node_prof.splitSlots)))
+                    self.obs.split_points.append(sorted(node_prof.useDistances)[:-1])
+                    logging.info('new slots : {}'.format(sorted(node_prof.useDistances)[:-1]))
                     logging.info('new positionalSpillWeights length : {}'.format(len(node_prof.positionalSpillWeights)))
                     
 
@@ -562,8 +566,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 self.obs.graph_topology.indegree[interfering_node_idx] = len(self.obs.graph_topology.adjList[interfering_node_idx])
                 
                 self.obs.spill_cost_list[interfering_node_idx] = node_prof.spillWeight
-                self.obs.split_points[interfering_node_idx] = np.array(sorted(node_prof.splitSlots))
-                logging.info('{} updated slots : {}'.format(nodeId, sorted(node_prof.splitSlots)))
+                self.obs.split_points[interfering_node_idx] = np.array(sorted(node_prof.useDistances)[:-1])
+                logging.info('{} updated slots : {}'.format(nodeId, sorted(node_prof.useDistances)[:-1]))
                 
                 inter_node_matrix = self.obs.raw_graph_mat[interfering_node_idx]
                 if len(inter_node_matrix) == len(node_prof.positionalSpillWeights):

@@ -2,7 +2,7 @@ echo "Start flow script."
 
 
 PWD=`pwd`
-HOME=`realpath ${PWD}/../..`
+HOME=`realpath ${PWD}/../../../..`
 
 TARGET=$1
 if [ -z ${TARGET} ];
@@ -18,7 +18,7 @@ then
   
 fi
 
-BUILD_TYPE="${TARGET}_release_build"
+BUILD_TYPE="build"
 
 LLVM_BUILD="${HOME}/${BUILD_TYPE}"
 echo "LLVM Build used for the data generation: ${LLVM_BUILD}"
@@ -26,7 +26,7 @@ echo "LLVM Build used for the data generation: ${LLVM_BUILD}"
 
 # INP_DIR=${HOME}/data/gcc-c-torture
 # INP_DIR=${HOME}/data/PE-benchmarks
-INP_DIR=/home/cs18mtech11030/project/ML-Register-Allocation/data/gcc-c-torture
+INP_DIR=/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON
 
 # PE-benchmarks
 # gcc-c-torture
@@ -49,7 +49,7 @@ then
   
 fi
 
-declare -A MODELS=([mlra]=" -mllvm -mlra-experimental -mllvm -regalloc=greedy -mllvm -mlra-dump-ig-dot " [mlbasicra]=" -mllvm -mlra-experimental -mllvm -regalloc=basic  -mllvm -mlra-dump-ig-dot ")
+declare -A MODELS=([mlra]=" -mllvm -regalloc=greedy -mllvm -mlra-dump-ig-dot " [mlbasicra]=" -mllvm -regalloc=basic  -mllvm -mlra-dump-ig-dot ")
 
 MODEL=$3
 
@@ -61,17 +61,17 @@ then
 fi
 
 # IP_FLR_NAME=execute
-IP_FLR_NAME=execute_basic_filter_timeout
-# IP_FLR_NAME=level-O0-llfiles
-# INP_TYPE=llfiles
-INP_TYPE=src
+# IP_FLR_NAME=execute_basic_filter_timeout
+IP_FLR_NAME=level-O0-llfiles
+INP_TYPE=llfiles
+# INP_TYPE=src
 SRCH_FLR=${INP_DIR}/${IP_FLR_NAME}
 [[ ! -d ${SRCH_FLR} ]] && echo " directory does not exist : ${SRCH_FLR}" && exit
 
 echo "Data will generated from ${SRCH_FLR}"
 echo ""
 
-WD=${SRCH_FLR}_${MODE}_${MODEL}_${TARGET}_temp
+WD=${SRCH_FLR}_${MODE}_${MODEL}_${TARGET}_split_data
 echo "Data will generated at : ${WD}"
 
 mkdir -p "${WD}"
