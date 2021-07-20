@@ -514,12 +514,20 @@ void MLRA::dumpInterferenceGraph(std::string ID) {
         node_str += std::to_string(rp.useDistances.back());
       }
       node_str += "} ";
+
+      node_str += " {";
+      if (rp.spillWeights.size() > 0) {
+        for (unsigned i = 0; i < rp.spillWeights.size() - 1; i++)
+          node_str += std::to_string(rp.spillWeights[i]) + ", ";
+        node_str += std::to_string(rp.spillWeights.back());
+      }
+      node_str += "} ";
       // auto instVecMap = symbolic->getInstVecMap();
 
       std::string segmentInst = "";
       unsigned Reg = Register::index2VirtReg(id - step);
       LiveInterval *VirtReg = &LIS->getInterval(Reg);
-      assert(rp.spillWeights.size() == rp.vecRep.size());
+
       for (unsigned k = 0; k < rp.spillWeights.size(); k++) {
         std::string str = "";
         auto vec = rp.vecRep[k];
@@ -529,17 +537,15 @@ void MLRA::dumpInterferenceGraph(std::string ID) {
         } else {
           LLVM_DEBUG(errs() << "Inst present in MIR2Vec map\n");
         }
-        auto spillWt = rp.spillWeights[k];
+
         for (unsigned idx = 0; idx < DIM - 1; idx++) {
           str += std::to_string(vec[idx]) + ", ";
         }
         str += std::to_string(vec[DIM - 1]);
         if (!is_atleastoneinstruction) {
-          segmentInst = segmentInst + "[ " + str + " ]" + "[ " +
-                        std::to_string(spillWt) + " ]";
+          segmentInst = segmentInst + "[ " + str + " ]";
         } else {
-          segmentInst = segmentInst + ", \n[ " + str + " ]" + "[ " +
-                        std::to_string(spillWt) + " ]";
+          segmentInst = segmentInst + ", \n[ " + str + " ]";
         }
         is_atleastoneinstruction = true;
       }
