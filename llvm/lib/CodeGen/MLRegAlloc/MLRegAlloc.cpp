@@ -804,7 +804,6 @@ void MLRA::calculatePositionalSpillWeights(
     auto *MIR = LIS->getInstructionFromIndex(use);
     if (!MIR)
       continue;
-    MIR->dump();
     if (MIR->getParent() != LIS->getMBBFromIndex(startIdx)) {
       startIdx = LIS->getMBBStartIdx(LIS->getMBBFromIndex(use));
     }
@@ -933,7 +932,7 @@ void MLRA::captureRegisterProfile() {
     SA->analyze(VirtReg);
     auto uses = SA->getUseSlots();
     auto firstUse = uses.front();
-    LIS->getInstructionFromIndex(firstUse)->dump();
+
     for (auto use : uses) {
       useDistances.push_back(firstUse.getInstrDistance(use));
     }
@@ -1076,7 +1075,6 @@ void MLRA::updateRegisterProfileAfterSplit(
     SA->analyze(NewVirtReg);
     auto uses = SA->getUseSlots();
     auto firstUse = uses.front();
-    LIS->getInstructionFromIndex(firstUse)->dump();
     for (auto use : uses) {
       useDistances.push_back(firstUse.getInstrDistance(use));
     }
