@@ -528,7 +528,7 @@ void MLRA::dumpInterferenceGraph(std::string ID) {
       unsigned Reg = Register::index2VirtReg(id - step);
       LiveInterval *VirtReg = &LIS->getInterval(Reg);
 
-      for (unsigned k = 0; k < rp.spillWeights.size(); k++) {
+      for (unsigned k = 0; k < rp.vecRep.size(); k++) {
         std::string str = "";
         auto vec = rp.vecRep[k];
         if (vec.size() == 0) {
