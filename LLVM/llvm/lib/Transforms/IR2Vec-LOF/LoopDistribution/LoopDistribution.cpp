@@ -176,7 +176,7 @@ void static populateVFandIF(std::string VF_IF, SmallVector<int, 5> &_VF,
     _VF.push_back(VF);
     _IF.push_back(IF);
 
-    errs() << "VF : " << VF << " IF: " << IF << "\n";
+    // errs() << "VF : " << VF << " IF: " << IF << "\n";
   }
 }
 
@@ -487,11 +487,15 @@ bool LoopDistribution::computeDistributionOnLoop(DataDependenceGraph *SCCGraph,
       auto iil = iilp.second;
       LLVMContext &Ctx = iil->getHeader()->getContext();
       SmallVector<Metadata *, 4> Args;
+      TempMDTuple TempNode = MDNode::getTemporary(Ctx, None);
+      Args.push_back(TempNode.get());
 
       // Setting vectorize.width
       int VF = _VF[counter];
       int IF = _IF[counter];
-      errs() << "VF : " << VF << " IF: " << IF << "\n";
+
+      assert(VF > 0 && IF > 0 && "IF and VF should be greater than 0.\n");
+      // errs() << "VF : " << VF << " IF: " << IF << "\n";
       Metadata *Vals1[] = {MDString::get(Ctx, "llvm.loop.vectorize.width"),
                            ConstantAsMetadata::get(ConstantInt::get(
                                llvm::Type::getInt32Ty(Ctx), VF))};
@@ -501,11 +505,22 @@ bool LoopDistribution::computeDistributionOnLoop(DataDependenceGraph *SCCGraph,
       Metadata *Vals2[] = {MDString::get(Ctx, "llvm.loop.interleave.count"),
                            ConstantAsMetadata::get(ConstantInt::get(
                                llvm::Type::getInt32Ty(Ctx), IF))};
+      
       Args.push_back(MDNode::get(Ctx, Vals2));
+      if (VF > 1) {
+      Metadata *Vals3[] = {MDString::get(Ctx, "llvm.loop.vectorize.enable"),
+                          ConstantAsMetadata::get(ConstantInt::get(
+                              llvm::Type::getInt1Ty(Ctx), true))};
+      
+      Args.push_back(MDNode::get(Ctx, Vals3));
+      }
+
+      
+      
       MDNode *LoopID = MDNode::get(Ctx, Args);
       LoopID->replaceOperandWith(0, LoopID);
 
-      iil->getLoopLatch()->getTerminator()->setMetadata("llvm.loop", LoopID);
+      iil->getLoopLatch()->getTerminator()->setMetadata(llvm::LLVMContext::MD_loop, LoopID);
       counter++;
     }
   }

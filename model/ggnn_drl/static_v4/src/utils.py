@@ -41,13 +41,13 @@ def getllFileAttributes_old(file):
     parts = file.split('/{graphs}/'.format(graphs=GRAPH_DIR_CONST))
     home_dir = parts[0]
     parts=parts[1].split('/')
-    file_name_parts = (parts[1].split('I_'))[1].split('.json')[0]
+    # print(parts)
+    file_name_parts = (parts[-1].split('I_'))[1].split('.json')[0]
     
     file_name_parts =file_name_parts.split('_L')
     record['HOME_DIR'] = home_dir
     record['LOOP_ID'] = file_name_parts[-1]
     record['FUN_ID'] = file_name_parts[0].split('_F')[-1]
-
     return record
 
 def remove_prefix(text, prefix):
@@ -173,7 +173,8 @@ def getLoopCost(filepath, loopId, fname):
        # TODO 
         cmd = "{opt} -S -load {llvm}/lib/LoopCost.so {post_distribution_passes} -LoopCost -lc-lID {loopId} -lc-function {fname}  {input_file} -o /dev/null ".format(opt=os.environ['OPT'], llvm=os.environ['LLVM'], input_file=filepath, loopId=loopId,fname=fname, post_distribution_passes=POST_DIS_PASSES_MAP[config.post_pass_key])
         # analysedInfo = subprocess.Popen(cmd, executable='/bin/bash', shell=True, stdout=subprocess.PIPE).stdout.read()
-        # logging.info(cmd)
+        logging.info(cmd)
+
         pro = subprocess.Popen(cmd, executable='/bin/bash', shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         output = pro.stdout
         line = output.readline()

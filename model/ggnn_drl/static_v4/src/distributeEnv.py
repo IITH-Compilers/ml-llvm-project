@@ -47,8 +47,8 @@ class DistributeLoopEnv:
         method_name = self.functionName
         loop_id = self.loopId
         ll_file_name = self.fileName
-        hfun_id = self.hfun_id
-        hloop_id = self.hloop_id
+        fun_id = self.fun_id
+        # hloop_id = self.hloop_id
         
         reward=0
         # key = "{filename}_{function_name}_{loopid}_{disSeq}".format(filename=ll_file_name, function_name=method_name, loopid=loop_id, disSeq=self.distribution)   
@@ -86,7 +86,7 @@ class DistributeLoopEnv:
             vectorfactor = None
             if isVectorizationtask: 
                 vectorfactor = action
-            distributed_llfile = utils.call_distributionPass( input_file_path, self.distribution, method_name, loop_id, hfun_id, hloop_id, self.distributed_data, vecfactor=vectorfactor)
+            distributed_llfile = utils.call_distributionPass( input_file_path, self.distribution, method_name, loop_id, fun_id, loop_id, self.distributed_data, vecfactor=vectorfactor)
              
             speedup=0
             if distributed_llfile is None:
@@ -193,11 +193,10 @@ class DistributeLoopEnv:
         self.cur_node = None
         self.graph = graph
         if self.mode != 'inference':
-            fileinfo = utils.getllFileAttributes(path)
+            fileinfo = utils.getllFileAttributes_old(path)
             self.home_dir = fileinfo['HOME_DIR']
-            self.hloop_id = fileinfo['HLOOP_ID']
-            self.hfun_id = fileinfo['HFUN_ID']
-            self.inlinety = fileinfo['INLINE_TY']
+            self.loop_id = fileinfo['LOOP_ID']
+            self.fun_id = fileinfo['FUN_ID']
             self.path = path
         
         self.fileName = graph['graph'][1][1]['FileName'].strip('\"') 

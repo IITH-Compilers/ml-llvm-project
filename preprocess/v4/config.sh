@@ -8,15 +8,15 @@ LLVM_BUILD="${HOME}/build${BUILD_TYPE}"
 echo "LLVM Build used for the data generation: ${LLVM_BUILD}"
 [[ ! -d ${LLVM_BUILD} ]] && echo "LLVM build directory does not exist" && exit
 
-INP_DIR=${HOME}/data/dev_set
-# INP_DIR=/home/venkat/IF-DV/Rohit/temp/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON
+# INP_DIR=${HOME}/data/dev_set
+INP_DIR=/home/venkat/IF-DV/Rohit/IR2Vec-LoopOptimizationFramework/data/mutated_combined
 echo "Input data directory path: ${INP_DIR}"
 [[ ! -d ${INP_DIR} ]] && echo "Input directory does not exist" && exit
 
 LL_FLR_NAME=level-O0-llfiles
 INP_TYPE=llfiles
 
-WD=${INP_DIR}/GIF_testing_v4
+WD=${INP_DIR}/GIF_train_v4
 echo "${WD}: Run to check the effect of added new ID if loopid not found in rdg on data"
 
 # FWD=${WD}_filter
@@ -33,9 +33,8 @@ REMARKS=" -pass-remarks=ir2vec-RDG -pass-remarks-analysis=ir2vec-RDG -pass-remar
 
 # Default flow
 
-FRONTIOR_PASS="-enable-loop-inline -enable-fusion"
-# FRONTIOR_PASS="-loop-inline -enable-fusion -enable-simple-loop-unswitch"
-PRE_DIST_PASSES="-O3 -No-PostDistributionPasses ${FRONTIOR_PASS} "
+FRONTIOR_PASS=" -enable-loop-inline -enable-fusion "
+PRE_DIST_PASSES=" -O3 -No-PostDistributionPasses ${FRONTIOR_PASS} "
 # PRE_DIST_PASSES="-targetlibinfo -tti -tbaa -scoped-noalias -assumption-cache-tracker -profile-summary-info -forceattrs -inferattrs -domtree -callsite-splitting -ipsccp -called-value-propagation -attributor -globalopt -domtree -mem2reg -deadargelim -domtree -basicaa -aa -loops -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -instcombine -simplifycfg -basiccg -globals-aa -prune-eh ${FRONTIOR_PASS} -functionattrs -argpromotion -domtree -sroa -basicaa -aa -memoryssa -early-cse-memssa -speculative-execution -basicaa -aa -lazy-value-info -jump-threading -correlated-propagation -simplifycfg -domtree -aggressive-instcombine -basicaa -aa -loops -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -instcombine -libcalls-shrinkwrap -loops -branch-prob -block-freq -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -pgo-memop-opt -basicaa -aa -loops -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -tailcallelim -simplifycfg -reassociate -domtree -loops -loop-simplify -lcssa-verification -lcssa -basicaa -aa -scalar-evolution -loop-rotate -memoryssa -licm -loop-unswitch -simplifycfg -domtree -basicaa -aa -loops -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -instcombine -loop-simplify -lcssa-verification -lcssa -scalar-evolution -indvars -loop-idiom -loop-deletion -loop-unroll -mldst-motion -phi-values -basicaa -aa -memdep -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -gvn -phi-values -basicaa -aa -memdep -memcpyopt -sccp -demanded-bits -bdce -basicaa -aa -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -instcombine -lazy-value-info -jump-threading -correlated-propagation -basicaa -aa -phi-values -memdep -dse -basicaa -aa -memoryssa -loops -loop-simplify -lcssa-verification -lcssa -scalar-evolution -licm -postdomtree -adce -simplifycfg -domtree -basicaa -aa -loops -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -instcombine -barrier -elim-avail-extern -basiccg -rpo-functionattrs -globalopt -globaldce -basiccg -globals-aa -domtree -float2int -lower-constant-intrinsics -domtree -loops -loop-simplify -lcssa-verification -lcssa -basicaa -aa -scalar-evolution -loop-rotate -loop-accesses -lazy-branch-prob -lazy-block-freq -opt-remark-emitter"
 
 SSA_PASSES_SEQ="${PRE_DIST_PASSES}"
