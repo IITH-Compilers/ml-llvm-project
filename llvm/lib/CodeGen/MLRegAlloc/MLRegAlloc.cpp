@@ -306,10 +306,11 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
   for (auto use : SA->getUseSlots()) {
     if (pos == splitPoint) {
       idx = use;
-      // To-Do: Make this check while populating spill points and skip them
       if (use.getBoundaryIndex() >=
           SA->getUseSlots().back().getBoundaryIndex()) {
-        errs() << "No use of splitting at/after the last use slot -- exiting\n";
+        LLVM_DEBUG(
+            errs()
+            << "No use of splitting at/after the last use slot -- exiting\n");
         llvm_unreachable("No use of splitting at/after the last use slot");
         return false;
       }
@@ -324,6 +325,11 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
 
   auto MBB = MI->getParent();
   assert(MBB && "MI should be part of a MBB");
+
+  if (MI == &MBB->back()) {
+    errs() << "Cannot split last instruction of a basic block\n";
+    return false;
+  }
 
   for (auto UB : SA->getUseBlocks()) {
     if (UB.MBB == MBB) {
