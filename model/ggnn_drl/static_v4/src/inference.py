@@ -14,6 +14,7 @@ import os
 import logging
 from argparse import Namespace
 import pydot
+from torch.utils.tensorboard import SummaryWriter
 # from networkx.drawing import nx_agraph
 # import pygraphviz
 
@@ -51,9 +52,9 @@ def run_predict_single_loop(agent, config, rdg, env=None):
 
     ## Do te
     score =  score_distribution + score_vec
-    score_tensor = score_tensor + score
-    config.writer.add_scalar('trainInv/rewardStep', score_tensor)
-    config.writer.add_scalar('trainInv/rewardWall', score)
+    # score_tensor = score_tensor + score
+    # config.writer.add_scalar('trainInv/rewardStep', score_tensor)
+    # config.writer.add_scalar('trainInv/rewardWall', score)
 
     return [score_distribution, score_vec], [dist_seq, vf_seq]
 
@@ -76,13 +77,14 @@ def run_predict_multiple_loops(agent, config, rdgs):
 def predict_loop_distribution(rdgs : list, trained_dist_model : str, trained_vec_model : str):
     
     # print('In python...')
-    config = { 'mode' :'inference', 'state_size':300, 'action_space':200, 'distributed_data' : '/tmp'}
+    config = { 'mode' :'inference', 'state_size':300, 'action_space':200, 'distributed_data' : '/tmp', 'device' : "cuda" if torch.cuda.is_available() else "cpu"}
     config = Namespace(**config)
+    config.writer = SummaryWriter(os.path.join(config.distributed_data, 'log/tensorboard'))   
     logdir='/tmp'
     logger = logging.getLogger('inference.py')
     logging.basicConfig(filename=os.path.join(logdir, 'loop-distribution.log'), format='%(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
     
-    agent = Agent(config, seed=0)
+    agent = Agent(config)
     agent.distribution_task.net_local.load_state_dict(torch.load(trained_dist_model, map_location=torch.device("cuda" if torch.cuda.is_available() else "cpu")))
     agent.vectorization_task.net_local.load_state_dict(torch.load(trained_vec_model, map_location=torch.device("cuda" if torch.cuda.is_available() else "cpu")))
 

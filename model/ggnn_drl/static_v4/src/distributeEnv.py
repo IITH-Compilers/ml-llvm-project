@@ -43,7 +43,8 @@ class DistributeLoopEnv:
 
     def getDistributionReward(self, action=None, isVectorizationtask=False):
        
-        home_dir = self.home_dir
+        if self.mode != 'inference':
+            home_dir = self.home_dir
         method_name = self.functionName
         loop_id = self.loopId
         ll_file_name = self.fileName
@@ -167,7 +168,9 @@ class DistributeLoopEnv:
     def step_via_vectorization(self, action):
         next_state =None
         done=True
-        reward = self.getDistributionReward(action, isVectorizationtask=True)
+        reward = 0
+        if self.mode != 'inference':
+            reward = self.getDistributionReward(action, isVectorizationtask=True)
         return next_state, reward, done
 
 
