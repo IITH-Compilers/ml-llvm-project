@@ -95,7 +95,7 @@ if __name__ == "__main__":
     config["env_config"]["dump_color_graph"] = True
     config["env_config"]["intermediate_data"] = './temp'
 
-    config["env_config"]["dataset"] = "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_SPLIT2/"
+    config["env_config"]["dataset"] = "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/"
     # config["env_config"]["dataset"] = "/home/cs20mtech12003/ML-Register-Allocation/data/test_dict/"
     config["env_config"]["graphs_num"] = 50000
     # training_graphs=glob.glob(os.path.join(dataset, 'graphs/IG/json_new/*.json'))

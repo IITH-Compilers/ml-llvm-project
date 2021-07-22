@@ -53,6 +53,7 @@ class GatedGraphNeuralNetwork(nn.Module):
         # self.annotation_size = annotation_size 
 
         self.hidden_layer = nn.Linear(self.hidden_size + annotation_size, self.hidden_size)
+        # self.hidden_layer = nn.Linear(self.hidden_size, self.hidden_size)
         # Prepare linear transformations from node states to messages, for each layer and each edge type
         # Prepare rnn cells for each layer
         self.state_to_message_linears = []
@@ -101,7 +102,7 @@ class GatedGraphNeuralNetwork(nn.Module):
         # logging.debug(initial_node_representation.shape)
         initial_node_representation = torch.cat([initial_node_representation, annotations], dim=1)
         # logging.debug('DLOOP H+A {}'.format(initial_node_representation.shape))
-        # print(self.initial_node_representation.device)
+        
         initial_node_representation = self.hidden_layer(initial_node_representation) #.to(device)
 
 
@@ -274,9 +275,9 @@ def get_observations(graph):
         if len(properties) > 3:
             # print(properties)
             split_points = parseProp(properties[3])
-            # print(split_points)
+            print("split_points for node id {} are {}".format(nodeId, split_points))
             if len(split_points) > 0:
-                split_points = sorted(list(map(lambda x : int(x), split_points.split(', '))))[:-1]
+                split_points = sorted(list(map(lambda x : int(x), split_points.split(', '))))
 
         split_points_list.append(np.array(split_points))
 
@@ -298,7 +299,7 @@ def get_observations(graph):
             node_mat = json.loads(eval(matr))
             # node_mat = json.loads(matr)
         else:
-            node_mat = [[0]*300 + [0]]
+            node_mat = [[0]*300]
         
         # print(node_mat)
         # print(type(node_mat)) 
@@ -321,6 +322,7 @@ def get_observations(graph):
             if i != neighId:
                 all_edges.append((i, neighId))
 
+    # print("initial_node_representation shape",len(initial_node_representation), len(initial_node_representation[0]), len(initial_node_representation[36]))
     initial_node_representation = torch.stack(initial_node_representation, dim=0)# .to(device)
     
     # print(initial_node_representation)
