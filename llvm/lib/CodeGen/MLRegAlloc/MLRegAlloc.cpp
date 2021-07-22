@@ -250,8 +250,8 @@ void MLRA::sendRegProfData(T *response,
     regprofResponse->set_regid(reg);
 
     // Copying the interferences
-    google::protobuf::RepeatedField<unsigned> interf(rp.interferences.begin(),
-                                                     rp.interferences.end());
+    google::protobuf::RepeatedField<unsigned> interf(
+        rp.frwdInterferences.begin(), rp.frwdInterferences.end());
     regprofResponse->mutable_interferences()->Swap(&interf);
 
     // // Copying the splitslots
@@ -572,8 +572,8 @@ void MLRA::dumpInterferenceGraph(std::string ID) {
       }
     }
     std::string edges = "";
-    for (unsigned i = 0; i < rp.interferences.size(); ++i) {
-      auto interference = rp.interferences[i];
+    for (unsigned i = 0; i < rp.frwdInterferences.size(); ++i) {
+      auto interference = rp.frwdInterferences[i];
       edges = edges + std::to_string(id) + "--" + std::to_string(interference) +
               "\n";
     }
@@ -877,7 +877,7 @@ void MLRA::captureRegisterProfile() {
     }
 
     SmallSetVector<unsigned, 8> interferences;
-    // SmallSetVector<unsigned, 8> frwdInterferences;
+    SmallSetVector<unsigned, 8> frwdInterferences;
     for (unsigned j = 0, ev = MRI->getNumVirtRegs(); j < ev; ++j) {
       unsigned Reg = Register::index2VirtReg(j);
       if (!isSafeVReg(Reg))
@@ -897,14 +897,14 @@ void MLRA::captureRegisterProfile() {
       if (Matrix->checkInterference(*VirtReg, i)) {
         LLVM_DEBUG(errs() << "Interference happened\n");
         interferences.insert(step + j);
-        // frwdInterferences.insert(step + j);
+        frwdInterferences.insert(step + j);
       }
       LLVM_DEBUG(errs() << "\n");
     }
     // if (interferences.empty())
     //   continue;
     regProf.interferences = interferences;
-    // regProf.frwdInterferences = frwdInterferences;
+    regProf.frwdInterferences = frwdInterferences;
 
     regProfMap[i] = regProf;
   }
@@ -976,27 +976,21 @@ void MLRA::captureRegisterProfile() {
       }
     }
     regProf.interferences = interference;
-    // regProf.frwdInterferences = frwdInterference;
+    regProf.frwdInterferences = frwdInterference;
     regProfMap[step + i] = regProf;
   }
 
-  // // Adding interferences in other direction
-  // for (auto rpi : regProfMap) {
-  //   auto id = rpi.first;
-  //   auto rp = rpi.second;
-  //   for (auto interference : rp.interferences) {
-  //     auto it = regProfMap.find(interference);
-  //     if (it != regProfMap.end()) {
-  //       regProfMap[interference].interferences.insert(id);
-  //       regProfMap[interference].overlapsEnd[id] =
-  //           vecUnion(regProfMap[interference].overlapsEnd[id],
-  //                    rp.overlapsStart[interference]);
-  //       regProfMap[interference].overlapsStart[id] =
-  //           vecUnion(regProfMap[interference].overlapsStart[id],
-  //                    rp.overlapsEnd[interference]);
-  //     }
-  //   }
-  // }
+  // Adding interferences in other direction
+  for (auto rpi : regProfMap) {
+    auto id = rpi.first;
+    auto rp = rpi.second;
+    for (auto interference : rp.interferences) {
+      auto it = regProfMap.find(interference);
+      if (it != regProfMap.end()) {
+        regProfMap[interference].interferences.insert(id);
+      }
+    }
+  }
 
   // LLVM_DEBUG(errs() << "Starting LastUseIdx search:\n");
   // for (auto rpi : regProfMap) {
@@ -1105,10 +1099,10 @@ void MLRA::updateRegisterProfileAfterSplit(
       if (regProfMap[interference].cls.equals("Phy")) {
         if (Matrix->checkInterference(*NewVirtReg, interference)) {
           rp.interferences.insert(interference);
-          // rp.frwdInterferences.insert(interference);
+          rp.frwdInterferences.insert(interference);
 
           regProfMap[interference].interferences.remove(OldVRegIdx);
-          // regProfMap[interference].frwdInterferences.remove(OldVRegIdx);
+          regProfMap[interference].frwdInterferences.remove(OldVRegIdx);
           regProfMap[interference].interferences.insert(NewVRegIdx + step);
 
           // regProfMap[interference].overlapsStart.erase(OldVRegIdx);
@@ -1131,10 +1125,10 @@ void MLRA::updateRegisterProfileAfterSplit(
         if (Reg1->overlaps(*Reg2)) {
           LLVM_DEBUG(errs() << "\n\t It overlaps\n");
           rp.interferences.insert(interference);
-          // rp.frwdInterferences.insert(interference);
+          rp.frwdInterferences.insert(interference);
 
           regProfMap[interference].interferences.remove(OldVRegIdx);
-          // regProfMap[interference].frwdInterferences.remove(OldVRegIdx);
+          regProfMap[interference].frwdInterferences.remove(OldVRegIdx);
           regProfMap[interference].interferences.insert(NewVRegIdx + step);
 
           // SmallVector<SlotIndex, 8> startpts, endpts;
