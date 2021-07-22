@@ -299,15 +299,15 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
   SE->reset(LREdit, SplitEditor::SM_Size);
 
   SlotIndex SegStart, idx;
-  unsigned pos = 1;
+  unsigned pos = 1, idxPos;
   bool found = false;
   SplitAnalysis::BlockInfo BI;
-
-  for (auto use : SA->getUseSlots()) {
+  auto useSlots = SA->getUseSlots();
+  for (auto use : useSlots) {
     if (pos == splitPoint) {
       idx = use;
-      if (use.getBoundaryIndex() >=
-          SA->getUseSlots().back().getBoundaryIndex()) {
+      idxPos = pos - 1;
+      if (use.getBoundaryIndex() >= useSlots.back().getBoundaryIndex()) {
         LLVM_DEBUG(
             errs()
             << "No use of splitting at/after the last use slot -- exiting\n");
@@ -326,8 +326,13 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
   auto MBB = MI->getParent();
   assert(MBB && "MI should be part of a MBB");
 
-  if (MI == &MBB->back()) {
-    errs() << "Cannot split last instruction of a basic block\n";
+  // if (MI == &MBB->back()) {
+  //   errs() << "Cannot split last instruction of a basic block\n";
+  //   return false;
+  // }
+
+  if (MI->registerDefIsDead(splitReg)) {
+    errs() << "No use of splitting after the dead register\n";
     return false;
   }
 
@@ -342,15 +347,19 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
              LIS->getInstructionFromIndex(idx)->dump());
 
   auto first = SE->openIntv();
-  SegStart = SE->enterIntvAfter(idx);
-  assert(SegStart);
+  // assert(SegStart);
   // SlotIndex SegStop = SE->leaveIntvAfter(SA->getUseSlots().back());
-  if (!BI.LiveOut)
+  if (!BI.LiveOut) {
+    SegStart = SE->enterIntvAfter(idx);
     SE->useIntv(SegStart, SE->leaveIntvAfter(BI.LastInstr));
-  else {
+  } else {
     LLVM_DEBUG(errs() << "BI lives out\n");
+    assert(useSlots[idxPos] == idx);
+    if (LIS->getInstructionFromIndex(useSlots[idxPos + 1])->getParent() != MBB)
+      SegStart = SE->enterIntvBefore(useSlots[idxPos + 1]);
+    else
+      SegStart = SE->enterIntvAfter(idx);
     SlotIndex SegStop = SE->leaveIntvAfter(SA->getUseSlots().back());
-
     SE->useIntv(SegStart, SE->leaveIntvAfter(LIS->getInstructionIndex(
                               SA->getUseBlocks().back().MBB->back())));
   }
