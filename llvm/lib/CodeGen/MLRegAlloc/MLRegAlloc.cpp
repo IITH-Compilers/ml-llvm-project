@@ -350,6 +350,13 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
   // assert(SegStart);
   // SlotIndex SegStop = SE->leaveIntvAfter(SA->getUseSlots().back());
   if (!BI.LiveOut) {
+    if (LIS->getInstructionFromIndex(useSlots[idxPos + 1])->getParent() !=
+        MBB) {
+      LLVM_DEBUG(errs() << "No use of splitting a VR that does not live out at "
+                           "its last use in a MBB");
+      return false;
+    }
+
     SegStart = SE->enterIntvAfter(idx);
     SE->useIntv(SegStart, SE->leaveIntvAfter(BI.LastInstr));
   } else {
