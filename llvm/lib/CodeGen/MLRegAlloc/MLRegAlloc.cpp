@@ -1073,7 +1073,7 @@ void MLRA::updateRegisterProfileAfterSplit(
   unsigned step = TRI->getNumRegs() + 1;
   // unsigned OldVRegIdx = Register::virtReg2Index(OldVReg);
   auto oldRP = regProfMap[OldVRegIdx];
-  assert(NewVRegs.size() == 2);
+  // assert(NewVRegs.size() == 2);
 
   for (unsigned i = 0; i < NewVRegs.size(); i++) {
     RegisterProfile rp;

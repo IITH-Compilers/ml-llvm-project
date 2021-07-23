@@ -33,6 +33,8 @@ if __name__ == '__main__':
         msg = input("Message: ")
         reg = input("Register: ")
         point = input("SplitPoint: ")        
+        if msg == '':
+            msg = "Split"
         print(client.codeGen(msg, int(reg), int(point)))
     #client.codeGen(jsonFile,testFiles) # generate code from json graphs
     #client.codeGen(jsonFile1,testFiles1) 
