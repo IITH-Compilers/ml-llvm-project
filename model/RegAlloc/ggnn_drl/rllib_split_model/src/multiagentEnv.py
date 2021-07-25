@@ -12,7 +12,7 @@ import gym
 import numpy as np
 import os
 import random
-import utils
+# import utils
 import utils_1
 import logging
 import json
@@ -48,7 +48,7 @@ from client import *
 config_path=None
 
 logger = logging.getLogger(__file__)
-logging.basicConfig(filename=os.path.join("/home/cs20mtech12003/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib-basic/src", 'running.log'), format='%(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
+logging.basicConfig(filename=os.path.join("/home/cs18mtech11030/project/grpc_llvm/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src", 'running.log'), format='%(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
 
 
 def set_config(path):
@@ -319,13 +319,16 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         
         response = None 
         # TODO updat eh graph sue to the split
+        logging.info('try Split register {} on point {}'.format(register_id, split_point))
+        # print('try Split register {} on point {}'.format(register_id, split_point))
+        updated_graphs = self.stable_grpc('Split', int(register_id), int(split_point))
 
-        if split_idx == 0 or not self.update_obs_split(node_id, split_idx):
+        if split_idx == 0 or not self.update_obs(updated_graphs):
             self.obs.graph_topology.markNodeAsNotVisited(nodeChoosen)
         
         assert False in self.obs.graph_topology.discovered, "After Split, all node not be finished"
         if False not in self.obs.graph_topology.discovered:
-            response = utils.get_colored_graph(self.fun_id, self.fileName, self.functionName, self.color_assignment_map)
+            response = utils_1.get_colored_graph(self.fun_id, self.fileName, self.functionName, self.color_assignment_map)
             done = True
             # reward = self.total_reward
             self.obs.next_stage = 'end'
@@ -481,10 +484,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
         return updated_graphs
 
-    def update_obs_split(self, register_id, split_point):
-        logging.info('try Split register {} on point {}'.format(register_id, split_point))
-        # print('try Split register {} on point {}'.format(register_id, split_point))
-        updated_graphs = self.stable_grpc('Split', int(register_id), int(split_point))
+    def update_obs(self, updated_graphs):
         # print(type(updated_graphs))
         # print(updated_graphs.regProf)
         # print(self.obs.nid_idx)

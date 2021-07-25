@@ -510,9 +510,7 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
 //   return true;
 // }
 
-void MLRA::dumpInterferenceGraph(std::string ID) {
-  LLVM_DEBUG(errs() << "\n******************* Dump the graphs "
-                       "(START)*************************** \n\n");
+std::string MLRA::getDotGraphAsString() {
   unsigned step = TRI->getNumRegs() + 1;
   std::string nodes = "";
   for (auto rpi : regProfMap) {
@@ -597,6 +595,7 @@ void MLRA::dumpInterferenceGraph(std::string ID) {
     llvm::sys::fs::make_absolute(temp);
     moduleName = StringRef(temp);
   }
+  
   std::string absmoduleName = moduleName.str();
 
   if (nodes != "") {
@@ -609,8 +608,28 @@ void MLRA::dumpInterferenceGraph(std::string ID) {
   } else {
     errs() << MF->getName()
            << " *********No Interference graph created*******\n";
-    return;
   }
+  return graph;
+}
+
+void MLRA::dumpInterferenceGraph(std::string ID) {
+  LLVM_DEBUG(errs() << "\n******************* Dump the graphs "
+                       "(START)*************************** \n\n");
+
+  std::string graph = getDotGraphAsString();
+
+  if (graph == "") {
+  	return;
+  }
+
+  StringRef moduleName = MF->getFunction().getParent()->getName();
+  if (llvm::sys::path::is_relative(moduleName)) {
+    SmallString<1024> temp = moduleName;
+    llvm::sys::fs::make_absolute(temp);
+    moduleName = StringRef(temp);
+  }
+  
+  std::string absmoduleName = moduleName.str();
 
   std::string input_fileName =
       absmoduleName.substr(absmoduleName.rfind('/') + 1);
@@ -1327,15 +1346,23 @@ void MLRA::training_flow() {
 
 void MLRA::inference() {
   assert(enable_mlra_inference && "mlra-inference should be true.");
-
+  assert(regProfMap.size() > 0 && "No profile information present.");
+   
   // errs () << "interference graph : " << graph << "\n";
   registerallocationinference::RegisterProfileList *request;
   registerallocationinference::Data *reply;
   grpc::ClientContext context;
-
+  
+  bool isGraphSet = false;
   while (true) {
-    sendRegProfData<registerallocationinference::RegisterProfileList>(request);
-    Stub->getInfo(&context, *request, reply);
+    if (!isGraphSet) {
+	    request->set_graph(getDotGraphAsString());
+	    Stub->getInfo(&context, *request, reply);
+	    isGraphSet = true;
+    } else {
+    	sendRegProfData<registerallocationinference::RegisterProfileList>(request);
+    	Stub->getInfo(&context, *request, reply);
+    }
 
     errs() << reply->message();
     // std::string str = "LLVM\n";
@@ -1448,7 +1475,7 @@ void MLRA::MLRegAlloc(MachineFunction &MF, SlotIndexes &Indexes,
     dumpInterferenceGraph();
   }
 
-  if (enable_mlra_inference) {
+  if (enable_mlra_inference && regProfMap.size() > 0) {
     inference();
   }
 }
