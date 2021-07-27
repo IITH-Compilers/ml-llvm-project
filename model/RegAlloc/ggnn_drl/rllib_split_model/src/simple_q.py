@@ -38,7 +38,7 @@ DEFAULT_CONFIG = with_common_config({
         # Config for the Exploration class' constructor:
         "initial_epsilon": 1.0,
         "final_epsilon": 0.02,
-        "epsilon_timesteps": 10000,  # Timesteps over which to anneal epsilon.
+        "epsilon_timesteps": 100,  # Timesteps over which to anneal epsilon.
 
         # For soft_q, use:
         # "exploration_config" = {
@@ -67,6 +67,7 @@ DEFAULT_CONFIG = with_common_config({
     # Whether to LZ4 compress observations
     "compress_observations": False,
 
+    # "horizon": 5000,
     # === Optimization ===
     # Learning rate for adam optimizer
     "lr": 5e-4,
@@ -103,7 +104,7 @@ DEFAULT_CONFIG = with_common_config({
     # Number of workers for collecting samples with. This only makes sense
     # to increase if your environment is particularly slow to sample, or if
     # you"re using the Async or Ape-X optimizers.
-    "num_workers": 0,
+    "num_workers": 1,
     # Prevent iterations from going lower than this time span
     "min_iter_time_s": 1,
 
