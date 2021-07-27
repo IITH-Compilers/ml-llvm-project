@@ -176,6 +176,7 @@ private:
   void computeVectors(LiveInterval *VirtReg,
                       SmallVector<IR2Vec::Vector, 12> &vectors);
   void captureRegisterProfile();
+  std::string getDotGraphAsString();
   void printRegisterProfile() const;
 
   void
