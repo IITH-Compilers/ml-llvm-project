@@ -323,6 +323,12 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
   auto MI = LIS->getInstructionFromIndex(idx);
   assert(MI && "Empty instruction found for splitting");
 
+  if (MI->isCopy()) {
+    LLVM_DEBUG(errs() << "No use of splitting the copy instruction -- would "
+                         "create more redundant copies\n");
+    return false;
+  }
+
   auto MBB = MI->getParent();
   assert(MBB && "MI should be part of a MBB");
 
@@ -350,6 +356,7 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
   // assert(SegStart);
   // SlotIndex SegStop = SE->leaveIntvAfter(SA->getUseSlots().back());
   if (!BI.LiveOut) {
+    LLVM_DEBUG(errs() << "BI does not live out\n");
     if (LIS->getInstructionFromIndex(useSlots[idxPos + 1])->getParent() !=
         MBB) {
       LLVM_DEBUG(errs() << "No use of splitting a VR that does not live out at "
