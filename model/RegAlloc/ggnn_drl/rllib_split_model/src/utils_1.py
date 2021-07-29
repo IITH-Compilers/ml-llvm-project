@@ -135,7 +135,7 @@ def startServer(filename, fun_id, ip):
         cmd = "{clang} -O3 -mllvm -regalloc=greedy   -mllvm -mlra-training -mllvm -mlra-funcID={fun_id} -mllvm -mlra-server-address={ip} {src_file} -o /dev/null".format(clang=os.environ['CLANG'], src_file=filename, fun_id=fun_id, ip=ip)
         # print(cmd)
         #os.system(cmd)
-        pid = subprocess.Popen(cmd, executable='/bin/bash', shell=True)
+        pid = subprocess.Popen(cmd, executable='/bin/bash', shell=True, preexec_fn=os.setsid)
         return pid
         
     

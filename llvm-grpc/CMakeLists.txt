@@ -127,4 +127,4 @@ target_include_directories(LLVMgRPC PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/Include)
 # target_include_directories(LLVMgRPC PUBLIC /home/cs18mtech11030/project/grpc_llvm/grpc_install/include)
 
 
-
+target_include_directories(LLVMgRPC PUBLIC ${Protobuf_INCLUDE_DIRS})

@@ -43,6 +43,8 @@ def experiment(config):
             checkpoint = train_agent.save(tune.get_trial_dir())
             # print("***************Checkpoint****************", checkpoint)
         tune.report(**train_results)
+        # if train_results['episodes_total'] > 10:
+        #     break
     train_agent.stop()
 
     # Manual Eval
