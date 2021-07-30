@@ -28,6 +28,9 @@ static cl::opt<std::string>
 static cl::opt<std::string>
     vecfactor("vecfactor", cl::Hidden, cl::Optional, cl::init(""),
               cl::desc("partition for loop distribution"));
+static cl::opt<bool>
+    EnableCustomVectorization("enable-custom-vf", cl::Hidden, cl::Optional, cl::init(true),
+               cl::desc("Enable or disable custom vector factors suggestions."));
 
 LoopDistributionWrapperPass::LoopDistributionWrapperPass() : FunctionPass(ID) {
   initializeLoopDistributionWrapperPassPass(*PassRegistry::getPassRegistry());
@@ -476,7 +479,7 @@ bool LoopDistribution::computeDistributionOnLoop(DataDependenceGraph *SCCGraph,
   removeUnwantedSlices(clonedLoops, loopInstVMap, workingLoopID, order);
   // LLVM_DEBUG(F.viewCFG());
 
-  if (vecfactor != "") {
+  if (vecfactor != "" && EnableCustomVectorization) {
     SmallVector<int, 5> _VF;
     SmallVector<int, 5> _IF;
 
@@ -522,8 +525,14 @@ bool LoopDistribution::computeDistributionOnLoop(DataDependenceGraph *SCCGraph,
 
       iil->getLoopLatch()->getTerminator()->setMetadata(llvm::LLVMContext::MD_loop, LoopID);
       counter++;
+      ORE->emit([&]() {
+        return OptimizationRemark(LDIST_NAME, "Vectorization", iil->getStartLoc(),
+                              iil->getHeader())
+           << iil->getHeader()->getParent()->getName()
+           << " --> vector factor suggested :: " << "(VF,IF)=(" << std::to_string(VF) <<"," << std::to_string(IF) <<")";
+        });
     }
-  }
+ }
 
   // Report the success.
   ORE->emit([&]() {
