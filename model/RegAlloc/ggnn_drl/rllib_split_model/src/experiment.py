@@ -43,8 +43,8 @@ def experiment(config):
             checkpoint = train_agent.save(tune.get_trial_dir())
             # print("***************Checkpoint****************", checkpoint)
         tune.report(**train_results)
-        # if train_results['episodes_total'] > 10:
-        #     break
+        if train_results['episodes_total'] > 9:
+            break
     train_agent.stop()
 
     # Manual Eval
@@ -118,11 +118,11 @@ if __name__ == "__main__":
         })
     
     def policy_mapping_fn(agent_id, episode=None, **kwargs):
-        if agent_id=="select_node_agent":
+        if agent_id.startswith("select_node_agent"):
             return "select_node_policy"
         elif agent_id.startswith("select_task_agent"):
             return "select_task_policy"
-        elif agent_id=="colour_node_agent":
+        elif agent_id.startswith("colour_node_agent"):
             return "colour_node_policy"
         else:
             return "split_node_policy"
@@ -131,7 +131,7 @@ if __name__ == "__main__":
     policies = {
         "select_node_policy": (None, box_obs,
                                 Discrete(100), {
-                                    "gamma": 0.0,
+                                    "gamma": 0.9,
                                     "model": {
                                         "custom_model": "select_node_model",
                                         "custom_model_config": {

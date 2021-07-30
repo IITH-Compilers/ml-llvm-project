@@ -58,6 +58,7 @@ class Graph:
             # for every adjacent vertex u of v, reduce in-degree of u by 1
             self.colored[v] = color
         else:
+            print("Colour Node", self.discovered[v], self.colored[v], v)
             assert False, 'Trying reassign the color to already colored or not visited node'
     
     def get_eligibleNodes(self):
