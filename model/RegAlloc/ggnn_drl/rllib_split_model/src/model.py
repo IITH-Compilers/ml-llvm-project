@@ -60,16 +60,31 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
         # self.seed = torch.manual_seed(0)
         self.fc1 = nn.Linear(custom_config["state_size"], custom_config["fc1_units"])
         self.fc2 = nn.Linear(custom_config["fc1_units"], custom_config["fc2_units"])
-        self.fc3 = nn.Linear( custom_config["fc2_units"], num_outputs)
-        print("Node selection model", num_outputs)
+        self.fc3 = nn.Linear( custom_config["fc2_units"], 1)
         
     def forward(self, input_dict, state, seq_lens):
         """Build a network that maps state -> action values."""
-        x = F.relu(self.fc1(input_dict["obs"]))
+        print("Select node forward Input", input_dict["obs"]["state"].shape)        
+        x = F.relu(self.fc1(input_dict["obs"]["state"]))
         x = F.relu(self.fc2(x))
         x = self.fc3(x)
         x = F.relu(x)
+        print("x shape",x.shape)
+        x = torch.squeeze(x, 2)
+        print("x shape",x.shape)
         
+        for i in range(input_dict["obs"]["action_mask"].shape[0]):
+            action_mask = input_dict["obs"]["action_mask"][i, :]            
+            
+            if all(v == 0 for v in action_mask):
+                x[i, :] =  torch.ones_like(action_mask)*FLOAT_MIN
+                x[i, 0] = 1.0
+                
+            else:
+                for j in range(action_mask.shape[0]):
+                    if action_mask[j] == 0:
+                        
+                        x[i, j] = FLOAT_MIN
         return x, state
 
 class ColorNetwork(TorchModelV2, nn.Module):

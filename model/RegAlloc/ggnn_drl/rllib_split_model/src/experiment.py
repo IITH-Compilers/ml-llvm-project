@@ -43,7 +43,7 @@ def experiment(config):
             checkpoint = train_agent.save(tune.get_trial_dir())
             # print("***************Checkpoint****************", checkpoint)
         tune.report(**train_results)
-        if train_results['episodes_total'] > 9:
+        if train_results['episodes_total'] > 0:
             break
     train_agent.stop()
 
@@ -109,13 +109,17 @@ if __name__ == "__main__":
 
     box_obs = Box(
             -100000.0, 100000.0, shape=(config["env_config"]["state_size"], ), dtype=np.float32)
-    box_1d = Box(
-            0, 1.0, shape=(1, ), dtype=np.float32)
+    box_1000d = Box(
+            -100000.0, 100000.0, shape=(1000, config["env_config"]["state_size"]), dtype=np.float32)
 
     obs_space = Dict({
         "action_mask": Box(0, 1, shape=(config["env_config"]["action_space_size"],)),
         "state": box_obs
         })
+    obs_space_1000d = Dict({
+        "action_mask": Box(0, 1, shape=(1000,)),
+        "state": box_1000d
+        }) 
     
     def policy_mapping_fn(agent_id, episode=None, **kwargs):
         if agent_id.startswith("select_node_agent"):
@@ -129,8 +133,8 @@ if __name__ == "__main__":
 
 
     policies = {
-        "select_node_policy": (None, box_obs,
-                                Discrete(100), {
+        "select_node_policy": (None, obs_space_1000d,
+                                Discrete(1000), {
                                     "gamma": 0.9,
                                     "model": {
                                         "custom_model": "select_node_model",
