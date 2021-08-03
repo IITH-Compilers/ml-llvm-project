@@ -158,6 +158,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.colour_node_agent_id = "colour_node_agent_{}".format(self.agent_count)
 
         action_mask = self.createNodeSelectMask()
+        spill_weight_list = self.getSpillWeightListExpanded()
         state = self.obs
         self.hidden_state =  self.ggnn(initial_node_representation=state.initial_node_representation, annotations=state.annotations, adjacency_lists=state.adjacency_lists)
         node_mat = self.hidden_state.detach().numpy()
@@ -166,7 +167,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         # print("hidden_state", node_mat.shape, cur_obs[1, :10])
 
         obs = {
-            self.select_node_agent_id: {'action_mask': np.array(action_mask), 'state' : cur_obs}
+            self.select_node_agent_id: { 'spill_weights': spill_weight_list, 'action_mask': np.array(action_mask), 'state' : cur_obs}
         }
         print("Cur_obs shape", cur_obs.shape)
         return obs
@@ -198,9 +199,34 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         assert len(eligibleNodes) < 1000, "Graph has more then 1000 nodes"
         for inx, x in enumerate(eligibleNodes):            
             if x in eligibleNodes:
-                mask[inx] = 1
-        return mask 
+                mask[x] = 1
+        if all(v == 0 for v in mask):
+            print("eligibleNodes", eligibleNodes)
+            # assert False, "No node elegible to select"
+            
+        return mask
 
+    def getSpillWeightListExpanded(self):
+        spill_weight_list = [0]*1000
+        for i in range(len(self.obs.spill_cost_list)):
+            spill_weight_list[i] = self.formatRewardValue(self.obs.spill_cost_list[i])
+        return spill_weight_list
+
+    def getNodeProperties(self):
+        regclass = self.obs.reg_class_list[self.cur_node]
+        adj_colors = self.obs.graph_topology.getColorOfVisitedAdjNodes(self.cur_node)
+        masked_action_space = self.registerAS.maskActionSpace(regclass, adj_colors)
+        adj_nodes = self.obs.graph_topology.getAdjNodes(self.cur_node)
+        spillcost = self.obs.spill_cost_list[self.cur_node]
+        splitpoints = self.obs.split_points[self.cur_node]
+        prop = {
+            "adj_nodes": len(adj_nodes),
+            "avilable_color": len(masked_action_space),            
+            "spill_cost": self.formatRewardValue(spillcost),
+            "usepoints": len(splitpoints)            
+        }
+        return prop
+        
     def _select_node_step(self, action):        
         # node_index, _ = self.constraint_selectNode(self.cur_obs, action)
         # node_index = int(math.ceil(((action + 1)*0.01)*self.obs.graph_topology.num_nodes))
@@ -232,12 +258,14 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         if self.cur_obs is not None and not isinstance(self.cur_obs, np.ndarray):
             self.cur_obs = self.cur_obs.detach().numpy()
         
+        prop = self.getNodeProperties()
+        prop_value_list = list(prop.values())
         reward = {
             self.select_task_agent_id: 0
         }
         done = {"__all__": False}
         obs = {
-            self.select_task_agent_id: self.cur_obs
+            self.select_task_agent_id: { 'node_properties': np.array(prop_value_list, dtype=np.float), 'state' : self.cur_obs},
         }
         # self.cur_obs = self.hidden_state[node_index]
         # print("Select Node Reward", reward)
@@ -265,22 +293,18 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
             reward = {
                 self.colour_node_agent_id : 0,
-                # self.select_task_agent_id: 1000.0
             }
             obs = {
                 self.colour_node_agent_id : { 'action_mask': np.array(action_mask), 'state' : self.cur_obs},
-                # self.select_task_agent_id: self.cur_obs
             }
         else:
             self.split_steps += 1
             self.last_step = 'split'
             reward = {
                 self.split_node_agent_id : 0,  
-                # self.select_task_agent_id: -1000.0           
             }
             obs = {
                 self.split_node_agent_id : self.cur_obs,
-                # self.select_task_agent_id: self.cur_obs
             }
         
         done[self.select_task_agent_id] = True
@@ -318,15 +342,16 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         action_mask[0] = 1
 
         action_mask2 = self.createNodeSelectMask()
+        spill_weight_list = self.getSpillWeightListExpanded()
         state = self.obs
         self.hidden_state =  self.ggnn(initial_node_representation=state.initial_node_representation, annotations=state.annotations, adjacency_lists=state.adjacency_lists)        
         node_mat = self.hidden_state.detach().numpy()
         cur_obs = np.zeros((1000, 300))
         cur_obs[0:node_mat.shape[0], :] = node_mat
-        print("hidden_state", node_mat.shape, cur_obs[1, :10])
+
+        prop = self.getNodeProperties()
+        prop_value_list = list(prop.values())
         
-        # self.select_task_agent_id = "select_task_agent_{}".format(self.agent_count)
-        done = {"__all__": done_all}
         reward = {
             self.colour_node_agent_id: colour_reward,
             self.select_node_agent_id: colour_reward,
@@ -335,8 +360,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         }
         obs = {
             self.colour_node_agent_id: { 'action_mask': np.array(action_mask), 'state' : self.cur_obs},
-            self.select_node_agent_id: { 'action_mask': np.array(action_mask2), 'state' : cur_obs},
-            self.select_task_agent_id: self.cur_obs,
+            self.select_node_agent_id: { 'spill_weights': spill_weight_list, 'action_mask': np.array(action_mask2), 'state' : cur_obs},
+            self.select_task_agent_id: { 'node_properties': np.array(prop_value_list, dtype=np.float), 'state' : self.cur_obs},
             self.split_node_agent_id: self.cur_obs
         }
         done = {
@@ -350,8 +375,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         if done_all:
             obs = {
                 self.colour_node_agent_id: { 'action_mask': np.array(action_mask), 'state' : self.cur_obs},
-                self.select_node_agent_id: { 'action_mask': np.array(action_mask2), 'state' : cur_obs},
-                self.select_task_agent_id: self.cur_obs,
+                self.select_node_agent_id: { 'spill_weights': spill_weight_list, 'action_mask': np.array(action_mask2), 'state' : cur_obs},
+                self.select_task_agent_id: { 'node_properties': np.array(prop_value_list, dtype=np.float), 'state' : self.cur_obs},
                 self.split_node_agent_id: self.cur_obs
             }
             reward = {
@@ -361,7 +386,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 self.split_node_agent_id: self.total_reward
             }
             done['__all__'] = True
-        # print("Color Node Reward", reward)
+        
 
         self.agent_count += 1
         self.select_node_agent_id = "select_node_agent_{}".format(self.agent_count)
@@ -371,10 +396,11 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
         
 
-        obs[self.select_node_agent_id] = { 'action_mask': np.array(action_mask2), 'state' : cur_obs}
+        obs[self.select_node_agent_id] = { 'spill_weights': spill_weight_list, 'action_mask': np.array(action_mask2), 'state' : cur_obs}
         
         # obs[self.select_node_agent_id] = self.cur_obs
         reward[self.select_node_agent_id] = 0
+        done[self.select_node_agent_id] = done_all
         return obs, reward, done, {}
 
     def _split_node_step(self, action):
@@ -384,7 +410,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         # print("****Split index******", len(splitpoints.shape), splitpoints.size)
         userDistanceDiff = 0
         if len(splitpoints.shape) > 0:
-            print("Split points possible", splitpoints)
+            # print("Split points possible", splitpoints)
             split_index = math.ceil(((action + 1)*0.01)*(len(splitpoints) - 1))
 
             if split_index > 0:
@@ -399,7 +425,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         discount_factor = (1.1**self.split_steps)/10
         userDistanceDiff = userDistanceDiff / 1000.0
         split_reward = userDistanceDiff + self.spill_weight_diff
-        print("split_reward", split_reward, userDistanceDiff, self.spill_weight_diff, discount_factor)
+        # print("split_reward", split_reward, userDistanceDiff, self.spill_weight_diff, discount_factor)
         
         self.total_reward += split_reward
 
@@ -410,11 +436,15 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         action_mask[0] = 1
 
         action_mask2 = self.createNodeSelectMask()
+        spill_weight_list = self.getSpillWeightListExpanded()
         state = self.obs
         self.hidden_state =  self.ggnn(initial_node_representation=state.initial_node_representation, annotations=state.annotations, adjacency_lists=state.adjacency_lists)
         node_mat = self.hidden_state.detach().numpy()
         cur_obs = np.zeros((1000, 300))
         cur_obs[0:node_mat.shape[0], :] = node_mat
+
+        prop = self.getNodeProperties()
+        prop_value_list = list(prop.values())
 
         done = {"__all__": False}
         reward = {
@@ -425,8 +455,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         }
         obs = {
             self.colour_node_agent_id: { 'action_mask': np.array(action_mask), 'state' : self.cur_obs},
-            self.select_node_agent_id: { 'action_mask': np.array(action_mask2), 'state' : cur_obs},
-            self.select_task_agent_id: self.cur_obs,
+            self.select_node_agent_id: { 'spill_weights': spill_weight_list, 'action_mask': np.array(action_mask2), 'state' : cur_obs},
+            self.select_task_agent_id: { 'node_properties': np.array(prop_value_list, dtype=np.float), 'state' : self.cur_obs},
             self.split_node_agent_id: self.cur_obs
         }
         done = {
@@ -446,7 +476,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         
         # print("hidden_state", node_mat.shape, cur_obs[1, :10])
 
-        obs[self.select_node_agent_id] = { 'action_mask': np.array(action_mask2), 'state' : cur_obs}
+        obs[self.select_node_agent_id] = { 'spill_weights': spill_weight_list, 'action_mask': np.array(action_mask2), 'state' : cur_obs}
 
         # obs[self.select_node_agent_id] = self.cur_obs
         reward[self.select_node_agent_id] = 0
@@ -474,7 +504,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
         if split_idx == 0 or not self.update_obs(updated_graphs):
             self.obs.graph_topology.markNodeAsNotVisited(nodeChoosen)
-            print("RegisterID {} {} is undiscovered {}".format(nodeChoosen, node_id, split_idx))
+            # print("RegisterID {} {} is undiscovered {}".format(nodeChoosen, node_id, split_idx))
         
         assert False in self.obs.graph_topology.discovered, "After Split, all node not be finished"
         if False not in self.obs.graph_topology.discovered:
@@ -498,6 +528,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             self.server_pid = None
             print('Stop server')
             logging.debug('!!!!!!!!!!!!!!!!!!1All visited Due to Spill!!!!!!!!!!!!!!!')
+            print('!!!!!!!!!!!!!!!!!!1All visited Due to Spill!!!!!!!!!!!!!!!')
            
             # self.server_pid.join()#terminate()
             return reward, done
@@ -551,6 +582,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             print('Stop server')
             time.sleep(5)
             logging.debug('All visited and colored graph visisted')
+            print('All visited and colored graph visisted')
             return reward, done, response
 
         self.obs.next_stage = 'selectnode'
@@ -683,14 +715,14 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             # print("Node Profile", updated_graphs.regProf)
             for node_prof in updated_graphs.regProf:
                 nodeId = str(node_prof.regID)
-                print("Node prof", node_prof.regID)
+                # print("Node prof", node_prof.regID)
                 
                 if nodeId not in self.obs.nid_idx.keys():
                     new_nodes+=1
                     logging.info('{}th New node {} '.format(new_nodes, nodeId))
                     # assert new_nodes < 3, "Splitting having more than 2 intervals"
                     self.obs.nid_idx[nodeId] = self.obs.graph_topology.num_nodes
-                    print("NodeId and index", nodeId, self.obs.graph_topology.num_nodes, register_id)
+                    # print("NodeId and index", nodeId, self.obs.graph_topology.num_nodes, register_id)
                     self.obs.idx_nid[self.obs.graph_topology.num_nodes] = nodeId
                     self.obs.graph_topology.num_nodes = self.obs.graph_topology.num_nodes + 1
                     self.obs.graph_topology.discovered.append(False)
@@ -701,7 +733,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                     self.obs.spill_cost_list.append(node_prof.spillWeight)
                     self.obs.reg_class_list.append(self.obs.reg_class_list[splited_node_idx])
                     self.obs.split_points.append(sorted(node_prof.useDistances))
-                    print('new slots : {}'.format(sorted(node_prof.useDistances)))
+                    # print('new slots : {}'.format(sorted(node_prof.useDistances)))
                     logging.info('new slots : {}'.format(sorted(node_prof.useDistances)))
                     logging.info('new positionalSpillWeights length : {}'.format(len(node_prof.positionalSpillWeights)))
                     
@@ -745,7 +777,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 
                 self.obs.spill_cost_list[interfering_node_idx] = node_prof.spillWeight
                 self.obs.split_points[interfering_node_idx] = np.array(sorted(node_prof.useDistances))
-                print('{} updated slots : {}'.format(nodeId, sorted(node_prof.useDistances)))
+                # print('{} updated slots : {}'.format(nodeId, sorted(node_prof.useDistances)))
                 logging.info('{} updated slots : {}'.format(nodeId, sorted(node_prof.useDistances)))
                 
                 inter_node_matrix = self.obs.raw_graph_mat[interfering_node_idx]

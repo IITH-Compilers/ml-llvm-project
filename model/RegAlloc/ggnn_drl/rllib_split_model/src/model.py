@@ -30,12 +30,15 @@ class SelectTaskNetwork(TorchModelV2, nn.Module):
         # self.seed = torch.manual_seed(0)
         self.fc1 = nn.Linear(custom_config["state_size"], custom_config["fc1_units"])
         self.fc2 = nn.Linear(custom_config["fc1_units"], custom_config["fc2_units"])
-        self.fc3 = nn.Linear( custom_config["fc2_units"], num_outputs)
+        self.fc3 = nn.Linear( custom_config["fc2_units"] + 4, num_outputs)
         
     def forward(self, input_dict, state, seq_lens):
         """Build a network that maps state -> action values."""
-        x = F.relu(self.fc1(input_dict["obs"]))
+        x = F.relu(self.fc1(input_dict["obs"]["state"]))
         x = F.relu(self.fc2(x))
+        x = torch.cat((x, input_dict["obs"]["node_properties"]), 1)
+        # print("X shape", x.shape, type(input_dict["obs"]["node_properties"]), input_dict["obs"]["node_properties"])
+        # assert False, "Hi {}".format(input_dict["obs"]["node_properties"].shape)
         x = self.fc3(x)
         # print("Select Task Model out", x)
         return x, state
@@ -64,27 +67,25 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
         
     def forward(self, input_dict, state, seq_lens):
         """Build a network that maps state -> action values."""
-        print("Select node forward Input", input_dict["obs"]["state"].shape)        
+                
         x = F.relu(self.fc1(input_dict["obs"]["state"]))
         x = F.relu(self.fc2(x))
-        x = self.fc3(x)
-        x = F.relu(x)
-        print("x shape",x.shape)
+        x = self.fc3(x)        
         x = torch.squeeze(x, 2)
-        print("x shape",x.shape)
+        x = torch.add(input_dict["obs"]["spill_weights"], x)
+        x = F.relu(x)
         
         for i in range(input_dict["obs"]["action_mask"].shape[0]):
-            action_mask = input_dict["obs"]["action_mask"][i, :]            
-            
+            action_mask = input_dict["obs"]["action_mask"][i, :]
+
             if all(v == 0 for v in action_mask):
-                x[i, :] =  torch.ones_like(action_mask)*FLOAT_MIN
-                x[i, 0] = 1.0
-                
-            else:
-                for j in range(action_mask.shape[0]):
-                    if action_mask[j] == 0:
-                        
-                        x[i, j] = FLOAT_MIN
+                print("Mask is all zero")
+
+            for j in range(action_mask.shape[0]):
+                if action_mask[j] == 0:                    
+                    x[i, j] = FLOAT_MIN
+
+        # print("Select node forward Input", input_dict["obs"]["action_mask"][:, 0], x, input_dict["obs"]["spill_weights"].shape)
         return x, state
 
 class ColorNetwork(TorchModelV2, nn.Module):

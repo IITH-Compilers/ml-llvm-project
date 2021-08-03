@@ -30,6 +30,9 @@ class Graph:
         interfering_nodes = self.adjList[v]
         return list(set([self.colored[u] for u in interfering_nodes if self.discovered[u]]))
     
+    def getAdjNodes(self, v):
+        return self.adjList[v]
+
     def UpdateVisitList(self, v):
         if not self.discovered[v]:
 

@@ -43,7 +43,7 @@ def experiment(config):
             checkpoint = train_agent.save(tune.get_trial_dir())
             # print("***************Checkpoint****************", checkpoint)
         tune.report(**train_results)
-        if train_results['episodes_total'] > 0:
+        if train_results['episodes_total'] > 4:
             break
     train_agent.stop()
 
@@ -117,9 +117,14 @@ if __name__ == "__main__":
         "state": box_obs
         })
     obs_space_1000d = Dict({
+        "spill_weights": Box(-100000.0, 100000.0, shape=(1000,)), 
         "action_mask": Box(0, 1, shape=(1000,)),
         "state": box_1000d
         }) 
+    obs_select_task = Dict({
+        "node_properties": Box(-100000.0, 100000.0, shape=(4,)), 
+        "state": box_obs
+        })
     
     def policy_mapping_fn(agent_id, episode=None, **kwargs):
         if agent_id.startswith("select_node_agent"):
@@ -145,7 +150,7 @@ if __name__ == "__main__":
                                         },
                                     },
                                 }),
-        "select_task_policy": (None, box_obs,
+        "select_task_policy": (None, obs_select_task,
                                 Discrete(2), {
                                     "gamma": 0.9,
                                     "model": {
