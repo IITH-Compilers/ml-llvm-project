@@ -43,7 +43,7 @@ def experiment(config):
             checkpoint = train_agent.save(tune.get_trial_dir())
             # print("***************Checkpoint****************", checkpoint)
         tune.report(**train_results)
-        if train_results['episodes_total'] > 4:
+        if train_results['episodes_total'] > 1:
             break
     train_agent.stop()
 

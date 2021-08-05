@@ -37,10 +37,7 @@ class SelectTaskNetwork(TorchModelV2, nn.Module):
         x = F.relu(self.fc1(input_dict["obs"]["state"]))
         x = F.relu(self.fc2(x))
         x = torch.cat((x, input_dict["obs"]["node_properties"]), 1)
-        # print("X shape", x.shape, type(input_dict["obs"]["node_properties"]), input_dict["obs"]["node_properties"])
-        # assert False, "Hi {}".format(input_dict["obs"]["node_properties"].shape)
-        x = self.fc3(x)
-        # print("Select Task Model out", x)
+        x = self.fc3(x)        
         return x, state
 
 class SelectNodeNetwork(TorchModelV2, nn.Module):

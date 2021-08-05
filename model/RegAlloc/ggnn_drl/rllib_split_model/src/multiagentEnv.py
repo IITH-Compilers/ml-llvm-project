@@ -96,7 +96,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         utils_1.set_config(temp_config)
 
         self.split_steps = 0
-        self.last_step = 'colour'
         # self.port_number = 50052
         self.spill_weight_diff = 0
 
@@ -226,7 +225,18 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             "usepoints": len(splitpoints)            
         }
         return prop
-        
+
+    def getUsepointProperties(self):
+        psw = self.obs.positionalSpillWeights[self.cur_node]
+        splitpoints = self.obs.split_points[self.cur_node]
+        assert len(splitpoints) == len(psw), "Usepoints and positionalSpillWeights have diffrent length"
+
+        prop = {
+            "positionalSpillWeights": psw,
+            "usepoints": splitpoints
+        }
+        return prop
+
     def _select_node_step(self, action):        
         # node_index, _ = self.constraint_selectNode(self.cur_obs, action)
         # node_index = int(math.ceil(((action + 1)*0.01)*self.obs.graph_topology.num_nodes))
@@ -276,7 +286,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         print("Select Task action", action)
         # self.select_task_agent_id = "select_task_agent_{}".format(self.agent_count)
         if action == 0: # Colour node
-            self.last_step = 'colour'
             regclass = self.obs.reg_class_list[self.cur_node]
             adj_colors = self.obs.graph_topology.getColorOfVisitedAdjNodes(self.cur_node)
 
@@ -299,7 +308,10 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             }
         else:
             self.split_steps += 1
-            self.last_step = 'split'
+            usepoint_prop = self.getUsepointProperties()
+            usepoint_prop_value = list(usepoint_prop.values())
+            print("usepoint_prop_value", np.array(usepoint_prop_value).shape)
+
             reward = {
                 self.split_node_agent_id : 0,  
             }
@@ -683,16 +695,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         return updated_graphs
 
     def update_obs(self, updated_graphs):
-        # print(type(updated_graphs))
-        # print(updated_graphs.regProf)
-        # print(self.obs.nid_idx)
-        # print(updated_graphs.result)
-
-        # print('-----', updated_graphs.regProf[0].regID)
-        # print('-----', updated_graphs.regProf[0].interferences)
-        # print('-----', updated_graphs.regProf[0].spillWeight)
-        # print('-----', updated_graphs.regProf[0].positionalSpillWeights)
-        # print('-----', updated_graphs.regProf[0].splitSlots)
         
         if updated_graphs.result:
             # logging.info(updated_graphs)            
@@ -733,10 +735,11 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                     self.obs.spill_cost_list.append(node_prof.spillWeight)
                     self.obs.reg_class_list.append(self.obs.reg_class_list[splited_node_idx])
                     self.obs.split_points.append(sorted(node_prof.useDistances))
+                    self.obs.positionalSpillWeights.append(node_prof.positionalSpillWeights)
                     # print('new slots : {}'.format(sorted(node_prof.useDistances)))
                     logging.info('new slots : {}'.format(sorted(node_prof.useDistances)))
                     logging.info('new positionalSpillWeights length : {}'.format(len(node_prof.positionalSpillWeights)))
-                    
+                    assert len(node_prof.useDistances) == len(node_prof.positionalSpillWeights), "Difference in length for use distance and postional spill weights"
 
                     annotation_zero = torch.zeros((1, 3))
                     self.obs.annotations = torch.cat((self.obs.annotations, annotation_zero),0)
@@ -777,6 +780,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 
                 self.obs.spill_cost_list[interfering_node_idx] = node_prof.spillWeight
                 self.obs.split_points[interfering_node_idx] = np.array(sorted(node_prof.useDistances))
+                self.obs.positionalSpillWeights[interfering_node_idx] = node_prof.positionalSpillWeights
                 # print('{} updated slots : {}'.format(nodeId, sorted(node_prof.useDistances)))
                 logging.info('{} updated slots : {}'.format(nodeId, sorted(node_prof.useDistances)))
                 
