@@ -1356,22 +1356,29 @@ void MLRA::inference() {
   assert(regProfMap.size() > 0 && "No profile information present.");
    
   // errs () << "interference graph : " << graph << "\n";
-  registerallocationinference::RegisterProfileList *request;
-  registerallocationinference::Data *reply;
-  grpc::ClientContext context;
   
   bool isGraphSet = false;
   while (true) {
+  registerallocationinference::RegisterProfileList requestObj;
+  registerallocationinference::Data replyObj;
+  registerallocationinference::RegisterProfileList *request = &requestObj;
+  registerallocationinference::Data *reply= &replyObj;
+  grpc::ClientContext context;
     if (!isGraphSet) {
-	    request->set_graph(getDotGraphAsString());
-	    Stub->getInfo(&context, *request, reply);
+	    std::string graph=getDotGraphAsString();
+	    // errs () << graph << "\n";
+	    request->set_graph(graph);
+	    errs () << "Call model first time\n";
+	    Stub->getInfo(&context, requestObj, &replyObj);
 	    isGraphSet = true;
     } else {
+	
     	sendRegProfData<registerallocationinference::RegisterProfileList>(request);
-    	Stub->getInfo(&context, *request, reply);
+    	errs () << "Call model again\n";
+	Stub->getInfo(&context, requestObj, &replyObj);
     }
 
-    errs() << reply->message();
+    errs() << "Taken performed : " << reply->message() << "\n";
     // std::string str = "LLVM\n";
     // response->set_payload(str);
     if (reply->message() == "Color") {
