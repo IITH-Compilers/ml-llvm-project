@@ -237,6 +237,12 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         }
         return prop
 
+    def getUsepointPropertiesMatrix(self, usepointProp):
+        propMat = np.zeros((100, 2), dtype=float)
+        for i in range(usepointProp.shape[0]):
+            propMat[i, :] = usepointProp[i, :]
+        return propMat
+
     def _select_node_step(self, action):        
         # node_index, _ = self.constraint_selectNode(self.cur_obs, action)
         # node_index = int(math.ceil(((action + 1)*0.01)*self.obs.graph_topology.num_nodes))
@@ -309,14 +315,24 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         else:
             self.split_steps += 1
             usepoint_prop = self.getUsepointProperties()
-            usepoint_prop_value = list(usepoint_prop.values())
-            print("usepoint_prop_value", np.array(usepoint_prop_value).shape)
-
+            usepoint_prop_value = np.array(list(usepoint_prop.values())).transpose()
+            
+            usepoint_prop_mat = self.getUsepointPropertiesMatrix(usepoint_prop_value)
+            action_mask = []
+            for i in range(usepoint_prop_mat.shape[0]):
+                if i < usepoint_prop_value.shape[0] - 1:
+                    action_mask.append(1)
+                else:
+                    action_mask.append(0)
+            # assert usepoint_prop_value.shape[0] <= 2, "No spi"
+            # action_mask[0] = 0
+                        
             reward = {
                 self.split_node_agent_id : 0,  
             }
             obs = {
-                self.split_node_agent_id : self.cur_obs,
+                self.split_node_agent_id : { 'action_mask': np.array(action_mask), 'state' : self.cur_obs, "usepoint_properties": usepoint_prop_mat},
+                # self.split_node_agent_id : self.cur_obs
             }
         
         done[self.select_task_agent_id] = True
@@ -363,7 +379,19 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
         prop = self.getNodeProperties()
         prop_value_list = list(prop.values())
+
+        usepoint_prop = self.getUsepointProperties()
+        usepoint_prop_value = np.array(list(usepoint_prop.values())).transpose()
         
+        usepoint_prop_mat = self.getUsepointPropertiesMatrix(usepoint_prop_value)
+        action_mask3 = []
+        for i in range(usepoint_prop_mat.shape[0]):
+            if i < usepoint_prop_value.shape[0] - 1 :
+                action_mask3.append(1)
+            else:
+                action_mask3.append(0)
+        # action_mask3[0] = 0
+
         reward = {
             self.colour_node_agent_id: colour_reward,
             self.select_node_agent_id: colour_reward,
@@ -374,7 +402,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             self.colour_node_agent_id: { 'action_mask': np.array(action_mask), 'state' : self.cur_obs},
             self.select_node_agent_id: { 'spill_weights': spill_weight_list, 'action_mask': np.array(action_mask2), 'state' : cur_obs},
             self.select_task_agent_id: { 'node_properties': np.array(prop_value_list, dtype=np.float), 'state' : self.cur_obs},
-            self.split_node_agent_id: self.cur_obs
+            self.split_node_agent_id: { 'action_mask': np.array(action_mask3), 'state' : self.cur_obs, "usepoint_properties": usepoint_prop_mat},
         }
         done = {
             self.colour_node_agent_id: True,
@@ -389,7 +417,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 self.colour_node_agent_id: { 'action_mask': np.array(action_mask), 'state' : self.cur_obs},
                 self.select_node_agent_id: { 'spill_weights': spill_weight_list, 'action_mask': np.array(action_mask2), 'state' : cur_obs},
                 self.select_task_agent_id: { 'node_properties': np.array(prop_value_list, dtype=np.float), 'state' : self.cur_obs},
-                self.split_node_agent_id: self.cur_obs
+                self.split_node_agent_id: { 'action_mask': np.array(action_mask3), 'state' : self.cur_obs, "usepoint_properties": usepoint_prop_mat},
             }
             reward = {
                 self.colour_node_agent_id: self.total_reward,
@@ -416,21 +444,26 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         return obs, reward, done, {}
 
     def _split_node_step(self, action):
-        # self.cur_obs = self.flat_env.reset()
 
-        splitpoints = self.obs.split_points[self.cur_node]
-        # print("****Split index******", len(splitpoints.shape), splitpoints.size)
+        # splitpoints = self.obs.split_points[self.cur_node]
+        # # print("****Split index******", len(splitpoints.shape), splitpoints.size)
+        # userDistanceDiff = 0
+        # if len(splitpoints.shape) > 0:
+        #     # print("Split points possible", splitpoints)
+        #     split_index = math.ceil(((action + 1)*0.01)*(len(splitpoints) - 1))
+
+        #     if split_index > 0:
+        #         split_point = split_index
+        #         split_reward, done = self.step_splitTask(split_point)
+        #         userDistanceDiff = splitpoints[split_index] - splitpoints[split_index-1]
+
         userDistanceDiff = 0
-        if len(splitpoints.shape) > 0:
-            # print("Split points possible", splitpoints)
-            split_index = math.ceil(((action + 1)*0.01)*(len(splitpoints) - 1))
+        splitpoints = self.obs.split_points[self.cur_node]
+        split_index = action + 1
+        split_point = split_index
+        split_reward, done = self.step_splitTask(split_point)
+        userDistanceDiff = splitpoints[split_index] - splitpoints[split_index-1]
 
-            if split_index > 0:
-                split_point = split_index
-                split_reward, done = self.step_splitTask(split_point)
-                userDistanceDiff = splitpoints[split_index] - splitpoints[split_index-1]
-
-        
         if userDistanceDiff > 1000:        
             # print('userDistanceDiff', userDistanceDiff, self.spill_weight_diff)
             userDistanceDiff = 1000
@@ -458,6 +491,18 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         prop = self.getNodeProperties()
         prop_value_list = list(prop.values())
 
+        usepoint_prop = self.getUsepointProperties()
+        usepoint_prop_value = np.array(list(usepoint_prop.values())).transpose()
+        
+        usepoint_prop_mat = self.getUsepointPropertiesMatrix(usepoint_prop_value)
+        action_mask3 = []
+        for i in range(usepoint_prop_mat.shape[0]):
+            if i < usepoint_prop_value.shape[0] - 1:
+                action_mask3.append(1)
+            else:
+                action_mask3.append(0)
+        # action_mask3[0] = 0
+
         done = {"__all__": False}
         reward = {
             self.colour_node_agent_id: 0,
@@ -469,7 +514,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             self.colour_node_agent_id: { 'action_mask': np.array(action_mask), 'state' : self.cur_obs},
             self.select_node_agent_id: { 'spill_weights': spill_weight_list, 'action_mask': np.array(action_mask2), 'state' : cur_obs},
             self.select_task_agent_id: { 'node_properties': np.array(prop_value_list, dtype=np.float), 'state' : self.cur_obs},
-            self.split_node_agent_id: self.cur_obs
+            self.split_node_agent_id: { 'action_mask': np.array(action_mask3), 'state' : self.cur_obs, "usepoint_properties": usepoint_prop_mat},
         }
         done = {
             self.colour_node_agent_id: True,
@@ -497,7 +542,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
     def step_splitTask(self, action):
 
-        print("Split Point", action)
+        # print("Split Point", action)
         split_idx= action
         nodeChoosen = self.cur_node 
         node_id =  self.obs.idx_nid[nodeChoosen]

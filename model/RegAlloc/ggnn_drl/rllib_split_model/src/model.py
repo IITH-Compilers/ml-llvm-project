@@ -148,14 +148,33 @@ class SplitNodeNetwork(TorchModelV2, nn.Module):
         # self.seed = torch.manual_seed(0)
         self.fc1 = nn.Linear(custom_config["state_size"], custom_config["fc1_units"])
         self.fc2 = nn.Linear(custom_config["fc1_units"], custom_config["fc2_units"])
-        self.fc3 = nn.Linear( custom_config["fc2_units"], num_outputs)
+        self.fc3 = nn.Linear( custom_config["fc2_units"] + 2, 1)
         
     def forward(self, input_dict, state, seq_lens):
         """Build a network that maps state -> action values."""
-        x = F.relu(self.fc1(input_dict["obs"]))
+        x = F.relu(self.fc1(input_dict["obs"]["state"]))
         x = F.relu(self.fc2(x))
-        x = self.fc3(x)
+        input_dict["obs"]["usepoint_properties"] = F.pad(input_dict["obs"]["usepoint_properties"], (0, 64))
+        for i in range(x.shape[0]):
+            vec = x[i, :]
+            
+            for j in range(input_dict["obs"]["usepoint_properties"].shape[1]):
+                input_dict["obs"]["usepoint_properties"][i][j][2:] = vec 
+        x = F.relu(self.fc3(input_dict["obs"]["usepoint_properties"]))
+        x = torch.squeeze(x, 2)
         
+        for i in range(input_dict["obs"]["action_mask"].shape[0]):
+            action_mask = input_dict["obs"]["action_mask"][i, :]
+
+            if all(v == 0 for v in action_mask):
+                print("Mask is all zero")
+
+            for j in range(action_mask.shape[0]):
+                if action_mask[j] == 0:                    
+                    x[i, j] = FLOAT_MIN
+        
+        # print("X shape", x.shape, x[0, :])
+        # assert False, "Hehe"                
         return x, state
 
 # class QNetwork(TorchModelV2):

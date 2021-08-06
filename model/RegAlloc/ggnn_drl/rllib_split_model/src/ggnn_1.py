@@ -278,7 +278,7 @@ def get_observations(graph):
             # print(properties)
             split_points = parseProp(properties[3])
             positionalSpillWeights = parseProp(properties[4])
-            print("split_points for node id {} are {} {}".format(nodeId, split_points, positionalSpillWeights))
+            # print("split_points for node id {} are {} {}".format(nodeId, split_points, positionalSpillWeights))
             if len(split_points) > 0:
                 split_points = sorted(list(map(lambda x : int(x), split_points.split(', '))))
             if len(positionalSpillWeights) > 0:

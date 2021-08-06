@@ -44,6 +44,7 @@ def experiment(config):
             # print("***************Checkpoint****************", checkpoint)
         tune.report(**train_results)
         if train_results['episodes_total'] > 1:
+            checkpoint = train_agent.save(tune.get_trial_dir())
             break
     train_agent.stop()
 
@@ -126,6 +127,12 @@ if __name__ == "__main__":
         "state": box_obs
         })
     
+    obs_node_spliting = Dict({
+        "usepoint_properties": Box(-100000.0, 100000.0, shape=(100, 2)), 
+        "action_mask": Box(0, 1, shape=(100,)),
+        "state": box_obs
+        }) 
+    
     def policy_mapping_fn(agent_id, episode=None, **kwargs):
         if agent_id.startswith("select_node_agent"):
             return "select_node_policy"
@@ -174,7 +181,7 @@ if __name__ == "__main__":
                                         },
                                     },
                                 }),
-        "split_node_policy": (None, box_obs,
+        "split_node_policy": (None, obs_node_spliting,
                                 Discrete(100), {
                                     "gamma": 0.9,
                                     "model": {
