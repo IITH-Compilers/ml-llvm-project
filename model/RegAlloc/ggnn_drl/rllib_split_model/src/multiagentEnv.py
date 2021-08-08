@@ -303,8 +303,9 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
     def _select_task_step(self, action):
         done = {"__all__": False}
         print("Select Task action", action)
+        splitpoints = self.obs.split_points[self.cur_node]
         # self.select_task_agent_id = "select_task_agent_{}".format(self.agent_count)
-        if action == 0: # Colour node
+        if action == 0 or len(splitpoints) == 1: # Colour node
             regclass = self.obs.reg_class_list[self.cur_node]
             adj_colors = self.obs.graph_topology.getColorOfVisitedAdjNodes(self.cur_node)
 
@@ -330,8 +331,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         else:
             self.split_steps += 1
             usepoint_prop = self.getUsepointProperties()
-            usepoint_prop_value = np.array(list(usepoint_prop.values())).transpose()
-            
+            usepoint_prop_value = np.array(list(usepoint_prop.values())).transpose()                        
             usepoint_prop_mat = self.getUsepointPropertiesMatrix(usepoint_prop_value)
             action_mask = []
             for i in range(usepoint_prop_mat.shape[0]):
@@ -339,7 +339,10 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                     action_mask.append(1)
                 else:
                     action_mask.append(0)
-            # assert usepoint_prop_value.shape[0] <= 2, "No spi"
+            if usepoint_prop_value.shape[0] <= 1:
+                # action_mask[0] = 1
+                print("usepoint_prop_value", usepoint_prop_value, splitpoints, self.cur_node)
+            # assert usepoint_prop_value.shape[0] > 1, "No split point possible"
             # action_mask[0] = 0
                         
             reward = {
