@@ -31,6 +31,7 @@ def experiment(config):
     train_results = {}
     # config["env_config"]["path"] = path
     train_agent = SimpleQTrainer(config=config, env=HierarchicalGraphColorEnv)
+    print('------------------------ aegent --------------------------------- ', train_agent)
     # Train
     
     # train_agent = SimpleQTrainer(config=config, env=GraphColorEnv)

@@ -436,10 +436,10 @@ class RollOutInference:
 #                                     }),
 #         }
         box_obs = Box(
-                -100000.0, 100000.0, shape=(config["env_config"]["state_size"], ), dtype=np.float32)
+            -100000.0, 100000.0, shape=(config["env_config"]["state_size"], ), dtype=np.float32)
         box_1000d = Box(
                 -100000.0, 100000.0, shape=(1000, config["env_config"]["state_size"]), dtype=np.float32)
-    
+
         obs_space = Dict({
             "action_mask": Box(0, 1, shape=(config["env_config"]["action_space_size"],)),
             "state": box_obs
@@ -454,6 +454,12 @@ class RollOutInference:
             "state": box_obs
             })
         
+        obs_node_spliting = Dict({
+            "usepoint_properties": Box(-100000.0, 100000.0, shape=(100, 2)), 
+            "action_mask": Box(0, 1, shape=(100,)),
+            "state": box_obs
+            }) 
+        
         def policy_mapping_fn(agent_id, episode=None, **kwargs):
             if agent_id.startswith("select_node_agent"):
                 return "select_node_policy"
@@ -463,8 +469,8 @@ class RollOutInference:
                 return "colour_node_policy"
             else:
                 return "split_node_policy"
-    
-    
+
+
         policies = {
             "select_node_policy": (None, obs_space_1000d,
                                     Discrete(1000), {
@@ -502,7 +508,7 @@ class RollOutInference:
                                             },
                                         },
                                     }),
-            "split_node_policy": (None, box_obs,
+            "split_node_policy": (None, obs_node_spliting,
                                     Discrete(100), {
                                         "gamma": 0.9,
                                         "model": {
@@ -515,6 +521,7 @@ class RollOutInference:
                                         },
                                     }),
         }
+
    
         config["multiagent"] = {
             "policies" : policies,
@@ -753,9 +760,12 @@ class RollOutInference:
         
         # actions_response["split_node_agent"] = self.env.split_point
         # actions_response["select_node_agent"] = int(self.env.virtRegId)
-        actions_response[self.env.split_node_agent_id] = self.env.split_point
+        if self.env.split_point is not None:
+            actions_response[self.env.split_node_agent_id] = self.env.split_point
+        else:
+            actions_response[self.env.colour_node_agent_id] = self.env.colormap
         actions_response[self.env.select_node_agent_id] = int(self.env.virtRegId)
-       
+         
         return actions_response, self.env.agent_count
     
     
