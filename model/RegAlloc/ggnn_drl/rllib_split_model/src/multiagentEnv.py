@@ -50,7 +50,7 @@ config_path=None
 
 logger = logging.getLogger(__file__)
 # logging.basicConfig(filename=os.path.join("/home/cs18mtech11030/project/grpc_llvm/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src", 'running.log'), format='%(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
-logging.basicConfig(filename=os.path.join("/home/cs20mtech12003/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib-basic/src", 'running.log'), format='%(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
+# logging.basicConfig(filename=os.path.join("/home/cs20mtech12003/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib-basic/src", 'running.log'), format='%(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
 
 
 def set_config(path):
@@ -61,6 +61,7 @@ def set_config(path):
 
 class HierarchicalGraphColorEnv(MultiAgentEnv):
     def __init__(self, env_config):
+        self.split_point = None
         # self.flat_env = GraphColorEnv(env_config)
         self.new_obs = None
 
@@ -76,18 +77,19 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.registerAS = RegisterActionSpace(env_config["target"])
         self.action_space_size = self.registerAS.ac_sp_normlize_size
         
-        dataset = env_config["dataset"]
-        self.graphs_num = env_config["graphs_num"]
+        if self.mode != 'inference':
+            dataset = env_config["dataset"]
+            self.graphs_num = env_config["graphs_num"]
 
-        self.graph_counter = 0
-        self.reset_count = 0
-        self.training_graphs=glob.glob(os.path.join(dataset, 'graphs/IG/json/*.json'))
-        assert len(self.training_graphs) > 0, 'training set is empty' 
-        if len(self.training_graphs) > self.graphs_num:
-            self.training_graphs = self.training_graphs[:self.graphs_num]
-        else:
-            self.graphs_num = len(self.training_graphs)
-        env_config["graphs_num"] = self.graphs_num
+            self.graph_counter = 0
+            self.reset_count = 0
+            self.training_graphs=glob.glob(os.path.join(dataset, 'graphs/IG/json/*.json'))
+            assert len(self.training_graphs) > 0, 'training set is empty' 
+            if len(self.training_graphs) > self.graphs_num:
+                self.training_graphs = self.training_graphs[:self.graphs_num]
+            else:
+                self.graphs_num = len(self.training_graphs)
+            env_config["graphs_num"] = self.graphs_num
 
         self.server_pid = None
         self.queryllvm = None
@@ -137,10 +139,10 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
     def getReward(self, action):
         return self.getReward_Static(action)
 
-    def reset(self):
+    def reset(self, graph=None):
             
         # self.cur_obs = self.flat_env.reset()        
-        self.reset_env()
+        # self.reset_env()
         # self.cur_node = self.obs.graph_topology.get_eligibleNodes()[0]
         # state = self.obs
         # self.obs.graph_topology.UpdateVisitList(self.cur_node)
@@ -150,6 +152,14 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         # if self.cur_obs is not None and not isinstance(self.cur_obs, np.ndarray):
         #     self.cur_obs = self.cur_obs.detach().numpy()
         
+        self.reset_env(graph)
+        self.cur_node = self.obs.graph_topology.get_eligibleNodes()[0]
+        state = self.obs
+        self.obs.graph_topology.UpdateVisitList(self.cur_node)
+        self.hidden_state =  self.ggnn(initial_node_representation=state.initial_node_representation, annotations=state.annotations, adjacency_lists=state.adjacency_lists)        
+        self.cur_obs = self.hidden_state[self.cur_node][0:300]
+        if self.cur_obs is not None and not isinstance(self.cur_obs, np.ndarray):
+            self.cur_obs = self.cur_obs.detach().numpy()
         self.agent_count = 0
         self.select_node_agent_id = "select_node_agent_{}".format(self.agent_count)
         self.select_task_agent_id = "select_task_agent_{}".format(self.agent_count)
@@ -172,7 +182,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         return obs
 
     def step(self, action_dict):
-
         # self.select_task_agent_id = "select_task_agent_{}".format(self.agent_count)
         if self.select_node_agent_id in action_dict:
             return self._select_node_step(action_dict[self.select_node_agent_id])
@@ -182,7 +191,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             return self._colour_node_step(action_dict[self.colour_node_agent_id])
         if self.split_node_agent_id in action_dict:
             return self._split_node_step(action_dict[self.split_node_agent_id])
-
 
     def constraint_selectNode(self, state, out):
         # print("&&&&&&&&&&&& state, action &&&&&&&&", state.shape, out)
@@ -279,8 +287,9 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         #         self.cur_obs = self.cur_obs.detach().numpy()
 
         self.cur_node = action
-        print("Node selected", action)
         self.obs.graph_topology.UpdateVisitList(self.cur_node)
+        self.virtRegId = self.obs.idx_nid[self.cur_node]
+        print("Node selected = {}, corresponding register id = {}".format(action, self.virtRegId))
         state = self.obs
         self.hidden_state =  self.ggnn(initial_node_representation=state.initial_node_representation, annotations=state.annotations, adjacency_lists=state.adjacency_lists)
         self.cur_obs = self.hidden_state[self.cur_node][0:300]
@@ -447,8 +456,9 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 self.split_node_agent_id: self.total_reward
             }
             done['__all__'] = True
-        
-
+        # if self.mode == 'inference':
+        #     done['__all__'] = True
+        # else:
         self.agent_count += 1
         self.select_node_agent_id = "select_node_agent_{}".format(self.agent_count)
         self.select_task_agent_id = "select_task_agent_{}".format(self.agent_count)
@@ -465,25 +475,19 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         return obs, reward, done, {}
 
     def _split_node_step(self, action):
-
-        # splitpoints = self.obs.split_points[self.cur_node]
-        # # print("****Split index******", len(splitpoints.shape), splitpoints.size)
-        # userDistanceDiff = 0
-        # if len(splitpoints.shape) > 0:
-        #     # print("Split points possible", splitpoints)
-        #     split_index = math.ceil(((action + 1)*0.01)*(len(splitpoints) - 1))
-
-        #     if split_index > 0:
-        #         split_point = split_index
-        #         split_reward, done = self.step_splitTask(split_point)
-        #         userDistanceDiff = splitpoints[split_index] - splitpoints[split_index-1]
-
+        # self.cur_obs = self.flat_env.reset()
+        print(self.virtRegId, self.obs.idx_nid[self.cur_node])
+        assert self.virtRegId == self.obs.idx_nid[self.cur_node], "Virtual should be same." # 
+        splitpoints = self.obs.split_points[self.cur_node]
+        done = False
+        # print("****Split index******", len(splitpoints.shape), splitpoints.size)
         userDistanceDiff = 0
         splitpoints = self.obs.split_points[self.cur_node]
         split_index = action + 1
         split_point = split_index
         split_reward, done = self.step_splitTask(split_point)
         userDistanceDiff = splitpoints[split_index] - splitpoints[split_index-1]
+
 
         if userDistanceDiff > 1000:        
             # print('userDistanceDiff', userDistanceDiff, self.spill_weight_diff)
@@ -528,6 +532,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         prop_value_list_colouring = list(node_properties.values())
 
         done = {"__all__": False}
+        # done = {"__all__": done }
         reward = {
             self.colour_node_agent_id: 0,
             self.select_node_agent_id: split_reward,
@@ -545,7 +550,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             self.select_node_agent_id: True,
             self.select_task_agent_id: True,
             self.split_node_agent_id: True,
-            "__all__": False
+            "__all__": done
         }
 
         self.agent_count += 1
@@ -566,53 +571,30 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
     def step_splitTask(self, action):
 
-        # print("Split Point", action)
-        split_idx= action
+        print("Split Point", action)
+        split_point= action
+        self.split_point = split_point
         nodeChoosen = self.cur_node 
         node_id =  self.obs.idx_nid[nodeChoosen]
 
-        self.obs.annotations[nodeChoosen][1] = torch.tensor(split_idx)# .to(device)
+        self.obs.annotations[nodeChoosen][1] = torch.tensor(split_point)# .to(device)
        
         reward = 0
         done = False
         
         response = None 
         # TODO updat eh graph sue to the split
-        # logging.info('try Split register {} on point {}'.format(register_id, split_point))
+        logging.info('try Split register {} on point {}'.format(node_id, split_point))
         # print('try Split register {} on point {}'.format(register_id, split_point))
-        updated_graphs = self.stable_grpc('Split', int(node_id), int(split_idx))
-        self.split_idx = split_idx
-
-        if split_idx == 0 or not self.update_obs(updated_graphs):
-            self.obs.graph_topology.markNodeAsNotVisited(nodeChoosen)
-            # print("RegisterID {} {} is undiscovered {}".format(nodeChoosen, node_id, split_idx))
+        
+        if self.mode != 'inference':
+            updated_graphs = self.stable_grpc('Split', int(node_id), int(split_point))
+            if split_point == 0 or not self.update_obs(updated_graphs):
+                self.obs.graph_topology.markNodeAsNotVisited(nodeChoosen)
+        else:
+            done = True
         
         assert False in self.obs.graph_topology.discovered, "After Split, all node not be finished"
-        if False not in self.obs.graph_topology.discovered:
-            response = utils_1.get_colored_graph(self.fun_id, self.fileName, self.functionName, self.color_assignment_map)
-            done = True
-            # reward = self.total_reward
-            self.obs.next_stage = 'end'
-            
-            self.stable_grpc('Exit', 0, 0)
-            print("Killing Server pid", self.server_pid.pid)
-            os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
-            # self.server_pid.kill()
-            # self.server_pid.communicate()
-            # while self.server_pid.poll() is None:
-            #     print("Tring to kill server")
-            #     self.server_pid.kill()
-            #     self.server_pid.communicate()
-            #     time.sleep(1)
-            if self.server_pid.poll() is not None:
-                print('Force stop')
-            self.server_pid = None
-            print('Stop server')
-            logging.debug('!!!!!!!!!!!!!!!!!!1All visited Due to Spill!!!!!!!!!!!!!!!')
-            print('!!!!!!!!!!!!!!!!!!1All visited Due to Spill!!!!!!!!!!!!!!!')
-           
-            # self.server_pid.join()#terminate()
-            return reward, done
         
         self.obs.next_stage = 'selectnode'
         return reward, done
@@ -625,7 +607,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         
         node_id =  self.obs.idx_nid[nodeChoosen]
         
-        self.color_assignment_map[node_id] = reg_allocated
+        self.color_assignment_map[node_id] = int(reg_allocated)
 
         logging.debug('Color the node with index={cur_node}, node_id={node_id} with color={action} in RegClass={regclass}'.format(cur_node=nodeChoosen, node_id=node_id, action=reg_allocated, regclass=self.obs.reg_class_list[self.cur_node]))
         
@@ -642,26 +624,28 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             response = utils_1.get_colored_graph(self.fun_id, self.fileName, self.functionName, self.color_assignment_map)
             done = True
             print("Colour map for {} file : {}".format(self.fun_id, response['Predictions'][0]['mapping']))
+            self.colormap = json.dumps(response)
             # reward = self.total_reward
             self.obs.next_stage = 'end'
             # print('Exit the server after last color ')
             # print('Seerver : {}'.format(self.server_pid))
             # self.server_pid.join()# terminate()
-            self.stable_grpc('Exit', 0, 0)   
-            print("Killing Server pid", self.server_pid.pid)         
-            os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
-            # self.server_pid.kill()
-            # self.server_pid.communicate()
-            # while self.server_pid.poll() is None:
-            #     print("Tring to kill server")
-            #     self.server_pid.kill()
-            #     self.server_pid.communicate()
-            #     time.sleep(1)
-            if self.server_pid.poll() is not None:
-                print('Force stop')
-            self.server_pid = None
-            print('Stop server')
-            time.sleep(5)
+            if self.mode != 'inference':
+                self.stable_grpc('Exit', 0, 0)   
+                print("Killing Server pid", self.server_pid.pid)         
+                os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
+                # self.server_pid.kill()
+                # self.server_pid.communicate()
+                # while self.server_pid.poll() is None:
+                #     print("Tring to kill server")
+                #     self.server_pid.kill()
+                #     self.server_pid.communicate()
+                #     time.sleep(1)
+                if self.server_pid.poll() is not None:
+                    print('Force stop')
+                self.server_pid = None
+                print('Stop server')
+                time.sleep(5)
             logging.debug('All visited and colored graph visisted')
             print('All visited and colored graph visisted')
             return reward, done, response
@@ -669,33 +653,35 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.obs.next_stage = 'selectnode'
         return reward, done, response
     
-    def reset_env(self):
+    def reset_env(self, graph=None):
+        if graph is None:
+            # path=self.training_graphs[self.graph_counter%self.graphs_num]
+            path="/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/graphs/IG/json/526.blender_r_756.ll_F15.json"
+            logging.debug('Graphs selected : {}'.format(path))
+            print('Graphs selected : {}'.format(path))
+            self.reset_count+=1
+            if self.reset_count % 300 == 0:
+                self.graph_counter+=1
+            try:
+                with open(path) as f:
+                   graph = json.load(f)
+            except Exception as ex:
+                print(traceback.format_exc())
+                logging.error(path)
+                logging.error(traceback.format_exc())
+                # traceback.print_exc()
+                # traceback.print_exception(*sys.exc_info())
+                return None
+            
+            if path is not None:
+                attr = utils_1.getllFileAttributes(path)
+                self.path = path
+                self.home_dir = attr['HOME_DIR']
         
-        # path=self.training_graphs[self.graph_counter%self.graphs_num]
-        path="/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/graphs/IG/json/526.blender_r_756.ll_F15.json"
-        logging.debug('Graphs selected : {}'.format(path))
-        print('Graphs selected : {}'.format(path))
-        self.reset_count+=1
-        if self.reset_count % 300 == 0:
-            self.graph_counter+=1
-        try:
-            with open(path) as f:
-               graph = json.load(f)
-        except Exception as ex:
-            print(traceback.format_exc())
-            logging.error(path)
-            logging.error(traceback.format_exc())
-            # traceback.print_exc()
-            # traceback.print_exception(*sys.exc_info())
-            return None
         self.color_assignment_map = {}
         self.total_reward = 0
 
         logging.debug('reset the env.')
-        if path is not None:
-            attr = utils_1.getllFileAttributes(path)
-            self.path = path
-            self.home_dir = attr['HOME_DIR']
         
         self.graph = graph
         self.fileName = graph['graph'][1][1]['FileName'].strip('\"')
@@ -703,27 +689,28 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.fun_id = graph['graph'][1][1]['Function_ID']
         self.num_nodes = len(self.graph['nodes'])
         self.obs = get_observations(self.graph)
-        if self.server_pid is not None:
-            print('terminate the pid if alive : {}'.format(self.server_pid.pid))
-            # self.server_pid.terminate()
-            os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
-        #    self.server_pid.kill()
-        #    print('Force Server killed 1')
-        #    self.server_pid.communicate()
-        #    print('Force Server killed 2')
-        #    if self.server_pid.poll() is not None:
-        #        print('Force stop in reset')
-        hostip = "0.0.0.0"
-        hostport = "50051"
-        # self.port_number += 1
-        # hostport=str(self.port_number)
-        ipadd = "{}:{}".format(hostip, hostport)
-        # print('Active thread before the server starts : ', threading.active_count())
-        self.server_pid = utils_1.startServer(self.fileName, self.fun_id, ipadd)
-        print("Server pid", self.server_pid.pid)
-        time.sleep(5)
-        # print('Active thread mid the server starts : ', threading.active_count())
-        self.queryllvm = RegisterAllocationClient(hostport=hostport)
+        if self.mode != 'inference':
+            if self.server_pid is not None:
+                print('terminate the pid if alive : {}'.format(self.server_pid.pid))
+                # self.server_pid.terminate()
+                os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
+            #    self.server_pid.kill()
+            #    print('Force Server killed 1')
+            #    self.server_pid.communicate()
+            #    print('Force Server killed 2')
+            #    if self.server_pid.poll() is not None:
+            #        print('Force stop in reset')
+            hostip = "0.0.0.0"
+            hostport = "50051"
+            # self.port_number += 1
+            # hostport=str(self.port_number)
+            ipadd = "{}:{}".format(hostip, hostport)
+            # print('Active thread before the server starts : ', threading.active_count())
+            self.server_pid = utils_1.startServer(self.fileName, self.fun_id, ipadd)
+            print("Server pid", self.server_pid.pid)
+            time.sleep(5)
+            # print('Active thread mid the server starts : ', threading.active_count())
+            self.queryllvm = RegisterAllocationClient(hostport=hostport)
         
         self.obs.stage = 'start'
         self.obs.next_stage = 'selectnode'
@@ -763,7 +750,17 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
         return updated_graphs
 
-    def update_obs(self, updated_graphs):
+    def update_obs(self, updated_graphs, register_id, split_point):
+        # print(type(updated_graphs))
+        # print(updated_graphs.regProf)
+        # print(self.obs.nid_idx)
+        # print(updated_graphs.result)
+
+        # print('-----', updated_graphs.regProf[0].regID)
+        # print('-----', updated_graphs.regProf[0].interferences)
+        # print('-----', updated_graphs.regProf[0].spillWeight)
+        # print('-----', updated_graphs.regProf[0].positionalSpillWeights)
+        # print('-----', updated_graphs.regProf[0].splitSlots)
         
         if updated_graphs.result:
             # logging.info(updated_graphs)            
@@ -772,13 +769,15 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             self.obs.graph_topology.indegree[splited_node_idx] = 0
             self.obs.graph_topology.adjList[splited_node_idx] = []
             
-            logging.info('register splilted : {} '.format(register_id))
+            # logging.info('register splilted : {} '.format(register_id))
+            print('register splilted : {} at point({})'.format(register_id, split_point))
             split_mtrix = self.obs.raw_graph_mat[splited_node_idx]
             CPY_INST_VEC=[0.001]*300
             splitpoints = self.obs.split_points[self.cur_node]
-            split_point = splitpoints[self.split_idx]
+            split_point = splitpoints[split_point]
             new_nodes_matrix = split_mtrix[:split_point+1] + [CPY_INST_VEC], [CPY_INST_VEC] + split_mtrix[split_point+1:]
-            logging.info('length of the matrix : {} '.format(len(split_mtrix)))
+            # logging.info('length of the matrix : {} '.format(len(split_mtrix)))
+            print('length of the matrix : {} '.format(len(split_mtrix)))
             new_nodes = 0
             def sc(vec, sw):
                 vec[-1] = sw

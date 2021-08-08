@@ -65,9 +65,19 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
     def forward(self, input_dict, state, seq_lens):
         """Build a network that maps state -> action values."""
                 
+        # print(input_dict)
         x = F.relu(self.fc1(input_dict["obs"]["state"]))
         x = F.relu(self.fc2(x))
-        x = self.fc3(x)        
+        x = self.fc3(x)
+        # print(seq_lens)
+        # print(type(input_dict["obs"]))
+
+        # if not isinstance(input_dict["obs"], list):
+
+        #     inp = input_dict["obs"]# [0]["select_node_agent"]
+        #     print("list")
+        # else:
+        #     inp = in
         x = torch.squeeze(x, 2)
         x = torch.add(input_dict["obs"]["spill_weights"], x)
         x = F.relu(x)
@@ -93,6 +103,7 @@ class ColorNetwork(TorchModelV2, nn.Module):
                               model_config, name)
         nn.Module.__init__(self)
         custom_config = model_config["custom_model_config"]
+
         """Initialize parameters and build model.
         Params
         ======

@@ -15,6 +15,12 @@ from register_action_space import RegisterActionSpace
 from ray.rllib.models import ModelCatalog
 from model import SelectTaskNetwork, SelectNodeNetwork, ColorNetwork, SplitNodeNetwork  
 import logging
+from ray.rllib.agents.dqn.simple_q_torch_policy import SimpleQTorchPolicy
+
+from gym.spaces import Discrete, Box, Dict
+import numpy as np
+from ray.tune import function
+
 logger = logging.getLogger(__file__)
 logging.basicConfig(filename='inference.log', format='%(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
 
@@ -26,20 +32,24 @@ import torch
 from argparse import Namespace
 import pydot
 from networkx.readwrite import json_graph
+from ray.rllib.agents.dqn.simple_q_torch_policy import SimpleQTorchPolicy
 
 class Inference:
 
     def __init__(self, trained_model):
         self.state = None
         config = { 'mode' :'inference', 'state_size':300, 'target' : 'X86', 'intermediate_data' : '/tmp'}
-        config = utils.set_config(config)
-        logdir='/tmp'
+        config = utils_1.set_config(config)
+        logdir='./'
         logger = logging.getLogger(__file__)
         logging.basicConfig(filename=os.path.join(logdir, 'mlra-predictions.log'), format='%(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
         
         config = DEFAULT_CONFIG.copy()
-        config["train-iterations"] = args.train_iterations
-    
+        # config["train-iterations"] = args.train_iterations
+        config["num_workers"] = 0
+        config["explore"] = False
+
+
         config["env"] = HierarchicalGraphColorEnv
         config["env_config"]["target"] = "X86"
         config["env_config"]["registerAS"] = RegisterActionSpace(config["env_config"]["target"])
@@ -139,10 +149,11 @@ class Inference:
         }
         
         # train_agent = DQNTrainer(env=GraphColorEnv, config=config)
-        self.train_agent = SimpleQTrainer(env=HierarchicalGraphColorEnv, config=config)
+        self.trained_agent = SimpleQTrainer(env=HierarchicalGraphColorEnv, config=config)
+        print(self.trained_agent, type(self.trained_agent))
         # train_agent = DQNTrainer(config=config)
         print('Hi 2')
-        train_agent.restore(self.trained_model)            
+        self.trained_agent.restore(trained_model)
      
         env_config =  config["env_config"]
         self.env = HierarchicalGraphColorEnv(env_config)
@@ -154,11 +165,18 @@ class Inference:
         return graph_json 
     
     def compute_action(self):
-        action = self.agent.compute_action(self.state)
-            
+        policy_id=list(self.state.keys())[0]
+        # print(policy_id)
+        state=list(self.state.values())[0]
+        print(self.trained_agent, type(self.trained_agent))
+        action = self.trained_agent.compute_action(self.state, policy_id="select_node_policy")
+        # action = self.trained_agent.compute_action(self.state, policy_id="select_node_policy")
+        # action = self.trained_agent.compute_action(self.state, policy_id=SimpleQTorchPolicy)
+        print('computed action : ', action) 
         next_state, reward, done, response  = self.env.step(action)
-        
+         
         self.state = next_state
+        print(self.state)
         return action
 
 
