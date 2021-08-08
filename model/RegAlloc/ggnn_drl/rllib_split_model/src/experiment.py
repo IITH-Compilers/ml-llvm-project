@@ -115,6 +115,7 @@ if __name__ == "__main__":
 
     obs_space = Dict({
         "action_mask": Box(0, 1, shape=(config["env_config"]["action_space_size"],)),
+        "node_properties": Box(-100000.0, 100000.0, shape=(3,)), 
         "state": box_obs
         })
     obs_space_1000d = Dict({

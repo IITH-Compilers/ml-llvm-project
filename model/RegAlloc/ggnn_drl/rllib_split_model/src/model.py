@@ -105,13 +105,16 @@ class ColorNetwork(TorchModelV2, nn.Module):
         # self.seed = torch.manual_seed(0)
         self.fc1 = nn.Linear(custom_config["state_size"], custom_config["fc1_units"])
         self.fc2 = nn.Linear(custom_config["fc1_units"], custom_config["fc2_units"])
-        self.fc3 = nn.Linear( custom_config["fc2_units"], num_outputs)
+        self.fc3 = nn.Linear( custom_config["fc2_units"] + 3, num_outputs)
         
     def forward(self, input_dict, state, seq_lens):
         """Build a network that maps state -> action values."""
 
         x = F.relu(self.fc1(input_dict["obs"]["state"]))
         x = F.relu(self.fc2(x))
+        x = torch.cat((x, input_dict["obs"]["node_properties"]), 1)
+        # print("Colouring forward", x.shape, input_dict["obs"]["node_properties"])
+        # assert False, "Hoho"
         x = self.fc3(x)
         
         for i in range(input_dict["obs"]["action_mask"].shape[0]):

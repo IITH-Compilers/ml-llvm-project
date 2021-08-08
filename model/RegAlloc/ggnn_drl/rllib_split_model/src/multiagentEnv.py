@@ -243,6 +243,19 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             propMat[i, :] = usepointProp[i, :]
         return propMat
 
+    def getNodePropertiesforColoring(self):
+        regclass = self.obs.reg_class_list[self.cur_node]
+        adj_colors = self.obs.graph_topology.getColorOfVisitedAdjNodes(self.cur_node)
+        masked_action_space = self.registerAS.maskActionSpace(regclass, adj_colors)
+        eligibleNodes = self.obs.graph_topology.get_eligibleNodes()
+
+        prop = {
+            "avilable_colours": len(masked_action_space),
+            "used_colours": len(adj_colors),
+            "node_unvisited": len(eligibleNodes)
+        }
+        return prop
+
     def _select_node_step(self, action):        
         # node_index, _ = self.constraint_selectNode(self.cur_obs, action)
         # node_index = int(math.ceil(((action + 1)*0.01)*self.obs.graph_topology.num_nodes))
@@ -306,11 +319,13 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             
             action_mask[0] = 1
 
+            node_properties = self.getNodePropertiesforColoring()
+            prop_value_list_colouring = list(node_properties.values())
             reward = {
                 self.colour_node_agent_id : 0,
             }
             obs = {
-                self.colour_node_agent_id : { 'action_mask': np.array(action_mask), 'state' : self.cur_obs},
+                self.colour_node_agent_id : { 'action_mask': np.array(action_mask),'node_properties': np.array(prop_value_list_colouring), 'state' : self.cur_obs},
             }
         else:
             self.split_steps += 1
@@ -392,6 +407,9 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 action_mask3.append(0)
         # action_mask3[0] = 0
 
+        node_properties = self.getNodePropertiesforColoring()
+        prop_value_list_colouring = list(node_properties.values())
+
         reward = {
             self.colour_node_agent_id: colour_reward,
             self.select_node_agent_id: colour_reward,
@@ -399,7 +417,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             self.split_node_agent_id: 0
         }
         obs = {
-            self.colour_node_agent_id: { 'action_mask': np.array(action_mask), 'state' : self.cur_obs},
+            self.colour_node_agent_id: { 'action_mask': np.array(action_mask),'node_properties': np.array(prop_value_list_colouring), 'state' : self.cur_obs},
             self.select_node_agent_id: { 'spill_weights': spill_weight_list, 'action_mask': np.array(action_mask2), 'state' : cur_obs},
             self.select_task_agent_id: { 'node_properties': np.array(prop_value_list, dtype=np.float), 'state' : self.cur_obs},
             self.split_node_agent_id: { 'action_mask': np.array(action_mask3), 'state' : self.cur_obs, "usepoint_properties": usepoint_prop_mat},
@@ -414,7 +432,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
         if done_all:
             obs = {
-                self.colour_node_agent_id: { 'action_mask': np.array(action_mask), 'state' : self.cur_obs},
+                self.colour_node_agent_id: { 'action_mask': np.array(action_mask),'node_properties': np.array(prop_value_list_colouring), 'state' : self.cur_obs},
                 self.select_node_agent_id: { 'spill_weights': spill_weight_list, 'action_mask': np.array(action_mask2), 'state' : cur_obs},
                 self.select_task_agent_id: { 'node_properties': np.array(prop_value_list, dtype=np.float), 'state' : self.cur_obs},
                 self.split_node_agent_id: { 'action_mask': np.array(action_mask3), 'state' : self.cur_obs, "usepoint_properties": usepoint_prop_mat},
@@ -503,6 +521,9 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 action_mask3.append(0)
         # action_mask3[0] = 0
 
+        node_properties = self.getNodePropertiesforColoring()
+        prop_value_list_colouring = list(node_properties.values())
+
         done = {"__all__": False}
         reward = {
             self.colour_node_agent_id: 0,
@@ -511,7 +532,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             self.split_node_agent_id: split_reward
         }
         obs = {
-            self.colour_node_agent_id: { 'action_mask': np.array(action_mask), 'state' : self.cur_obs},
+            self.colour_node_agent_id: { 'action_mask': np.array(action_mask),'node_properties': np.array(prop_value_list_colouring), 'state' : self.cur_obs},
             self.select_node_agent_id: { 'spill_weights': spill_weight_list, 'action_mask': np.array(action_mask2), 'state' : cur_obs},
             self.select_task_agent_id: { 'node_properties': np.array(prop_value_list, dtype=np.float), 'state' : self.cur_obs},
             self.split_node_agent_id: { 'action_mask': np.array(action_mask3), 'state' : self.cur_obs, "usepoint_properties": usepoint_prop_mat},
