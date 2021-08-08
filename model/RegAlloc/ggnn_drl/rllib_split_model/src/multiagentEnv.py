@@ -550,7 +550,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             self.select_node_agent_id: True,
             self.select_task_agent_id: True,
             self.split_node_agent_id: True,
-            "__all__": done
+            "__all__": False
         }
 
         self.agent_count += 1
@@ -589,7 +589,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         
         if self.mode != 'inference':
             updated_graphs = self.stable_grpc('Split', int(node_id), int(split_point))
-            if split_point == 0 or not self.update_obs(updated_graphs):
+            if split_point == 0 or not self.update_obs(updated_graphs, int(node_id), int(split_point)):
                 self.obs.graph_topology.markNodeAsNotVisited(nodeChoosen)
         else:
             done = True

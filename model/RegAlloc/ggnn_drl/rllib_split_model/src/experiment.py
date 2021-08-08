@@ -94,7 +94,7 @@ if __name__ == "__main__":
     config["env_config"]["action_space_size"] = config["env_config"]["registerAS"].ac_sp_normlize_size
     config["env_config"]["state_size"] = 300
 
-    config["env_config"]["mode"] = 'inference'
+    config["env_config"]["mode"] = 'training'
     config["env_config"]["dump_type"] = 'One'
     config["env_config"]["dump_color_graph"] = True
     config["env_config"]["intermediate_data"] = './temp'
