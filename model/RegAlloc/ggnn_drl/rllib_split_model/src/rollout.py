@@ -435,13 +435,102 @@ class RollOutInference:
 #                                         },
 #                                     }),
 #         }
+
+#         box_obs = Box(
+#             -100000.0, 100000.0, shape=(config["env_config"]["state_size"], ), dtype=np.float32)
+#         box_1000d = Box(
+#                 -100000.0, 100000.0, shape=(1000, config["env_config"]["state_size"]), dtype=np.float32)
+# 
+#         obs_space = Dict({
+#             "action_mask": Box(0, 1, shape=(config["env_config"]["action_space_size"],)),
+#             "state": box_obs
+#             })
+#         obs_space_1000d = Dict({
+#             "spill_weights": Box(-100000.0, 100000.0, shape=(1000,)), 
+#             "action_mask": Box(0, 1, shape=(1000,)),
+#             "state": box_1000d
+#             }) 
+#         obs_select_task = Dict({
+#             "node_properties": Box(-100000.0, 100000.0, shape=(4,)), 
+#             "state": box_obs
+#             })
+#         
+#         obs_node_spliting = Dict({
+#             "usepoint_properties": Box(-100000.0, 100000.0, shape=(100, 2)), 
+#             "action_mask": Box(0, 1, shape=(100,)),
+#             "state": box_obs
+#             }) 
+#         
+#         def policy_mapping_fn(agent_id, episode=None, **kwargs):
+#             if agent_id.startswith("select_node_agent"):
+#                 return "select_node_policy"
+#             elif agent_id.startswith("select_task_agent"):
+#                 return "select_task_policy"
+#             elif agent_id.startswith("colour_node_agent"):
+#                 return "colour_node_policy"
+#             else:
+#                 return "split_node_policy"
+# 
+# 
+#         policies = {
+#             "select_node_policy": (None, obs_space_1000d,
+#                                     Discrete(1000), {
+#                                         "gamma": 0.9,
+#                                         "model": {
+#                                             "custom_model": "select_node_model",
+#                                             "custom_model_config": {
+#                                                 "state_size": 300,
+#                                                 "fc1_units": 64,
+#                                                 "fc2_units": 64
+#                                             },
+#                                         },
+#                                     }),
+#             "select_task_policy": (None, obs_select_task,
+#                                     Discrete(2), {
+#                                         "gamma": 0.9,
+#                                         "model": {
+#                                             "custom_model": "select_task_model",
+#                                             "custom_model_config": {
+#                                                 "state_size": 300,
+#                                                 "fc1_units": 64,
+#                                                 "fc2_units": 64
+#                                             },
+#                                         },
+#                                     }),
+#             "colour_node_policy": (None, obs_space,
+#                                     Discrete(config["env_config"]["action_space_size"]), {
+#                                         "gamma": 0.9,
+#                                         "model": {
+#                                             "custom_model": "colour_node_model",
+#                                             "custom_model_config": {
+#                                                 "state_size": 300,
+#                                                 "fc1_units": 64,
+#                                                 "fc2_units": 64
+#                                             },
+#                                         },
+#                                     }),
+#             "split_node_policy": (None, obs_node_spliting,
+#                                     Discrete(100), {
+#                                         "gamma": 0.9,
+#                                         "model": {
+#                                             "custom_model": "split_node_model",
+#                                             "custom_model_config": {
+#                                                 "state_size": 300,
+#                                                 "fc1_units": 64,
+#                                                 "fc2_units": 64
+#                                             },
+#                                         },
+#                                     }),
+#         }
+
         box_obs = Box(
-            -100000.0, 100000.0, shape=(config["env_config"]["state_size"], ), dtype=np.float32)
+                -100000.0, 100000.0, shape=(config["env_config"]["state_size"], ), dtype=np.float32)
         box_1000d = Box(
                 -100000.0, 100000.0, shape=(1000, config["env_config"]["state_size"]), dtype=np.float32)
 
         obs_space = Dict({
             "action_mask": Box(0, 1, shape=(config["env_config"]["action_space_size"],)),
+            "node_properties": Box(-100000.0, 100000.0, shape=(3,)), 
             "state": box_obs
             })
         obs_space_1000d = Dict({
@@ -521,8 +610,7 @@ class RollOutInference:
                                         },
                                     }),
         }
-
-   
+  
         config["multiagent"] = {
             "policies" : policies,
             "policy_mapping_fn": function(policy_mapping_fn)
@@ -682,6 +770,7 @@ class RollOutInference:
 
     def update_obs(self, request):
         self.env.update_obs(request, self.env.virtRegId, self.env.split_point)
+        # self.env.update_obs(request)
 
     def compute_action(self):
         #obs = env.reset()
@@ -762,7 +851,7 @@ class RollOutInference:
         # actions_response["select_node_agent"] = int(self.env.virtRegId)
         if self.env.split_point is not None:
             actions_response[self.env.split_node_agent_id] = self.env.split_point
-        else:
+        if self.env.colormap is not None:
             actions_response[self.env.colour_node_agent_id] = self.env.colormap
         actions_response[self.env.select_node_agent_id] = int(self.env.virtRegId)
          

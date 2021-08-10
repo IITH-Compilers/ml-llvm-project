@@ -19,7 +19,8 @@ class service_server(RegisterAllocationInference_pb2_grpc.RegisterAllocationInfe
     def __init__(self):
         # model_path = '/home/cs18mtech11030/ray_results/experiment_2021-07-24_17-11-31/experiment_HierarchicalGraphColorEnv_16ff3_00000_0_2021-07-24_17-11-31/checkpoint_000001/checkpoint-1'
         # model_path = '/home/cs18mtech11030/ray_results/model/experiment_2021-08-06_09-58-35/experiment_HierarchicalGraphColorEnv_c3fda_00000_0_2021-08-06_09-58-36/checkpoint_000005/checkpoint-5'
-        model_path = '/home/cs18mtech11030/ray_results/model/experiment_2021-08-06_23-02-18/experiment_HierarchicalGraphColorEnv_3f58c_00000_0_2021-08-06_23-02-18/checkpoint_000010/checkpoint-10'
+        # model_path = '/home/cs18mtech11030/ray_results/model/experiment_2021-08-06_23-02-18/experiment_HierarchicalGraphColorEnv_3f58c_00000_0_2021-08-06_23-02-18/checkpoint_000010/checkpoint-10'
+        model_path = '/home/cs18mtech11030/ray_results/model/experiment_2021-08-09_16-11-00/experiment_HierarchicalGraphColorEnv_49c97_00000_0_2021-08-09_16-11-01/checkpoint_000100/checkpoint-100'
         # self.inference_model = inference.Inference(model_path)
         args = {'no_render' : True, 'checkpoint' : model_path, 'run' : 'SimpleQ' , 'env' : '' , 'config' : {}, 'video_dir' : '', 'steps' : 0, 'episodes' : 0}
         args = Namespace(**args)
@@ -97,17 +98,19 @@ class service_server(RegisterAllocationInference_pb2_grpc.RegisterAllocationInfe
                 self.inference_model.setGraphInEnv(inter_graph_list)
             else:
                 # exit()
-                self.inference_model.update_obs(request, self.inference_model.env.virtRegId, self.inference_model.env.split_point)
+                # self.inference_model.update_obs(request, self.inference_model.env.virtRegId, self.inference_model.env.split_point)
+                self.inference_model.update_obs(request)
 
             action, count = self.inference_model.compute_action()
             print('action= {}, count={}'.format(action,count))
             select_node_agent = "select_node_agent_{}".format(count)
+            select_task_agent = "select_task_agent_{}".format(count)
             split_agent = "split_node_agent_{}".format(count)
             color_agent = "colour_node_agent_{}".format(count)
 
-            if split_agent in action.keys():
+            if action[select_task_agent] == 1:
                 reply=RegisterAllocationInference_pb2.Data(message="Split", regidx=action[select_node_agent], payload=action[split_agent])
-            elif  color_agent in action.keys():
+            elif  action[select_task_agent] == 0:
                 reply=RegisterAllocationInference_pb2.Data(message="Color", colorData=action[color_agent].encode('utf-8'))
             else:
                 reply=RegisterAllocationInference_pb2.Data(message="Exit")
