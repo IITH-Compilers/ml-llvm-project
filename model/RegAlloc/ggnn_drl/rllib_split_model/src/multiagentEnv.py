@@ -61,6 +61,7 @@ def set_config(path):
 
 class HierarchicalGraphColorEnv(MultiAgentEnv):
     def __init__(self, env_config):
+        self.colormap = None
         self.split_point = None
         # self.flat_env = GraphColorEnv(env_config)
         self.new_obs = None
@@ -463,20 +464,19 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             done['__all__'] = True
         # if self.mode == 'inference':
         #     done['__all__'] = True
-        # else:
-        self.agent_count += 1
-        self.select_node_agent_id = "select_node_agent_{}".format(self.agent_count)
-        self.select_task_agent_id = "select_task_agent_{}".format(self.agent_count)
-        self.split_node_agent_id = "split_node_agent_{}".format(self.agent_count)
-        self.colour_node_agent_id = "colour_node_agent_{}".format(self.agent_count)
+        else:
+            self.agent_count += 1
+            self.select_node_agent_id = "select_node_agent_{}".format(self.agent_count)
+            self.select_task_agent_id = "select_task_agent_{}".format(self.agent_count)
+            self.split_node_agent_id = "split_node_agent_{}".format(self.agent_count)
+            self.colour_node_agent_id = "colour_node_agent_{}".format(self.agent_count)
+            
 
-        
-
-        obs[self.select_node_agent_id] = { 'spill_weights': spill_weight_list, 'action_mask': np.array(action_mask2), 'state' : cur_obs}
-        
-        # obs[self.select_node_agent_id] = self.cur_obs
-        reward[self.select_node_agent_id] = 0
-        done[self.select_node_agent_id] = done_all
+            obs[self.select_node_agent_id] = { 'spill_weights': spill_weight_list, 'action_mask': np.array(action_mask2), 'state' : cur_obs}
+            
+            # obs[self.select_node_agent_id] = self.cur_obs
+            reward[self.select_node_agent_id] = 0
+            done[self.select_node_agent_id] = done_all
         return obs, reward, done, {}
 
     def _split_node_step(self, action):
@@ -538,7 +538,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         prop_value_list_colouring = list(node_properties.values())
 
         done = {"__all__": False}
-        # done = {"__all__": done }
         reward = {
             self.colour_node_agent_id: 0,
             self.select_node_agent_id: split_reward,
@@ -558,20 +557,23 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             self.split_node_agent_id: True,
             "__all__": False
         }
-
-        self.agent_count += 1
-        self.select_node_agent_id = "select_node_agent_{}".format(self.agent_count)
-        self.select_task_agent_id = "select_task_agent_{}".format(self.agent_count)
-        self.split_node_agent_id = "split_node_agent_{}".format(self.agent_count)
-        self.colour_node_agent_id = "colour_node_agent_{}".format(self.agent_count)
-
         
-        # print("hidden_state", node_mat.shape, cur_obs[1, :10])
+        if self.mode == 'inference':
+            done = {"__all__": done }
+        else:
+            self.agent_count += 1
+            self.select_node_agent_id = "select_node_agent_{}".format(self.agent_count)
+            self.select_task_agent_id = "select_task_agent_{}".format(self.agent_count)
+            self.split_node_agent_id = "split_node_agent_{}".format(self.agent_count)
+            self.colour_node_agent_id = "colour_node_agent_{}".format(self.agent_count)
 
-        obs[self.select_node_agent_id] = { 'spill_weights': spill_weight_list, 'action_mask': np.array(action_mask2), 'state' : cur_obs}
+            
+            # print("hidden_state", node_mat.shape, cur_obs[1, :10])
 
-        # obs[self.select_node_agent_id] = self.cur_obs
-        reward[self.select_node_agent_id] = 0
+            obs[self.select_node_agent_id] = { 'spill_weights': spill_weight_list, 'action_mask': np.array(action_mask2), 'state' : cur_obs}
+
+            # obs[self.select_node_agent_id] = self.cur_obs
+            reward[self.select_node_agent_id] = 0
         # print("Split node Reward", reward)
         return obs, reward, done, {}
 
@@ -652,6 +654,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 self.server_pid = None
                 print('Stop server')
                 time.sleep(5)
+            
             logging.debug('All visited and colored graph visisted')
             print('All visited and colored graph visisted')
             return reward, done, response
@@ -693,6 +696,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
         logging.debug('reset the env.')
         
+        self.colormap = None
         self.graph = graph
         self.fileName = graph['graph'][1][1]['FileName'].strip('\"')
         self.functionName = graph['graph'][1][1]['Function'].strip('\"')
