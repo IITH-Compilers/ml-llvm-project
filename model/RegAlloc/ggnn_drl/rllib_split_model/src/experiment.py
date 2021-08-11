@@ -44,7 +44,7 @@ def experiment(config):
             checkpoint = train_agent.save(tune.get_trial_dir())
             # print("***************Checkpoint****************", checkpoint)
         tune.report(**train_results)
-        if train_results['episodes_total'] > 9:
+        if train_results['episodes_total'] > 4:
             checkpoint = train_agent.save(tune.get_trial_dir())
             break
     train_agent.stop()
@@ -102,6 +102,7 @@ if __name__ == "__main__":
     config["env_config"]["dataset"] = "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/"
     # config["env_config"]["dataset"] = "/home/cs20mtech12003/ML-Register-Allocation/data/test_dict/"
     config["env_config"]["graphs_num"] = 50000
+    config["env_config"]["max_usepoint_count"] = 200
     # training_graphs=glob.glob(os.path.join(dataset, 'graphs/IG/json_new/*.json'))
 
     ModelCatalog.register_custom_model("select_node_model", SelectNodeNetwork)
@@ -130,8 +131,8 @@ if __name__ == "__main__":
         })
     
     obs_node_spliting = Dict({
-        "usepoint_properties": Box(-100000.0, 100000.0, shape=(100, 2)), 
-        "action_mask": Box(0, 1, shape=(100,)),
+        "usepoint_properties": Box(-100000.0, 100000.0, shape=(config["env_config"]["max_usepoint_count"], 2)), 
+        "action_mask": Box(0, 1, shape=(config["env_config"]["max_usepoint_count"],)),
         "state": box_obs
         }) 
     
@@ -184,7 +185,7 @@ if __name__ == "__main__":
                                     },
                                 }),
         "split_node_policy": (None, obs_node_spliting,
-                                Discrete(100), {
+                                Discrete(config["env_config"]["max_usepoint_count"]), {
                                     "gamma": 0.9,
                                     "model": {
                                         "custom_model": "split_node_model",

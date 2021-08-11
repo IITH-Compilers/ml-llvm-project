@@ -38,7 +38,7 @@ DEFAULT_CONFIG = with_common_config({
         # Config for the Exploration class' constructor:
         "initial_epsilon": 1.0,
         "final_epsilon": 0.02,
-        "epsilon_timesteps": 1000,  # Timesteps over which to anneal epsilon.
+        "epsilon_timesteps": 10000,  # Timesteps over which to anneal epsilon.
 
         # For soft_q, use:
         # "exploration_config" = {
@@ -56,6 +56,8 @@ DEFAULT_CONFIG = with_common_config({
     "timesteps_per_iteration": 0,
     # Update the target network every `target_network_update_freq` steps.
     "target_network_update_freq": 256,
+
+    "metrics_smoothing_episodes": 1,
 
     # === Replay buffer ===
     # Size of the replay buffer. Note that if async_updates is set, then

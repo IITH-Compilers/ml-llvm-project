@@ -86,7 +86,7 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
             action_mask = input_dict["obs"]["action_mask"][i, :]
 
             if all(v == 0 for v in action_mask):
-                print("Mask is all zero")
+                print("Mask is all zero node select")
 
             for j in range(action_mask.shape[0]):
                 if action_mask[j] == 0:                    
@@ -181,7 +181,7 @@ class SplitNodeNetwork(TorchModelV2, nn.Module):
             action_mask = input_dict["obs"]["action_mask"][i, :]
 
             if all(v == 0 for v in action_mask):
-                print("Mask is all zero")
+                print("Mask is all zero node spliting")
 
             for j in range(action_mask.shape[0]):
                 if action_mask[j] == 0:                    
