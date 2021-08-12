@@ -15,6 +15,8 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -fno-rtti")
 
 find_package(Protobuf CONFIG REQUIRED)
 message(STATUS "Using protobuf ${Protobuf_VERSION}")
+message(STATUS "Using include paths ${Protobuf_INCLUDE_DIRS}")
+
 
 set(_PROTOBUF_LIBPROTOBUF protobuf::libprotobuf)
 set(_REFLECTION gRPC::grpc++_reflection)
@@ -122,6 +124,6 @@ add_custom_command(
 target_include_directories(LLVMgRPC PRIVATE ${header_files})
 target_include_directories(LLVMgRPC PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_include_directories(LLVMgRPC PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/Include)
-
+target_include_directories(LLVMgRPC PUBLIC ${Protobuf_INCLUDE_DIRS})
 
 
