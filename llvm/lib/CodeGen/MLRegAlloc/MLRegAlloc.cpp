@@ -353,30 +353,15 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
              LIS->getInstructionFromIndex(idx)->dump());
 
   auto first = SE->openIntv();
-  // assert(SegStart);
-  // SlotIndex SegStop = SE->leaveIntvAfter(SA->getUseSlots().back());
-  if (!BI.LiveOut) {
-    LLVM_DEBUG(errs() << "BI does not live out\n");
-    if (LIS->getInstructionFromIndex(useSlots[idxPos + 1])->getParent() !=
-        MBB) {
-      LLVM_DEBUG(errs() << "No use of splitting a VR that does not live out at "
-                           "its last use in a MBB");
-      return false;
-    }
 
+  assert(useSlots[idxPos] == idx);
+  if (LIS->getInstructionFromIndex(useSlots[idxPos + 1])->getParent() != MBB)
+    SegStart = SE->enterIntvBefore(useSlots[idxPos + 1]);
+  else
     SegStart = SE->enterIntvAfter(idx);
-    SE->useIntv(SegStart, SE->leaveIntvAfter(BI.LastInstr));
-  } else {
-    LLVM_DEBUG(errs() << "BI lives out\n");
-    assert(useSlots[idxPos] == idx);
-    if (LIS->getInstructionFromIndex(useSlots[idxPos + 1])->getParent() != MBB)
-      SegStart = SE->enterIntvBefore(useSlots[idxPos + 1]);
-    else
-      SegStart = SE->enterIntvAfter(idx);
-    SlotIndex SegStop = SE->leaveIntvAfter(SA->getUseSlots().back());
-    SE->useIntv(SegStart, SE->leaveIntvAfter(LIS->getInstructionIndex(
-                              SA->getUseBlocks().back().MBB->back())));
-  }
+  SlotIndex SegStop = SE->leaveIntvAfter(SA->getUseSlots().back());
+  SE->useIntv(SegStart, SE->leaveIntvAfter(LIS->getInstructionIndex(
+                            SA->getUseBlocks().back().MBB->back())));
 
   if (LREdit.empty()) {
     LLVM_DEBUG(dbgs() << "All uses were copies.\n");
@@ -602,7 +587,7 @@ std::string MLRA::getDotGraphAsString() {
     llvm::sys::fs::make_absolute(temp);
     moduleName = StringRef(temp);
   }
-  
+
   std::string absmoduleName = moduleName.str();
 
   if (nodes != "") {
@@ -626,7 +611,7 @@ void MLRA::dumpInterferenceGraph(std::string ID) {
   std::string graph = getDotGraphAsString();
 
   if (graph == "") {
-  	return;
+    return;
   }
 
   StringRef moduleName = MF->getFunction().getParent()->getName();
@@ -635,7 +620,7 @@ void MLRA::dumpInterferenceGraph(std::string ID) {
     llvm::sys::fs::make_absolute(temp);
     moduleName = StringRef(temp);
   }
-  
+
   std::string absmoduleName = moduleName.str();
 
   std::string input_fileName =
@@ -1354,28 +1339,29 @@ void MLRA::training_flow() {
 void MLRA::inference() {
   assert(enable_mlra_inference && "mlra-inference should be true.");
   assert(regProfMap.size() > 0 && "No profile information present.");
-   
+
   // errs () << "interference graph : " << graph << "\n";
-  
+
   bool isGraphSet = false;
   while (true) {
-  registerallocationinference::RegisterProfileList requestObj;
-  registerallocationinference::Data replyObj;
-  registerallocationinference::RegisterProfileList *request = &requestObj;
-  registerallocationinference::Data *reply= &replyObj;
-  grpc::ClientContext context;
+    registerallocationinference::RegisterProfileList requestObj;
+    registerallocationinference::Data replyObj;
+    registerallocationinference::RegisterProfileList *request = &requestObj;
+    registerallocationinference::Data *reply = &replyObj;
+    grpc::ClientContext context;
     if (!isGraphSet) {
-	    std::string graph=getDotGraphAsString();
-	    // errs () << graph << "\n";
-	    request->set_graph(graph);
-	    errs () << "Call model first time\n";
-	    Stub->getInfo(&context, requestObj, &replyObj);
-	    isGraphSet = true;
+      std::string graph = getDotGraphAsString();
+      // errs () << graph << "\n";
+      request->set_graph(graph);
+      errs() << "Call model first time\n";
+      Stub->getInfo(&context, requestObj, &replyObj);
+      isGraphSet = true;
     } else {
-	
-    	sendRegProfData<registerallocationinference::RegisterProfileList>(request);
-    	errs () << "Call model again\n";
-	Stub->getInfo(&context, requestObj, &replyObj);
+
+      sendRegProfData<registerallocationinference::RegisterProfileList>(
+          request);
+      errs() << "Call model again\n";
+      Stub->getInfo(&context, requestObj, &replyObj);
     }
 
     errs() << "Taken performed : " << reply->message() << "\n";
