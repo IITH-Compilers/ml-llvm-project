@@ -40,11 +40,11 @@ def experiment(config):
 
     for i in range(iterations):            
         train_results = train_agent.train()
-        if i == iterations - 1:
+        if i == iterations - 1 or train_results['episodes_total']%100 == 0:
             checkpoint = train_agent.save(tune.get_trial_dir())
             # print("***************Checkpoint****************", checkpoint)
         tune.report(**train_results)
-        if train_results['episodes_total'] > 4:
+        if train_results['episodes_total'] > 9999:
             checkpoint = train_agent.save(tune.get_trial_dir())
             break
     train_agent.stop()

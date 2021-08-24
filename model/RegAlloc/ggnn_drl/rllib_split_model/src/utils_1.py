@@ -64,9 +64,10 @@ def composeData(payload):
 
 def get_colored_graph(file_id, fileName, funcName, color_assignment_map):
     payload = {'FileName' : fileName, 'Function' : funcName, 'mapping' : color_assignment_map}
-    
     if config.mode == 'inference':
-        return composeData(payload) 
+        return composeData(payload)
+    else:
+        return  composeData(payload)
     coloredGraphDir = os.path.join(config.intermediate_data, 'coloredGraphs')
     if not os.path.exists(coloredGraphDir):
         os.makedirs(coloredGraphDir)

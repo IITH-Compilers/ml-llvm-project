@@ -34,10 +34,12 @@ class SelectTaskNetwork(TorchModelV2, nn.Module):
         
     def forward(self, input_dict, state, seq_lens):
         """Build a network that maps state -> action values."""
+        # print("Select task GPU", next(self.parameters()).is_cuda)
         x = F.relu(self.fc1(input_dict["obs"]["state"]))
         x = F.relu(self.fc2(x))
         x = torch.cat((x, input_dict["obs"]["node_properties"]), 1)
-        x = self.fc3(x)        
+        x = self.fc3(x)
+        # print("Select task out", x.shape)        
         return x, state
 
 class SelectNodeNetwork(TorchModelV2, nn.Module):
@@ -64,7 +66,8 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
         
     def forward(self, input_dict, state, seq_lens):
         """Build a network that maps state -> action values."""
-                
+
+        # print("Select node GPU", next(self.parameters()).is_cuda)        
         # print(input_dict)
         x = F.relu(self.fc1(input_dict["obs"]["state"]))
         x = F.relu(self.fc2(x))
@@ -120,6 +123,17 @@ class ColorNetwork(TorchModelV2, nn.Module):
         
     def forward(self, input_dict, state, seq_lens):
         """Build a network that maps state -> action values."""
+        print("On GPU", next(self.parameters()).is_cuda, input_dict["obs"]["state"].is_cuda)
+        
+        # if next(self.parameters()).is_cuda and not input_dict["obs"]["state"].is_cuda:
+        #     input_dict["obs"]["state"] = input_dict["obs"]["state"].to("cuda:0")
+        #     input_dict["obs"]["node_properties"] = input_dict["obs"]["node_properties"].to("cuda:0")
+        #     input_dict["obs"]["action_mask"] = input_dict["obs"]["action_mask"].to("cuda:0")
+        #     device = "cuda:0"
+        # elif not next(self.parameters()).is_cuda and input_dict["obs"]["state"].is_cuda:
+        #     input_dict["obs"]["state"] = input_dict["obs"]["state"].to("cpu")
+        #     input_dict["obs"]["node_properties"] = input_dict["obs"]["node_properties"].to("cpu")
+        #     input_dict["obs"]["action_mask"] = input_dict["obs"]["action_mask"].to("cpu")
 
         x = F.relu(self.fc1(input_dict["obs"]["state"]))
         x = F.relu(self.fc2(x))
@@ -134,12 +148,13 @@ class ColorNetwork(TorchModelV2, nn.Module):
             if all(v == 0 for v in action_mask):
                 x[i, :] =  torch.ones_like(action_mask)*FLOAT_MIN
                 x[i, 0] = 1.0
+                print("Colour node all zero")
                 
             else:
                 for j in range(action_mask.shape[0]):
                     if action_mask[j] == 0:
                         x[i, j] = FLOAT_MIN             
-        
+        # print("OFF GPU", x.shape)        
         return x, state
 
 class SplitNodeNetwork(TorchModelV2, nn.Module):
@@ -166,6 +181,7 @@ class SplitNodeNetwork(TorchModelV2, nn.Module):
         
     def forward(self, input_dict, state, seq_lens):
         """Build a network that maps state -> action values."""
+        # print("Split node GPU", next(self.parameters()).is_cuda)
         x = F.relu(self.fc1(input_dict["obs"]["state"]))
         x = F.relu(self.fc2(x))
         input_dict["obs"]["usepoint_properties"] = F.pad(input_dict["obs"]["usepoint_properties"], (0, 64))

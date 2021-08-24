@@ -78,6 +78,9 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.registerAS = RegisterActionSpace(env_config["target"])
         self.action_space_size = self.registerAS.ac_sp_normlize_size
         self.max_usepoint_count = env_config["max_usepoint_count"]
+        self.worker_index = env_config.worker_index
+
+        print("env_config.worker_index", env_config.worker_index)
         
         if self.mode != 'inference':
             dataset = env_config["dataset"]
@@ -100,6 +103,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         utils_1.set_config(temp_config)
 
         self.split_steps = 0
+        self.colour_steps = 0
         # self.port_number = 50052
         self.spill_weight_diff = 0
 
@@ -179,7 +183,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         # print("hidden_state", node_mat.shape, cur_obs[1, :10])
 
         obs = {
-            self.select_node_agent_id: { 'spill_weights': spill_weight_list, 'action_mask': np.array(action_mask), 'state' : cur_obs}
+            self.select_node_agent_id: { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(action_mask), 'state' : cur_obs}
         }
         print("Cur_obs shape", cur_obs.shape)
         return obs
@@ -319,6 +323,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         splitpoints = self.obs.split_points[self.cur_node]
         # self.select_task_agent_id = "select_task_agent_{}".format(self.agent_count)
         if action == 0 or len(splitpoints) == 1: # Colour node
+            self.colour_steps += 1
             regclass = self.obs.reg_class_list[self.cur_node]
             adj_colors = self.obs.graph_topology.getColorOfVisitedAdjNodes(self.cur_node)
 
@@ -436,7 +441,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         }
         obs = {
             self.colour_node_agent_id: { 'action_mask': np.array(action_mask),'node_properties': np.array(prop_value_list_colouring), 'state' : self.cur_obs},
-            self.select_node_agent_id: { 'spill_weights': spill_weight_list, 'action_mask': np.array(action_mask2), 'state' : cur_obs},
+            self.select_node_agent_id: { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(action_mask2), 'state' : cur_obs},
             self.select_task_agent_id: { 'node_properties': np.array(prop_value_list, dtype=np.float), 'state' : self.cur_obs},
             self.split_node_agent_id: { 'action_mask': np.array(action_mask3), 'state' : self.cur_obs, "usepoint_properties": usepoint_prop_mat},
         }
@@ -451,7 +456,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         if done_all:
             obs = {
                 self.colour_node_agent_id: { 'action_mask': np.array(action_mask),'node_properties': np.array(prop_value_list_colouring), 'state' : self.cur_obs},
-                self.select_node_agent_id: { 'spill_weights': spill_weight_list, 'action_mask': np.array(action_mask2), 'state' : cur_obs},
+                self.select_node_agent_id: { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(action_mask2), 'state' : cur_obs},
                 self.select_task_agent_id: { 'node_properties': np.array(prop_value_list, dtype=np.float), 'state' : self.cur_obs},
                 self.split_node_agent_id: { 'action_mask': np.array(action_mask3), 'state' : self.cur_obs, "usepoint_properties": usepoint_prop_mat},
             }
@@ -472,7 +477,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             self.colour_node_agent_id = "colour_node_agent_{}".format(self.agent_count)
             
 
-            obs[self.select_node_agent_id] = { 'spill_weights': spill_weight_list, 'action_mask': np.array(action_mask2), 'state' : cur_obs}
+            obs[self.select_node_agent_id] = { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(action_mask2), 'state' : cur_obs}
             
             # obs[self.select_node_agent_id] = self.cur_obs
             reward[self.select_node_agent_id] = 0
@@ -501,7 +506,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         # discount_factor = 0
         userDistanceDiff = userDistanceDiff / 1000.0
         split_reward = userDistanceDiff + self.spill_weight_diff
-        print("split_reward", len(splitpoints), split_reward, discount_factor)
+        # print("split_reward", len(splitpoints), split_reward, discount_factor)
         
         self.total_reward += split_reward
 
@@ -546,7 +551,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         }
         obs = {
             self.colour_node_agent_id: { 'action_mask': np.array(action_mask),'node_properties': np.array(prop_value_list_colouring), 'state' : self.cur_obs},
-            self.select_node_agent_id: { 'spill_weights': spill_weight_list, 'action_mask': np.array(action_mask2), 'state' : cur_obs},
+            self.select_node_agent_id: { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(action_mask2), 'state' : cur_obs},
             self.select_task_agent_id: { 'node_properties': np.array(prop_value_list, dtype=np.float), 'state' : self.cur_obs},
             self.split_node_agent_id: { 'action_mask': np.array(action_mask3), 'state' : self.cur_obs, "usepoint_properties": usepoint_prop_mat},
         }
@@ -570,7 +575,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             
             # print("hidden_state", node_mat.shape, cur_obs[1, :10])
 
-            obs[self.select_node_agent_id] = { 'spill_weights': spill_weight_list, 'action_mask': np.array(action_mask2), 'state' : cur_obs}
+            obs[self.select_node_agent_id] = { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(action_mask2), 'state' : cur_obs}
 
             # obs[self.select_node_agent_id] = self.cur_obs
             reward[self.select_node_agent_id] = 0
@@ -579,7 +584,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
     def step_splitTask(self, action):
 
-        print("Split Point", action)
+        # print("Split Point", action)
         split_point= action
         self.split_point = split_point
         nodeChoosen = self.cur_node 
@@ -632,6 +637,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             response = utils_1.get_colored_graph(self.fun_id, self.fileName, self.functionName, self.color_assignment_map)
             done = True
             print("Colour map for {} file : {}".format(self.fun_id, response['Predictions'][0]['mapping']))
+            print("Number of split steps are {}, colour steps are {}".format(self.split_steps, self.colour_steps))
             self.colormap = json.dumps(response)
             # reward = self.total_reward
             self.obs.next_stage = 'end'
@@ -666,13 +672,15 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         if graph is None:
             path=self.training_graphs[self.graph_counter%self.graphs_num]
             # path="/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/graphs/IG/json/526.blender_r_756.ll_F15.json"
-            # path="/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/graphs/IG/json_new/500.perlbench_r_51.ll_F2.json"
+            # path="/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/graphs/IG/json/500.perlbench_r_51.ll_F2.json"
             # path = "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/graphs/IG/json_new/523.xalancbmk_r_392.ll_F21.json"
+            # path = "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/graphs/IG/json_new/523.xalancbmk_r_682.ll_F12.json"
             logging.debug('Graphs selected : {}'.format(path))
             print('Graphs selected : {}'.format(path))
             self.reset_count+=1
-            if self.reset_count % 5 == 0:
+            if self.reset_count % 10 == 0:
                 self.graph_counter+=1
+                self.graph_counter = self.graph_counter%200 
             try:
                 with open(path) as f:
                    graph = json.load(f)
@@ -691,7 +699,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         
         self.color_assignment_map = {}
         assert not bool(self.color_assignment_map), "Colour assignment map is non empty"
-        # print("color_assignment_map keys", list(self.color_assignment_map.keys()), list(self.color_assignment_map.values()))
         self.total_reward = 0
 
         logging.debug('reset the env.')
@@ -716,13 +723,14 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             #    if self.server_pid.poll() is not None:
             #        print('Force stop in reset')
             hostip = "0.0.0.0"
-            hostport = "50051"
+
+            hostport = str(int("50050") + self.worker_index)
             # self.port_number += 1
             # hostport=str(self.port_number)
             ipadd = "{}:{}".format(hostip, hostport)
             # print('Active thread before the server starts : ', threading.active_count())
             self.server_pid = utils_1.startServer(self.fileName, self.fun_id, ipadd)
-            print("Server pid", self.server_pid.pid)
+            print("Server pid", self.server_pid.pid, hostport)
             time.sleep(5)
             # print('Active thread mid the server starts : ', threading.active_count())
             self.queryllvm = RegisterAllocationClient(hostport=hostport)
@@ -730,6 +738,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.obs.stage = 'start'
         self.obs.next_stage = 'selectnode'
         self.split_steps =  0
+        self.colour_steps = 0
 
     def stable_grpc(self, op, register_id, split_point):
         attempt = 0
@@ -785,14 +794,14 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             self.obs.graph_topology.adjList[splited_node_idx] = []
             
             # logging.info('register splilted : {} '.format(register_id))
-            print('register splilted : {} at point({})'.format(register_id, split_point))
+            # print('register splilted : {} at point({})'.format(register_id, split_point))
             split_mtrix = self.obs.raw_graph_mat[splited_node_idx]
             CPY_INST_VEC=[0.001]*300
             splitpoints = self.obs.split_points[self.cur_node]
             split_point = splitpoints[split_point]
             new_nodes_matrix = split_mtrix[:split_point+1] + [CPY_INST_VEC], [CPY_INST_VEC] + split_mtrix[split_point+1:]
             # logging.info('length of the matrix : {} '.format(len(split_mtrix)))
-            print('length of the matrix : {} '.format(len(split_mtrix)))
+            # print('length of the matrix : {} '.format(len(split_mtrix)))
             new_nodes = 0
             def sc(vec, sw):
                 vec[-1] = sw
