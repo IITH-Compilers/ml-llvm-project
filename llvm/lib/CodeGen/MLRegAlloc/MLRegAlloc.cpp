@@ -352,13 +352,36 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
   LLVM_DEBUG(errs() << " Splitting at: "; idx.dump();
              LIS->getInstructionFromIndex(idx)->dump());
 
-  auto first = SE->openIntv();
-
   assert(useSlots[idxPos] == idx);
-  if (LIS->getInstructionFromIndex(useSlots[idxPos + 1])->getParent() != MBB)
-    SegStart = SE->enterIntvBefore(useSlots[idxPos + 1]);
-  else
-    SegStart = SE->enterIntvAfter(idx);
+
+  // Check if we can split at idx
+  auto baseIdx = useSlots[idxPos + 1].getBaseIndex();
+  VNInfo *ParentVNI = LREdit.getParent().getVNInfoAt(baseIdx);
+  if (ParentVNI) {
+    unsigned Original = VRM->getOriginal(splitReg);
+    LiveInterval &OrigLI = LIS->getInterval(Original);
+    VNInfo *OrigVNI = OrigLI.getVNInfoAt(baseIdx);
+
+    unsigned Reg = VirtReg->reg;
+    bool DidRemat = false;
+    if (OrigVNI) {
+      LiveRangeEdit::Remat RM(ParentVNI);
+      RM.OrigMI = LIS->getInstructionFromIndex(OrigVNI->def);
+      if (LREdit.canRematerializeAt(RM, OrigVNI, baseIdx, true)) {
+        LLVM_DEBUG(dbgs() << "Splitting at this point would not be useful");
+        return false;
+      }
+    }
+  }
+
+  auto first = SE->openIntv();
+  // if (LIS->getInstructionFromIndex(useSlots[idxPos + 1])->getParent() !=
+  // MBB)
+  //   SegStart = SE->enterIntvBefore(useSlots[idxPos + 1]);
+  // else
+  //   SegStart = SE->enterIntvAfter(idx);
+
+  SegStart = SE->enterIntvBefore(useSlots[idxPos + 1]);
   SlotIndex SegStop = SE->leaveIntvAfter(SA->getUseSlots().back());
   SE->useIntv(SegStart, SE->leaveIntvAfter(LIS->getInstructionIndex(
                             SA->getUseBlocks().back().MBB->back())));
