@@ -380,11 +380,12 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
   //   SegStart = SE->enterIntvBefore(useSlots[idxPos + 1]);
   // else
   //   SegStart = SE->enterIntvAfter(idx);
-
+  // for(auto i : )
   SegStart = SE->enterIntvBefore(useSlots[idxPos + 1]);
   SlotIndex SegStop = SE->leaveIntvAfter(SA->getUseSlots().back());
-  SE->useIntv(SegStart, SE->leaveIntvAfter(LIS->getInstructionIndex(
-                            SA->getUseBlocks().back().MBB->back())));
+  SE->useIntv(SegStart, SegStop);
+  // SE->useIntv(SegStart, SE->leaveIntvAfter(LIS->getInstructionIndex(
+  //                           SA->getUseBlocks().back().MBB->back())));
 
   if (LREdit.empty()) {
     LLVM_DEBUG(dbgs() << "All uses were copies.\n");
