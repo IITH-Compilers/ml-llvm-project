@@ -232,6 +232,50 @@ grpc::Status MLRA::codeGen(grpc::ServerContext *context,
   return Status::OK;
 }
 
+void MLRA::serializeRegProfData(
+    registerallocationinference::RegisterProfileList *response) {
+  for (auto rpm : regProfMap) {
+    auto regprofResponse = response->add_regprof();
+    auto rp = rpm.second;
+    regprofResponse->set_regid(rpm.first);
+
+    regprofResponse->set_cls(rp.cls);
+    regprofResponse->set_color(rp.color);
+
+    // Copying the vectors
+    for (auto vec : rp.vecRep) {
+      auto vector = regprofResponse->add_vectors();
+      google::protobuf::RepeatedField<double> vecs(vec.begin(), vec.end());
+      vector->mutable_vec()->Swap(&vecs);
+    }
+
+    // Copying the interferences
+    google::protobuf::RepeatedField<unsigned> interf(
+        rp.frwdInterferences.begin(), rp.frwdInterferences.end());
+    regprofResponse->mutable_interferences()->Swap(&interf);
+
+    // // Copying the splitslots
+    // google::protobuf::RepeatedField<unsigned>
+    // splitSlots(rp.splitSlots.begin(),
+    //                                                      rp.splitSlots.end());
+    // regprofResponse->mutable_splitslots()->Swap(&splitSlots);
+
+    // Copying the useDistances
+    google::protobuf::RepeatedField<unsigned> useDistances(
+        rp.useDistances.begin(), rp.useDistances.end());
+    regprofResponse->mutable_usedistances()->Swap(&useDistances);
+
+    // Set spillweights
+    regprofResponse->set_spillweight(rp.spillWeight);
+
+    // Copying the positional spill weights
+    google::protobuf::RepeatedField<float> posSpillWeights(
+        rp.spillWeights.begin(), rp.spillWeights.end());
+    regprofResponse->mutable_positionalspillweights()->Swap(&posSpillWeights);
+  }
+  response->set_result(true);
+}
+
 template <class T>
 void MLRA::sendRegProfData(T *response,
                            SmallSetVector<unsigned, 8> *updatedRegIdxs) {
@@ -1374,14 +1418,11 @@ void MLRA::inference() {
     registerallocationinference::Data *reply = &replyObj;
     grpc::ClientContext context;
     if (!isGraphSet) {
-      std::string graph = getDotGraphAsString();
-      // errs () << graph << "\n";
-      request->set_graph(graph);
+      serializeRegProfData(request);
       errs() << "Call model first time\n";
       Stub->getInfo(&context, requestObj, &replyObj);
       isGraphSet = true;
     } else {
-
       sendRegProfData<registerallocationinference::RegisterProfileList>(
           request);
       errs() << "Call model again\n";
