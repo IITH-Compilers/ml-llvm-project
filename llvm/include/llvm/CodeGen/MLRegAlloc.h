@@ -183,6 +183,8 @@ private:
   updateRegisterProfileAfterSplit(unsigned OldVReg,
                                   SmallVector<unsigned, 2> NewVRegs,
                                   SmallSetVector<unsigned, 8> &updatedRegs);
+  void serializeRegProfData(
+      registerallocationinference::RegisterProfileList *response);
   template <class T>
   void sendRegProfData(T *response,
                        SmallSetVector<unsigned, 8> *updatedRegs = nullptr);
