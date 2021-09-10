@@ -6,12 +6,22 @@ import json
 import glob
 import time
 import numpy as np
+from typing import Dict as type_dict
+import psutil
+import gc
 
 import ray
 from ray import tune
 from ray.tune import function
 from ray.rllib.agents import ppo
 from ray.rllib.agents.dqn.simple_q_torch_policy import SimpleQTorchPolicy
+
+from ray.rllib.agents.callbacks import DefaultCallbacks
+from ray.rllib.env import BaseEnv
+from ray.rllib.evaluation import MultiAgentEpisode, RolloutWorker
+from ray.rllib.policy import Policy
+from ray.rllib.policy.sample_batch import SampleBatch
+
 from gym.spaces import Discrete, Box, Dict
 from simple_q import SimpleQTrainer, DEFAULT_CONFIG
 # from env import GraphColorEnv, set_config
@@ -38,13 +48,15 @@ def experiment(config):
     if checkpoint is not None:
         train_agent.restore(checkpoint)            
 
-    for i in range(iterations):            
+    for i in range(iterations):
         train_results = train_agent.train()
+        # auto_garbage_collect()
         if i == iterations - 1 or train_results['episodes_total']%100 == 0:
             checkpoint = train_agent.save(tune.get_trial_dir())
             # print("***************Checkpoint****************", checkpoint)
         tune.report(**train_results)
         if train_results['episodes_total'] > 9999:
+            print("Traning Ended")
             checkpoint = train_agent.save(tune.get_trial_dir())
             break
     train_agent.stop()
@@ -66,6 +78,32 @@ def experiment(config):
     # results = {**train_results, **eval_results}
     # tune.report(results)
 
+def auto_garbage_collect(pct=50.0):
+    """
+    auto_garbage_collection - Call the garbage collection if memory used is greater than 80% of total available memory.
+                              This is called to deal with an issue in Ray not freeing up used memory.
+
+        pct - Default value of 80%.  Amount of memory in use that triggers the garbage collection call.
+    """
+    if psutil.virtual_memory().percent >= pct:
+        gc.collect()
+    return
+
+class MyCallbacks(DefaultCallbacks):
+    def  on_episode_start(self, *, worker: RolloutWorker, base_env: BaseEnv,
+                       policies: type_dict[str, Policy], episode: MultiAgentEpisode,
+                       env_index: int, **kwargs):
+        # print("Env object", base_env.get_unwrapped())
+        if base_env.get_unwrapped()[0].server_pid is not None:
+            episode.hist_data["server_pid"] = [base_env.get_unwrapped()[0].server_pid.pid]
+        else:
+            episode.hist_data["server_pid"] = [0]
+    
+    def on_sample_end(self, *, worker: "RolloutWorker", samples: SampleBatch,
+                    **kwargs):
+        print("Sample Batch size is {} bytes".format(samples.size_bytes()))
+
+
 
 if __name__ == "__main__":
     args = parser.parse_args()
@@ -84,7 +122,7 @@ if __name__ == "__main__":
 
 
 
-    ray.init()
+    ray.init(object_store_memory=10000000000)
     config = DEFAULT_CONFIG.copy()
     config["train-iterations"] = args.train_iterations
 
@@ -103,6 +141,7 @@ if __name__ == "__main__":
     # config["env_config"]["dataset"] = "/home/cs20mtech12003/ML-Register-Allocation/data/test_dict/"
     config["env_config"]["graphs_num"] = 50000
     config["env_config"]["max_usepoint_count"] = 200
+    config["callbacks"] = MyCallbacks
     # training_graphs=glob.glob(os.path.join(dataset, 'graphs/IG/json_new/*.json'))
 
     ModelCatalog.register_custom_model("select_node_model", SelectNodeNetwork)
@@ -115,12 +154,12 @@ if __name__ == "__main__":
     box_1000d = Box(
             -100000.0, 100000.0, shape=(1000, config["env_config"]["state_size"]), dtype=np.float32)
 
-    obs_space = Dict({
+    obs_colour_node = Dict({
         "action_mask": Box(0, 1, shape=(config["env_config"]["action_space_size"],)),
         "node_properties": Box(-100000.0, 100000.0, shape=(3,)), 
         "state": box_obs
         })
-    obs_space_1000d = Dict({
+    obs_select_node = Dict({
         "spill_weights": Box(-100000.0, 100000.0, shape=(1000,)), 
         "action_mask": Box(0, 1, shape=(1000,)),
         "state": box_1000d
@@ -148,7 +187,7 @@ if __name__ == "__main__":
 
 
     policies = {
-        "select_node_policy": (None, obs_space_1000d,
+        "select_node_policy": (None, obs_select_node,
                                 Discrete(1000), {
                                     "gamma": 0.9,
                                     "model": {
@@ -172,7 +211,7 @@ if __name__ == "__main__":
                                         },
                                     },
                                 }),
-        "colour_node_policy": (None, obs_space,
+        "colour_node_policy": (None, obs_colour_node,
                                 Discrete(config["env_config"]["action_space_size"]), {
                                     "gamma": 0.9,
                                     "model": {
@@ -212,5 +251,6 @@ if __name__ == "__main__":
         experiment,
         config=config,
         resources_per_trial=SimpleQTrainer.default_resource_request(config))
+        # resources_per_trial={"cpu": 16, "gpu": 2})
         # file_count += 1
     print("Total time in seconds is: ", (time.time() - start_time))

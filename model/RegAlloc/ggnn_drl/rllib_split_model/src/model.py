@@ -88,8 +88,8 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
         for i in range(input_dict["obs"]["action_mask"].shape[0]):
             action_mask = input_dict["obs"]["action_mask"][i, :]
 
-            if all(v == 0 for v in action_mask):
-                print("Mask is all zero node select")
+            # if all(v == 0 for v in action_mask):
+            #     print("Mask is all zero node select")
 
             for j in range(action_mask.shape[0]):
                 if action_mask[j] == 0:                    
@@ -123,7 +123,7 @@ class ColorNetwork(TorchModelV2, nn.Module):
         
     def forward(self, input_dict, state, seq_lens):
         """Build a network that maps state -> action values."""
-        print("On GPU", next(self.parameters()).is_cuda, input_dict["obs"]["state"].is_cuda)
+        # print("On GPU", next(self.parameters()).is_cuda, input_dict["obs"]["state"].is_cuda)
         
         # if next(self.parameters()).is_cuda and not input_dict["obs"]["state"].is_cuda:
         #     input_dict["obs"]["state"] = input_dict["obs"]["state"].to("cuda:0")
@@ -148,7 +148,7 @@ class ColorNetwork(TorchModelV2, nn.Module):
             if all(v == 0 for v in action_mask):
                 x[i, :] =  torch.ones_like(action_mask)*FLOAT_MIN
                 x[i, 0] = 1.0
-                print("Colour node all zero")
+                # print("Colour node all zero")
                 
             else:
                 for j in range(action_mask.shape[0]):
@@ -196,8 +196,8 @@ class SplitNodeNetwork(TorchModelV2, nn.Module):
         for i in range(input_dict["obs"]["action_mask"].shape[0]):
             action_mask = input_dict["obs"]["action_mask"][i, :]
 
-            if all(v == 0 for v in action_mask):
-                print("Mask is all zero node spliting")
+            # if all(v == 0 for v in action_mask):
+            #     print("Mask is all zero node spliting")
 
             for j in range(action_mask.shape[0]):
                 if action_mask[j] == 0:                    

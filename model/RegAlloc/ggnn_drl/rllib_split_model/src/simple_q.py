@@ -38,7 +38,7 @@ DEFAULT_CONFIG = with_common_config({
         # Config for the Exploration class' constructor:
         "initial_epsilon": 1.0,
         "final_epsilon": 0.02,
-        "epsilon_timesteps": 30000,  # Timesteps over which to anneal epsilon.
+        "epsilon_timesteps": 2000000,  # Timesteps over which to anneal epsilon.
 
         # For soft_q, use:
         # "exploration_config" = {
@@ -55,14 +55,14 @@ DEFAULT_CONFIG = with_common_config({
     # not affect learning, only the length of iterations.
     "timesteps_per_iteration": 0,
     # Update the target network every `target_network_update_freq` steps.
-    "target_network_update_freq": 256,
+    "target_network_update_freq": 512,
 
     "metrics_smoothing_episodes": 1,
 
     # === Replay buffer ===
     # Size of the replay buffer. Note that if async_updates is set, then
     # each worker will have a replay buffer of this size.
-    "buffer_size": 50000,
+    "buffer_size": 10000,
     # The number of contiguous environment steps to replay at once. This may
     # be set to greater than 1 to support recurrent models.
     "replay_sequence_length": 1,
@@ -80,14 +80,14 @@ DEFAULT_CONFIG = with_common_config({
     # If not None, clip gradients during optimization at this value
     "grad_clip": 40,
     # How many steps of the model to sample before learning starts.
-    "learning_starts": 128,
+    "learning_starts": 64,
     # Update the replay buffer with this many samples at once. Note that
     # this setting applies per-worker if num_workers > 1.
-    "rollout_fragment_length": 32,
+    "rollout_fragment_length": 64,
     # Size of a batch sampled from replay buffer for training. Note that
     # if async_updates is set, then each worker returns gradients for a
     # batch of this size.
-    "train_batch_size": 64,
+    "train_batch_size": 320,
 
     "batch_mode": "complete_episodes",
     
@@ -106,13 +106,14 @@ DEFAULT_CONFIG = with_common_config({
     # Number of workers for collecting samples with. This only makes sense
     # to increase if your environment is particularly slow to sample, or if
     # you"re using the Async or Ape-X optimizers.
-    "num_workers": 1,
+    "num_workers": 5,
     # Prevent iterations from going lower than this time span
     "min_iter_time_s": 1,
 
-    "num_gpus": 0,
+    "num_gpus": 2,
 
-    "num_gpus_per_worker": 0,
+    # "num_cpus_for_driver": 4,
+    # "num_gpus_per_worker": 0,
 
 })
 # __sphinx_doc_end__
