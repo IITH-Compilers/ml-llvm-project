@@ -39,7 +39,11 @@ message RegisterProfileList {
     repeated vector vectors=8;
   }
   repeated RegisterProfile regProf=1;
-  bool result=2;
+  string funcName=2;
+  string fileName=3;
+  uint32 funid=4;
+  bool result=5;
+  bool new=6;
 }
 
 message Data {

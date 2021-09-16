@@ -22,8 +22,8 @@ import signal
 from gym.spaces import Discrete, Box
 from memory_profiler import profile
 
-from ggnn import constructGraph
-from ggnn_1 import get_observations, GatedGraphNeuralNetwork, constructVectorFromMatrix, AdjacencyList
+# from ggnn import constructGraph
+from ggnn_1 import get_observations, get_observationsInf, GatedGraphNeuralNetwork, constructVectorFromMatrix, AdjacencyList
 from register_action_space import RegisterActionSpace
 
 import ray
@@ -51,7 +51,7 @@ config_path=None
 
 logger = logging.getLogger(__file__)
 # logging.basicConfig(filename=os.path.join("/home/cs18mtech11030/project/grpc_llvm/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src", 'running.log'), format='%(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
-# logging.basicConfig(filename=os.path.join("/home/cs20mtech12003/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib-basic/src", 'running.log'), format='%(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
+logging.basicConfig(filename='running.log', format='%(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
 
 
 def set_config(path):
@@ -179,12 +179,32 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         action_mask = self.createNodeSelectMask()
         spill_weight_list = self.getSpillWeightListExpanded()
         state = self.obs
-        hidden_state =  self.ggnn(initial_node_representation=state.initial_node_representation, annotations=state.annotations, adjacency_lists=state.adjacency_lists)
-        node_mat = hidden_state.detach().numpy()
+        # import math
+        # for i, vec in enumerate(state.initial_node_representation):
+        #     for v in vec:
+        #         if math.isnan(v):
+        #             print('multiagentEnv state.initial_node_representation ****NAN****', v, i)
+
+        # for i, vec in enumerate(state.annotations):
+        #     for v in vec:
+        #         if math.isnan(v):
+        #             print('multiagentEnv state.annotation ****NAN****', v, i)
+
+        
+        self.hidden_state =  self.ggnn(initial_node_representation=state.initial_node_representation, annotations=state.annotations, adjacency_lists=state.adjacency_lists)
+        node_mat = self.hidden_state.detach().numpy()
+        # print(node_mat)
+        print('multiagentEnv : ',node_mat.shape)
+        # for i, vec in enumerate(node_mat):
+        #     for v in vec:
+        #         if math.isnan(v):
+        #             print('multiagentEnv ****NAN****', v, i)
+
         cur_obs = np.zeros((1000, 300))
         cur_obs[0:node_mat.shape[0], :] = node_mat
         # print("hidden_state", node_mat.shape, cur_obs[1, :10])
-
+        
+        
         obs = {
             self.select_node_agent_id: { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(action_mask), 'state' : cur_obs}
         }
@@ -203,21 +223,21 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         if self.split_node_agent_id in action_dict:
             return self._split_node_step(action_dict[self.split_node_agent_id])
 
-    def constraint_selectNode(self, state, out):
-        # print("&&&&&&&&&&&& state, action &&&&&&&&", state.shape, out)
-        masked_select_out = out[state.graph_topology.get_eligibleNodes()]
-        rel_indexchoose = torch.argmax(masked_select_out)
-        Qvalue, rel_indexchoose = self.getMaxQvalueAndActions(masked_select_out)
-        node_index = state.graph_topology.get_eligibleNodes()[rel_indexchoose]
-        return node_index, Qvalue
+    # def constraint_selectNode(self, state, out):
+    #     # print("&&&&&&&&&&&& state, action &&&&&&&&", state.shape, out)
+    #     masked_select_out = out[state.graph_topology.get_eligibleNodes()]
+    #     rel_indexchoose = torch.argmax(masked_select_out)
+    #     Qvalue, rel_indexchoose = self.getMaxQvalueAndActions(masked_select_out)
+    #     node_index = state.graph_topology.get_eligibleNodes()[rel_indexchoose]
+    #     return node_index, Qvalue
     
     def createNodeSelectMask(self):
-        mask = [0]*1000
+        mask = [0.0]*1000
         eligibleNodes = self.obs.graph_topology.get_eligibleNodes()
         assert len(eligibleNodes) < 1000, "Graph has more then 1000 nodes"
         for inx, x in enumerate(eligibleNodes):            
             if x in eligibleNodes:
-                mask[x] = 1
+                mask[x] = 1.0
         if all(v == 0 for v in mask):
             print("eligibleNodes", eligibleNodes)
             # assert False, "No node elegible to select"
@@ -302,6 +322,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.obs.graph_topology.UpdateVisitList(self.cur_node)
         self.virtRegId = self.obs.idx_nid[self.cur_node]
         print("Node selected = {}, corresponding register id = {}".format(action, self.virtRegId))
+        logging.info("Node selected = {}, corresponding register id = {}".format(action, self.virtRegId))
         state = self.obs
         hidden_state =  self.ggnn(initial_node_representation=state.initial_node_representation, annotations=state.annotations, adjacency_lists=state.adjacency_lists)
         self.cur_obs = hidden_state[self.cur_node][0:300]
@@ -495,13 +516,13 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
     def _split_node_step(self, action):
         # self.cur_obs = self.flat_env.reset()
-        # print(self.virtRegId, self.obs.idx_nid[self.cur_node])
+        print(self.virtRegId, self.obs.idx_nid[self.cur_node], self.cur_node)
+        print(self.obs.idx_nid, self.obs.nid_idx)
         assert self.virtRegId == self.obs.idx_nid[self.cur_node], "Virtual should be same." # 
         splitpoints = self.obs.split_points[self.cur_node]
         done = False
-        # print("****Split index******", len(splitpoints.shape), splitpoints.size)
+        print("****Split index******", len(splitpoints), splitpoints)
         userDistanceDiff = 0
-        splitpoints = self.obs.split_points[self.cur_node]
         split_index = action + 1
         split_point = split_index
         split_reward, split_done = self.step_splitTask(split_point)
@@ -509,7 +530,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
 
         if userDistanceDiff > 1000:        
-            # print('userDistanceDiff', userDistanceDiff, self.spill_weight_diff)
+            print('userDistanceDiff', userDistanceDiff, self.spill_weight_diff)
             userDistanceDiff = 1000
         discount_factor = (1.001*self.split_steps)/10
         # discount_factor = 0
@@ -726,23 +747,16 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         
         self.colormap = None
         self.graph = graph
-        self.fileName = graph['graph'][1][1]['FileName'].strip('\"')
-        self.functionName = graph['graph'][1][1]['Function'].strip('\"')
-        self.fun_id = graph['graph'][1][1]['Function_ID']
-        self.num_nodes = len(self.graph['nodes'])
-        self.obs = get_observations(self.graph)
-        print("Number of node in graph", self.num_nodes)
         if self.mode != 'inference':
+            self.fileName = graph['graph'][1][1]['FileName'].strip('\"')
+            self.functionName = graph['graph'][1][1]['Function'].strip('\"')
+            self.fun_id = graph['graph'][1][1]['Function_ID']
+            self.num_nodes = len(self.graph['nodes'])
+            self.obs = get_observations(self.graph)
+            print("Number of node in graph", self.num_nodes)
             if self.server_pid is not None:
                 print('terminate the pid if alive : {}'.format(self.server_pid.pid))
-                # self.server_pid.terminate()
                 os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
-            #    self.server_pid.kill()
-            #    print('Force Server killed 1')
-            #    self.server_pid.communicate()
-            #    print('Force Server killed 2')
-            #    if self.server_pid.poll() is not None:
-            #        print('Force stop in reset')
             hostip = "0.0.0.0"
 
             hostport = str(int("50060") + self.worker_index)
@@ -755,6 +769,12 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             time.sleep(5)
             # print('Active thread mid the server starts : ', threading.active_count())
             self.queryllvm = RegisterAllocationClient(hostport=hostport)
+        else:
+            self.fileName = graph.fileName
+            self.functionName = graph.funcName
+            self.fun_id = graph.funid    
+            self.num_nodes = len(graph.regProf)
+            self.obs = get_observationsInf(self.graph)
         
         self.obs.stage = 'start'
         self.obs.next_stage = 'selectnode'
@@ -812,7 +832,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         if updated_graphs.result:
             # logging.info(updated_graphs)            
             register_id = self.obs.idx_nid[self.cur_node]
-            splited_node_idx = self.obs.nid_idx[str(register_id)]
+            # print(self.obs.nid_idx)
+            splited_node_idx = self.obs.nid_idx[register_id]
             self.obs.graph_topology.indegree[splited_node_idx] = 0
             self.obs.graph_topology.adjList[splited_node_idx] = []
             
@@ -831,7 +852,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 return vec
             # print("Node Profile", updated_graphs.regProf)
             for node_prof in updated_graphs.regProf:
-                nodeId = str(node_prof.regID)
+                nodeId = node_prof.regID
                 # print("Node prof", node_prof.regID)
                 
                 if nodeId not in self.obs.nid_idx.keys():
@@ -886,11 +907,11 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
             logging.debug('update the interfering node data.')
             for node_prof in updated_graphs.regProf:
-                nodeId = str(node_prof.regID)
+                nodeId = node_prof.regID
                 interfering_node_idx = self.obs.nid_idx[nodeId]
 
 
-                self.obs.graph_topology.adjList[interfering_node_idx] = list(map(lambda x: self.obs.nid_idx[str(x)], node_prof.interferences))
+                self.obs.graph_topology.adjList[interfering_node_idx] = list(map(lambda x: self.obs.nid_idx[x], node_prof.interferences))
                 self.obs.graph_topology.indegree[interfering_node_idx] = len(self.obs.graph_topology.adjList[interfering_node_idx])
                 
                 self.obs.spill_cost_list[interfering_node_idx] = node_prof.spillWeight

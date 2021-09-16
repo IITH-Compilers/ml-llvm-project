@@ -150,7 +150,7 @@ MLRA::MLRA() {
   loadTargetRegisterConfig(std::string(COLORMAP_PATH));
   symbolic = new MIR2Vec_Symbolic(VOCAB_PATH);
 
-  SetStub<registerallocationinference::RegisterAllocationInference>();
+  SetStub<registerallocationinference::RegisterAllocationInference>(mlra_server_address);
 
   Stub = (registerallocationinference::RegisterAllocationInference::Stub *)
       getStub();
@@ -235,8 +235,11 @@ grpc::Status MLRA::codeGen(grpc::ServerContext *context,
 void MLRA::serializeRegProfData(
     registerallocationinference::RegisterProfileList *response) {
   for (auto rpm : regProfMap) {
-    auto regprofResponse = response->add_regprof();
     auto rp = rpm.second;
+    if ( rp.cls == "Phy"  && rp.frwdInterferences.begin() == rp.frwdInterferences.end()){
+        continue;
+    }
+    auto regprofResponse = response->add_regprof();
     regprofResponse->set_regid(rpm.first);
 
     regprofResponse->set_cls(rp.cls);
@@ -274,6 +277,7 @@ void MLRA::serializeRegProfData(
     regprofResponse->mutable_positionalspillweights()->Swap(&posSpillWeights);
   }
   response->set_result(true);
+  response->set_new_(true);
 }
 
 template <class T>
@@ -289,8 +293,10 @@ void MLRA::sendRegProfData(T *response,
     regIdxs = *updatedRegIdxs;
 
   for (auto reg : regIdxs) {
-    auto regprofResponse = response->add_regprof();
     auto rp = regProfMap[reg];
+    if (rp.frwdInterferences.begin() == rp.frwdInterferences.end())
+            continue;
+    auto regprofResponse = response->add_regprof();
     regprofResponse->set_regid(reg);
 
     // Copying the interferences
@@ -1425,6 +1431,7 @@ void MLRA::inference() {
     } else {
       sendRegProfData<registerallocationinference::RegisterProfileList>(
           request);
+      request->set_new_(false);
       errs() << "Call model again\n";
       Stub->getInfo(&context, requestObj, &replyObj);
     }

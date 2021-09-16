@@ -100,10 +100,22 @@ class GatedGraphNeuralNetwork(nn.Module):
         
         # logging.debug('Annotaion shape {shape} and value {value} '.format(shape=annotations.shape, value=annotations))
         # logging.debug(initial_node_representation.shape)
+        # print(initial_node_representation[])
+        # import math
+        # for i, vec in enumerate(annotations):
+        #     print('first annotation', vec, i)
+        #     for v in vec:
+        #         if math.isnan(v):
+        #             print('ggnn_1 computeGraph ****NAN****', v, i)
         initial_node_representation = torch.cat([initial_node_representation, annotations], dim=1)
         # logging.debug('DLOOP H+A {}'.format(initial_node_representation.shape))
         
         initial_node_representation = self.hidden_layer(initial_node_representation) #.to(device)
+        # for i, vec in enumerate(initial_node_representation):
+        #     print('23232', vec)
+        #     for v in vec:
+        #         if math.isnan(v):
+        #             print('ggnn_1 computeGraph ****NAN****', v, i)
 
 
         init_node_repr_size = initial_node_representation.size(1)
@@ -161,38 +173,59 @@ class GatedGraphNeuralNetwork(nn.Module):
                     if adjacency_list_for_edge_type.edge_num > 0:
                         # shape [E]
                         edge_sources = adjacency_list_for_edge_type[:, 0]
+                        # print(edge_sources)
+                        assert not torch.isnan(edge_sources).any(), "NAN is presertnt"
                         # print('edge source : {}'.format(len(edge_sources)))
                         # shape [E, D]
                         edge_source_states = node_states_for_this_layer[edge_sources]
+                        # [print("edge_source_states", vec, vec.shape, edge_source_states.shape, i) for i, vec in enumerate(edge_source_states)]
+                        assert not torch.isnan(edge_source_states).any(), "NAN is presertnt"
 
                         f_state_to_message = self.state_to_message_linears[layer_idx][edge_type_idx]
+                        # print("", f_state_to_message, f_state_to_message.weight, layer_idx, edge_type_idx)
+                        assert not torch.isnan(f_state_to_message.weight).any(), "NAN is presertnt"
                         # Shape [E, D]
-                        all_messages_for_edge_type = self.state_to_message_dropout_layer(f_state_to_message(edge_source_states))
-
+                        fvec = f_state_to_message(edge_source_states)
+                        # [print("fvec",vec, vec.shape, fvec.shape, i) for i, vec in enumerate(fvec)]
+                        assert not torch.isnan(fvec).any(), "NAN is presertnt"
+                        all_messages_for_edge_type = self.state_to_message_dropout_layer(fvec)
+                        # [print(vec, vec.shape, all_messages_for_edge_type.shape, i) for i, vec in enumerate(all_messages_for_edge_type)]
+                        assert not torch.isnan(all_messages_for_edge_type).any(), "NAN is presertnt"
+                      
                         messages.append(all_messages_for_edge_type)
                         # message_source_states.append(edge_source_states)
 
                 # shape [M, D]
                 messages: torch.FloatTensor = torch.cat(messages, dim=0)
-
+                 
+                assert not torch.isnan(messages).any(), "NAN is presertnt"
                 # Sum up messages that go to the same target node
                 # shape [V, D]
                 incoming_messages = torch.zeros(node_num, messages.size(1), device=ndevice)
                 incoming_messages = incoming_messages.scatter_add_(0,
                                                                    message_targets.unsqueeze(-1).expand_as(messages),
                                                                    messages)
+                assert not torch.isnan(incoming_messages).any(), "NAN is presertnt"
 
                 # shape [V, D * (1 + num of residual connections)]
                 # incoming_information = torch.cat(layer_residual_states + [incoming_messages], dim=-1)
                 incoming_messages = torch.cat(layer_residual_states + [incoming_messages], dim=-1)
+                assert not torch.isnan(incoming_messages).any(), "NAN is presertnt"
                 
                 # print('incoming_messages : {}'.format(incoming_messages.shape))
                 # pass updated vertex features into RNN cell
                 # Shape [V, D]
                 # updated_node_states = self.rnn_cells[layer_idx](incoming_information, node_states_for_this_layer)
                 updated_node_states = self.rnn_cells[layer_idx](incoming_messages, node_states_for_this_layer)
+                assert not torch.isnan(updated_node_states).any(), "NAN is presertnt"
                 updated_node_states = self.rnn_dropout_layer(updated_node_states)
+                assert not torch.isnan(updated_node_states).any(), "NAN is presertnt"
                 node_states_for_this_layer = updated_node_states
+                # for i, vec in enumerate(node_states_for_this_layer):
+                #    for v in vec:
+                #        if math.isnan(v):
+                #            print('ggnn_1 computeGraph layer_idx timestamp ****NAN****', v, i, layer_idx,t)
+                #            break
 
             # node_states_per_layer.append(node_states_for_this_layer)
         
@@ -207,7 +240,12 @@ class GatedGraphNeuralNetwork(nn.Module):
         # print('return shape {}'.format(node_states_for_this_layer.shape))
 
         initial_node_representation = node_states_for_this_layer.detach()
-        
+        # for i, vec in enumerate(initial_node_representation):
+        #     for v in vec:
+        #         if math.isnan(v):
+        #             print('ggnn_1 computeGraph last ****NAN****', v, i)
+        #             break
+       
         return node_states_for_this_layer
 
     def updateAnnotation(self, nodeChoosen, action):
@@ -243,6 +281,150 @@ class GatedGraphNeuralNetwork(nn.Module):
 def parseProp(val):
     val = val.strip()
     return val[1: len(val) - 1]
+
+def get_observationsInf(graph):
+    nodes = graph.regProf
+    # adjlist = graph['adjacency']
+
+    num_nodes = len(nodes)
+    
+    initial_node_representation = []
+    
+    idx_nid = {}
+    nid_idx = {}
+    # self.unique_type_map = {'pair' : []}
+    all_edges = []
+    spill_cost_list = []
+    reg_class_list = []
+    color_list = []
+    # allocate_type_list = []
+    split_points_list = []
+    raw_graph_mat = []
+    positionalSpillWeights_list = []
+    for idx, node in enumerate(nodes):
+        
+        nodeId = node.regID
+        # properties = re.findall("{[^}]*}", node['label'])
+        # print(properties)
+        # properties = properties.split()
+        # logging.debug('Node idx={} | {}'.format(idx, properties))
+        regClass = node.cls #parseProp(properties[0]) 
+        spill_cost = node.spillWeight #parseProp(properties[1])
+        color = node.color # parseProp(properties[2])
+        split_points = node.useDistances
+        positionalSpillWeights = node.positionalSpillWeights
+        # if len(properties) > 3:
+        #     # print(properties)
+        #     split_points = parseProp(properties[3])
+        #     positionalSpillWeights = parseProp(properties[4])
+        #     # print("split_points for node id {} are {} {}".format(nodeId, split_points, positionalSpillWeights))
+        #     if len(split_points) > 0:
+        #         split_points = sorted(list(map(lambda x : int(x), split_points.split(', '))))
+        #     if len(positionalSpillWeights) > 0:
+        #         positionalSpillWeights = sorted(list(map(lambda x : float(x), positionalSpillWeights.split(', '))))
+            
+            
+        
+        split_points_list.append(np.array(split_points))
+        positionalSpillWeights_list.append(np.array(positionalSpillWeights))
+
+        # logging.debug('Allocation type : {}'.format(allocate_type))
+        # print(spill_cost, type(spill_cost))
+        if spill_cost in [float('inf'), "inf", "INF"]:
+            spill_cost = float(1)
+        # node['label'] = re.sub(" {.*} ", '', node['label'])
+        
+        if len(node.vectors) > 0:
+            # print("Node vectors : ", node.vectors[0].vec)
+            node_mat = [ vector.vec for vector in node.vectors]
+        else:
+            node_mat = [[0]*300]
+        
+        # print(node_mat)
+        # print(type(node_mat)) 
+        raw_graph_mat.append(node_mat)
+        node_tansor_matrix = torch.FloatTensor(node_mat)
+        # print(node_tansor_matrix.shape)
+        nodeVec = constructVectorFromMatrix(node_tansor_matrix)
+        reg_class_list.append(regClass)
+        spill_cost_list.append(spill_cost)
+        color_list.append(color)
+        # allocate_type_list.append(allocate_type)
+        
+        # print(nodeVec)
+        logging.debug(nodeVec)
+        initial_node_representation.append(nodeVec)
+        nid_idx[nodeId] = idx
+        idx_nid[idx] = nodeId
+
+        assert not torch.isnan(nodeVec).any(), "Nan is present"
+        
+    for i, node in enumerate(nodes):
+        for nlink in node.interferences:
+            neighId = nid_idx[nlink]
+            if i != neighId:
+                all_edges.append((i, neighId))
+                all_edges.append((neighId, i))
+
+    # print("initial_node_representation shape",len(initial_node_representation), len(initial_node_representation[0]), len(initial_node_representation[36]))
+    initial_node_representation = torch.stack(initial_node_representation, dim=0)# .to(device)
+    
+    # import math
+    # for i, vec in enumerate(node_mat):
+    #     # print('ggnn_1 ',vec)
+    #     for v in vec:
+    #         if math.isnan(v):
+    #             print('ggnn_1 node_mat ****NAN****', v, i)
+    #             break
+    # for i, vec in enumerate(initial_node_representation):
+    #     print('ggnn_1 ',vec)
+    #     for v in vec:
+    #         if math.isnan(v):
+    #             print('ggnn_1 initial_node_representation ****NAN****', v, i)
+    #             break
+    print(__file__, initial_node_representation.shape)
+    logging.debug("Shape of the hidden nodes matrix N X D : {}".format(initial_node_representation.shape)) 
+    # Create aGraph obj for getting the Zero incoming egdes nodes
+    graph_topology = Graph(all_edges,  num_nodes)
+
+    logging.debug('All links : {}'.format(all_edges))
+    logging.debug("num_nodes : {}".format(num_nodes) )
+    logging.debug('All edges num : {}'.format(len(all_edges)))
+    
+    assert not np.isnan(spill_cost_list).any(), "Spill cost is NAN"
+    annotation_zero = np.zeros((num_nodes, 3))
+    annotation_zero[:, 0] = spill_cost_list
+    annotations = torch.FloatTensor(annotation_zero)# .to(device)
+    
+    '''
+    Support for already allocated registers.
+    Mark the nodes as visted in the graph and 
+    ggnn so that removed from action space
+    '''
+    
+    for node_idx in range(num_nodes):
+        if reg_class_list[node_idx] == 'Phy':
+            # color, phyReg = map( lambda x : int(x.split('=')[-1]), allocate_type_list[node_idx].split(';'))
+            color = color_list[node_idx]
+            logging.debug('creating graph; Marking node_idx={} with color={}'.format(node_idx, color))
+            
+            graph_topology.UpdateVisitList(node_idx)
+            graph_topology.UpdateColorVisitedNode(node_idx, color) 
+            # ggnn.updateAnnotation(node_idx, color)
+            annotations[node_idx][0] =  torch.tensor(0)# .to(device)
+            # set the color assigned to the node
+            annotations[node_idx][1] = torch.tensor(color)# .to(device)
+    
+    adjacency_lists = [ AdjacencyList(node_num=num_nodes, adj_list=all_edges, device=device)]
+    assert not torch.isnan(adjacency_lists[0].data).any(), "AdjacencyList is NAN"
+    assert not torch.isnan(annotations).any(), "Annotation is NAN"
+     
+    '''
+    Main call to the compute representation
+    '''
+    obs = {'raw_graph_mat':raw_graph_mat, 'initial_node_representation':initial_node_representation, 'annotations':annotations, 'adjacency_lists' : adjacency_lists,  'graph_topology':graph_topology, 'spill_cost_list' : spill_cost_list, 'reg_class_list' : reg_class_list, 'nid_idx':nid_idx, 'idx_nid':idx_nid, 'split_points' : split_points_list, "positionalSpillWeights": positionalSpillWeights_list}
+    obs = Namespace(**obs) 
+    return obs
 
 def get_observations(graph):
     nodes = graph['nodes']
@@ -354,6 +536,7 @@ def get_observations(graph):
     for node_idx in range(num_nodes):
         if reg_class_list[node_idx] == 'Phy':
             color, phyReg = map( lambda x : int(x.split('=')[-1]), allocate_type_list[node_idx].split(';'))
+            # color = color_list[node_idx]
             logging.debug('creating graph; Marking node_idx={} with color={}'.format(node_idx, color))
             
             graph_topology.UpdateVisitList(node_idx)

@@ -7,8 +7,8 @@ import traceback
 import json
 import ray
 import os
-sys.path.append('../../model/RegAlloc/ggnn_drl/rllib_split_model/src')
-# sys.path.append('/home/cs20mtech12003/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src')
+# sys.path.append(os.path.realpath('../../model/RegAlloc/ggnn_drl/rllib_split_model/src'))
+sys.path.append('/home/venkat/IF-DV/Rohit/regAlloc/iith-compilers/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src')
 # import inference
 import rollout as inference
 # import register_action_space
@@ -20,7 +20,8 @@ class service_server(RegisterAllocationInference_pb2_grpc.RegisterAllocationInfe
         # model_path = '/home/cs18mtech11030/ray_results/experiment_2021-07-24_17-11-31/experiment_HierarchicalGraphColorEnv_16ff3_00000_0_2021-07-24_17-11-31/checkpoint_000001/checkpoint-1'
         # model_path = '/home/cs18mtech11030/ray_results/model/experiment_2021-08-06_09-58-35/experiment_HierarchicalGraphColorEnv_c3fda_00000_0_2021-08-06_09-58-36/checkpoint_000005/checkpoint-5'
         # model_path = '/home/cs18mtech11030/ray_results/model/experiment_2021-08-06_23-02-18/experiment_HierarchicalGraphColorEnv_3f58c_00000_0_2021-08-06_23-02-18/checkpoint_000010/checkpoint-10'
-        model_path = '/home/cs18mtech11030/ray_results/model/experiment_2021-08-09_16-11-00/experiment_HierarchicalGraphColorEnv_49c97_00000_0_2021-08-09_16-11-01/checkpoint_000100/checkpoint-100'
+        # model_path = '/home/cs18mtech11030/ray_results/model/experiment_2021-08-09_16-11-00/experiment_HierarchicalGraphColorEnv_49c97_00000_0_2021-08-09_16-11-01/checkpoint_000100/checkpoint-100'
+        model_path = '/home/venkat/ray_results/split_model/experiment_2021-09-05_01-20-13/experiment_HierarchicalGraphColorEnv_521df_00000_0_2021-09-05_01-20-14/checkpoint_000040/checkpoint-40'
         # self.inference_model = inference.Inference(model_path)
         args = {'no_render' : True, 'checkpoint' : model_path, 'run' : 'SimpleQ' , 'env' : '' , 'config' : {}, 'video_dir' : '', 'steps' : 0, 'episodes' : 0}
         args = Namespace(**args)
@@ -85,9 +86,9 @@ class service_server(RegisterAllocationInference_pb2_grpc.RegisterAllocationInfe
     def getInfo(self, request, context):
         try:
             print('------Hi---------')
-            graph = request.graph
+            # graph = request.graph
             # print(graph)
-            inter_graphs = graph.decode("utf-8")           
+            inter_graphs = request# graph.decode("utf-8")           
             if inter_graphs is not None and  inter_graphs !="":
                              # model_path = os.path.abspath(model_path)
                 # print(inter_graphs)
@@ -134,7 +135,7 @@ class Server:
 
         RegisterAllocationInference_pb2_grpc.add_RegisterAllocationInferenceServicer_to_server(service_server(),server)
 
-        server.add_insecure_port('localhost:50051')
+        server.add_insecure_port('localhost:50001')
 
         server.start()
         print("Server Running")

@@ -22,7 +22,8 @@ from ray.rllib.utils.spaces.space_utils import flatten_to_single_ndarray
 from ray.tune.utils import merge_dicts
 from ray.tune.registry import get_trainable_cls, _global_registry, ENV_CREATOR
 
-
+import sys
+sys.path.append('/home/venkat/IF-DV/Rohit/regAlloc/iith-compilers/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src')
 from multiagentEnv import HierarchicalGraphColorEnv
 import utils_1
 from register_action_space import RegisterActionSpace
@@ -318,7 +319,7 @@ class RollOutInference:
         # Make sure worker 0 has an Env.
         config["create_env_on_driver"] = True
         
-        print(config)
+        # print(config)
 
         # Merge with `evaluation_config` (first try from command line, then from
         # pkl file).
@@ -358,170 +359,12 @@ class RollOutInference:
         config["env_config"]["dump_type"] = 'One'
         config["env_config"]["dump_color_graph"] = True
         config["env_config"]["intermediate_data"] = './temp'
-        
+       
+        config["num_gpus"]=1
         ModelCatalog.register_custom_model("select_node_model", SelectNodeNetwork)
         ModelCatalog.register_custom_model("select_task_model", SelectTaskNetwork)
         ModelCatalog.register_custom_model("colour_node_model", ColorNetwork)
         ModelCatalog.register_custom_model("split_node_model", SplitNodeNetwork)
-    
-#         box_obs = Box(
-#                 -100000.0, 100000.0, shape=(config["env_config"]["state_size"], ), dtype=np.float32)
-#         box_1d = Box(
-#                 0, 1.0, shape=(1, ), dtype=np.float32)
-#     
-#         obs_space = Dict({
-#             "action_mask": Box(0, 1, shape=(config["env_config"]["action_space_size"],)),
-#             "state": box_obs
-#             })
-#         
-#         def policy_mapping_fn(agent_id, episode=None, **kwargs):
-#             if agent_id == "select_node_agent":
-#                 return "select_node_policy"
-#             elif agent_id == "select_task_agent":
-#                 return "select_task_policy"
-#             elif agent_id == "colour_node_agent":
-#                 return "colour_node_policy"
-#             else:
-#                 return "split_node_policy"
-#     
-#     
-#         policies = {
-#             "select_node_policy": (None, box_obs,
-#                                     Discrete(1), {
-#                                         "gamma": 0.0,
-#                                         "model": {
-#                                             "custom_model": "select_node_model",
-#                                             "custom_model_config": {
-#                                                 "state_size": 300,
-#                                                 "fc1_units": 64,
-#                                                 "fc2_units": 64
-#                                             },
-#                                         },
-#                                     }),
-#             "select_task_policy": (None, box_obs,
-#                                     Discrete(2), {
-#                                         "gamma": 0.0,
-#                                         "model": {
-#                                             "custom_model": "select_task_model",
-#                                             "custom_model_config": {
-#                                                 "state_size": 300,
-#                                                 "fc1_units": 64,
-#                                                 "fc2_units": 64
-#                                             },
-#                                         },
-#                                     }),
-#             "colour_node_policy": (None, obs_space,
-#                                     Discrete(config["env_config"]["action_space_size"]), {
-#                                         "gamma": 0.9,
-#                                         "model": {
-#                                             "custom_model": "colour_node_model",
-#                                             "custom_model_config": {
-#                                                 "state_size": 300,
-#                                                 "fc1_units": 64,
-#                                                 "fc2_units": 64
-#                                             },
-#                                         },
-#                                     }),
-#             "split_node_policy": (None, box_obs,
-#                                     Discrete(100), {
-#                                         "gamma": 0.9,
-#                                         "model": {
-#                                             "custom_model": "split_node_model",
-#                                             "custom_model_config": {
-#                                                 "state_size": 300,
-#                                                 "fc1_units": 64,
-#                                                 "fc2_units": 64
-#                                             },
-#                                         },
-#                                     }),
-#         }
-
-#         box_obs = Box(
-#             -100000.0, 100000.0, shape=(config["env_config"]["state_size"], ), dtype=np.float32)
-#         box_1000d = Box(
-#                 -100000.0, 100000.0, shape=(1000, config["env_config"]["state_size"]), dtype=np.float32)
-# 
-#         obs_space = Dict({
-#             "action_mask": Box(0, 1, shape=(config["env_config"]["action_space_size"],)),
-#             "state": box_obs
-#             })
-#         obs_space_1000d = Dict({
-#             "spill_weights": Box(-100000.0, 100000.0, shape=(1000,)), 
-#             "action_mask": Box(0, 1, shape=(1000,)),
-#             "state": box_1000d
-#             }) 
-#         obs_select_task = Dict({
-#             "node_properties": Box(-100000.0, 100000.0, shape=(4,)), 
-#             "state": box_obs
-#             })
-#         
-#         obs_node_spliting = Dict({
-#             "usepoint_properties": Box(-100000.0, 100000.0, shape=(100, 2)), 
-#             "action_mask": Box(0, 1, shape=(100,)),
-#             "state": box_obs
-#             }) 
-#         
-#         def policy_mapping_fn(agent_id, episode=None, **kwargs):
-#             if agent_id.startswith("select_node_agent"):
-#                 return "select_node_policy"
-#             elif agent_id.startswith("select_task_agent"):
-#                 return "select_task_policy"
-#             elif agent_id.startswith("colour_node_agent"):
-#                 return "colour_node_policy"
-#             else:
-#                 return "split_node_policy"
-# 
-# 
-#         policies = {
-#             "select_node_policy": (None, obs_space_1000d,
-#                                     Discrete(1000), {
-#                                         "gamma": 0.9,
-#                                         "model": {
-#                                             "custom_model": "select_node_model",
-#                                             "custom_model_config": {
-#                                                 "state_size": 300,
-#                                                 "fc1_units": 64,
-#                                                 "fc2_units": 64
-#                                             },
-#                                         },
-#                                     }),
-#             "select_task_policy": (None, obs_select_task,
-#                                     Discrete(2), {
-#                                         "gamma": 0.9,
-#                                         "model": {
-#                                             "custom_model": "select_task_model",
-#                                             "custom_model_config": {
-#                                                 "state_size": 300,
-#                                                 "fc1_units": 64,
-#                                                 "fc2_units": 64
-#                                             },
-#                                         },
-#                                     }),
-#             "colour_node_policy": (None, obs_space,
-#                                     Discrete(config["env_config"]["action_space_size"]), {
-#                                         "gamma": 0.9,
-#                                         "model": {
-#                                             "custom_model": "colour_node_model",
-#                                             "custom_model_config": {
-#                                                 "state_size": 300,
-#                                                 "fc1_units": 64,
-#                                                 "fc2_units": 64
-#                                             },
-#                                         },
-#                                     }),
-#             "split_node_policy": (None, obs_node_spliting,
-#                                     Discrete(100), {
-#                                         "gamma": 0.9,
-#                                         "model": {
-#                                             "custom_model": "split_node_model",
-#                                             "custom_model_config": {
-#                                                 "state_size": 300,
-#                                                 "fc1_units": 64,
-#                                                 "fc2_units": 64
-#                                             },
-#                                         },
-#                                     }),
-#         }
 
         box_obs = Box(
                 -100000.0, 100000.0, shape=(config["env_config"]["state_size"], ), dtype=np.float32)
@@ -535,7 +378,7 @@ class RollOutInference:
             })
         obs_space_1000d = Dict({
             "spill_weights": Box(-100000.0, 100000.0, shape=(1000,)), 
-            "action_mask": Box(0, 1, shape=(1000,)),
+            "action_mask": Box(0.0, 1.0, shape=(1000,)),
             "state": box_1000d
             }) 
         obs_select_task = Dict({
@@ -544,11 +387,11 @@ class RollOutInference:
             })
         
         obs_node_spliting = Dict({
-            "usepoint_properties": Box(-100000.0, 100000.0, shape=(100, 2)), 
-            "action_mask": Box(0, 1, shape=(100,)),
+            "usepoint_properties": Box(-100000.0, 100000.0, shape=(config["env_config"]["max_usepoint_count"], 2)), 
+            "action_mask": Box(0, 1, shape=(config["env_config"]["max_usepoint_count"],)),
             "state": box_obs
             }) 
-        
+              
         def policy_mapping_fn(agent_id, episode=None, **kwargs):
             if agent_id.startswith("select_node_agent"):
                 return "select_node_policy"
@@ -598,7 +441,7 @@ class RollOutInference:
                                         },
                                     }),
             "split_node_policy": (None, obs_node_spliting,
-                                    Discrete(100), {
+                                    Discrete(config["env_config"]["max_usepoint_count"]), {
                                         "gamma": 0.9,
                                         "model": {
                                             "custom_model": "split_node_model",
@@ -610,12 +453,13 @@ class RollOutInference:
                                         },
                                     }),
         }
-  
+
         config["multiagent"] = {
             "policies" : policies,
             "policy_mapping_fn": function(policy_mapping_fn)
         }
-        
+
+
         if not args.env:
             assert config.get("env"), "Experiment ua not set."
             args.env = config.get("env")
@@ -624,6 +468,7 @@ class RollOutInference:
         cls = get_trainable_cls(args.run)
         print(cls)
         del config["train-iterations"]
+        print(config)
         agent = cls(env=args.env, config=config)
    
         print(agent)
@@ -764,8 +609,8 @@ class RollOutInference:
         
         assert len(inter_graph_list) == 1, "Only one graph at a time supported."
         inter_graph = inter_graph_list[0]
-        graph = self.dot_to_json(inter_graph) 
-        # graph = inter_graph 
+        # graph = self.dot_to_json(inter_graph) 
+        graph = inter_graph 
         self.obs = self.env.reset(graph)
 
     def update_obs(self, request):
@@ -798,9 +643,11 @@ class RollOutInference:
                 if a_obs is not None:
                     policy_id = mapping_cache.setdefault(
                         agent_id, self.policy_agent_mapping(agent_id))
+                    print(policy_id)
                     p_use_lstm = self.use_lstm[policy_id]
                     if p_use_lstm:
                         a_action, p_state, _ = self.agent.compute_action(
+                        # a_action, p_state, _ = self.agent.compute_single_action(
                             a_obs,
                             state=agent_states[agent_id],
                             prev_action=prev_actions[agent_id],
@@ -808,7 +655,18 @@ class RollOutInference:
                             policy_id=policy_id)
                         agent_states[agent_id] = p_state
                     else:
+                        # print(a_obs['action_mask'].shape, a_obs['spill_weights'].shape, a_obs['state'].shape)
+                        # print('------------ ',np.max(a_obs['state']), np.min(a_obs['state']))
+                        # import math
+                        # for i, vec in enumerate(a_obs['state']):
+                        #     print(vec)
+                        #     for v in vec:
+                        #         # print(v, ', ')
+                        #         if math.isnan(v):
+                        #             print('******NAN**** ', v, i)
+                            # print('\n')
                         a_action = self.agent.compute_action(
+                        # a_action = self.agent.compute_single_action(
                             a_obs,
                             prev_action=prev_actions[agent_id],
                             prev_reward=prev_rewards[agent_id],

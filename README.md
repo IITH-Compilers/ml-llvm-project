@@ -15,7 +15,7 @@
 
 ## Run MLRegAlloc Pass
 *  _`mlra`_` flag to choice our pass`
-* `{BUILD}/bin/clang -03 -mllvm -regalloc=mlra  <Input_file>`
+* `{BUILD}/bin/clang -03 -mllvm -regalloc=greedy -mllvm -mlra-inference -mllvm -mlra-server-address="0.0.0.0:50051"  <Input_file>`
 * `{BUILD}/bin/llc -03 -regalloc=mlra <Input_file>`
 * `{BUILD}/bin/llc -regalloc=mlra <Input_file>`
 
