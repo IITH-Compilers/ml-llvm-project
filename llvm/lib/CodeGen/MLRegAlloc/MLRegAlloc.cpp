@@ -304,11 +304,10 @@ void MLRA::sendRegProfData(T *response,
         rp.frwdInterferences.begin(), rp.frwdInterferences.end());
     regprofResponse->mutable_interferences()->Swap(&interf);
 
-    // // Copying the splitslots
-    // google::protobuf::RepeatedField<unsigned>
-    // splitSlots(rp.splitSlots.begin(),
-    //                                                      rp.splitSlots.end());
-    // regprofResponse->mutable_splitslots()->Swap(&splitSlots);
+    // Copying the splitslots
+    google::protobuf::RepeatedField<unsigned> splitSlots(rp.splitSlots.begin(),
+                                                         rp.splitSlots.end());
+    regprofResponse->mutable_splitslots()->Swap(&splitSlots);
 
     // Copying the useDistances
     google::protobuf::RepeatedField<unsigned> useDistances(
@@ -593,6 +592,15 @@ std::string MLRA::getDotGraphAsString() {
       bool is_atleastoneinstruction = false;
       std::string reginfo = " {Vir} ";
       node_str = node_str + reginfo;
+
+      node_str += " {";
+      if (rp.splitSlots.size() > 0) {
+        for (unsigned i = 0; i < rp.splitSlots.size() - 1; i++)
+          node_str += std::to_string(rp.splitSlots[i]) + ", ";
+        node_str += std::to_string(rp.splitSlots.back());
+      }
+      node_str += "} ";
+
       node_str += " {";
       if (rp.useDistances.size() > 0) {
         for (unsigned i = 0; i < rp.useDistances.size() - 1; i++)
@@ -1036,14 +1044,26 @@ void MLRA::captureRegisterProfile() {
     regProf.spillWeight = VirtReg->weight;
 
     SmallVector<int, 8> useDistances;
+    SmallVector<unsigned, 8> splitPoints;
+
     SA->analyze(VirtReg);
     auto uses = SA->getUseSlots();
     auto firstUse = uses.front();
-
+    int useIdx = 0;
     for (auto use : uses) {
+      auto MI = LIS->getInstructionFromIndex(use);
+      assert(MI && "Empty instruction found at use idx");
+
+      if (!MI->isCopy() && !MI->registerDefIsDead(Reg) &&
+          !MRI->reg_nodbg_empty(VirtReg->reg)) {
+        splitPoints.push_back(useIdx);
+      }
+
       useDistances.push_back(firstUse.getInstrDistance(use));
+      useIdx++;
     }
     regProf.useDistances = useDistances;
+    regProf.splitSlots = splitPoints;
 
     SmallSetVector<unsigned, 8> interference;
     SmallSetVector<unsigned, 8> frwdInterference;
@@ -1137,10 +1157,10 @@ void MLRA::printRegisterProfile() const {
     //     val.dump();
     //   }
     // }
-    // errs() << "\nSplit slots: \n";
-    // for (auto o : rp.splitSlots) {
-    //   errs() << o << ", ";
-    // }
+    errs() << "\nSplit slots: \n";
+    for (auto o : rp.splitSlots) {
+      errs() << o << ", ";
+    }
     errs() << "\n--------------------------------\n";
   }
 }
@@ -1173,12 +1193,23 @@ void MLRA::updateRegisterProfileAfterSplit(
     rp.spillWeight = NewVirtReg->weight;
 
     SmallVector<int, 8> useDistances;
+    SmallVector<unsigned, 8> splitPoints;
     SA->analyze(NewVirtReg);
     auto uses = SA->getUseSlots();
     auto firstUse = uses.front();
+    unsigned useIdx = 0;
     for (auto use : uses) {
+      auto MI = LIS->getInstructionFromIndex(use);
+      assert(MI && "Empty instruction found at use idx");
+
+      if (!MI->isCopy() && !MI->registerDefIsDead(NewVRegs[i]) &&
+          !MRI->reg_nodbg_empty(NewVirtReg->reg)) {
+        splitPoints.push_back(useIdx);
+      }
       useDistances.push_back(firstUse.getInstrDistance(use));
+      useIdx++;
     }
+    rp.splitSlots = splitPoints;
     rp.useDistances = useDistances;
 
     SmallVector<float, 8> positionalSpillWeights;

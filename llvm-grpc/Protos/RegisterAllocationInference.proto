@@ -33,10 +33,11 @@ message RegisterProfileList {
     uint32 color=2;
     float spillWeight=3;
     string cls=4;
-    repeated uint32 interferences=5;
-    repeated uint32 useDistances=6;
-    repeated float positionalSpillWeights=7;
-    repeated vector vectors=8;
+    repeated uint32 splitSlots=5;
+    repeated uint32 interferences=6;
+    repeated uint32 useDistances=7;
+    repeated float positionalSpillWeights=8;
+    repeated vector vectors=9;
   }
   repeated RegisterProfile regProf=1;
   string funcName=2;

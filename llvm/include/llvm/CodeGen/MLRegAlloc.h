@@ -146,7 +146,7 @@ private:
     SmallSetVector<unsigned, 8> interferences;
     SmallSetVector<unsigned, 8> frwdInterferences;
     SmallVector<IR2Vec::Vector, 12> vecRep;
-    // SmallSetVector<unsigned, 8> splitSlots;
+    SmallVector<unsigned, 8> splitSlots;
     // SmallMapVector<unsigned, SmallVector<SlotIndex, 8>, 8> overlapsStart;
     // SmallMapVector<unsigned, SmallVector<SlotIndex, 8>, 8> overlapsEnd;
   };
