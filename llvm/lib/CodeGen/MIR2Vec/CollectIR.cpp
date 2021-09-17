@@ -10,6 +10,9 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Target/TargetMachine.h"
+
+#include "Config.h"
 
 #include <fstream>
 
@@ -28,7 +31,44 @@ FunctionPass *llvm::createCollectMachineIRPass() {
   return new CollectMachineIR();
 }
 
+void CollectMachineIR::createOpcodeMap(MachineFunction &MF) {
+  std::string extFile = OPCODE_DESC_PATH;
+  switch (MF.getTarget().getTargetTriple().getArch()) {
+  case Triple::ArchType::aarch64: {
+    extFile += "/extracted_aarch64.csv";
+    break;
+  }
+  case Triple::ArchType::x86:
+  case Triple::ArchType::x86_64: {
+    extFile += "/extracted_x86.csv";
+    break;
+  }
+  default:
+    llvm_unreachable("Should be one among the supported targets");
+  }
+
+  std::ifstream opcDesc(extFile);
+  assert(!opcDesc.fail() && "Config file is not present.");
+
+  std::string delimiter = ",";
+  for (std::string line; getline(opcDesc, line);) {
+    std::string strkey = line.substr(0, line.find(delimiter));
+    int key = std::stoi(strkey);
+    // errs() << key << "-";
+
+    std::string tmp = line.substr(line.find(delimiter) + 1, line.length());
+    std::string val = tmp.substr(0, tmp.find(delimiter));
+    // errs() << val << "\n";
+    opcDescMap[key] = val;
+  }
+}
+
 bool CollectMachineIR::runOnMachineFunction(MachineFunction &MF) {
+  static bool run = false;
+  if (!run) {
+    createOpcodeMap(MF);
+    run = true;
+  }
   TRI = MF.getSubtarget().getRegisterInfo();
   TII = MF.getSubtarget().getInstrInfo();
   for (MachineBasicBlock &MB : MF)
@@ -45,7 +85,7 @@ void CollectMachineIR::traverseBasicBlock(MachineBasicBlock &MB) {
     // errs() << I.getDesc().getFlags() << "\n";
     // errs() << "----------------------------------------\n";
 
-    temp += "\n OPC_" + std::to_string(I.getOpcode()) + " ";
+    temp += "\n " + opcDescMap[I.getOpcode()] + " ";
 
     for (unsigned i = 0; i < I.getNumOperands(); i++) {
       auto MO = I.getOperand(i);

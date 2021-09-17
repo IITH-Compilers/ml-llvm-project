@@ -1,0 +1,6 @@
+#ifndef MIR2VEC_CONFIG_H
+#define MIR2VEC_CONFIG_H
+
+#define OPCODE_DESC_PATH "@OPCODEDESC@"
+
+#endif // MIR2VEC_CONFIG_H

@@ -18,8 +18,8 @@
 #include <map>
 
 namespace llvm {
-static cl::opt<std::string> oname("cmi-o", cl::Optional, cl::desc("Output file path"), cl::init(""));
-
+static cl::opt<std::string> oname("cmi-o", cl::Optional,
+                                  cl::desc("Output file path"), cl::init(""));
 
 class CollectMachineIR : public MachineFunctionPass {
 
@@ -31,7 +31,10 @@ private:
   const TargetRegisterInfo *TRI;
 
   void traverseBasicBlock(llvm::MachineBasicBlock &MB);
+  void createOpcodeMap(MachineFunction &mf);
   bool runOnMachineFunction(MachineFunction &mf) override;
+
+  std::map<int, std::string> opcDescMap;
 
 public:
   static char ID;
@@ -40,7 +43,6 @@ public:
     o.open(oname, std::ios_base::app);
     res = "";
   }
-
 };
 FunctionPass *createCollectMachineIRPass();
 } // namespace llvm
