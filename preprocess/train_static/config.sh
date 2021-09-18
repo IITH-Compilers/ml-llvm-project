@@ -8,12 +8,13 @@ LLVM_BUILD="${HOME}/build${BUILD_TYPE}"
 echo "LLVM Build used for the data generation: ${LLVM_BUILD}"
 [[ ! -d ${LLVM_BUILD} ]] && echo "LLVM build directory does not exist" && exit
 
-INP_DIR=${HOME}/data/mutated_llvmtestsuite
+INP_DIR=${HOME}/data/mutated_combined
 # INP_DIR=/home/venkat/IF-DV/Rohit/temp/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON
 echo "Input data directory path: ${INP_DIR}"
 [[ ! -d ${INP_DIR} ]] && echo "Input directory does not exist" && exit
 
-LL_FLR_NAME=llvmtestsuite_speedup_mutation
+LL_FLR_NAME=level-O0-llfiles
+# llvmtestsuite_speedup_mutation
 INP_TYPE=llfiles
 
 WD=${INP_DIR}/generated_final

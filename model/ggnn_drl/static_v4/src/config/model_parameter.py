@@ -11,7 +11,7 @@ def for_distribution():
     config.lr = 5e-4
     config.buffer_size = 20000
     config.batch_size = 64
-    config.update_target_freq = 4
+    config.update_target_freq = 400
     config.gamma = 0.99
     config.tau = 1e-1
     config.fc1_units=64
@@ -27,9 +27,9 @@ def for_vectorization():
     config.action_space_IF = [1, 2, 4, 8, 16, 32, 64]
     config.seed = 0
     config.lr = 5e-4
-    config.buffer_size = 20000
+    config.buffer_size = 80000
     config.batch_size = 64
-    config.update_target_freq = 4
+    config.update_target_freq = 100
     config.gamma = 0.99
     config.tau = 1e-1
     config.fc1_units=200

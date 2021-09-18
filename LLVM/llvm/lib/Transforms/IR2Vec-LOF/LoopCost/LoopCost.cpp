@@ -354,10 +354,18 @@ int64_t Locality::computeLocalityCost(Loop *L, unsigned TripCount,
       LAI_WR.getDepChecker().getDDist();
   const SmallVector<int64_t, 8> ReadDependenceDistances =
       LAI_RAR.getDepChecker().getDDist();
-  assert(WriteDependences->size() == WriteDependenceDistances.size() &&
+  if (ReadDependences){
+  assert( (ReadDependences->size() == ReadDependenceDistances.size()) &&
          "Dep Distances are not there??");
-  assert(ReadDependences->size() == ReadDependenceDistances.size() &&
+//    errs () << "ReadDependences size : " << ReadDependences->size() << " " << " ReadDependenceDistances size : "<< ReadDependenceDistances.size() << "\n";
+  }
+  if (WriteDependences){
+  assert( (WriteDependences->size() == WriteDependenceDistances.size()) &&
          "Dep Distances are not there??");
+  //  errs () << "WriteDependences size : " << WriteDependences->size() << " " << " WriteDependenceDistances size : "<< WriteDependenceDistances.size() << "\n";
+  }
+// errs () << &ReadDependenceDistances << " " << ReadDependences  << " "  << ReadDependenceDistances.size() << "\n";
+//  errs () << &WriteDependenceDistances << " " << WriteDependences  << " " << WriteDependenceDistances.size() << "\n";
 
   // Insert MemoryInstruction in the Graph
   for (auto *I : MemroyInstuctions) {
@@ -365,6 +373,7 @@ int64_t Locality::computeLocalityCost(Loop *L, unsigned TripCount,
   }
 
   // Insert the write memory dependences
+  if (WriteDependences){
   for (unsigned Ind = 0; Ind < WriteDependences->size(); Ind++) {
     auto Dep = (*WriteDependences)[Ind];
     unsigned Dist = WriteDependenceDistances[Ind];
@@ -374,8 +383,10 @@ int64_t Locality::computeLocalityCost(Loop *L, unsigned TripCount,
       MemGraph[Dst]->push_back(Src);
     }
   }
+  }
 
   // Insert the read memory dependences
+  if (ReadDependences){ 
   for (unsigned Ind = 0; Ind < ReadDependences->size(); Ind++) {
     auto Dep = (*ReadDependences)[Ind];
     unsigned Dist = ReadDependenceDistances[Ind];
@@ -385,6 +396,7 @@ int64_t Locality::computeLocalityCost(Loop *L, unsigned TripCount,
       MemGraph[Src]->push_back(Dst);
       MemGraph[Dst]->push_back(Src);
     }
+  }
   }
 
   // Insert instructions that are spartially close

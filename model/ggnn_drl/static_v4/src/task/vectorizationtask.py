@@ -34,7 +34,7 @@ class VectorizationTask(BaseTask):
             logging.info('EXP: Model decision')
             return (torch.argmax(VF_actionValues).item(), torch.argmax(IF_actionValues).item())
         else:
-            logging.info('EXP: Random ')
+            logging.info('EXP: Random with eps={}'.format(eps))
             return (np.random.randint(0, len(self.action_space_VF)), np.random.randint(0, len(self.action_space_IF)))
 
     def Qvalue_targets(self, experiences):
@@ -112,7 +112,7 @@ class VectorizationTask(BaseTask):
         next_state, reward, done = env.step(vecfactors, self.name)
         for scc in SCCs:
             self.step(vec_dict[scc]['state'], vec_dict[scc]['action'], reward, next_state, done)
-        scre= reward
+        score= reward
         result = {'score' : score, 'vecfactors' : vecfactors}
         
         logging.info('Distributed Loopwise vectorization {} {}'.format('|'.join(SCCs), vecfactors))

@@ -1,10 +1,2 @@
-Build RELEASE with Assertion ON
-> cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="clang" -DLLVM_TARGETS_TO_BUILD="X86" -DLLVM_ENABLE_ASSERTIONS=ON -DIR2VEC_INSTALL_DIR=../IR2Vec/build/install -DDISTRIBUTION_MODEL_DIR=<path_to_model_folder_containing_src_and_model> ../LLVM/llvm
-
-`cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="clang" -DLLVM_TARGETS_TO_BUILD="X86" -DLLVM_ENABLE_ASSERTIONS=ON -DIR2VEC_INSTALL_DIR=../IR2Vec/build/install -DDISTRIBUTION_MODEL_DIR=../model/ggnn_drl/static_v2/ ../LLVM/llvm`
-
-Build RELEASE with Assertion OFF
-> cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="clang" -DLLVM_TARGETS_TO_BUILD="X86" -DIR2VEC_INSTALL_DIR=../IR2Vec/build/install -DDISTRIBUTION_MODEL_DIR=<path_to_model_folder_containing_src_and_model> ../LLVM/llvm
-
 Buid Debug
-> cmake -G Ninja -DLLVM_ENABLE_PROJECTS="clang" -DLLVM_TARGETS_TO_BUILD="X86" -DIR2VEC_INSTALL_DIR=../IR2Vec/build/install -DDISTRIBUTION_MODEL_DIR=<path_to_model_folder_containing_src_and_model> ../LLVM/llvm
+> cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug -DLLVM_ENABLE_PROJECTS="clang" -DLLVM_TARGETS_TO_BUILD="X86" -DLLVM_ENABLE_ASSERTIONS=ON -DIR2VEC_INSTALL_DIR=/home/venkat/IF-DV/Rohit/LOF-distribution-Vectorization/IR2Vec-LoopOptimizationFramework/IR2Vec/build_debug/install -DMODEL_DIR=/home/venkat/IF-DV/Rohit/LOF-distribution-Vectorization/IR2Vec-LoopOptimizationFramework/model/ggnn_drl/static_v4 ../LLVM/llvm

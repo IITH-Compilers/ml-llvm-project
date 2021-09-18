@@ -65,15 +65,19 @@ def run(agent, config):
             result = agent.run_episode(agent.distribution_task, startingInfo)
             score_distribution = result['score']
 
-            logging.info('--------------------------- {} Task Completed-----------------------------------------'.format('Distribution'))
+            logging.info('--------------------------- {} Task Completed with score/reward : {} -----------------------------------------'.format('Distribution', score_distribution))
 
             ''' Run the vectoriation '''
             logging.info('--------------------------- {} Task Started-----------------------------------------'.format('Vectorization'))
             startingInfo['SCC'] =  result['distributionSeq'].split('|')
-            result_vec = agent.run_episode(agent.vectorization_task, startingInfo)
-            score_vec = result_vec['score']
-
-            logging.info('--------------------------- {} Task Completed-----------------------------------------'.format('Vectorization'))
+            startingInfo['eps'] = min(1.5*eps, eps_start)
+            vec_score_list = [] 
+            for i in range(2):
+                result_vec = agent.run_episode(agent.vectorization_task, startingInfo)
+                vec_score_list.append(result_vec['score'])
+            score_vec = np.mean(vec_score_list) 
+            agent.distribution_task.memory.memory[-1]._replace(reward = score_vec)
+            logging.info('--------------------------- {} Task Completed; Score : {}-----------------------------------------'.format('Vectorization', score_vec))
 
             ## Do te
             score =  score_distribution + score_vec

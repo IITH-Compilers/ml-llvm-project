@@ -2,7 +2,7 @@
 # Testing - bash run.sh test <path dataset> <path of model> <disable runtime calc:Y> <POST distribution passes choice: {0, 1, 2}> <rewardtype LC or MCA>
 #
 
-EPOCHS=50
+EPOCHS=100
 PWD=`pwd`
 # set the llvm Build and other paramter
 

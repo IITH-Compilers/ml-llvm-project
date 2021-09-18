@@ -149,7 +149,7 @@ class DistributionTask(BaseTask):
             
 
             # logging.info('state : {}'.format(state))
-            logging.info('stored in memoey action tuple: {}'.format((nextNodeIndex, merge_distribute)))
+            logging.info('stored in memory action tuple: {}'.format((nextNodeIndex, merge_distribute)))
             logging.info('reward : {}'.format(reward))
             # logging.info('next_state : {}'.format(next_state))
             logging.info('done : {}'.format(done))
