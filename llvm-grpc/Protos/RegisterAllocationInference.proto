@@ -20,10 +20,6 @@ message GraphList {
   bytes payload=1;
 }
 
-message ColorData {
-  bytes payload=1;
-}
-
 message RegisterProfileList {
   message vector {
     repeated double vec=1;
@@ -48,10 +44,15 @@ message RegisterProfileList {
 }
 
 message Data {
+  message colorData {
+    string key = 2;
+    uint32 value = 3;
+  }
   string message = 1;
   uint32 regidx = 2;
   int64 payload = 3;
-  bytes colorData = 4;
+  string funcName = 4;
+  repeated colorData color = 5;
 }
 
 message Empty {}

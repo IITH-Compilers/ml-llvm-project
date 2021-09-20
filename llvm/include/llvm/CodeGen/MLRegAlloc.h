@@ -200,54 +200,54 @@ private:
   unsigned getPhyRegForColor(LiveInterval &VirtReg, unsigned color,
                              SmallVector<unsigned, 4> &SplitVRegs);
 
-  std::map<std::string, std::map<std::string, int64_t>>
-  parsePredictionJson(std::string jsonString) {
-    // LLVM_DEBUG(errs() << jsonString << "\n");
-    if (Expected<json::Value> E = json::parse(jsonString)) {
+  // std::map<std::string, std::map<std::string, int64_t>>
+  // parsePredictionJson(std::string jsonString) {
+  //   // LLVM_DEBUG(errs() << jsonString << "\n");
+  //   if (Expected<json::Value> E = json::parse(jsonString)) {
 
-      if (json::Object *J = E->getAsObject()) {
-        if (json::Array *S = J->getArray("Predictions")) {
-          for (auto V : *S) {
-            if (json::Object *O = V.getAsObject()) {
-              std::map<std::string, int64_t> colormap;
-              if (json::Value *omap = O->get("mapping")) {
-                json::fromJSON(*omap, colormap);
-                LLVM_DEBUG(for (auto entry
-                                : colormap) errs()
-                           << entry.first << " " << entry.second << "\n");
-              }
-              if (colormap.size() > 0) {
-                if (json::Value *S = O->get("Function")) {
-                  std::string funcName_key;
-                  json::fromJSON(*S, funcName_key);
-                  this->FunctionVirtRegToColorMap[funcName_key] = colormap;
-                  LLVM_DEBUG(errs()
-                             << "Function Name : " << funcName_key << "\n");
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-    return this->FunctionVirtRegToColorMap;
-  }
+  //     if (json::Object *J = E->getAsObject()) {
+  //       if (json::Array *S = J->getArray("Predictions")) {
+  //         for (auto V : *S) {
+  //           if (json::Object *O = V.getAsObject()) {
+  //             std::map<std::string, int64_t> colormap;
+  //             if (json::Value *omap = O->get("mapping")) {
+  //               json::fromJSON(*omap, colormap);
+  //               LLVM_DEBUG(for (auto entry
+  //                               : colormap) errs()
+  //                          << entry.first << " " << entry.second << "\n");
+  //             }
+  //             if (colormap.size() > 0) {
+  //               if (json::Value *S = O->get("Function")) {
+  //                 std::string funcName_key;
+  //                 json::fromJSON(*S, funcName_key);
+  //                 this->FunctionVirtRegToColorMap[funcName_key] = colormap;
+  //                 LLVM_DEBUG(errs()
+  //                            << "Function Name : " << funcName_key << "\n");
+  //               }
+  //             }
+  //           }
+  //         }
+  //       }
+  //     }
+  //   }
+  //   return this->FunctionVirtRegToColorMap;
+  // }
 
-  std::map<std::string, std::map<std::string, int64_t>>
-  setPredictionFromFile(std::string pred_file) {
-    assert(pred_file != "" && "Path is empty.");
-    LLVM_DEBUG(errs() << pred_file << "\n");
-    std::ifstream predColorFile(pred_file);
-    if (predColorFile.fail()) {
-      errs() << "setPredictionFromFile- file does not exist at the location "
-             << pred_file << "\n";
-      return this->FunctionVirtRegToColorMap;
-    }
-    std::string jsonString;
-    jsonString.assign((std::istreambuf_iterator<char>(predColorFile)),
-                      (std::istreambuf_iterator<char>()));
-    return parsePredictionJson(jsonString);
-  }
+  // std::map<std::string, std::map<std::string, int64_t>>
+  // setPredictionFromFile(std::string pred_file) {
+  //   assert(pred_file != "" && "Path is empty.");
+  //   LLVM_DEBUG(errs() << pred_file << "\n");
+  //   std::ifstream predColorFile(pred_file);
+  //   if (predColorFile.fail()) {
+  //     errs() << "setPredictionFromFile- file does not exist at the location "
+  //            << pred_file << "\n";
+  //     return this->FunctionVirtRegToColorMap;
+  //   }
+  //   std::string jsonString;
+  //   jsonString.assign((std::istreambuf_iterator<char>(predColorFile)),
+  //                     (std::istreambuf_iterator<char>()));
+  //   return parsePredictionJson(jsonString);
+  // }
 
   void loadTargetRegisterConfig(std::string config_colorMap) {
     assert(config_colorMap != "" && "Path is empty");
