@@ -126,23 +126,8 @@ if __name__ == "__main__":
     config = DEFAULT_CONFIG.copy()
     config["train-iterations"] = args.train_iterations
 
-    config["env"] = HierarchicalGraphColorEnv
-    config["env_config"]["target"] = "X86"
-    config["env_config"]["registerAS"] = RegisterActionSpace(config["env_config"]["target"])
-    config["env_config"]["action_space_size"] = config["env_config"]["registerAS"].ac_sp_normlize_size
-    config["env_config"]["state_size"] = 300
-
-    config["env_config"]["mode"] = 'training'
-    config["env_config"]["dump_type"] = 'One'
-    config["env_config"]["dump_color_graph"] = True
-    config["env_config"]["intermediate_data"] = './temp'
-
-    config["env_config"]["dataset"] = "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/"
-    # config["env_config"]["dataset"] = "/home/cs20mtech12003/ML-Register-Allocation/data/test_dict/"
-    config["env_config"]["graphs_num"] = 50000
-    config["env_config"]["max_usepoint_count"] = 200
+    config["env"] = HierarchicalGraphColorEnv    
     config["callbacks"] = MyCallbacks
-    # training_graphs=glob.glob(os.path.join(dataset, 'graphs/IG/json_new/*.json'))
 
     ModelCatalog.register_custom_model("select_node_model", SelectNodeNetwork)
     ModelCatalog.register_custom_model("select_task_model", SelectTaskNetwork)
@@ -151,8 +136,8 @@ if __name__ == "__main__":
 
     box_obs = Box(
             -100000.0, 100000.0, shape=(config["env_config"]["state_size"], ), dtype=np.float32)
-    box_1000d = Box(
-            -100000.0, 100000.0, shape=(1000, config["env_config"]["state_size"]), dtype=np.float32)
+    box_obs_select_node = Box(
+            -100000.0, 100000.0, shape=(config["env_config"]["max_number_nodes"], config["env_config"]["state_size"]), dtype=np.float32)
 
     obs_colour_node = Dict({
         "action_mask": Box(0, 1, shape=(config["env_config"]["action_space_size"],)),
@@ -160,9 +145,9 @@ if __name__ == "__main__":
         "state": box_obs
         })
     obs_select_node = Dict({
-        "spill_weights": Box(-100000.0, 100000.0, shape=(1000,)), 
-        "action_mask": Box(0, 1, shape=(1000,)),
-        "state": box_1000d
+        "spill_weights": Box(-100000.0, 100000.0, shape=(config["env_config"]["max_number_nodes"],)), 
+        "action_mask": Box(0, 1, shape=(config["env_config"]["max_number_nodes"],)),
+        "state": box_obs_select_node
         }) 
     obs_select_task = Dict({
         "node_properties": Box(-100000.0, 100000.0, shape=(4,)), 
@@ -188,12 +173,12 @@ if __name__ == "__main__":
 
     policies = {
         "select_node_policy": (None, obs_select_node,
-                                Discrete(1000), {
+                                Discrete(config["env_config"]["max_number_nodes"]), {
                                     "gamma": 0.9,
                                     "model": {
                                         "custom_model": "select_node_model",
                                         "custom_model_config": {
-                                            "state_size": 300,
+                                            "state_size": config["env_config"]["state_size"],
                                             "fc1_units": 64,
                                             "fc2_units": 64
                                         },
@@ -205,7 +190,7 @@ if __name__ == "__main__":
                                     "model": {
                                         "custom_model": "select_task_model",
                                         "custom_model_config": {
-                                            "state_size": 300,
+                                            "state_size": config["env_config"]["state_size"],
                                             "fc1_units": 64,
                                             "fc2_units": 64
                                         },
@@ -217,7 +202,7 @@ if __name__ == "__main__":
                                     "model": {
                                         "custom_model": "colour_node_model",
                                         "custom_model_config": {
-                                            "state_size": 300,
+                                            "state_size": config["env_config"]["state_size"],
                                             "fc1_units": 64,
                                             "fc2_units": 64
                                         },
@@ -229,7 +214,7 @@ if __name__ == "__main__":
                                     "model": {
                                         "custom_model": "split_node_model",
                                         "custom_model_config": {
-                                            "state_size": 300,
+                                            "state_size": config["env_config"]["state_size"],
                                             "fc1_units": 64,
                                             "fc2_units": 64
                                         },

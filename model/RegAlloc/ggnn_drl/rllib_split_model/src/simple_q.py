@@ -101,6 +101,19 @@ DEFAULT_CONFIG = with_common_config({
         },
     },
 
+    "env_config": {
+        "target": "X86",
+        "state_size": 300,
+        "max_number_nodes": 1000,
+        "max_usepoint_count": 200,
+        "mode": 'training',
+        "dump_type": 'One',
+        "dump_color_graph": True,
+        "intermediate_data": './temp',
+        "dataset": "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/",
+        "graphs_num": 50000
+    },
+
     "framework": "torch",
     # === Parallelism ===
     # Number of workers for collecting samples with. This only makes sense
