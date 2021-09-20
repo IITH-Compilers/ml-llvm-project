@@ -114,9 +114,9 @@ cl::opt<bool>
                              cl::desc("Turn on the dot file dumping logic."),
                              cl::init(false));
 
-cl::opt<std::string> MLRA::pred_file("mlra-pred-file", cl::Hidden,
-                                     cl::desc("File Path of color-target map."),
-                                     cl::init(""));
+// cl::opt<std::string> MLRA::pred_file("mlra-pred-file", cl::Hidden,
+//                                      cl::desc("File Path of color-target
+//                                      map."), cl::init(""));
 
 cl::opt<unsigned> MLRA::funcID("mlra-funcID", cl::Hidden,
                                cl::desc("Function name for training"),
@@ -143,14 +143,15 @@ registerallocationinference::RegisterAllocationInference::Stub *Stub = nullptr;
 // gRPCUtil client;
 
 MLRA::MLRA() {
-  if (pred_file != "") {
-    setPredictionFromFile(pred_file);
-  }
+  // if (pred_file != "") {
+  //   setPredictionFromFile(pred_file);
+  // }
 
   loadTargetRegisterConfig(std::string(COLORMAP_PATH));
   symbolic = new MIR2Vec_Symbolic(VOCAB_PATH);
 
-  SetStub<registerallocationinference::RegisterAllocationInference>(mlra_server_address);
+  SetStub<registerallocationinference::RegisterAllocationInference>(
+      mlra_server_address);
 
   Stub = (registerallocationinference::RegisterAllocationInference::Stub *)
       getStub();
@@ -236,8 +237,9 @@ void MLRA::serializeRegProfData(
     registerallocationinference::RegisterProfileList *response) {
   for (auto rpm : regProfMap) {
     auto rp = rpm.second;
-    if ( rp.cls == "Phy"  && rp.frwdInterferences.begin() == rp.frwdInterferences.end()){
-        continue;
+    if (rp.cls == "Phy" &&
+        rp.frwdInterferences.begin() == rp.frwdInterferences.end()) {
+      continue;
     }
     auto regprofResponse = response->add_regprof();
     regprofResponse->set_regid(rpm.first);
@@ -295,7 +297,7 @@ void MLRA::sendRegProfData(T *response,
   for (auto reg : regIdxs) {
     auto rp = regProfMap[reg];
     if (rp.frwdInterferences.begin() == rp.frwdInterferences.end())
-            continue;
+      continue;
     auto regprofResponse = response->add_regprof();
     regprofResponse->set_regid(reg);
 
@@ -1471,16 +1473,20 @@ void MLRA::inference() {
     // std::string str = "LLVM\n";
     // response->set_payload(str);
     if (reply->message() == "Color") {
-      if (reply->colordata() == "") {
+      if (reply->color_size() == 0) {
         errs() << "*****Warning -" << MF->getName()
                << " - Predictions not generated for the graph\n";
         return;
       }
-      parsePredictionJson(reply->colordata());
-      if (this->FunctionVirtRegToColorMap.find(MF->getName()) !=
-          this->FunctionVirtRegToColorMap.end()) {
-        allocatePhysRegsViaRL();
+
+      std::map<std::string, int64_t> colorMap;
+      for (auto i : reply->color()) {
+        colorMap[i.key()] = i.value();
       }
+      this->FunctionVirtRegToColorMap[reply->funcname()] = colorMap;
+      assert(reply->funcname() == MF->getName());
+      allocatePhysRegsViaRL();
+
       LLVM_DEBUG(errs() << "The ML allocated virtual registers: /n";
                  for (auto i
                       : mlAllocatedRegs) errs()
