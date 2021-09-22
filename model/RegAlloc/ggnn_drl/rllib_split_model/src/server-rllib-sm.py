@@ -16,6 +16,7 @@ import rollout as inference
 # import register_action_space
 # import env
 from argparse import Namespace
+# logging = 
 class service_server(RegisterAllocationInference_pb2_grpc.RegisterAllocationInferenceServicer):
 
     def __init__(self):
@@ -107,7 +108,7 @@ class service_server(RegisterAllocationInference_pb2_grpc.RegisterAllocationInfe
                 self.inference_model.update_obs(request)
 
             action, count = self.inference_model.compute_action()
-            print('action= {}, count={}'.format(action,count))
+            # print('action= {}, count={}'.format(action,count))
             select_node_agent = "select_node_agent_{}".format(count)
             select_task_agent = "select_task_agent_{}".format(count)
             split_agent = "split_node_agent_{}".format(count)
@@ -116,7 +117,7 @@ class service_server(RegisterAllocationInference_pb2_grpc.RegisterAllocationInfe
             if action[select_task_agent] == 1:
                 reply=RegisterAllocationInference_pb2.Data(message="Split", regidx=action[select_node_agent], payload=action[split_agent])
             elif  action[select_task_agent] == 0:
-                reply=RegisterAllocationInference_pb2.Data(message="Color", colorData=action[color_agent].encode('utf-8'))
+                reply=RegisterAllocationInference_pb2.Data(message="Color", color=action[color_agent], funcName=request.funcName)
             else:
                 reply=RegisterAllocationInference_pb2.Data(message="Exit")
             print('------Bye-----' , reply)

@@ -31,11 +31,11 @@ class RegisterActionSpace:
         self.regs_supp = list(set(list(itertools.chain(*self.suppcls_regs_map.values()))))
         # print(self.regs_supp)
         self.num_regs_supp = len(self.regs_supp)
-        print('number of register :: {}'.format(self.num_regs_supp))
+        logging.info('number of register :: {}'.format(self.num_regs_supp))
 
         self.ac_sp_normlize = np.arange(0, self.num_regs_supp+1) # 1.... Num of supported registers
         self.ac_sp_normlize_size = len(self.ac_sp_normlize)
-        print('Size of the action space  : {} '.format(len(self.ac_sp_normlize)))
+        logging.info('Size of the action space  : {} '.format(len(self.ac_sp_normlize)))
         # Original to
 
         

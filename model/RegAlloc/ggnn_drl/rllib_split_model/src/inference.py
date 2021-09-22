@@ -150,9 +150,9 @@ class Inference:
         
         # train_agent = DQNTrainer(env=GraphColorEnv, config=config)
         self.trained_agent = SimpleQTrainer(env=HierarchicalGraphColorEnv, config=config)
-        print(self.trained_agent, type(self.trained_agent))
+        logging.info("{} {}".format(self.trained_agent, type(self.trained_agent)))
         # train_agent = DQNTrainer(config=config)
-        print('Hi 2')
+        # print('Hi 2')
         self.trained_agent.restore(trained_model)
      
         env_config =  config["env_config"]
@@ -168,15 +168,15 @@ class Inference:
         policy_id=list(self.state.keys())[0]
         # print(policy_id)
         state=list(self.state.values())[0]
-        print(self.trained_agent, type(self.trained_agent))
+        # print(self.trained_agent, type(self.trained_agent))
         action = self.trained_agent.compute_action(self.state, policy_id="select_node_policy")
         # action = self.trained_agent.compute_action(self.state, policy_id="select_node_policy")
         # action = self.trained_agent.compute_action(self.state, policy_id=SimpleQTorchPolicy)
-        print('computed action : ', action) 
+        # print('computed action : ', action) 
         next_state, reward, done, response  = self.env.step(action)
          
         self.state = next_state
-        print(self.state)
+        # print(self.state)
         return action
 
 

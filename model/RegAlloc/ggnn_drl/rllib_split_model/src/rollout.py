@@ -341,7 +341,7 @@ class RollOutInference:
         utils_1.set_config(config_other)
         logdir='./'
         logger = logging.getLogger(__file__)
-        logging.basicConfig(filename=os.path.join(logdir, 'mlra-predictions.log'), format='%(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
+        logging.basicConfig(filename='running.log', format='%(thread)d - %(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
 
 
         config["render_env"] = not args.no_render
@@ -466,12 +466,12 @@ class RollOutInference:
 
         # Create the Trainer from config.
         cls = get_trainable_cls(args.run)
-        print(cls)
+        # print(cls)
         del config["train-iterations"]
-        print(config)
+        # print(config)
         agent = cls(env=args.env, config=config)
    
-        print(agent)
+        logging.info("Agent is loaded succesfully - {}".format(agent))
         # Load state from checkpoint, if provided.
         if args.checkpoint:
             agent.restore(args.checkpoint)
@@ -555,9 +555,9 @@ class RollOutInference:
             if agent.workers.local_worker().multiagent:
                 self.policy_agent_mapping = agent.config["multiagent"][
                     "policy_mapping_fn"]
-                print('Multiagent policy mapping function.')
+                # print('Multiagent policy mapping function.')
             self.policy_map = agent.workers.local_worker().policy_map
-            print('polucy map ', self.policy_map)
+            # print('polucy map ', self.policy_map)
             self.state_init = {p: m.get_initial_state() for p, m in self.policy_map.items()}
             self.use_lstm = {p: len(s) > 0 for p, s in self.state_init.items()}
         # Agent has neither evaluation- nor rollout workers.
@@ -643,7 +643,7 @@ class RollOutInference:
                 if a_obs is not None:
                     policy_id = mapping_cache.setdefault(
                         agent_id, self.policy_agent_mapping(agent_id))
-                    print(policy_id)
+                    # print(policy_id)
                     p_use_lstm = self.use_lstm[policy_id]
                     if p_use_lstm:
                         a_action, p_state, _ = self.agent.compute_action(
@@ -676,7 +676,7 @@ class RollOutInference:
                     prev_actions[agent_id] = a_action
             action = action_dict
    
-            print('compute_action ', action)
+            # print('compute_action ', action)
             action = action if self.multiagent else action[_DUMMY_AGENT_ID]
             next_obs, reward, done, info = self.env.step(action)
             if self.multiagent:
@@ -686,7 +686,7 @@ class RollOutInference:
                 prev_rewards[_DUMMY_AGENT_ID] = reward
     
             if self.multiagent:
-                print(done)
+                # print(done)
                 done = done["__all__"]
                 reward_total += sum(
                     r for r in reward.values() if r is not None)
@@ -702,7 +702,7 @@ class RollOutInference:
         # print("Episode #{}: reward: {}".format(episodes, reward_total))
         # if done:
         #     episodes += 1
-        print(actions_response.keys())
+        # print(actions_response.keys())
         # if "split_node_agent_0" in   actions_response.keys():
         
         # actions_response["split_node_agent"] = self.env.split_point

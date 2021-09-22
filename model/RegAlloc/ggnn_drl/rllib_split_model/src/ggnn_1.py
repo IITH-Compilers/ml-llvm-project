@@ -352,7 +352,7 @@ def get_observationsInf(graph):
         # allocate_type_list.append(allocate_type)
         
         # print(nodeVec)
-        logging.debug(nodeVec)
+        # logging.debug(nodeVec)
         initial_node_representation.append(nodeVec)
         nid_idx[nodeId] = idx
         idx_nid[idx] = nodeId
@@ -389,8 +389,10 @@ def get_observationsInf(graph):
 
     logging.debug('All links : {}'.format(all_edges))
     logging.debug("num_nodes : {}".format(num_nodes) )
+    logging.debug("adjList : {}".format(graph_topology.adjList) )
     logging.debug('All edges num : {}'.format(len(all_edges)))
     
+
     assert not np.isnan(spill_cost_list).any(), "Spill cost is NAN"
     annotation_zero = np.zeros((num_nodes, 3))
     annotation_zero[:, 0] = spill_cost_list
