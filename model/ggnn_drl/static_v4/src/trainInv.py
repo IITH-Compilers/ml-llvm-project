@@ -11,6 +11,7 @@ import random
 import logging
 import datetime
 import sys
+import multiprocessing
 # sys.path.append('.')
 
 from distributeEnv import DistributeLoopEnv
@@ -72,9 +73,12 @@ def run(agent, config):
             startingInfo['SCC'] =  result['distributionSeq'].split('|')
             startingInfo['eps'] = min(1.5*eps, eps_start)
             vec_score_list = [] 
-            for i in range(2):
-                result_vec = agent.run_episode(agent.vectorization_task, startingInfo)
-                vec_score_list.append(result_vec['score'])
+            # for i in range(2):
+            #     result_vec = agent.run_episode(agent.vectorization_task, startingInfo)
+            #     vec_score_list.append(result_vec['score'])
+            result_vec = multiprocessing.Pool(2).starmap(agent.run_episode, [(agent.vectorization_task, startingInfo), (agent.vectorization_task, startingInfo)])
+            vec_score_list.append(result_vec[0]['score'])
+            vec_score_list.append(result_vec[1]['score'])
             score_vec = np.mean(vec_score_list) 
             agent.distribution_task.memory.memory[-1]._replace(reward = score_vec)
             logging.info('--------------------------- {} Task Completed; Score : {}-----------------------------------------'.format('Vectorization', score_vec))
