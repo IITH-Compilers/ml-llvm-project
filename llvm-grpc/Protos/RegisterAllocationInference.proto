@@ -45,8 +45,8 @@ message RegisterProfileList {
 
 message Data {
   message colorData {
-    string key = 2;
-    uint32 value = 3;
+    string key = 1;
+    uint32 value = 2;
   }
   string message = 1;
   uint32 regidx = 2;
