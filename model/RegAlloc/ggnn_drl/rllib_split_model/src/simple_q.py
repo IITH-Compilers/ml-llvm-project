@@ -26,6 +26,8 @@ from ray.rllib.policy.policy import Policy
 from ray.rllib.utils.typing import TrainerConfigDict
 from ray.util.iter import LocalIterator
 
+from register_action_space import RegisterActionSpace
+
 logger = logging.getLogger(__name__)
 
 # yapf: disable
@@ -111,7 +113,8 @@ DEFAULT_CONFIG = with_common_config({
         "dump_color_graph": True,
         "intermediate_data": './temp',
         "dataset": "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/",
-        "graphs_num": 50000
+        "graphs_num": 50000,
+        "action_space_size": RegisterActionSpace("X86").ac_sp_normlize_size
     },
 
     "framework": "torch",
@@ -123,7 +126,7 @@ DEFAULT_CONFIG = with_common_config({
     # Prevent iterations from going lower than this time span
     "min_iter_time_s": 1,
 
-    "num_gpus": 2,
+    "num_gpus": 0,
 
     # "num_cpus_for_driver": 4,
     # "num_gpus_per_worker": 0,

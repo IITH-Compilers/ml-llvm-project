@@ -20,7 +20,7 @@ import math
 import torch
 import signal
 from gym.spaces import Discrete, Box
-from memory_profiler import profile
+# from memory_profiler import profile
 
 # from ggnn import constructGraph
 from ggnn_1 import get_observations, get_observationsInf, GatedGraphNeuralNetwork, constructVectorFromMatrix, AdjacencyList
@@ -51,7 +51,7 @@ config_path=None
 
 logger = logging.getLogger(__file__)
 # logging.basicConfig(filename=os.path.join("/home/cs18mtech11030/project/grpc_llvm/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src", 'running.log'), format='%(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
-logging.basicConfig(filename='running.log', format='%(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
+logging.basicConfig(filename='running.log', format='%(thread)d - %(threadName)s %(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
 
 
 def set_config(path):
@@ -92,7 +92,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
             self.graph_counter = 0
             self.reset_count = 0
-            self.training_graphs=glob.glob(os.path.join(dataset, 'graphs/IG/set1/*.json'))
+            self.training_graphs=glob.glob(os.path.join(dataset, 'graphs/IG/json_new/*.json'))
             assert len(self.training_graphs) > 0, 'training set is empty' 
             if len(self.training_graphs) > self.graphs_num:
                 self.training_graphs = self.training_graphs[:self.graphs_num]
@@ -108,9 +108,9 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
         self.split_steps = 0
         self.colour_steps = 0
-        # self.port_number = 50052
         self.spill_weight_diff = 0
-        # self.first_time = True
+        self.task_selected = 0
+        self.split_threshold = 100
 
     def reward_formula(self, value, action):
         if value == float("inf"):
@@ -235,12 +235,12 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
     #     return node_index, Qvalue
     
     def createNodeSelectMask(self):
-        mask = [0.0]*self.max_number_nodes
+        mask = [0]*self.max_number_nodes
         eligibleNodes = self.obs.graph_topology.get_eligibleNodes()
         assert len(eligibleNodes) < self.max_number_nodes, "Graph has more then maximum nodes allowed"
         for inx, x in enumerate(eligibleNodes):            
             if x in eligibleNodes:
-                mask[x] = 1.0
+                mask[x] = 1
         if all(v == 0 for v in mask):
             print("eligibleNodes", eligibleNodes)
             # assert False, "No node elegible to select"
@@ -350,8 +350,11 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         print("Select Task action", action)
         splitpoints = self.obs.split_points[self.cur_node]
         # self.select_task_agent_id = "select_task_agent_{}".format(self.agent_count)
-        if action == 0 or len(splitpoints) == 1: # Colour node
+        self.task_selected = action
+        if action == 0 or len(splitpoints) == 1 or self.split_steps > self.split_threshold: # Colour node
             self.colour_steps += 1
+            if self.task_selected == 1:
+                self.split_steps += 1
             regclass = self.obs.reg_class_list[self.cur_node]
             adj_colors = self.obs.graph_topology.getColorOfVisitedAdjNodes(self.cur_node)
 
@@ -441,6 +444,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         cur_obs = np.zeros((self.max_number_nodes, self.emb_size))
         cur_obs[0:node_mat.shape[0], :] = node_mat
 
+        discount_factor = (1.001*self.split_steps)/10
+
         prop = self.getNodeProperties()
         prop_value_list = list(prop.values())
 
@@ -475,7 +480,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         reward = {
             self.colour_node_agent_id: colour_reward,
             self.select_node_agent_id: colour_reward,
-            self.select_task_agent_id: colour_reward,
+            self.select_task_agent_id: colour_reward - (self.task_selected * discount_factor),
             self.split_node_agent_id: 0
         }
         obs = {
@@ -836,7 +841,11 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             # logging.info(updated_graphs)            
             register_id = self.obs.idx_nid[self.cur_node]
             # print(self.obs.nid_idx)
-            splited_node_idx = self.obs.nid_idx[register_id]
+            # splited_node_idx = self.obs.nid_idx[register_id]
+            if self.mode != 'inference':
+                splited_node_idx = self.obs.nid_idx[str(register_id)]
+            else:
+                splited_node_idx = self.obs.nid_idx[register_id]
             self.obs.graph_topology.indegree[splited_node_idx] = 0
             self.obs.graph_topology.adjList[splited_node_idx] = []
             
@@ -855,7 +864,10 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 return vec
             # print("Node Profile", updated_graphs.regProf)
             for node_prof in updated_graphs.regProf:
-                nodeId = node_prof.regID
+                if self.mode != 'inference':
+                    nodeId = str(node_prof.regID)
+                else:
+                    nodeId = node_prof.regID
                 # print("Node prof", node_prof.regID)
                 
                 if nodeId not in self.obs.nid_idx.keys():
@@ -910,11 +922,17 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
             logging.debug('update the interfering node data.')
             for node_prof in updated_graphs.regProf:
-                nodeId = node_prof.regID
+                if self.mode != 'inference':
+                    nodeId = str(node_prof.regID)
+                else:
+                    nodeId = node_prof.regID
                 interfering_node_idx = self.obs.nid_idx[nodeId]
 
+                if self.mode != 'inference':
+                    self.obs.graph_topology.adjList[interfering_node_idx] = list(map(lambda x: self.obs.nid_idx[str(x)], node_prof.interferences))
+                else:
+                    self.obs.graph_topology.adjList[interfering_node_idx] = list(map(lambda x: self.obs.nid_idx[x], node_prof.interferences))
 
-                self.obs.graph_topology.adjList[interfering_node_idx] = list(map(lambda x: self.obs.nid_idx[x], node_prof.interferences))
                 self.obs.graph_topology.indegree[interfering_node_idx] = len(self.obs.graph_topology.adjList[interfering_node_idx])
                 
                 self.obs.spill_cost_list[interfering_node_idx] = node_prof.spillWeight

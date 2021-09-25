@@ -55,7 +55,7 @@ def experiment(config):
             checkpoint = train_agent.save(tune.get_trial_dir())
             # print("***************Checkpoint****************", checkpoint)
         tune.report(**train_results)
-        if train_results['episodes_total'] > 9999:
+        if train_results['episodes_total'] > 999:
             print("Traning Ended")
             checkpoint = train_agent.save(tune.get_trial_dir())
             break
@@ -116,7 +116,7 @@ if __name__ == "__main__":
     if os.path.exists('running.log'):
         os.remove('running.log')
 
-    logging.basicConfig(filename='running.log', format='%(levelname)s - %(filename)s - %(message)s', level=log_level)
+    logging.basicConfig(filename='running.log', format='%(thread)d - %(threadName)s - %(levelname)s - %(filename)s - %(message)s', level=log_level)
     logging.info('Starting training')
     logging.info(args)
 
