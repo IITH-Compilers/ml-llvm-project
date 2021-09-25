@@ -1,5 +1,5 @@
 import logging
-logger = logging.getLogger('topologicalSort.py') 
+logger = logging.getLogger(__file__) 
 # class to represent a graph object:
 class Graph:
 
@@ -28,6 +28,7 @@ class Graph:
 
     def getColorOfVisitedAdjNodes(self, v):
         interfering_nodes = self.adjList[v]
+        logging.debug('interfering_nodes {} '.format(interfering_nodes))
         return list(set([self.colored[u] for u in interfering_nodes if self.discovered[u]]))
     
     def getAdjNodes(self, v):

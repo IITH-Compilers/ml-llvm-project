@@ -16,6 +16,7 @@ import rollout as inference
 # import register_action_space
 # import env
 from argparse import Namespace
+# logging = 
 class service_server(RegisterAllocationInference_pb2_grpc.RegisterAllocationInferenceServicer):
 
     def __init__(self):
@@ -23,8 +24,9 @@ class service_server(RegisterAllocationInference_pb2_grpc.RegisterAllocationInfe
         # model_path = '/home/cs18mtech11030/ray_results/model/experiment_2021-08-06_09-58-35/experiment_HierarchicalGraphColorEnv_c3fda_00000_0_2021-08-06_09-58-36/checkpoint_000005/checkpoint-5'
         # model_path = '/home/cs18mtech11030/ray_results/model/experiment_2021-08-06_23-02-18/experiment_HierarchicalGraphColorEnv_3f58c_00000_0_2021-08-06_23-02-18/checkpoint_000010/checkpoint-10'
         # model_path = '/home/cs18mtech11030/ray_results/model/experiment_2021-08-09_16-11-00/experiment_HierarchicalGraphColorEnv_49c97_00000_0_2021-08-09_16-11-01/checkpoint_000100/checkpoint-100'
-        model_path = '/home/venkat/ray_results/split_model/experiment_2021-09-05_01-20-13/experiment_HierarchicalGraphColorEnv_521df_00000_0_2021-09-05_01-20-14/checkpoint_000040/checkpoint-40'
+        # model_path = '/home/venkat/ray_results/split_model/experiment_2021-09-05_01-20-13/experiment_HierarchicalGraphColorEnv_521df_00000_0_2021-09-05_01-20-14/checkpoint_000040/checkpoint-40'
         # self.inference_model = inference.Inference(model_path)
+        model_path = '/home/venkat/ray_results/split_model/experiment_2021-09-09_22-09-20/experiment_HierarchicalGraphColorEnv_7b793_00000_0_2021-09-09_22-09-21/checkpoint_001969/checkpoint-1969'
         args = {'no_render' : True, 'checkpoint' : model_path, 'run' : 'SimpleQ' , 'env' : '' , 'config' : {}, 'video_dir' : '', 'steps' : 0, 'episodes' : 0}
         args = Namespace(**args)
         self.inference_model = inference.RollOutInference(args)
@@ -87,7 +89,7 @@ class service_server(RegisterAllocationInference_pb2_grpc.RegisterAllocationInfe
     #TODO
     def getInfo(self, request, context):
         try:
-            print('------Hi---------')
+            # print('------Hi---------')
             # graph = request.graph
             # print(graph)
             inter_graphs = request# graph.decode("utf-8")           
@@ -95,6 +97,7 @@ class service_server(RegisterAllocationInference_pb2_grpc.RegisterAllocationInfe
             # if inter_graphs is not None and  inter_graphs !="":
             if inter_graphs.new:
                              # model_path = os.path.abspath(model_path)
+                assert len(inter_graphs.regProf) > 0, "Graphs has no nodes"
                 # print(inter_graphs)
                 inter_graph_list = []
                 if type(inter_graphs) is not list:
@@ -107,7 +110,7 @@ class service_server(RegisterAllocationInference_pb2_grpc.RegisterAllocationInfe
                 self.inference_model.update_obs(request)
 
             action, count = self.inference_model.compute_action()
-            print('action= {}, count={}'.format(action,count))
+            # print('action= {}, count={}'.format(action,count))
             select_node_agent = "select_node_agent_{}".format(count)
             select_task_agent = "select_task_agent_{}".format(count)
             split_agent = "split_node_agent_{}".format(count)
@@ -116,10 +119,10 @@ class service_server(RegisterAllocationInference_pb2_grpc.RegisterAllocationInfe
             if action[select_task_agent] == 1:
                 reply=RegisterAllocationInference_pb2.Data(message="Split", regidx=action[select_node_agent], payload=action[split_agent])
             elif  action[select_task_agent] == 0:
-                reply=RegisterAllocationInference_pb2.Data(message="Color", colorData=action[color_agent].encode('utf-8'))
+                reply=RegisterAllocationInference_pb2.Data(message="Color", color=action[color_agent], funcName=request.funcName)
             else:
                 reply=RegisterAllocationInference_pb2.Data(message="Exit")
-            print('------Bye-----' , reply)
+            # print('------Bye-----' , reply)
             return reply
         except:
             print('Error')

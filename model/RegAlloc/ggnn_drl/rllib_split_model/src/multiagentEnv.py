@@ -46,6 +46,7 @@ import sys
 
 sys.path.append('../../../../../llvm-grpc/Python-Utilities/')
 from client import *
+import RegisterAllocationInference_pb2_grpc, RegisterAllocationInference_pb2
 
 config_path=None
 
@@ -74,7 +75,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.topology = None # Have the graph formed from adjency list using dependence edges only.
         self.cur_node = None
         self.mode = env_config["mode"]
-        self.color_assignment_map = {}
         self.total_reward = 0
         self.registerAS = RegisterActionSpace(env_config["target"])
         self.action_space_size = self.registerAS.ac_sp_normlize_size
@@ -87,6 +87,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         print("env_config.worker_index", env_config.worker_index)
         
         if self.mode != 'inference':
+            self.color_assignment_map = {}
             dataset = env_config["dataset"]
             self.graphs_num = env_config["graphs_num"]
 
@@ -99,6 +100,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             else:
                 self.graphs_num = len(self.training_graphs)
             env_config["graphs_num"] = self.graphs_num
+        else:
+            self.color_assignment_map = []
 
         self.server_pid = None
         self.queryllvm = None
@@ -197,7 +200,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.hidden_state =  self.ggnn(initial_node_representation=state.initial_node_representation, annotations=state.annotations, adjacency_lists=state.adjacency_lists)
         node_mat = self.hidden_state.detach().numpy()
         # print(node_mat)
-        print('multiagentEnv : ',node_mat.shape)
+        # print('multiagentEnv : ',node_mat.shape)
         # for i, vec in enumerate(node_mat):
         #     for v in vec:
         #         if math.isnan(v):
@@ -214,7 +217,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         # print("Cur_obs shape", cur_obs.shape)
         return obs
 
-    # @profile
     def step(self, action_dict):
         # self.select_task_agent_id = "select_task_agent_{}".format(self.agent_count)
         if self.select_node_agent_id in action_dict:
@@ -256,6 +258,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
     def getNodeProperties(self):
         regclass = self.obs.reg_class_list[self.cur_node]
         adj_colors = self.obs.graph_topology.getColorOfVisitedAdjNodes(self.cur_node)
+        logging.debug("self.cur_node {} regclass {} adj_colors {}".format(self.cur_node, regclass, adj_colors))
         masked_action_space = self.registerAS.maskActionSpace(regclass, adj_colors)
         adj_nodes = self.obs.graph_topology.getAdjNodes(self.cur_node)
         spillcost = self.obs.spill_cost_list[self.cur_node]
@@ -300,6 +303,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         return prop
 
     def _select_node_step(self, action):        
+        logging.debug("Enter _select_node_step")
         # node_index, _ = self.constraint_selectNode(self.cur_obs, action)
         # node_index = int(math.ceil(((action + 1)*0.01)*self.obs.graph_topology.num_nodes))
         # self.obs.graph_topology.UpdateVisitList(node_index)
@@ -324,7 +328,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.cur_node = action
         self.obs.graph_topology.UpdateVisitList(self.cur_node)
         self.virtRegId = self.obs.idx_nid[self.cur_node]
-        print("Node selected = {}, corresponding register id = {}".format(action, self.virtRegId))
+        # print("Node selected = {}, corresponding register id = {}".format(action, self.virtRegId))
         logging.info("Node selected = {}, corresponding register id = {}".format(action, self.virtRegId))
         state = self.obs
         hidden_state =  self.ggnn(initial_node_representation=state.initial_node_representation, annotations=state.annotations, adjacency_lists=state.adjacency_lists)
@@ -343,11 +347,13 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         }
         # self.cur_obs = hidden_state[node_index]
         # print("Select Node Reward", reward)
+        logging.debug("Exit _select_node_step")
         return obs, reward, done, {}
 
     def _select_task_step(self, action):
+        logging.debug("Enter _select_task_step")
         done = {"__all__": False}
-        print("Select Task action", action)
+        # print("Select Task action", action)
         splitpoints = self.obs.split_points[self.cur_node]
         # self.select_task_agent_id = "select_task_agent_{}".format(self.agent_count)
         self.task_selected = action
@@ -388,9 +394,9 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                     action_mask.append(1)
                 else:
                     action_mask.append(0)
-            if usepoint_prop_value.shape[0] <= 1:
+            # if usepoint_prop_value.shape[0] <= 1:
                 # action_mask[0] = 1
-                print("usepoint_prop_value", usepoint_prop_value, splitpoints, self.cur_node)
+            #     print("usepoint_prop_value", usepoint_prop_value, splitpoints, self.cur_node)
             # assert usepoint_prop_value.shape[0] > 1, "No split point possible"
             # action_mask[0] = 0
                         
@@ -410,12 +416,14 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         #     self.colour_node_agent_id : self.cur_obs
         # }
         # print("Select Task Reward", reward)
+        logging.debug("Exit _select_task_step")
         return obs, reward, done, {}
         
     
 
 
     def _colour_node_step(self, action):
+        logging.debug("Enter _colour_node_step")
         # next_obs, colour_reward, done, response  = self.flat_env.step(action)
         
         colour_reward, done_all, response  = self.step_colorTask(action)
@@ -520,16 +528,18 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             # obs[self.select_node_agent_id] = self.cur_obs
             reward[self.select_node_agent_id] = 0
             done[self.select_node_agent_id] = done_all
+        logging.debug("Exit _colour_node_step")
         return obs, reward, done, {}
 
     def _split_node_step(self, action):
+        logging.debug("Enter _split_node_step")
         # self.cur_obs = self.flat_env.reset()
-        print(self.virtRegId, self.obs.idx_nid[self.cur_node], self.cur_node)
-        print(self.obs.idx_nid, self.obs.nid_idx)
+        logging.debug("{} {} {}".format(self.virtRegId, self.obs.idx_nid[self.cur_node], self.cur_node))
+        logging.debug("{} {}".format(self.obs.idx_nid, self.obs.nid_idx))
         assert self.virtRegId == self.obs.idx_nid[self.cur_node], "Virtual should be same." # 
         splitpoints = self.obs.split_points[self.cur_node]
         done = False
-        print("****Split index******", len(splitpoints), splitpoints)
+        logging.debug("****Split index****** {} {}".format( len(splitpoints), splitpoints))
         userDistanceDiff = 0
         split_index = action + 1
         split_point = split_index
@@ -538,7 +548,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
 
         if userDistanceDiff > 1000:        
-            print('userDistanceDiff', userDistanceDiff, self.spill_weight_diff)
+            logging.debug('userDistanceDiff - {} {}'.format(userDistanceDiff, self.spill_weight_diff))
             userDistanceDiff = 1000
         discount_factor = (1.001*self.split_steps)/10
         # discount_factor = 0
@@ -627,6 +637,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 "__all__": True 
             }
         # print("Split node Reward", reward)
+        logging.debug("Exit _split_node_step")
         return obs, reward, done, {}
 
     def step_splitTask(self, action):
@@ -668,8 +679,12 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.obs.graph_topology.UpdateColorVisitedNode(nodeChoosen, reg_allocated)
         
         node_id =  self.obs.idx_nid[nodeChoosen]
-        
-        self.color_assignment_map[node_id] = int(reg_allocated)
+        if self.mode != 'inference':
+            self.color_assignment_map[node_id] = int(reg_allocated)
+        else:
+            # grpccolor = RegisterAllocationInference_pb2.Data.color(key=node_id, value=int(reg_allocated))
+            # print()
+            self.color_assignment_map.append(RegisterAllocationInference_pb2.Data.colorData(key=str(node_id), value=int(reg_allocated)))
 
         logging.debug('Color the node with index={cur_node}, node_id={node_id} with color={action} in RegClass={regclass}'.format(cur_node=nodeChoosen, node_id=node_id, action=reg_allocated, regclass=self.obs.reg_class_list[self.cur_node]))
         
@@ -683,11 +698,15 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         reward = self.getReward(reg_allocated)
         response = None 
         if False not in self.obs.graph_topology.discovered:
-            response = utils_1.get_colored_graph(self.fun_id, self.fileName, self.functionName, self.color_assignment_map)
+            if self.mode != 'inference': 
+                response = utils_1.get_colored_graph(self.fun_id, self.fileName, self.functionName, self.color_assignment_map)
+                logging.info("Colour map for {} file : {}".format(self.fun_id, response['Predictions'][0]['mapping']))
+                logging.debug("Number of split steps are {}, colour steps are {}".format(self.split_steps, self.colour_steps))
+                self.colormap = json.dumps(response)
+            else:
+                response = self.color_assignment_map
+                self.colormap = response
             done = True
-            print("Colour map for {} file : {}".format(self.fun_id, response['Predictions'][0]['mapping']))
-            print("Number of split steps are {}, colour steps are {}".format(self.split_steps, self.colour_steps))
-            self.colormap = json.dumps(response)
             # reward = self.total_reward
             self.obs.next_stage = 'end'
             # print('Exit the server after last color ')
@@ -711,7 +730,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 time.sleep(5)
             
             logging.debug('All visited and colored graph visisted')
-            print('All visited and colored graph visisted')
+            # print('All visited and colored graph visisted')
             return reward, done, response
 
         self.obs.next_stage = 'selectnode'
@@ -726,7 +745,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             # path = "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/graphs/IG/json_new/523.xalancbmk_r_682.ll_F12.json"
             # path ="/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/graphs/IG/json_new/526.blender_r_425.ll_F13.json"
             logging.debug('Graphs selected : {}'.format(path))
-            print('Graphs selected : {}'.format(path))
+            # print('Graphs selected : {}'.format(path))
             self.reset_count+=1
             if self.reset_count % 1 == 0:
                 self.graph_counter+=1
@@ -747,8 +766,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 self.path = path
                 self.home_dir = attr['HOME_DIR']
         
-        self.color_assignment_map = {}
-        assert not bool(self.color_assignment_map), "Colour assignment map is non empty"
         self.total_reward = 0
 
         logging.debug('reset the env.')
@@ -761,7 +778,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             self.fun_id = graph['graph'][1][1]['Function_ID']
             self.num_nodes = len(self.graph['nodes'])
             self.obs = get_observations(self.graph)
-            print("Number of node in graph", self.num_nodes)
+            # print("Number of node in graph", self.num_nodes)
             if self.server_pid is not None:
                 print('terminate the pid if alive : {}'.format(self.server_pid.pid))
                 os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
@@ -777,12 +794,15 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             time.sleep(5)
             # print('Active thread mid the server starts : ', threading.active_count())
             self.queryllvm = RegisterAllocationClient(hostport=hostport)
+            self.color_assignment_map = {}
+            assert not bool(self.color_assignment_map), "Colour assignment map is non empty"
         else:
             self.fileName = graph.fileName
             self.functionName = graph.funcName
             self.fun_id = graph.funid    
             self.num_nodes = len(graph.regProf)
             self.obs = get_observationsInf(self.graph)
+            self.color_assignment_map = []
         
         self.obs.stage = 'start'
         self.obs.next_stage = 'selectnode'
@@ -796,7 +816,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         retry_wait_backoff_exponent=1.5
         while True:
             try:
-                print("Observation {}, register id {} and split point {}".format(op, register_id,  split_point))
+                logging.debug("Observation {}, register id {} and split point {}".format(op, register_id,  split_point))
                 updated_graphs = self.queryllvm.codeGen(op, register_id,  split_point)
                 # time.sleep(.1)
                 break
@@ -826,19 +846,9 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         return updated_graphs
 
     def update_obs(self, updated_graphs, register_id, split_point):
-        # print(type(updated_graphs))
-        # print(updated_graphs.regProf)
-        # print(self.obs.nid_idx)
-        # print(updated_graphs.result)
-
-        # print('-----', updated_graphs.regProf[0].regID)
-        # print('-----', updated_graphs.regProf[0].interferences)
-        # print('-----', updated_graphs.regProf[0].spillWeight)
-        # print('-----', updated_graphs.regProf[0].positionalSpillWeights)
-        # print('-----', updated_graphs.regProf[0].splitSlots)
         
         if updated_graphs.result:
-            # logging.info(updated_graphs)            
+            logging.info(updated_graphs)            
             register_id = self.obs.idx_nid[self.cur_node]
             # print(self.obs.nid_idx)
             # splited_node_idx = self.obs.nid_idx[register_id]
@@ -921,6 +931,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                     # self.obs.graph_topology.adjList[interfering_node_idx] = list(map(lambda x: self.obs.nid_idx[str(x)], node_prof.interferences))
 
             logging.debug('update the interfering node data.')
+            adjList_helper = [[] for _ in range(self.obs.graph_topology.num_nodes)]
             for node_prof in updated_graphs.regProf:
                 if self.mode != 'inference':
                     nodeId = str(node_prof.regID)
@@ -958,20 +969,22 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             else:
                 self.spill_weight_diff = 0
             # def topo
-            a = list(map(lambda x:list(map(lambda y: (x[0], y) , x[1])) , enumerate(self.obs.graph_topology.adjList)))
+            # a = list(map(lambda x:list(map(lambda y: (x[0], y) , x[1])) , enumerate(self.obs.graph_topology.adjList)))
             edges = []
             for i, adj in enumerate(self.obs.graph_topology.adjList):
                 for node in adj:
                     edges.append((i, node))
-                    edges.append((node, i))
+                    # edges.append((node, i))
             # print(len(edges))
             edges = list(set(edges))
             # print(len(edges))
 
-            # print(edges)
+            logging.debug("egdes({}) after after update : {} ".format(len(edges), edges))
+            logging.debug("self.obs.graph_topology.adjList : {} ".format(self.obs.graph_topology.adjList))
 
             self.obs.adjacency_lists = [ AdjacencyList(node_num=self.obs.graph_topology.num_nodes, adj_list=edges, device=self.obs.adjacency_lists[0].device)]
         else:
             self.spill_weight_diff = 0
-            print("updated_graphs", type(updated_graphs), updated_graphs.result)
+            logging.debug("updated_graphs= type:{} result:{}".format(type(updated_graphs), updated_graphs.result))
+        logging.debug("Exit update_obs")
         return updated_graphs.result

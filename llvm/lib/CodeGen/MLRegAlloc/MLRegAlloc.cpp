@@ -1459,6 +1459,9 @@ void MLRA::inference() {
     if (!isGraphSet) {
       serializeRegProfData(request);
       errs() << "Call model first time\n";
+      if ( requestObj.mutable_regprof()->size() <= 0) {
+        return ;
+      }
       Stub->getInfo(&context, requestObj, &replyObj);
       isGraphSet = true;
     } else {
@@ -1483,8 +1486,8 @@ void MLRA::inference() {
       for (auto i : reply->color()) {
         colorMap[i.key()] = i.value();
       }
-      this->FunctionVirtRegToColorMap[reply->funcname()] = colorMap;
-      assert(reply->funcname() == MF->getName());
+      this->FunctionVirtRegToColorMap[MF->getName()] = colorMap;
+      // assert(reply->funcname() == MF->getName());
       allocatePhysRegsViaRL();
 
       LLVM_DEBUG(errs() << "The ML allocated virtual registers: /n";

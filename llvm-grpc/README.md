@@ -2,7 +2,7 @@
 A GRPC framework to communicate between LLVM and a python ML workload for optimized Register Allocation.
 
 ## Pre-requites 
-* Building GRPC from Source: Please follow [`Build GRPC with cmake`](https://grpc.io/docs/languages/cpp/quickstart/) to build GRPC from source.
+* Building GRPC from Source: Please follow [`Build GRPC with cmake`](https://grpc.io/docs/languages/cpp/quickstart/) v1.34 (protobuff v3.13) to build GRPC from source.
 * In the above tutorial setting `DCMAKE_INSTALL_PREFIX` may not be necessary and the default install prefix can be used.
 * A proper build from source of LLVM along with Clang. 
 * The following dependencies will be required for Python:
