@@ -355,7 +355,7 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
   SplitAnalysis::BlockInfo BI;
   auto useSlots = SA->getUseSlots();
   for (auto use : useSlots) {
-    if (pos == splitPoint) {
+    if (pos == splitPoint + 1) {
       idx = use;
       idxPos = pos - 1;
       if (use.getBoundaryIndex() >= useSlots.back().getBoundaryIndex()) {
@@ -370,6 +370,8 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
     }
     pos++;
   }
+
+  assert(found && "Invalid split point");
 
   auto MI = LIS->getInstructionFromIndex(idx);
   assert(MI && "Empty instruction found for splitting");
@@ -1459,8 +1461,8 @@ void MLRA::inference() {
     if (!isGraphSet) {
       serializeRegProfData(request);
       errs() << "Call model first time\n";
-      if ( requestObj.mutable_regprof()->size() <= 0) {
-        return ;
+      if (requestObj.mutable_regprof()->size() <= 0) {
+        return;
       }
       Stub->getInfo(&context, requestObj, &replyObj);
       isGraphSet = true;
