@@ -112,7 +112,8 @@ DEFAULT_CONFIG = with_common_config({
         "dump_type": 'One',
         "dump_color_graph": True,
         "intermediate_data": './temp',
-        "dataset": "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/",
+        # "dataset": "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/",
+        "dataset": "/home/cs20mtech12003/ML-Register-Allocation/temp_data/",
         "graphs_num": 50000,
         "action_space_size": RegisterActionSpace("X86").ac_sp_normlize_size
     },
@@ -122,7 +123,7 @@ DEFAULT_CONFIG = with_common_config({
     # Number of workers for collecting samples with. This only makes sense
     # to increase if your environment is particularly slow to sample, or if
     # you"re using the Async or Ape-X optimizers.
-    "num_workers": 5,
+    "num_workers": 1,
     # Prevent iterations from going lower than this time span
     "min_iter_time_s": 1,
 

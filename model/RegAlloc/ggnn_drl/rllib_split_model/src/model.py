@@ -196,8 +196,10 @@ class SplitNodeNetwork(TorchModelV2, nn.Module):
         for i in range(input_dict["obs"]["action_mask"].shape[0]):
             action_mask = input_dict["obs"]["action_mask"][i, :]
 
-            # if all(v == 0 for v in action_mask):
-            #     print("Mask is all zero node spliting")
+            if all(v == 0 for v in action_mask):
+                action_mask[len(action_mask) - 1] = 1
+                x[i, len(action_mask) - 1] = 1
+                print("Mask is all zero node spliting")
 
             for j in range(action_mask.shape[0]):
                 if action_mask[j] == 0:                    

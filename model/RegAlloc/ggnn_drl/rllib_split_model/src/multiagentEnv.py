@@ -93,7 +93,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
             self.graph_counter = 0
             self.reset_count = 0
-            self.training_graphs=glob.glob(os.path.join(dataset, 'graphs/IG/json_new/*.json'))
+            # self.training_graphs=glob.glob(os.path.join(dataset, 'graphs/IG/json_new/*.json'))
+            self.training_graphs=glob.glob(os.path.join(dataset, 'json/*.json'))
             assert len(self.training_graphs) > 0, 'training set is empty' 
             if len(self.training_graphs) > self.graphs_num:
                 self.training_graphs = self.training_graphs[:self.graphs_num]
@@ -262,23 +263,23 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         masked_action_space = self.registerAS.maskActionSpace(regclass, adj_colors)
         adj_nodes = self.obs.graph_topology.getAdjNodes(self.cur_node)
         spillcost = self.obs.spill_cost_list[self.cur_node]
-        splitpoints = self.obs.split_points[self.cur_node]
+        use_distances = self.obs.use_distances[self.cur_node]
         prop = {
             "adj_nodes": len(adj_nodes),
             "avilable_color": len(masked_action_space),            
             "spill_cost": self.formatRewardValue(spillcost),
-            "usepoints": len(splitpoints)            
+            "usepoints": len(use_distances)            
         }
         return prop
 
     def getUsepointProperties(self):
         psw = self.obs.positionalSpillWeights[self.cur_node]
-        splitpoints = self.obs.split_points[self.cur_node]
-        assert len(splitpoints) == len(psw), "Usepoints and positionalSpillWeights have diffrent length"
+        use_distances = self.obs.use_distances[self.cur_node]
+        assert len(use_distances) == len(psw), "Usepoints and positionalSpillWeights have diffrent length"
 
         prop = {
             "positionalSpillWeights": psw,
-            "usepoints": splitpoints
+            "usepoints": use_distances
         }
         return prop
 
@@ -353,11 +354,11 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
     def _select_task_step(self, action):
         logging.debug("Enter _select_task_step")
         done = {"__all__": False}
-        # print("Select Task action", action)
+        print("Select Task action", action)
         splitpoints = self.obs.split_points[self.cur_node]
         # self.select_task_agent_id = "select_task_agent_{}".format(self.agent_count)
         self.task_selected = action
-        if action == 0 or len(splitpoints) == 1 or self.split_steps > self.split_threshold: # Colour node
+        if action == 0 or len(splitpoints) < 1 or self.split_steps > self.split_threshold: # Colour node
             self.colour_steps += 1
             if self.task_selected == 1:
                 self.split_steps += 1
@@ -386,11 +387,14 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         else:
             self.split_steps += 1
             usepoint_prop = self.getUsepointProperties()
-            usepoint_prop_value = np.array(list(usepoint_prop.values())).transpose()                        
-            usepoint_prop_mat = self.getUsepointPropertiesMatrix(usepoint_prop_value)
+            usepoint_prop_value = np.array(list(usepoint_prop.values())).transpose()
+            usepoint_prop_mat = self.getUsepointPropertiesMatrix(usepoint_prop_value)            
             action_mask = []
+            use_distance_list = self.obs.use_distances[self.cur_node]
+
             for i in range(usepoint_prop_mat.shape[0]):
-                if i < usepoint_prop_value.shape[0] - 1:
+                # if i < usepoint_prop_value.shape[0] - 1:
+                if i in splitpoints and i != len(use_distance_list) - 1:
                     action_mask.append(1)
                 else:
                     action_mask.append(0)
@@ -461,9 +465,12 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         usepoint_prop_value = np.array(list(usepoint_prop.values())).transpose()
         
         usepoint_prop_mat = self.getUsepointPropertiesMatrix(usepoint_prop_value)
+        splitpoints = self.obs.split_points[self.cur_node]
         action_mask3 = []
+        use_distance_list = self.obs.use_distances[self.cur_node]
         for i in range(usepoint_prop_mat.shape[0]):
-            if i < usepoint_prop_value.shape[0] - 1 :
+            # if i < usepoint_prop_value.shape[0] - 1 :
+            if i in splitpoints and i != len(use_distance_list) - 1:
                 action_mask3.append(1)
             else:
                 action_mask3.append(0)
@@ -537,24 +544,31 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         logging.debug("{} {} {}".format(self.virtRegId, self.obs.idx_nid[self.cur_node], self.cur_node))
         logging.debug("{} {}".format(self.obs.idx_nid, self.obs.nid_idx))
         assert self.virtRegId == self.obs.idx_nid[self.cur_node], "Virtual should be same." # 
-        splitpoints = self.obs.split_points[self.cur_node]
+        use_distances = self.obs.use_distances[self.cur_node]
         done = False
-        logging.debug("****Split index****** {} {}".format( len(splitpoints), splitpoints))
+        logging.debug("****Split index****** {} {}".format( len(use_distances), use_distances))
         userDistanceDiff = 0
-        split_index = action + 1
+        split_index = action
         split_point = split_index
-        split_reward, split_done = self.step_splitTask(split_point)
-        userDistanceDiff = splitpoints[split_index] - splitpoints[split_index-1]
+        print("****Split index****** {} {}".format( self.obs.split_points[self.cur_node], split_point))
+        if action != self.max_usepoint_count -1:
+            split_reward, split_done = self.step_splitTask(split_point)
+            userDistanceDiff = use_distances[split_index] - use_distances[split_index-1]
 
 
-        if userDistanceDiff > 1000:        
-            logging.debug('userDistanceDiff - {} {}'.format(userDistanceDiff, self.spill_weight_diff))
-            userDistanceDiff = 1000
-        discount_factor = (1.001*self.split_steps)/10
-        # discount_factor = 0
-        userDistanceDiff = userDistanceDiff / 1000.0
-        split_reward = userDistanceDiff + self.spill_weight_diff
-        # print("split_reward", len(splitpoints), split_reward, discount_factor)
+            if userDistanceDiff > 1000:        
+                logging.debug('userDistanceDiff - {} {}'.format(userDistanceDiff, self.spill_weight_diff))
+                userDistanceDiff = 1000
+            discount_factor = (1.001*self.split_steps)/10
+            # discount_factor = 0
+            userDistanceDiff = userDistanceDiff / 1000.0
+            split_reward = userDistanceDiff + self.spill_weight_diff
+            # print("split_reward", len(splitpoints), split_reward, discount_factor)
+        else:
+            split_reward = 0
+            split_done = False
+            discount_factor = 0
+            print("Skipping split step")
         
         self.total_reward += split_reward
 
@@ -579,9 +593,12 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         usepoint_prop_value = np.array(list(usepoint_prop.values())).transpose()
         
         usepoint_prop_mat = self.getUsepointPropertiesMatrix(usepoint_prop_value)
+        splitpoints = self.obs.split_points[self.cur_node]
         action_mask3 = []
+        use_distance_list = self.obs.use_distances[self.cur_node]
         for i in range(usepoint_prop_mat.shape[0]):
-            if i < usepoint_prop_value.shape[0] - 1:
+            # if i < usepoint_prop_value.shape[0] - 1:
+            if i in splitpoints and i != len(use_distance_list) - 1:
                 action_mask3.append(1)
             else:
                 action_mask3.append(0)
@@ -656,7 +673,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         response = None 
         # TODO updat eh graph sue to the split
         logging.info('try Split register {} on point {}'.format(node_id, split_point))
-        # print('try Split register {} on point {}'.format(register_id, split_point))
+        print('try Split register {} on point {}'.format(node_id, split_point))
         
         if self.mode != 'inference':
             updated_graphs = self.stable_grpc('Split', int(node_id), int(split_point))
@@ -743,7 +760,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             # path="/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/graphs/IG/json/500.perlbench_r_51.ll_F2.json"
             # path = "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/graphs/IG/json_new/523.xalancbmk_r_392.ll_F21.json"
             # path = "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/graphs/IG/json_new/523.xalancbmk_r_682.ll_F12.json"
-            # path ="/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/graphs/IG/json_new/526.blender_r_425.ll_F13.json"
+            path ="/home/cs20mtech12003/ML-Register-Allocation/temp_data/json/bublesort.c_F3.json"
             logging.debug('Graphs selected : {}'.format(path))
             # print('Graphs selected : {}'.format(path))
             self.reset_count+=1
@@ -864,6 +881,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             split_mtrix = self.obs.raw_graph_mat[splited_node_idx]
             CPY_INST_VEC=[0.001]*self.emb_size
             splitpoints = self.obs.split_points[self.cur_node]
+            print("Split points and use distances", self.obs.split_points[self.cur_node], self.obs.use_distances[self.cur_node])
             split_point = splitpoints[split_point]
             new_nodes_matrix = split_mtrix[:split_point+1] + [CPY_INST_VEC], [CPY_INST_VEC] + split_mtrix[split_point+1:]
             # logging.info('length of the matrix : {} '.format(len(split_mtrix)))
@@ -895,8 +913,9 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                     
                     self.obs.spill_cost_list.append(node_prof.spillWeight)
                     self.obs.reg_class_list.append(self.obs.reg_class_list[splited_node_idx])
-                    self.obs.split_points.append(sorted(node_prof.useDistances))
+                    self.obs.use_distances.append(sorted(node_prof.useDistances))
                     self.obs.positionalSpillWeights.append(node_prof.positionalSpillWeights)
+                    self.obs.split_points.append(node_prof.splitSlots)
                     # print('new slots : {}'.format(sorted(node_prof.useDistances)))
                     logging.info('new slots : {}'.format(sorted(node_prof.useDistances)))
                     logging.info('new positionalSpillWeights length : {}'.format(len(node_prof.positionalSpillWeights)))
@@ -947,7 +966,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 self.obs.graph_topology.indegree[interfering_node_idx] = len(self.obs.graph_topology.adjList[interfering_node_idx])
                 
                 self.obs.spill_cost_list[interfering_node_idx] = node_prof.spillWeight
-                self.obs.split_points[interfering_node_idx] = np.array(sorted(node_prof.useDistances))
+                self.obs.use_distances[interfering_node_idx] = np.array(sorted(node_prof.useDistances))
                 self.obs.positionalSpillWeights[interfering_node_idx] = node_prof.positionalSpillWeights
                 # print('{} updated slots : {}'.format(nodeId, sorted(node_prof.useDistances)))
                 logging.info('{} updated slots : {}'.format(nodeId, sorted(node_prof.useDistances)))

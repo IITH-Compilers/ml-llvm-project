@@ -444,6 +444,7 @@ def get_observations(graph):
     reg_class_list = []
     allocate_type_list = []
     split_points_list = []
+    use_distance_list = []
     raw_graph_mat = []
     positionalSpillWeights_list = []
     for idx, node in enumerate(nodes):
@@ -457,20 +458,25 @@ def get_observations(graph):
         spill_cost = parseProp(properties[1])
         allocate_type = parseProp(properties[2])
         split_points = []
+        use_distances = []
         positionalSpillWeights = []
         if len(properties) > 3:
             # print(properties)
             split_points = parseProp(properties[3])
-            positionalSpillWeights = parseProp(properties[4])
+            use_distances = parseProp(properties[4])
+            positionalSpillWeights = parseProp(properties[5])
             # print("split_points for node id {} are {} {}".format(nodeId, split_points, positionalSpillWeights))
             if len(split_points) > 0:
                 split_points = sorted(list(map(lambda x : int(x), split_points.split(', '))))
+            if len(use_distances) > 0:
+                use_distances = sorted(list(map(lambda x : int(x), use_distances.split(', '))))
             if len(positionalSpillWeights) > 0:
                 positionalSpillWeights = sorted(list(map(lambda x : float(x), positionalSpillWeights.split(', '))))
             
             
         
         split_points_list.append(np.array(split_points))
+        use_distance_list.append(np.array(use_distances))
         positionalSpillWeights_list.append(np.array(positionalSpillWeights))
 
         logging.debug('Allocation type : {}'.format(allocate_type))
@@ -553,7 +559,7 @@ def get_observations(graph):
     '''
     Main call to the compute representation
     '''
-    obs = {'raw_graph_mat':raw_graph_mat, 'initial_node_representation':initial_node_representation, 'annotations':annotations, 'adjacency_lists' : adjacency_lists,  'graph_topology':graph_topology, 'spill_cost_list' : spill_cost_list, 'reg_class_list' : reg_class_list, 'nid_idx':nid_idx, 'idx_nid':idx_nid, 'split_points' : split_points_list, "positionalSpillWeights": positionalSpillWeights_list}
+    obs = {'raw_graph_mat':raw_graph_mat, 'initial_node_representation':initial_node_representation, 'annotations':annotations, 'adjacency_lists' : adjacency_lists,  'graph_topology':graph_topology, 'spill_cost_list' : spill_cost_list, 'reg_class_list' : reg_class_list, 'nid_idx':nid_idx, 'idx_nid':idx_nid, 'split_points' : split_points_list, 'use_distances': use_distance_list, "positionalSpillWeights": positionalSpillWeights_list}
     obs = Namespace(**obs) 
     return obs
 

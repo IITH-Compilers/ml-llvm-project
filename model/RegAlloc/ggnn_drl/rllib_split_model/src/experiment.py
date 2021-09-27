@@ -55,7 +55,7 @@ def experiment(config):
             checkpoint = train_agent.save(tune.get_trial_dir())
             # print("***************Checkpoint****************", checkpoint)
         tune.report(**train_results)
-        if train_results['episodes_total'] > 999:
+        if train_results['episodes_total'] > 9:
             print("Traning Ended")
             checkpoint = train_agent.save(tune.get_trial_dir())
             break
