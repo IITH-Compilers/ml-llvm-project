@@ -329,7 +329,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.cur_node = action
         self.obs.graph_topology.UpdateVisitList(self.cur_node)
         self.virtRegId = self.obs.idx_nid[self.cur_node]
-        # print("Node selected = {}, corresponding register id = {}".format(action, self.virtRegId))
+        print("Node selected = {}, corresponding register id = {}".format(action, self.virtRegId))
         logging.info("Node selected = {}, corresponding register id = {}".format(action, self.virtRegId))
         state = self.obs
         hidden_state =  self.ggnn(initial_node_representation=state.initial_node_representation, annotations=state.annotations, adjacency_lists=state.adjacency_lists)
@@ -398,6 +398,10 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                     action_mask.append(1)
                 else:
                     action_mask.append(0)
+            if all(v == 0 for v in action_mask):
+                action_mask[len(use_distance_list) - 1] = 1
+                print("Curr Nodes split points", splitpoints, use_distance_list)
+
             # if usepoint_prop_value.shape[0] <= 1:
                 # action_mask[0] = 1
             #     print("usepoint_prop_value", usepoint_prop_value, splitpoints, self.cur_node)
@@ -551,7 +555,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         split_index = action
         split_point = split_index
         print("****Split index****** {} {}".format( self.obs.split_points[self.cur_node], split_point))
-        if action != self.max_usepoint_count -1:
+        use_distance_list = self.obs.use_distances[self.cur_node]
+        if action != len(use_distance_list) - 1:
             split_reward, split_done = self.step_splitTask(split_point)
             userDistanceDiff = use_distances[split_index] - use_distances[split_index-1]
 
@@ -723,6 +728,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             else:
                 response = self.color_assignment_map
                 self.colormap = response
+            print("Colour map ", self.colormap)
             done = True
             # reward = self.total_reward
             self.obs.next_stage = 'end'
@@ -762,7 +768,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             # path = "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/graphs/IG/json_new/523.xalancbmk_r_682.ll_F12.json"
             path ="/home/cs20mtech12003/ML-Register-Allocation/temp_data/json/bublesort.c_F3.json"
             logging.debug('Graphs selected : {}'.format(path))
-            # print('Graphs selected : {}'.format(path))
+            print('Graphs selected : {}'.format(path))
             self.reset_count+=1
             if self.reset_count % 1 == 0:
                 self.graph_counter+=1
@@ -882,7 +888,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             CPY_INST_VEC=[0.001]*self.emb_size
             splitpoints = self.obs.split_points[self.cur_node]
             print("Split points and use distances", self.obs.split_points[self.cur_node], self.obs.use_distances[self.cur_node])
-            split_point = splitpoints[split_point]
+            # split_point = splitpoints[split_point]
             new_nodes_matrix = split_mtrix[:split_point+1] + [CPY_INST_VEC], [CPY_INST_VEC] + split_mtrix[split_point+1:]
             # logging.info('length of the matrix : {} '.format(len(split_mtrix)))
             # print('length of the matrix : {} '.format(len(split_mtrix)))
