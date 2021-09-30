@@ -350,15 +350,30 @@ class RollOutInference:
         # ray.init(local_mode=args.local_mode)
 
         config["env"] = HierarchicalGraphColorEnv
-        config["env_config"]["target"] = "X86"
-        config["env_config"]["registerAS"] = RegisterActionSpace(config["env_config"]["target"])
-        config["env_config"]["action_space_size"] = config["env_config"]["registerAS"].ac_sp_normlize_size
-        config["env_config"]["state_size"] = 300
+        # config["env_config"]["target"] = "X86"
+        # config["env_config"]["registerAS"] = RegisterActionSpace(config["env_config"]["target"])
+        # config["env_config"]["action_space_size"] = config["env_config"]["registerAS"].ac_sp_normlize_size
+        # config["env_config"]["state_size"] = 300
     
-        config["env_config"]["mode"] = 'inference'
-        config["env_config"]["dump_type"] = 'One'
-        config["env_config"]["dump_color_graph"] = True
-        config["env_config"]["intermediate_data"] = './temp'
+        # config["env_config"]["mode"] = 'inference'
+        # config["env_config"]["dump_type"] = 'One'
+        # config["env_config"]["dump_color_graph"] = True
+        # config["env_config"]["intermediate_data"] = './temp'
+
+        config["env_config"] = {
+            "target": "X86",
+            "state_size": 300,
+            "max_number_nodes": 1000,
+            "max_usepoint_count": 200,
+            "mode": 'inference',
+            "dump_type": 'One',
+            "dump_color_graph": True,
+            "intermediate_data": './temp',
+            "dataset": "/lfs/usrhome/staff/nvk1tb/scratch/mlra_data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/",
+            "graphs_num": 50000,
+            "action_space_size": RegisterActionSpace("X86").ac_sp_normlize_size
+        }
+
        
         config["num_gpus"]=1
         ModelCatalog.register_custom_model("select_node_model", SelectNodeNetwork)
