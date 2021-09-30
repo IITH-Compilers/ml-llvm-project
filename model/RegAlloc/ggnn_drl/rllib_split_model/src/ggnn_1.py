@@ -299,6 +299,7 @@ def get_observationsInf(graph):
     color_list = []
     # allocate_type_list = []
     split_points_list = []
+    use_distance_list = []
     raw_graph_mat = []
     positionalSpillWeights_list = []
     for idx, node in enumerate(nodes):
@@ -311,7 +312,8 @@ def get_observationsInf(graph):
         regClass = node.cls #parseProp(properties[0]) 
         spill_cost = node.spillWeight #parseProp(properties[1])
         color = node.color # parseProp(properties[2])
-        split_points = node.useDistances
+        split_points = node.splitSlots
+        use_distances = node.useDistances
         positionalSpillWeights = node.positionalSpillWeights
         # if len(properties) > 3:
         #     # print(properties)
@@ -326,6 +328,7 @@ def get_observationsInf(graph):
             
         
         split_points_list.append(np.array(split_points))
+        use_distance_list.append(np.array(use_distances))
         positionalSpillWeights_list.append(np.array(positionalSpillWeights))
 
         # logging.debug('Allocation type : {}'.format(allocate_type))
@@ -424,7 +427,7 @@ def get_observationsInf(graph):
     '''
     Main call to the compute representation
     '''
-    obs = {'raw_graph_mat':raw_graph_mat, 'initial_node_representation':initial_node_representation, 'annotations':annotations, 'adjacency_lists' : adjacency_lists,  'graph_topology':graph_topology, 'spill_cost_list' : spill_cost_list, 'reg_class_list' : reg_class_list, 'nid_idx':nid_idx, 'idx_nid':idx_nid, 'split_points' : split_points_list, "positionalSpillWeights": positionalSpillWeights_list}
+    obs = {'raw_graph_mat':raw_graph_mat, 'initial_node_representation':initial_node_representation, 'annotations':annotations, 'adjacency_lists' : adjacency_lists,  'graph_topology':graph_topology, 'spill_cost_list' : spill_cost_list, 'reg_class_list' : reg_class_list, 'nid_idx':nid_idx, 'idx_nid':idx_nid, 'split_points' : split_points_list, 'use_distances': use_distance_list, "positionalSpillWeights": positionalSpillWeights_list}
     obs = Namespace(**obs) 
     return obs
 
