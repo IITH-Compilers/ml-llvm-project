@@ -89,7 +89,7 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
             action_mask = input_dict["obs"]["action_mask"][i, :]
 
             # if all(v == 0 for v in action_mask):
-            #     print("Mask is all zero node select")
+            #     print("Mask is all zero node select", input_dict["obs"]["state"].shape)
 
             for j in range(action_mask.shape[0]):
                 if action_mask[j] == 0:                    
@@ -148,7 +148,7 @@ class ColorNetwork(TorchModelV2, nn.Module):
             if all(v == 0 for v in action_mask):
                 x[i, :] =  torch.ones_like(action_mask)*FLOAT_MIN
                 x[i, 0] = 1.0
-                # print("Colour node all zero")
+                # print("Colour node all zero", input_dict["obs"]["state"].shape)
                 
             else:
                 for j in range(action_mask.shape[0]):
@@ -196,11 +196,11 @@ class SplitNodeNetwork(TorchModelV2, nn.Module):
         for i in range(input_dict["obs"]["action_mask"].shape[0]):
             action_mask = input_dict["obs"]["action_mask"][i, :]
 
-            if all(v == 0 for v in action_mask):
+            # if all(v == 0 for v in action_mask):
                 # action_mask[len(action_mask) - 1] = 1
                 # x[i, len(action_mask) - 1] = 1
-                print("Mask is all zero node spliting")
-                print("Input state", input_dict["obs"]["state"].shape)
+                # print("Mask is all zero node spliting")
+                # print("Input state", input_dict["obs"]["state"].shape)
 
             for j in range(action_mask.shape[0]):
                 if action_mask[j] == 0:                    
