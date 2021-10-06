@@ -226,8 +226,9 @@ grpc::Status MLRA::codeGen(grpc::ServerContext *context,
             response, &updatedRegIdxs);
       else
         sendRegProfData<registerallocation::RegisterProfileList>(response);
-    } else
+    } else {
       response->set_result(false);
+    }
   }
 
   return Status::OK;
@@ -418,20 +419,12 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
     return false;
   }
 
-  for (auto UB : SA->getUseBlocks()) {
-    if (UB.MBB == MBB) {
-      BI = UB;
-      break;
-    }
-  }
-
   LLVM_DEBUG(errs() << " Splitting at: "; idx.dump();
              LIS->getInstructionFromIndex(idx)->dump());
 
   assert(useSlots[idxPos] == idx);
-
   // Check if we can split at idx
-  auto baseIdx = useSlots[idxPos + 1].getBaseIndex();
+  auto baseIdx = useSlots[idxPos].getBoundaryIndex();
   VNInfo *ParentVNI = LREdit.getParent().getVNInfoAt(baseIdx);
   if (ParentVNI) {
     unsigned Original = VRM->getOriginal(splitReg);
@@ -450,18 +443,38 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
     }
   }
 
-  auto first = SE->openIntv();
-  // if (LIS->getInstructionFromIndex(useSlots[idxPos + 1])->getParent() !=
-  // MBB)
-  //   SegStart = SE->enterIntvBefore(useSlots[idxPos + 1]);
-  // else
-  //   SegStart = SE->enterIntvAfter(idx);
-  // for(auto i : )
-  SegStart = SE->enterIntvBefore(useSlots[idxPos + 1]);
-  SlotIndex SegStop = SE->leaveIntvAfter(SA->getUseSlots().back());
-  SE->useIntv(SegStart, SegStop);
-  // SE->useIntv(SegStart, SE->leaveIntvAfter(LIS->getInstructionIndex(
-  //                           SA->getUseBlocks().back().MBB->back())));
+  // SmallVector<MachineBasicBlock *, 5> newLRBlocks;
+  SmallVector<std::pair<SlotIndex, SlotIndex>, 5> newLRIntervals;
+  SlotIndex prevStart, prevEnd;
+  bool lastNoDom = false;
+
+  for (auto UB : SA->getUseBlocks()) {
+    if (DomTree->dominates(MBB, UB.MBB)) {
+      auto endIdx = UB.LastInstr;
+      auto startIdx = MBB == UB.MBB ? baseIdx : UB.FirstInstr;
+
+      if (!prevEnd.isValid() || lastNoDom) {
+        prevStart = startIdx;
+        prevEnd = endIdx;
+        lastNoDom = false;
+      } else {
+        prevEnd = endIdx;
+      }
+    } else if (prevStart.isValid() && prevEnd.isValid() && !lastNoDom) {
+      newLRIntervals.push_back(std::make_pair(prevStart, prevEnd));
+      lastNoDom = true;
+    }
+  }
+  if (!lastNoDom)
+    newLRIntervals.push_back(std::make_pair(prevStart, prevEnd));
+
+  for (auto i : newLRIntervals) {
+    auto first = SE->openIntv();
+    SE->selectIntv(first);
+    SegStart = SE->enterIntvBefore(i.first);
+    SlotIndex SegStop = SE->leaveIntvAfter(i.second);
+    SE->useIntv(SegStart, SegStop);
+  }
 
   if (LREdit.empty()) {
     LLVM_DEBUG(dbgs() << "All uses were copies.\n");
