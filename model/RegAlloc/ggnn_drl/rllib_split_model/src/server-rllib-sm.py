@@ -89,22 +89,30 @@ class service_server(RegisterAllocationInference_pb2_grpc.RegisterAllocationInfe
     #TODO
     def getInfo(self, request, context):
         try:
-            # print('------Hi---------')
+            print('------Hi--------- isnew {} '.format(request.new))
+            # print(request)
+            # print('******************************************')
             # graph = request.graph
             # print(graph)
             inter_graphs = request# graph.decode("utf-8")           
             # print(inter_graphs)
             # if inter_graphs is not None and  inter_graphs !="":
+            
+            # if not inter_graphs.result:
+            #     print('Nothing to update')
+            #     return RegisterAllocationInference_pb2.Data(message="Exit")
+            
+            assert len(inter_graphs.regProf) > 0, "Graphs has no nodes"
+
             if inter_graphs.new:
                              # model_path = os.path.abspath(model_path)
-                assert len(inter_graphs.regProf) > 0, "Graphs has no nodes"
                 # print(inter_graphs)
                 inter_graph_list = []
                 if type(inter_graphs) is not list:
                     inter_graph_list.append(inter_graphs)
                 # print(inter_graph_list)
                 self.inference_model.setGraphInEnv(inter_graph_list)
-            else:
+            elif inter_graphs.result:
                 # exit()
                 # self.inference_model.update_obs(request, self.inference_model.env.virtRegId, self.inference_model.env.split_point)
                 self.inference_model.update_obs(request)
@@ -122,9 +130,11 @@ class service_server(RegisterAllocationInference_pb2_grpc.RegisterAllocationInfe
                 reply=RegisterAllocationInference_pb2.Data(message="Color", color=action[color_agent], funcName=request.funcName)
             else:
                 reply=RegisterAllocationInference_pb2.Data(message="Exit")
-            # print('------Bye-----' , reply)
+            print('------Bye-----' , reply)
             return reply
         except:
+            print('Error')
+            # print(request)
             print('Error')
             traceback.print_exc()
             reply=RegisterAllocationInference_pb2.Data(message="Split", regidx=0, payload=0)
@@ -138,7 +148,10 @@ class Server:
     def run():
         ray.init()
 
-        server=grpc.server(futures.ThreadPoolExecutor(max_workers=20))
+        server=grpc.server(futures.ThreadPoolExecutor(max_workers=20),options = [
+                    ('grpc.max_send_message_length', 50*1024*1024), #50MB
+                            ('grpc.max_receive_message_length', 50*1024*1024) #50MB
+                                ])
 
         RegisterAllocationInference_pb2_grpc.add_RegisterAllocationInferenceServicer_to_server(service_server(),server)
 
