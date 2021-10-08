@@ -337,9 +337,10 @@ def get_observationsInf(graph):
             spill_cost = float(1)
         # node['label'] = re.sub(" {.*} ", '', node['label'])
         
+        # print(node.vectors)
         if len(node.vectors) > 0:
             # print("Node vectors : ", node.vectors[0].vec)
-            node_mat = [ vector.vec for vector in node.vectors]
+            node_mat = [ list(map(lambda x: float(x), vector.split())) for vector in node.vectors.split(" ; ")[:-1]]
         else:
             node_mat = [[0]*300]
         
@@ -372,19 +373,6 @@ def get_observationsInf(graph):
     # print("initial_node_representation shape",len(initial_node_representation), len(initial_node_representation[0]), len(initial_node_representation[36]))
     initial_node_representation = torch.stack(initial_node_representation, dim=0)# .to(device)
     
-    # import math
-    # for i, vec in enumerate(node_mat):
-    #     # print('ggnn_1 ',vec)
-    #     for v in vec:
-    #         if math.isnan(v):
-    #             print('ggnn_1 node_mat ****NAN****', v, i)
-    #             break
-    # for i, vec in enumerate(initial_node_representation):
-    #     print('ggnn_1 ',vec)
-    #     for v in vec:
-    #         if math.isnan(v):
-    #             print('ggnn_1 initial_node_representation ****NAN****', v, i)
-    #             break
     print(__file__, initial_node_representation.shape)
     logging.debug("Shape of the hidden nodes matrix N X D : {}".format(initial_node_representation.shape)) 
     # Create aGraph obj for getting the Zero incoming egdes nodes
@@ -470,11 +458,11 @@ def get_observations(graph):
             positionalSpillWeights = parseProp(properties[5])
             # print("split_points for node id {} are {} {}".format(nodeId, split_points, positionalSpillWeights))
             if len(split_points) > 0:
-                split_points = sorted(list(map(lambda x : int(x), split_points.split(', '))))
+                split_points = list(map(lambda x : int(x), split_points.split(', ')))
             if len(use_distances) > 0:
-                use_distances = sorted(list(map(lambda x : int(x), use_distances.split(', '))))
+                use_distances = list(map(lambda x : int(x), use_distances.split(', ')))
             if len(positionalSpillWeights) > 0:
-                positionalSpillWeights = sorted(list(map(lambda x : float(x), positionalSpillWeights.split(', '))))
+                positionalSpillWeights = list(map(lambda x : float(x), positionalSpillWeights.split(', ')))
             
             
         

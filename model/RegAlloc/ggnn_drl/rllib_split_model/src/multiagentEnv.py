@@ -275,7 +275,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
     def getUsepointProperties(self):
         psw = self.obs.positionalSpillWeights[self.cur_node]
         use_distances = self.obs.use_distances[self.cur_node]
-        assert len(use_distances) == len(psw), "Usepoints and positionalSpillWeights have diffrent length"
+        assert len(use_distances) == len(psw), "Usepoints and positionalSpillWeights have diffrent length {}({}) {}({}) for node {}".format(use_distances, len(use_distances), psw, len(psw), self.cur_node)
 
         prop = {
             "positionalSpillWeights": psw,
@@ -696,7 +696,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             if split_point == 0 or not self.update_obs(updated_graphs, int(node_id), int(split_point)):
                 self.obs.graph_topology.markNodeAsNotVisited(nodeChoosen)
         
-        assert False in self.obs.graph_topology.discovered, "After Split, all node not be finished"
+        # assert False in self.obs.graph_topology.discovered, "After Split, all node not be finished"
         
         self.obs.next_stage = 'selectnode'
         return reward, done
@@ -832,6 +832,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             self.fun_id = graph.funid    
             self.num_nodes = len(graph.regProf)
             self.obs = get_observationsInf(self.graph)
+            # print(self.obs)
+            # print("*********************************************************")
             self.color_assignment_map = []
         
         self.obs.stage = 'start'
@@ -889,7 +891,12 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             else:
                 splited_node_idx = self.obs.nid_idx[register_id]
             self.obs.graph_topology.indegree[splited_node_idx] = 0
-            self.obs.graph_topology.adjList[splited_node_idx] = []
+            
+            for adj in self.obs.graph_topology.adjList[splited_node_idx]:
+                self.obs.graph_topology.adjList[adj].remove(splited_node_idx)
+                self.obs.graph_topology.indegree[adj] = self.obs.graph_topology.indegree[adj] - 1
+
+            # self.obs.graph_topology.adjList[splited_node_idx] = []
             
             # logging.info('register splilted : {} '.format(register_id))
             # print('register splilted : {} at point({})'.format(register_id, split_point))

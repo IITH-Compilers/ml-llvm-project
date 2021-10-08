@@ -175,7 +175,7 @@ private:
                                        SmallVector<float, 8> &spillWeights);
   void computeVectors(LiveInterval *VirtReg,
                       SmallVector<IR2Vec::Vector, 12> &vectors);
-  void captureRegisterProfile();
+  bool captureRegisterProfile();
   std::string getDotGraphAsString();
   void printRegisterProfile() const;
 
