@@ -1,0 +1,7 @@
+S_haloExchange.c_F11_L1.dot : 8
+S_haloExchange.c_F11_L2.dot : 8
+S_timestep.c_F1_L1.dot : 3
+S_timestep.c_F1_L4.dot : 3
+S_initAtoms.c_F5_L1.dot : 3
+S_parallel.c_F13_L1.dot : 2
+S_parallel.c_F14_L1.dot : 2

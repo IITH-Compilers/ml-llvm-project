@@ -1,0 +1,25 @@
+2015-12-14 TOmofumi Yuki <tomofumi.yuki@inria.fr>
+	* utilities/polybench.c: Fixed the typo introduced in the previous change.
+        The reduction clause was written as (tmp:+) where it should have been (+:tmp).
+        Reported by Sven Verdoolaege <sven.verdoolaege@gmail.com>.
+
+2015-09-02  Louis-Noel Pouchet  <pouchet@cs.ucla.edu>
+
+	* utilities/polybench.c: Fix OpenMP pragma for flush_cache: was
+	sometimes causing a memory allocation issue with IBM XL/C's OpenMP
+	implementation (bug reported by Sudheer Kumar <sudheer3@gmail.com>
+	on a Power7).
+
+2015-04-01  Louis-Noel Pouchet  <pouchet@cs.ucla.edu>
+
+	* ChangeLog-internal: New. ChangeLog not to be distributed.
+	* utilities/polybench.c: Fix the support of POLYBENCH_GFLOPS.
+
+2015-04-02  Tomofumi
+
+	* Fixed issues with SCALAR_VAL macro in gessummv,2mm,3mm,atax,bicg,doitgen,durbin,gramschmidt,adi (reported by Sven)
+	* Simplified macros for data type changes.
+		- new macros DATA_TYPE_IS_XXX now takes care of all other macros (printf specifier, sqrt,pow,exp)
+		- affectted files are all headers of the kernels + header-gen.pl
+	* Updated README with the above
+		- plus removed gauss-filter from the list of kernels
