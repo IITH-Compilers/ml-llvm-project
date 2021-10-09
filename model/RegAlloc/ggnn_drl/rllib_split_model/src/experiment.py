@@ -103,7 +103,14 @@ class MyCallbacks(DefaultCallbacks):
                     **kwargs):
         print("Sample Batch size is {} bytes".format(samples.size_bytes()))
 
-
+@ray.remote
+class Counter:
+    def __init__(self):
+        self.count = 0
+    def inc(self, n):
+        self.count += n
+    def get(self):
+        return self.count
 
 if __name__ == "__main__":
     args = parser.parse_args()
@@ -122,7 +129,10 @@ if __name__ == "__main__":
 
 
 
-    ray.init(object_store_memory=10000000000)
+    ray.init(object_store_memory=10000000000, local_mode=True)
+    
+    c = Counter.remote()
+
     config = DEFAULT_CONFIG.copy()
     config["train-iterations"] = args.train_iterations
 

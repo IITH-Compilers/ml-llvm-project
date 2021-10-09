@@ -658,7 +658,16 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 self.split_node_agent_id: True,
                 "__all__": True 
             }
-        # print("Split node Reward", reward)
+            self.obs.next_stage = 'end'
+            self.stable_grpc('Exit', 0, 0)   
+            print("Killing Server pid", self.server_pid.pid)         
+            os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
+            if self.server_pid.poll() is not None:
+                print('Force stop')
+            self.server_pid = None
+            print('Stop server')
+            time.sleep(5)
+            
         logging.debug("Exit _split_node_step")
         return obs, reward, done, {}
 
@@ -686,9 +695,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 return reward, True
             if split_point == 0 or not self.update_obs(updated_graphs, int(node_id), int(split_point)):
                 self.obs.graph_topology.markNodeAsNotVisited(nodeChoosen)
-        # else:
-        #     done = True
-            # self.obs.graph_topology.markNodeAsNotVisited(nodeChoosen)
         
         # assert False in self.obs.graph_topology.discovered, "After Split, all node not be finished"
         
@@ -767,7 +773,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             # path="/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/graphs/IG/json/500.perlbench_r_51.ll_F2.json"
             # path = "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/graphs/IG/json_new/523.xalancbmk_r_392.ll_F21.json"
             # path = "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/graphs/IG/json_new/523.xalancbmk_r_682.ll_F12.json"
-            path ="/home/cs20mtech12003/ML-Register-Allocation/temp_data/json/bublesort.c_F3.json"
+            path ="/home/cs20mtech12003/ML-Register-Allocation/temp_data/json/bublesort.c_F2.json"
             logging.debug('Graphs selected : {}'.format(path))
             print('Graphs selected : {}'.format(path))
             self.reset_count+=1
@@ -843,7 +849,9 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         while True:
             try:
                 logging.debug("Observation {}, register id {} and split point {}".format(op, register_id,  split_point))
+                print("LLVM grpc called")
                 updated_graphs = self.queryllvm.codeGen(op, register_id,  split_point)
+                print("LLVM grpc response came")
                 # time.sleep(.1)
                 break
             # except ValueError as e:
@@ -867,7 +875,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                     time.sleep(retry_wait_seconds)
                     retry_wait_seconds *= retry_wait_backoff_exponent
                 else:
-                    print("Unknown error")
+                    print("Unknown error", e.code())
                     raise
         return updated_graphs
 
