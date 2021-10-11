@@ -99,9 +99,16 @@ class MyCallbacks(DefaultCallbacks):
         else:
             episode.hist_data["server_pid"] = [0]
     
+    def  on_episode_end(self, *, worker: RolloutWorker, base_env: BaseEnv,
+                       policies: type_dict[str, Policy], episode: MultiAgentEpisode,
+                       env_index: int, **kwargs):
+        print("Episode Ended with worker", worker.worker_index)
+    
+    
     def on_sample_end(self, *, worker: "RolloutWorker", samples: SampleBatch,
                     **kwargs):
         print("Sample Batch size is {} bytes".format(samples.size_bytes()))
+        # print("Sample Batch is", samples.rows())
 
 @ray.remote
 class Counter:
@@ -113,6 +120,9 @@ class Counter:
         return self.count
 
 if __name__ == "__main__":
+
+    os.environ['GRPC_VERBOSITY']='DEBUG'
+
     args = parser.parse_args()
     logger = logging.getLogger(__file__)
     log_level=logging.DEBUG
@@ -129,9 +139,9 @@ if __name__ == "__main__":
 
 
 
-    ray.init(object_store_memory=10000000000, local_mode=True)
+    ray.init(object_store_memory=10000000000, local_mode=False)
     
-    c = Counter.remote()
+    # c = Counter.remote()
 
     config = DEFAULT_CONFIG.copy()
     config["train-iterations"] = args.train_iterations
@@ -245,7 +255,10 @@ if __name__ == "__main__":
     tune.run(
         experiment,
         config=config,
-        resources_per_trial=SimpleQTrainer.default_resource_request(config))
+        resources_per_trial=SimpleQTrainer.default_resource_request(config),
+        # fail_fast=True,
+        # max_failures=10
+        )
         # resources_per_trial={"cpu": 16, "gpu": 2})
         # file_count += 1
     print("Total time in seconds is: ", (time.time() - start_time))

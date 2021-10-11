@@ -93,8 +93,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
             self.graph_counter = 0
             self.reset_count = 0
-            # self.training_graphs=glob.glob(os.path.join(dataset, 'graphs/IG/json_new/*.json'))
-            self.training_graphs=glob.glob(os.path.join(dataset, 'json/*.json'))
+            self.training_graphs=glob.glob(os.path.join(dataset, 'graphs/IG/set1/*.json'))
+            # self.training_graphs=glob.glob(os.path.join(dataset, 'json/*.json'))
             assert len(self.training_graphs) > 0, 'training set is empty' 
             if len(self.training_graphs) > self.graphs_num:
                 self.training_graphs = self.training_graphs[:self.graphs_num]
@@ -358,7 +358,11 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         splitpoints = self.obs.split_points[self.cur_node]
         # self.select_task_agent_id = "select_task_agent_{}".format(self.agent_count)
         self.task_selected = action
-        if action == 0 or len(splitpoints) < 1 or self.split_steps > self.split_threshold: # Colour node
+        if type(splitpoints) == np.ndarray:
+            splitpoints = splitpoints.tolist()
+            # print("splitpoints type", len(splitpoints.tolist()), type(splitpoints))
+        # if action == 0 or len(splitpoints) < 1 or self.split_steps > self.split_threshold: # Colour node
+        if True: # Colour node
             self.colour_steps += 1
             if self.task_selected == 1:
                 self.split_steps += 1
@@ -773,7 +777,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             # path="/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/graphs/IG/json/500.perlbench_r_51.ll_F2.json"
             # path = "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/graphs/IG/json_new/523.xalancbmk_r_392.ll_F21.json"
             # path = "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/graphs/IG/json_new/523.xalancbmk_r_682.ll_F12.json"
-            path ="/home/cs20mtech12003/ML-Register-Allocation/temp_data/json/bublesort.c_F2.json"
+            # path ="/home/cs20mtech12003/ML-Register-Allocation/temp_data/json/bublesort.c_F2.json"
             logging.debug('Graphs selected : {}'.format(path))
             print('Graphs selected : {}'.format(path))
             self.reset_count+=1
@@ -892,9 +896,9 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 splited_node_idx = self.obs.nid_idx[register_id]
             self.obs.graph_topology.indegree[splited_node_idx] = 0
             
-            for adj in self.obs.graph_topology.adjList[splited_node_idx]:
-                self.obs.graph_topology.adjList[adj].remove(splited_node_idx)
-                self.obs.graph_topology.indegree[adj] = self.obs.graph_topology.indegree[adj] - 1
+            # for adj in self.obs.graph_topology.adjList[splited_node_idx]:
+            #     self.obs.graph_topology.adjList[adj].remove(splited_node_idx)
+            #     self.obs.graph_topology.indegree[adj] = self.obs.graph_topology.indegree[adj] - 1
 
             # self.obs.graph_topology.adjList[splited_node_idx] = []
             
