@@ -361,8 +361,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         if type(splitpoints) == np.ndarray:
             splitpoints = splitpoints.tolist()
             # print("splitpoints type", len(splitpoints.tolist()), type(splitpoints))
-        # if action == 0 or len(splitpoints) < 1 or self.split_steps > self.split_threshold: # Colour node
-        if True: # Colour node
+        if action == 0 or len(splitpoints) < 1 or self.split_steps > self.split_threshold: # Colour node
             self.colour_steps += 1
             if self.task_selected == 1:
                 self.split_steps += 1
@@ -777,7 +776,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             # path="/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/graphs/IG/json/500.perlbench_r_51.ll_F2.json"
             # path = "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/graphs/IG/json_new/523.xalancbmk_r_392.ll_F21.json"
             # path = "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/graphs/IG/json_new/523.xalancbmk_r_682.ll_F12.json"
-            # path ="/home/cs20mtech12003/ML-Register-Allocation/temp_data/json/bublesort.c_F2.json"
+            # path ="/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data_new/graphs/IG/set1/508.namd_r_11.ll_F4.json"
             logging.debug('Graphs selected : {}'.format(path))
             print('Graphs selected : {}'.format(path))
             self.reset_count+=1
@@ -983,12 +982,13 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 else:
                     nodeId = node_prof.regID
                 interfering_node_idx = self.obs.nid_idx[nodeId]
-
-                if self.mode != 'inference':
-                    self.obs.graph_topology.adjList[interfering_node_idx] = list(map(lambda x: self.obs.nid_idx[str(x)], node_prof.interferences))
-                else:
-                    self.obs.graph_topology.adjList[interfering_node_idx] = list(map(lambda x: self.obs.nid_idx[x], node_prof.interferences))
-
+                try:
+                    if self.mode != 'inference':
+                        self.obs.graph_topology.adjList[interfering_node_idx] = list(map(lambda x: self.obs.nid_idx[str(x)], node_prof.interferences))
+                    else:
+                        self.obs.graph_topology.adjList[interfering_node_idx] = list(map(lambda x: self.obs.nid_idx[x], node_prof.interferences))
+                except:
+                    print("Node idx map", self.obs.nid_idx)
                 self.obs.graph_topology.indegree[interfering_node_idx] = len(self.obs.graph_topology.adjList[interfering_node_idx])
                 
                 self.obs.spill_cost_list[interfering_node_idx] = node_prof.spillWeight

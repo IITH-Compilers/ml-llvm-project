@@ -137,8 +137,8 @@ class RegisterActionSpace:
 
     @staticmethod
     def loadRegConfig(target):
-        baseDir = '/home/venkat/IF-DV/Rohit/regAlloc/iith-compilers/ML-Register-Allocation/llvm/lib/CodeGen/MLRegAlloc/config_json'
-        #baseDir = '/home/cs20mtech12003/ML-Register-Allocation/llvm/lib/CodeGen/MLRegAlloc/config_json'
+        # baseDir = '/home/venkat/IF-DV/Rohit/regAlloc/iith-compilers/ML-Register-Allocation/llvm/lib/CodeGen/MLRegAlloc/config_json'
+        baseDir = '/home/cs20mtech12003/ML-Register-Allocation/llvm/lib/CodeGen/MLRegAlloc/config_json'
         # baseDir = '/home/cs18mtech11030/project/grpc_llvm/ML-Register-Allocation/llvm/lib/CodeGen/MLRegAlloc/config_json'
         if target == "X86":
             fileName= os.path.join(baseDir, 'X86_supported_RegClasses.json')
