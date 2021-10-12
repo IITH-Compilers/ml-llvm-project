@@ -447,12 +447,10 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
   SmallVector<std::pair<SlotIndex, SlotIndex>, 5> newLRIntervals;
   SlotIndex prevStart, prevEnd;
   bool lastNoDom = false;
-
   for (auto UB : SA->getUseBlocks()) {
     if (DomTree->dominates(MBB, UB.MBB)) {
       auto endIdx = UB.LastInstr;
       auto startIdx = MBB == UB.MBB ? baseIdx : UB.FirstInstr;
-
       if (!prevEnd.isValid() || lastNoDom) {
         prevStart = startIdx;
         prevEnd = endIdx;
@@ -469,9 +467,8 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
     newLRIntervals.push_back(std::make_pair(prevStart, prevEnd));
 
   for (auto i : newLRIntervals) {
-    auto first = SE->openIntv();
-    SE->selectIntv(first);
-    SegStart = SE->enterIntvBefore(i.first);
+    SE->openIntv();
+    SegStart = SE->enterIntvAfter(i.first);
     SlotIndex SegStop = SE->leaveIntvAfter(i.second);
     SE->useIntv(SegStart, SegStop);
   }
@@ -1234,14 +1231,23 @@ void MLRA::updateRegisterProfileAfterSplit(
 
     // unsigned Reg = Register::index2VirtReg(NewVRegs[i]);
     LiveInterval *NewVirtReg = &LIS->getInterval(NewVRegs[i]);
-
+    if (NewVirtReg->empty()) {
+      LLVM_DEBUG(errs() << "empty newvirtreg detected.. continue\n");
+      continue;
+    }
     rp.cls = oldRP.cls;
     rp.spillWeight = NewVirtReg->weight;
 
     SmallVector<int, 8> useDistances;
     SmallVector<unsigned, 8> splitPoints;
     SA->analyze(NewVirtReg);
+
     auto uses = SA->getUseSlots();
+    if (uses.empty()) {
+      LLVM_DEBUG(errs() << "There are no uses.. skipping this new virt reg\n");
+      continue;
+    }
+
     auto firstUse = uses.front();
     unsigned useIdx = 0;
     for (auto use : uses) {
@@ -1588,7 +1594,6 @@ void MLRA::inference() {
           MF->dump();
           errs()
           << "============================================================\n");
-    
       if (splitVirtReg(splitRegIdx, splitPoint, NewVRegs)) {
         SmallSetVector<unsigned, 8> updatedRegIdxs;
         updateRegisterProfileAfterSplit(splitRegIdx, NewVRegs, updatedRegIdxs);
