@@ -15,7 +15,7 @@
 
 namespace IR2Vec {
 
-#define DIM 300
+#define DIM 100
 using Vector = llvm::SmallVector<double, DIM>;
 
 void collectDataFromVocab(std::string vocab,

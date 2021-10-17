@@ -32,7 +32,7 @@ from model import SelectTaskNetwork, SelectNodeNetwork, ColorNetwork, SplitNodeN
 import logging
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--train-iterations", type=int, default=10)
+parser.add_argument("--train-iterations", type=int, default=100000)
 
 checkpoint = None
 def experiment(config):
@@ -55,7 +55,7 @@ def experiment(config):
             checkpoint = train_agent.save(tune.get_trial_dir())
             # print("***************Checkpoint****************", checkpoint)
         tune.report(**train_results)
-        if train_results['episodes_total'] > 9:
+        if train_results['episodes_total'] > 999:
             print("Traning Ended")
             checkpoint = train_agent.save(tune.get_trial_dir())
             break

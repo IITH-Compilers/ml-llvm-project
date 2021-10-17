@@ -174,5 +174,5 @@ class RegisterActionSpace:
 
         # with open("{}_supported_reg.json".format(target), "w") as f:
         #     json.dump(supported_reg_test, f, indent=4)
-
+        print("suppcls_regs_map", len(suppcls_regs_map.values()))
         return supported_regClass, suppcls_regs_map, reg_idname_map, overlaps 

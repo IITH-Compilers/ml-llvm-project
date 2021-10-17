@@ -114,7 +114,9 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.colour_steps = 0
         self.spill_weight_diff = 0
         self.task_selected = 0
-        self.split_threshold = 100
+        self.split_threshold = 20
+
+        self.grpc_rtt = 0
 
     def reward_formula(self, value, action):
         if value == float("inf"):
@@ -216,6 +218,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             self.select_node_agent_id: { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(action_mask), 'state' : cur_obs}
         }
         # print("Cur_obs shape", cur_obs.shape)
+        print("Total time in grpc rtt", self.grpc_rtt)
         return obs
 
     def step(self, action_dict):
@@ -557,7 +560,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         userDistanceDiff = 0
         split_index = action
         split_point = split_index
-        print("****Split index****** {} {}".format( self.obs.split_points[self.cur_node], split_point))
+        # print("****Split index****** {} {}".format( self.obs.split_points[self.cur_node], split_point))
         use_distance_list = self.obs.use_distances[self.cur_node]
         if action != len(use_distance_list) - 1:
             split_reward, split_done = self.step_splitTask(split_point)
@@ -576,6 +579,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             split_reward = 0
             split_done = False
             discount_factor = 0
+            nodeChoosen = self.cur_node
+            self.obs.graph_topology.markNodeAsNotVisited(nodeChoosen)
             print("Skipping split step")
         
         self.total_reward += split_reward
@@ -852,9 +857,12 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         while True:
             try:
                 logging.debug("Observation {}, register id {} and split point {}".format(op, register_id,  split_point))
-                print("LLVM grpc called")
+                # print("LLVM grpc called")
+                t1 = time.time()
                 updated_graphs = self.queryllvm.codeGen(op, register_id,  split_point)
-                print("LLVM grpc response came")
+                t2 = time.time()
+                # print("LLVM grpc response came in {} sec".format(t2 -t1))
+                self.grpc_rtt += t2-t1
                 # time.sleep(.1)
                 break
             # except ValueError as e:

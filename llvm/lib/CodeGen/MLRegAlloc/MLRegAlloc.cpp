@@ -664,7 +664,7 @@ std::string MLRA::getDotGraphAsString() {
         auto vec = rp.vecRep[k];
         if (vec.size() == 0) {
           LLVM_DEBUG(errs() << "No MIR2Vec Inst in map\n");
-          vec = SmallVector<double, 300>(DIM, 0);
+          vec = SmallVector<double, DIM>(DIM, 0);
         } else {
           LLVM_DEBUG(errs() << "Inst present in MIR2Vec map\n");
         }

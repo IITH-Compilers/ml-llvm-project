@@ -342,7 +342,7 @@ def get_observationsInf(graph):
             # print("Node vectors : ", node.vectors[0].vec)
             node_mat = [ list(map(lambda x: float(x), vector.split())) for vector in node.vectors.split(" ; ")[:-1]]
         else:
-            node_mat = [[0]*300]
+            node_mat = [[0]*100]
         
         # print(node_mat)
         # print(type(node_mat)) 
@@ -487,7 +487,7 @@ def get_observations(graph):
             node_mat = json.loads(eval(matr))
             # node_mat = json.loads(matr)
         else:
-            node_mat = [[0]*300]
+            node_mat = [[0]*100]
         
         # print(node_mat)
         # print(type(node_mat)) 

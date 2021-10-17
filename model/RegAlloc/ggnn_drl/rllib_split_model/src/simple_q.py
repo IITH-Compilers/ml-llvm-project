@@ -39,8 +39,8 @@ DEFAULT_CONFIG = with_common_config({
         "type": "EpsilonGreedy",
         # Config for the Exploration class' constructor:
         "initial_epsilon": 1.0,
-        "final_epsilon": 0.02,
-        "epsilon_timesteps": 2000000,  # Timesteps over which to anneal epsilon.
+        "final_epsilon": 0.1,
+        "epsilon_timesteps": 50000,  # Timesteps over which to anneal epsilon.
 
         # For soft_q, use:
         # "exploration_config" = {
@@ -104,18 +104,19 @@ DEFAULT_CONFIG = with_common_config({
     },
 
     "env_config": {
-        "target": "X86",
-        "state_size": 300,
+        "target": "AArch64",
+        "state_size": 100,
         "max_number_nodes": 1000,
         "max_usepoint_count": 200,
         "mode": 'training',
         "dump_type": 'One',
         "dump_color_graph": True,
         "intermediate_data": './temp',
-        "dataset": "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data_new/",
-        # "dataset": "/home/cs20mtech12003/ML-Register-Allocation/temp_data/",
+        # "dataset": "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data_100d/",
+        "dataset": "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_aarch64_split_data/",
+        # "dataset": "/home/cs20mtech12003/ML-Register-Allocation/data/test_dict/graphs/IG/",
         "graphs_num": 50000,
-        "action_space_size": RegisterActionSpace("X86").ac_sp_normlize_size
+        "action_space_size": RegisterActionSpace("AArch64").ac_sp_normlize_size
     },
 
     "framework": "torch",
@@ -123,7 +124,7 @@ DEFAULT_CONFIG = with_common_config({
     # Number of workers for collecting samples with. This only makes sense
     # to increase if your environment is particularly slow to sample, or if
     # you"re using the Async or Ape-X optimizers.
-    "num_workers": 1,
+    "num_workers": 5,
     # Prevent iterations from going lower than this time span
     "min_iter_time_s": 1,
 

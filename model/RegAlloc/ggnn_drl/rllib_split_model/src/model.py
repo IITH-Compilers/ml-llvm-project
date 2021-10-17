@@ -120,6 +120,7 @@ class ColorNetwork(TorchModelV2, nn.Module):
         self.fc1 = nn.Linear(custom_config["state_size"], custom_config["fc1_units"])
         self.fc2 = nn.Linear(custom_config["fc1_units"], custom_config["fc2_units"])
         self.fc3 = nn.Linear( custom_config["fc2_units"] + 3, num_outputs)
+        print("ColorNetwork colour size", num_outputs)
         
     def forward(self, input_dict, state, seq_lens):
         """Build a network that maps state -> action values."""
