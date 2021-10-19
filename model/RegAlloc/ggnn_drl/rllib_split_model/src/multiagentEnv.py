@@ -776,7 +776,9 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
     
     def reset_env(self, graph=None):
         if graph is None:
-            path=self.training_graphs[self.graph_counter%self.graphs_num]
+            inx = (((self.worker_index-1)*200) + self.graph_counter)
+            # print("Worker index", self.worker_index, inx)
+            path=self.training_graphs[inx]
             # path="/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/graphs/IG/json/526.blender_r_756.ll_F15.json"
             # path="/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/graphs/IG/json/500.perlbench_r_51.ll_F2.json"
             # path = "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/graphs/IG/json_new/523.xalancbmk_r_392.ll_F21.json"
@@ -787,7 +789,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             self.reset_count+=1
             if self.reset_count % 1 == 0:
                 self.graph_counter+=1
-                self.graph_counter = self.graph_counter%100 
+                self.graph_counter = self.graph_counter%200
             try:
                 with open(path) as f:
                    graph = json.load(f)
@@ -886,8 +888,11 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                     time.sleep(retry_wait_seconds)
                     retry_wait_seconds *= retry_wait_backoff_exponent
                 else:
-                    print("Unknown error", e.code())
-                    raise
+                    if self.mode != 'inference':
+                        print("Unknown error", e.code())
+                        return None
+                    else:
+                        raise
         return updated_graphs
 
     def update_obs(self, updated_graphs, register_id, split_point):

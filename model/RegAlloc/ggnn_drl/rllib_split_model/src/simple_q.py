@@ -40,7 +40,7 @@ DEFAULT_CONFIG = with_common_config({
         # Config for the Exploration class' constructor:
         "initial_epsilon": 1.0,
         "final_epsilon": 0.1,
-        "epsilon_timesteps": 50000,  # Timesteps over which to anneal epsilon.
+        "epsilon_timesteps": 1000000,  # Timesteps over which to anneal epsilon.
 
         # For soft_q, use:
         # "exploration_config" = {
@@ -115,7 +115,7 @@ DEFAULT_CONFIG = with_common_config({
         # "dataset": "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data_100d/",
         "dataset": "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_aarch64_split_data/",
         # "dataset": "/home/cs20mtech12003/ML-Register-Allocation/data/test_dict/graphs/IG/",
-        "graphs_num": 50000,
+        "graphs_num": 5000,
         "action_space_size": RegisterActionSpace("AArch64").ac_sp_normlize_size
     },
 
@@ -124,7 +124,7 @@ DEFAULT_CONFIG = with_common_config({
     # Number of workers for collecting samples with. This only makes sense
     # to increase if your environment is particularly slow to sample, or if
     # you"re using the Async or Ape-X optimizers.
-    "num_workers": 5,
+    "num_workers": 10,
     # Prevent iterations from going lower than this time span
     "min_iter_time_s": 1,
 

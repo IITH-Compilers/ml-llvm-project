@@ -43,10 +43,11 @@ def experiment(config):
     train_agent = SimpleQTrainer(config=config, env=HierarchicalGraphColorEnv)
     print('------------------------ aegent --------------------------------- ', train_agent)
     # Train
-    
+    checkpoint = "/home/cs20mtech12003/ray_results/experiment_2021-10-18_01-05-12/experiment_HierarchicalGraphColorEnv_58ccb_00000_0_2021-10-18_01-05-13/checkpoint_000150/checkpoint-150"
     # train_agent = SimpleQTrainer(config=config, env=GraphColorEnv)
     if checkpoint is not None:
-        train_agent.restore(checkpoint)            
+        train_agent.restore(checkpoint)
+        print("Checkpoint restored")            
 
     for i in range(iterations):
         train_results = train_agent.train()
@@ -55,7 +56,7 @@ def experiment(config):
             checkpoint = train_agent.save(tune.get_trial_dir())
             # print("***************Checkpoint****************", checkpoint)
         tune.report(**train_results)
-        if train_results['episodes_total'] > 999:
+        if train_results['episodes_total'] > 19999:
             print("Traning Ended")
             checkpoint = train_agent.save(tune.get_trial_dir())
             break
