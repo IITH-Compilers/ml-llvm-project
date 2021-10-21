@@ -10,6 +10,7 @@
 
 #include "llvm/CodeGen/MLRegAlloc.h"
 #include "AllocationOrder.h"
+#include "Config.h"
 #include "InterferenceCache.h"
 #include "LiveDebugVariables.h"
 #include "RegAllocBase.h"
@@ -75,6 +76,7 @@
 #include <cstdint>
 #include <fstream>
 #include <future>
+#include <google/protobuf/text_format.h>
 #include <iostream>
 #include <map>
 #include <memory>
@@ -84,8 +86,6 @@
 #include <tuple>
 #include <utility>
 #include <vector>
-#include <google/protobuf/text_format.h>
-#include "Config.h"
 // #include "Service/RegisterAllocationInference/RegisterAllocationInference.h"
 
 #define DIS_SANITY_CHECK 1
@@ -241,7 +241,7 @@ void MLRA::serializeRegProfData(
     auto rp = rpm.second;
     if (rp.cls == "Phy" &&
         rp.frwdInterferences.begin() == rp.frwdInterferences.end()) {
-        //errs() << "Continuing here --- " << rpm.first << "-" << rp.cls << "\n";
+      // errs() << "Continuing here --- " << rpm.first << "-" << rp.cls << "\n";
 
       continue;
     }
@@ -254,16 +254,15 @@ void MLRA::serializeRegProfData(
     // Copying the vectors
     std::string vectors;
     for (auto vec : rp.vecRep) {
-        for(auto elem : vec){
-            vectors += std::to_string(elem) + " ";
-        }
-        vectors += "; ";
+      for (auto elem : vec) {
+        vectors += std::to_string(elem) + " ";
+      }
+      vectors += "; ";
     }
     regprofResponse->set_vectors(vectors);
-      //auto vector = regprofResponse->add_vectors();
-      //google::protobuf::RepeatedField<double> vecs(vec.begin(), vec.end());
-      //vector->mutable_vec()->Swap(&vecs);
-    
+    // auto vector = regprofResponse->add_vectors();
+    // google::protobuf::RepeatedField<double> vecs(vec.begin(), vec.end());
+    // vector->mutable_vec()->Swap(&vecs);
 
     // Copying the interferences
     google::protobuf::RepeatedField<unsigned> interf(
@@ -271,10 +270,9 @@ void MLRA::serializeRegProfData(
     regprofResponse->mutable_interferences()->Swap(&interf);
 
     // // Copying the splitslots
-     google::protobuf::RepeatedField<unsigned>
-     splitSlots(rp.splitSlots.begin(),
-                                                          rp.splitSlots.end());
-     regprofResponse->mutable_splitslots()->Swap(&splitSlots);
+    google::protobuf::RepeatedField<unsigned> splitSlots(rp.splitSlots.begin(),
+                                                         rp.splitSlots.end());
+    regprofResponse->mutable_splitslots()->Swap(&splitSlots);
 
     // Copying the useDistances
     google::protobuf::RepeatedField<unsigned> useDistances(
@@ -289,11 +287,13 @@ void MLRA::serializeRegProfData(
         rp.spillWeights.begin(), rp.spillWeights.end());
     regprofResponse->mutable_positionalspillweights()->Swap(&posSpillWeights);
 
-    /*if (std::string s; google::protobuf::TextFormat::PrintToString(*regprofResponse, &s)) {
+    /*if (std::string s;
+    google::protobuf::TextFormat::PrintToString(*regprofResponse, &s)) {
               std::cout << "Your message: " << s;
     } else {
               std::cerr << "Message not valid (partial content: "
-                                  << regprofResponse->ShortDebugString() << ")\n";
+                                  << regprofResponse->ShortDebugString() <<
+    ")\n";
     }*/
   }
   response->set_result(true);
@@ -342,12 +342,12 @@ void MLRA::sendRegProfData(T *response,
         rp.spillWeights.begin(), rp.spillWeights.end());
     regprofResponse->mutable_positionalspillweights()->Swap(&posSpillWeights);
   }
-  if (regIdxs.size() > 0){
-        
-          response->set_result(true);
+  if (regIdxs.size() > 0) {
+    numSplits++;
+    response->set_result(true);
   } else {
-          errs () << "update not happeed\n";
-        response->set_result(false);
+    errs() << "update not happeed\n";
+    response->set_result(false);
   }
 }
 
@@ -1068,6 +1068,11 @@ bool MLRA::captureRegisterProfile() {
         regClassSupported4_MLRA.end()) {
       LLVM_DEBUG(errs() << "Register class(" << regProf.cls
                         << ") is not supported.\n");
+      numUnsupportedRegs++;
+      if (unsupportedClsFreq.find(regProf.cls) == unsupportedClsFreq.end())
+        unsupportedClsFreq[regProf.cls] = 1;
+      else
+        unsupportedClsFreq[regProf.cls] = unsupportedClsFreq[regProf.cls] + 1;
       continue;
     }
 
@@ -1099,8 +1104,8 @@ bool MLRA::captureRegisterProfile() {
       useDistances.push_back(firstUse.getInstrDistance(use));
       useIdx++;
     }
-    if ( useDistances.size() > 200){
-    validProf = false;
+    if (useDistances.size() > 200) {
+      validProf = false;
     }
     regProf.useDistances = useDistances;
     regProf.splitSlots = splitPoints;
@@ -1167,7 +1172,7 @@ bool MLRA::captureRegisterProfile() {
   //                                             splitSlots.end());
   //   }
   // }
-  
+
   LLVM_DEBUG(errs() << "\ncaptureRegisterProfile() call ended.\n");
   LLVM_DEBUG(printRegisterProfile());
 
@@ -1498,10 +1503,10 @@ void MLRA::inference() {
   assert(regProfMap.size() > 0 && "No profile information present.");
 
   // errs () << "interference graph : " << graph << "\n";
-    // registerallocationinference::RegisterProfileList requestObj;
-    // registerallocationinference::Data replyObj;
-    registerallocationinference::RegisterProfileList *request; //= &requestObj;
-    registerallocationinference::Data *reply;// = &replyObj;
+  // registerallocationinference::RegisterProfileList requestObj;
+  // registerallocationinference::Data replyObj;
+  registerallocationinference::RegisterProfileList *request; //= &requestObj;
+  registerallocationinference::Data *reply;                  // = &replyObj;
 
   bool isGraphSet = false;
   while (true) {
@@ -1509,59 +1514,101 @@ void MLRA::inference() {
     grpc::ClientContext context;
     // LLVM_DEBUG(printRegisterProfile());
     if (!isGraphSet) {
-        request = new registerallocationinference::RegisterProfileList();
+      request = new registerallocationinference::RegisterProfileList();
       serializeRegProfData(request);
       errs() << "Call model first time\n";
-      if ( request->mutable_regprof()->size() <= 70 || request->mutable_regprof()->size() > 150 ) {
-        return ;
-      
+      if (request->mutable_regprof()->size() <= 70 ||
+          request->mutable_regprof()->size() > 150) {
+        return;
       }
+
+      ORE->emit([&]() {
+        return MachineOptimizationRemark(
+                   DEBUG_TYPE, "MLRA Allocating Function ",
+                   MF->getFunction().front().front().getDebugLoc(),
+                   &MF->front())
+               << MF->getFunction().getParent()->getSourceFileName() << "\t"
+               << MF->getFunction().getName() << "--> Allocated by MLRA";
+      });
       /*errs() << "Before calling model \n";
-      if (std::string s; google::protobuf::TextFormat::PrintToString(*request, &s)) {
-                            std::cout << "Your message: " << s;
-                                } else {
-                                                      std::cerr << "Message not valid (partial content: "
+      if (std::string s; google::protobuf::TextFormat::PrintToString(*request,
+      &s)) { std::cout << "Your message: " << s; } else { std::cerr << "Message
+      not valid (partial content: "
                                                                                                 << request->ShortDebugString() << ")\n";
                                                           }
       errs() << "Before calling -- requetObj\n";
-      if (std::string s; google::protobuf::TextFormat::PrintToString(*request, &s)) {
-                            std::cout << "Your message: " << s;
-                                } else {
-                                                      std::cerr << "Message not valid (partial content: "
+      if (std::string s; google::protobuf::TextFormat::PrintToString(*request,
+      &s)) { std::cout << "Your message: " << s; } else { std::cerr << "Message
+      not valid (partial content: "
                                                                                                 << request->ShortDebugString() << ")\n";
                                                           }
      */
-      //Stub->getInfo(&context, *request, reply);
+      // Stub->getInfo(&context, *request, reply);
       isGraphSet = true;
     } else {
-      //sendRegProfData<registerallocationinference::RegisterProfileList>(
+      // sendRegProfData<registerallocationinference::RegisterProfileList>(
       //    request);
       request->set_new_(false);
       errs() << "Call model again\n";
-       //Stub->getInfo(&context, *request, reply);
+      // Stub->getInfo(&context, *request, reply);
     }
-    assert(request->mutable_regprof()->size() <= 1000 && "Graph size is greater than the expected.\n");
+    assert(request->mutable_regprof()->size() <= 1000 &&
+           "Graph size is greater than the expected.\n");
     errs() << "Before calling model \n";
-    /*  if (std::string s; google::protobuf::TextFormat::PrintToString(*request, &s)) {
-                            std::cout << "Your message: " << s;
-                                } else {
-                                                      std::cerr << "Message not valid (partial content: "
+    /*  if (std::string s; google::protobuf::TextFormat::PrintToString(*request,
+       &s)) { std::cout << "Your message: " << s; } else { std::cerr << "Message
+       not valid (partial content: "
                                                                                                 << request->ShortDebugString() << ")\n";
                                                           }
      */
     Status status = Stub->getInfo(&context, *request, reply);
-    errs () << "Status : "<< status.error_code() << ": " << status.error_message() << "\n";
+    errs() << "Status : " << status.error_code() << ": "
+           << status.error_message() << "\n";
     assert(status.ok() && "status i not OK.");
-      errs() << "After calling model \n";
-      /*if (std::string s; google::protobuf::TextFormat::PrintToString(*reply, &s)) {
-                            std::cout << "Yo
+    errs() << "After calling model \n";
+    /*if (std::string s; google::protobuf::TextFormat::PrintToString(*reply,
+       &s)) { std::cout << "Yo
     */
     assert(reply->message() != "" && "reply msg is empty");
-    errs() << "Taken performed : " << reply->message() << " vreg "<<std::to_string(reply->regidx()) << " " <<std::to_string(reply->payload()) << "\n";
+    errs() << "Taken performed : " << reply->message() << " vreg "
+           << std::to_string(reply->regidx()) << " "
+           << std::to_string(reply->payload()) << "\n";
     // std::string str = "LLVM\n";
-    assert(!(reply->message() == "Split" && reply->regidx() == 0 && reply->payload() == 0) && "Error in python side...");
+    assert(!(reply->message() == "Split" && reply->regidx() == 0 &&
+             reply->payload() == 0) &&
+           "Error in python side...");
     // response->set_payload(str);
     if (reply->message() == "Color") {
+      ORE->emit([&]() {
+        return MachineOptimizationRemark(
+                   DEBUG_TYPE, "#Registers colored by MLRA:Greedy ",
+                   MF->getFunction().front().front().getDebugLoc(),
+                   &MF->front())
+               << std::to_string(reply->color_size()) + ":" +
+                      std::to_string(numUnsupportedRegs);
+      });
+
+      std::string ucf = "";
+      for (auto i : unsupportedClsFreq) {
+        ucf += "\n " + i.first.str() + " - " + std::to_string(i.second);
+      }
+
+      ORE->emit([&]() {
+        return MachineOptimizationRemark(
+                   DEBUG_TYPE, "Freq of unsupported reg cls",
+                   MF->getFunction().front().front().getDebugLoc(),
+                   &MF->front())
+               << ucf;
+      });
+
+      ORE->emit([&]() {
+        return MachineOptimizationRemark(
+                   DEBUG_TYPE, "#Splits",
+                   MF->getFunction().front().front().getDebugLoc(),
+                   &MF->front())
+               << std::to_string(numSplits);
+      });
+
       if (reply->color_size() == 0) {
         errs() << "*****Warning -" << MF->getName()
                << " - Predictions not generated for the graph\n";
@@ -1601,7 +1648,7 @@ void MLRA::inference() {
           dumpInterferenceGraph(std::to_string(SplitCounter));
         if (enable_mlra_checks)
           verifyRegisterProfile();
-        
+
         request = new registerallocationinference::RegisterProfileList();
         if (reply->message() == "Split")
           sendRegProfData<registerallocationinference::RegisterProfileList>(
@@ -1609,12 +1656,12 @@ void MLRA::inference() {
         else
           sendRegProfData<registerallocationinference::RegisterProfileList>(
               request);
-      } else{
-        errs () << "Still after spliting prediction; LLVM dees not perform it.\n";
-              request->set_result(false);
+      } else {
+        errs()
+            << "Still after spliting prediction; LLVM dees not perform it.\n";
+        request->set_result(false);
       }
     }
-
   }
 }
 
@@ -1622,7 +1669,8 @@ void MLRA::MLRegAlloc(MachineFunction &MF, SlotIndexes &Indexes,
                       MachineBlockFrequencyInfo &MBFI,
                       MachineDominatorTree &DomTree, MachineLoopInfo &Loops,
                       AAResults &AA, LiveDebugVariables &DebugVars,
-                      SpillPlacement &SpillPlacer) {
+                      SpillPlacement &SpillPlacer,
+                      MachineOptimizationRemarkEmitter &ORE) {
   FunctionCounter++;
   if (enable_mlra_training) {
     assert(funcID != 0 && "Function ID is expected in training flow");
@@ -1643,6 +1691,7 @@ void MLRA::MLRegAlloc(MachineFunction &MF, SlotIndexes &Indexes,
   this->AA = &AA;
   this->DebugVars = &DebugVars;
   this->SpillPlacer = &SpillPlacer;
+  this->ORE = &ORE;
 
   mlAllocatedRegs.clear();
 
@@ -1662,15 +1711,17 @@ void MLRA::MLRegAlloc(MachineFunction &MF, SlotIndexes &Indexes,
   default:
     this->targetName = "UnKnown";
   }
- 
-  // TODO - PLace the check for node size in proper place to increase the performance.
+
+  // TODO - PLace the check for node size in proper place to increase the
+  // performance.
   symbolic->generateSymbolicEncodings(MF);
   instVecMap = symbolic->getInstVecMap();
   bool isProfileValid = captureRegisterProfile();
 
-  if(!isProfileValid){
-    LLVM_DEBUG(errs () << "Profile is not valid so skipping the mlra workflow.\n";);
-      return;
+  if (!isProfileValid) {
+    LLVM_DEBUG(
+        errs() << "Profile is not valid so skipping the mlra workflow.\n";);
+    return;
   }
   if (enable_mlra_training) {
     errs() << "Here1\n";
