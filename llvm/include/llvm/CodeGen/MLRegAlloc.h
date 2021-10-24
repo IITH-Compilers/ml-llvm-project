@@ -102,6 +102,8 @@ class MLRA : public RegAllocBase,
   AAResults *AA;
   LiveDebugVariables *DebugVars;
   SpillPlacement *SpillPlacer;
+  MachineOptimizationRemarkEmitter *ORE;
+
   std::unique_ptr<SplitAnalysis> SA;
   std::unique_ptr<SplitEditor> SE;
 
@@ -134,7 +136,8 @@ protected:
                   MachineBlockFrequencyInfo &MBFI,
                   MachineDominatorTree &DomTree, MachineLoopInfo &Loops,
                   AAResults &AA, LiveDebugVariables &DebugVars,
-                  SpillPlacement &SpillPlacer);
+                  SpillPlacement &SpillPlacer,
+                  MachineOptimizationRemarkEmitter &ORE);
 
 private:
   struct RegisterProfile {
@@ -151,6 +154,11 @@ private:
     // SmallMapVector<unsigned, SmallVector<SlotIndex, 8>, 8> overlapsEnd;
   };
   SmallMapVector<unsigned, RegisterProfile, 16> regProfMap;
+
+  unsigned numUnsupportedRegs = 0;
+  unsigned numSplits = 0;
+  SmallDenseMap<StringRef, unsigned> unsupportedClsFreq;
+
   SmallVector<unsigned, 16> splitInvalidRegs;
 
   bool isSafeVReg(unsigned);

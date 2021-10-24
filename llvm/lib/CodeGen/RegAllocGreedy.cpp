@@ -3250,7 +3250,7 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
 
   if (enable_dump_ig_dot || enable_mlra_inference || enable_mlra_training){
     MLRegAlloc(*MF, *Indexes, *MBFI, *DomTree, *Loops, *AA, *DebugVars,
-               *SpillPlacer);
+               *SpillPlacer, *ORE);
   }
 
 
