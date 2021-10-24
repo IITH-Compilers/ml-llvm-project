@@ -42,8 +42,11 @@ class Graph:
                 self.indegree[u] = self.indegree[u] - 1
             self.discovered[v] = True
             # self.colored[v] = color
+            return True
         else:
-            assert False, 'discovered node visited.'
+            print("discovered node visited is", v)
+            return False
+            # assert False, 'discovered node visited.'
 
     def markNodeAsNotVisited(self, v):
         if self.discovered[v]:
