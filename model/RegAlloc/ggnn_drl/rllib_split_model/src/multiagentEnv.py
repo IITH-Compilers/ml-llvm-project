@@ -93,7 +93,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
             self.graph_counter = 0
             self.reset_count = 0
-            self.training_graphs=glob.glob(os.path.join(dataset, 'graphs/IG/set1/*.json'))
+            self.training_graphs=glob.glob(os.path.join(dataset, 'graphs/IG/set2/*.json'))
             # self.training_graphs=glob.glob(os.path.join(dataset, 'json/*.json'))
             assert len(self.training_graphs) > 0, 'training set is empty' 
             if len(self.training_graphs) > self.graphs_num:
@@ -463,7 +463,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         colour_node_mask[0] = 1
         # Handling mask all zero issue
         select_node_mask = self.createNodeSelectMask()
-        if colour_node_mask is None and not done_all:
+        if select_node_mask is None and not done_all:
             done_all = True
 
         spill_weight_list = self.getSpillWeightListExpanded()
@@ -600,7 +600,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
         select_node_mask = self.createNodeSelectMask()
         # Handling mask all zero issue
-        if colour_node_mask is None:
+        if select_node_mask is None:
            split_done = True 
 
         spill_weight_list = self.getSpillWeightListExpanded()

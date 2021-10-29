@@ -43,7 +43,7 @@ def experiment(config):
     train_agent = SimpleQTrainer(config=config, env=HierarchicalGraphColorEnv)
     print('------------------------ aegent --------------------------------- ', train_agent)
     # Train
-    checkpoint = "/home/cs20mtech12003/ray_results/experiment_2021-10-23_11-51-08/experiment_HierarchicalGraphColorEnv_68f1a_00000_0_2021-10-23_11-51-08/checkpoint_002057/checkpoint-2057"
+    # checkpoint = "/home/cs20mtech12003/ray_results/experiment_2021-10-25_14-15-16/experiment_HierarchicalGraphColorEnv_e0779_00000_0_2021-10-25_14-15-16/checkpoint_002228/checkpoint-2228"
     # train_agent = SimpleQTrainer(config=config, env=GraphColorEnv)
     if checkpoint is not None:
         train_agent.restore(checkpoint)
@@ -158,27 +158,27 @@ if __name__ == "__main__":
     ModelCatalog.register_custom_model("split_node_model", SplitNodeNetwork)
 
     box_obs = Box(
-            -100000.0, 100000.0, shape=(config["env_config"]["state_size"], ), dtype=np.float32)
+            -10000000000000.0, 10000000000000.0, shape=(config["env_config"]["state_size"], ), dtype=np.float32)
     box_obs_select_node = Box(
-            -100000.0, 100000.0, shape=(config["env_config"]["max_number_nodes"], config["env_config"]["state_size"]), dtype=np.float32)
+            -10000000000000.0, 10000000000000.0, shape=(config["env_config"]["max_number_nodes"], config["env_config"]["state_size"]), dtype=np.float32)
 
     obs_colour_node = Dict({
         "action_mask": Box(0, 1, shape=(config["env_config"]["action_space_size"],)),
-        "node_properties": Box(-100000.0, 100000.0, shape=(3,)), 
+        "node_properties": Box(-10000000000000.0, 10000000000000.0, shape=(3,)), 
         "state": box_obs
         })
     obs_select_node = Dict({
-        "spill_weights": Box(-100000.0, 100000.0, shape=(config["env_config"]["max_number_nodes"],)), 
+        "spill_weights": Box(-10000000000000.0, 10000000000000.0, shape=(config["env_config"]["max_number_nodes"],)), 
         "action_mask": Box(0, 1, shape=(config["env_config"]["max_number_nodes"],)),
         "state": box_obs_select_node
         }) 
     obs_select_task = Dict({
-        "node_properties": Box(-100000.0, 100000.0, shape=(4,)), 
+        "node_properties": Box(-10000000000000.0, 10000000000000.0, shape=(4,)), 
         "state": box_obs
         })
     
     obs_node_spliting = Dict({
-        "usepoint_properties": Box(-100000.0, 100000.0, shape=(config["env_config"]["max_usepoint_count"], 2)), 
+        "usepoint_properties": Box(-10000000000000.0, 10000000000000.0, shape=(config["env_config"]["max_usepoint_count"], 2)), 
         "action_mask": Box(0, 1, shape=(config["env_config"]["max_usepoint_count"],)),
         "state": box_obs
         }) 
