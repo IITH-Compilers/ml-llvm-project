@@ -216,10 +216,8 @@ bool RABasic::spillInterferences(LiveInterval &VirtReg, unsigned PhysReg,
   // Collect interferences assigned to any alias of the physical register.
   for (MCRegUnitIterator Units(PhysReg, TRI); Units.isValid(); ++Units) {
     LiveIntervalUnion::Query &Q = Matrix->query(VirtReg, *Units);
-    Q.collectInterferingVRegs();
-    for (unsigned i = Q.interferingVRegs().size(); i; --i) {
-      LiveInterval *Intf = Q.interferingVRegs()[i - 1];
-      if (!Intf->isSpillable() || Intf->weight > VirtReg.weight)
+    for (auto *Intf : reverse(Q.interferingVRegs())) {
+      if (!Intf->isSpillable() || Intf->weight() > VirtReg.weight())
         return false;
       Intfs.push_back(Intf);
     }
