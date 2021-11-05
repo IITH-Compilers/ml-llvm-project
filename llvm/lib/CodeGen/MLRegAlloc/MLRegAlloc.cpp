@@ -314,8 +314,11 @@ void MLRA::sendRegProfData(T *response,
 
   for (auto reg : regIdxs) {
     auto rp = regProfMap[reg];
-    if (rp.frwdInterferences.begin() == rp.frwdInterferences.end())
-      continue;
+    // Removing this check as there can be splits on regs that doesn't have any
+    // interferences
+    // if (rp.frwdInterferences.begin() == rp.frwdInterferences.end())
+    //   continue;
+
     auto regprofResponse = response->add_regprof();
     regprofResponse->set_regid(reg);
 
