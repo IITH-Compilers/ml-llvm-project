@@ -252,18 +252,19 @@ void MLRA::serializeRegProfData(
     regprofResponse->set_color(rp.color);
 
     // Copying the vectors
-    std::string vectors;
+    /*std::string vectors;
     for (auto vec : rp.vecRep) {
       for (auto elem : vec) {
         vectors += std::to_string(elem) + " ";
       }
       vectors += "; ";
     }
-    regprofResponse->set_vectors(vectors);
-    // auto vector = regprofResponse->add_vectors();
-    // google::protobuf::RepeatedField<double> vecs(vec.begin(), vec.end());
-    // vector->mutable_vec()->Swap(&vecs);
-
+    regprofResponse->set_vectors(vectors);*/
+    for (auto vec : rp.vecRep) {
+      auto vector = regprofResponse->add_vectors();
+      google::protobuf::RepeatedField<double> vecs(vec.begin(), vec.end());
+      vector->mutable_vec()->Swap(&vecs);
+    }
     // Copying the interferences
     google::protobuf::RepeatedField<unsigned> interf(
         rp.frwdInterferences.begin(), rp.frwdInterferences.end());
@@ -1522,6 +1523,15 @@ void MLRA::inference() {
       errs() << "Call model first time\n";
       if (request->mutable_regprof()->size() <= 70 ||
           request->mutable_regprof()->size() > 150) {
+        ORE->emit([&]() {
+          return MachineOptimizationRemark(
+                     DEBUG_TYPE, "MLRA skipped Function ",
+                     MF->getFunction().front().front().getDebugLoc(),
+                     &MF->front())
+                 << MF->getFunction().getParent()->getSourceFileName() << "\t"
+                 << MF->getFunction().getName()
+                 << "--> skipped by MLRA (nodes not in serviceable range)";
+        });
         return;
       }
 
@@ -1587,6 +1597,7 @@ void MLRA::inference() {
                    DEBUG_TYPE, "#Registers colored by MLRA:Greedy ",
                    MF->getFunction().front().front().getDebugLoc(),
                    &MF->front())
+               << "#Registers colored by MLRA:Greedy :: "
                << std::to_string(reply->color_size()) + ":" +
                       std::to_string(numUnsupportedRegs);
       });
@@ -1601,6 +1612,7 @@ void MLRA::inference() {
                    DEBUG_TYPE, "Freq of unsupported reg cls",
                    MF->getFunction().front().front().getDebugLoc(),
                    &MF->front())
+               << "Freq of unsupported reg cls:\n"
                << ucf;
       });
 
@@ -1609,7 +1621,7 @@ void MLRA::inference() {
                    DEBUG_TYPE, "#Splits",
                    MF->getFunction().front().front().getDebugLoc(),
                    &MF->front())
-               << std::to_string(numSplits);
+               << "#Splits: " << std::to_string(numSplits);
       });
 
       if (reply->color_size() == 0) {
@@ -1619,9 +1631,23 @@ void MLRA::inference() {
       }
 
       std::map<std::string, int64_t> colorMap;
+      unsigned numSpills = 0;
       for (auto i : reply->color()) {
         colorMap[i.key()] = i.value();
+        if (i.value() == 0)
+          numSpills++;
       }
+
+      ORE->emit([&]() {
+        return MachineOptimizationRemark(
+                   DEBUG_TYPE, "#Spills",
+                   MF->getFunction().front().front().getDebugLoc(),
+                   &MF->front())
+               << "#Spills predicted by MLRA: " << std::to_string(numSpills)
+               << "#Regs allocated excluding spills by MLRA: "
+               << std::to_string(reply->color_size() - numSpills);
+      });
+
       this->FunctionVirtRegToColorMap[MF->getName()] = colorMap;
       // assert(reply->funcname() == MF->getName());
       allocatePhysRegsViaRL();

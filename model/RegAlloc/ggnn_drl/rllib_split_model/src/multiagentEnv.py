@@ -336,7 +336,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             print("UpdateVisitList failed for {} graph at {} node".format(self.path, self.cur_node))
             assert False, 'discovered node visited.'
         self.virtRegId = self.obs.idx_nid[self.cur_node]
-        print("Node selected = {}, corresponding register id = {}".format(action, self.virtRegId))
+        # print("Node selected = {}, corresponding register id = {}".format(action, self.virtRegId))
         logging.info("Node selected = {}, corresponding register id = {}".format(action, self.virtRegId))
         state = self.obs
         hidden_state =  self.ggnn(initial_node_representation=state.initial_node_representation, annotations=state.annotations, adjacency_lists=state.adjacency_lists)
@@ -361,7 +361,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
     def _select_task_step(self, action):
         logging.debug("Enter _select_task_step")
         done = {"__all__": False}
-        print("Select Task action", action)
+        # print("Select Task action", action)
         splitpoints = self.obs.split_points[self.cur_node]
         # self.select_task_agent_id = "select_task_agent_{}".format(self.agent_count)
         self.task_selected = action
@@ -714,6 +714,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 return reward, True
             if split_point == 0 or not self.update_obs(updated_graphs, int(node_id), int(split_point)):
                 self.obs.graph_topology.markNodeAsNotVisited(nodeChoosen)
+        else:
+            done = True
         
         # assert False in self.obs.graph_topology.discovered, "After Split, all node not be finished"
         
@@ -754,7 +756,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             else:
                 response = self.color_assignment_map
                 self.colormap = response
-            print("Colour map ", self.colormap)
+            # print("Colour map ", self.colormap)
             done = True
             # reward = self.total_reward
             self.obs.next_stage = 'end'
@@ -907,7 +909,19 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         return updated_graphs
 
     def update_obs(self, updated_graphs, register_id, split_point):
-        
+        # adjs = {} 
+        # for  i, x in enumerate(self.obs.graph_topology.adjList):
+        #     for y in x:
+        #         fro = self.obs.idx_nid[i]
+        #         to = self.obs.idx_nid[y]
+
+        #         if fro not in adjs.keys():
+        #             adjs[fro] = [to]
+        #         else:
+        #             adjs[fro].append(to)
+
+        # logging.debug("register ids adjacent before update : {} ".format(adjs))
+       
         if updated_graphs.result:
             logging.info(updated_graphs)            
             register_id = self.obs.idx_nid[self.cur_node]
@@ -919,11 +933,11 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 splited_node_idx = self.obs.nid_idx[register_id]
             self.obs.graph_topology.indegree[splited_node_idx] = 0
             
-            # for adj in self.obs.graph_topology.adjList[splited_node_idx]:
-            #     self.obs.graph_topology.adjList[adj].remove(splited_node_idx)
-            #     self.obs.graph_topology.indegree[adj] = self.obs.graph_topology.indegree[adj] - 1
+            for adj in self.obs.graph_topology.adjList[splited_node_idx]:
+                self.obs.graph_topology.adjList[adj].remove(splited_node_idx)
+                self.obs.graph_topology.indegree[adj] = self.obs.graph_topology.indegree[adj] - 1
 
-            # self.obs.graph_topology.adjList[splited_node_idx] = []
+            self.obs.graph_topology.adjList[splited_node_idx] = []
             
             # logging.info('register splilted : {} '.format(register_id))
             # print('register splilted : {} at point({})'.format(register_id, split_point))
@@ -959,7 +973,15 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                     self.obs.graph_topology.adjList.append([])
                     self.obs.graph_topology.indegree.append(0)
                     self.obs.graph_topology.colored.append(-1)
-                    
+                     
+
+                    for neigh in node_prof.interferences:
+                        if self.mode != 'inference':
+                            self.obs.graph_topology.adjList[self.obs.nid_idx[str(neigh)]].append(self.obs.nid_idx[nodeId])
+                        else:
+                            self.obs.graph_topology.adjList[self.obs.nid_idx[neigh]].append(self.obs.nid_idx[nodeId])
+
+
                     self.obs.spill_cost_list.append(node_prof.spillWeight)
                     self.obs.reg_class_list.append(self.obs.reg_class_list[splited_node_idx])
                     self.obs.use_distances.append(sorted(node_prof.useDistances))
@@ -1008,9 +1030,12 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 interfering_node_idx = self.obs.nid_idx[nodeId]
                 try:
                     if self.mode != 'inference':
-                        self.obs.graph_topology.adjList[interfering_node_idx] = list(map(lambda x: self.obs.nid_idx[str(x)], node_prof.interferences))
+                        # self.obs.graph_topology.adjList[interfering_node_idx] = list(map(lambda x: self.obs.nid_idx[str(x)], node_prof.interferences))
+                        self.obs.graph_topology.adjList[interfering_node_idx] = list(set(self.obs.graph_topology.adjList[interfering_node_idx] + list(map(lambda x: self.obs.nid_idx[str(x)], node_prof.interferences))))
+
                     else:
-                        self.obs.graph_topology.adjList[interfering_node_idx] = list(map(lambda x: self.obs.nid_idx[x], node_prof.interferences))
+                        # self.obs.graph_topology.adjList[interfering_node_idx] = list(set().union(self.obs.graph_topology.adjList[interfering_node_idx], list(map(lambda x: self.obs.nid_idx[x], node_prof.interferences)))) 
+                        self.obs.graph_topology.adjList[interfering_node_idx] = list(set(self.obs.graph_topology.adjList[interfering_node_idx] + list(map(lambda x: self.obs.nid_idx[x], node_prof.interferences))))
                 except:
                     print("Node idx map", self.obs.nid_idx)
                 self.obs.graph_topology.indegree[interfering_node_idx] = len(self.obs.graph_topology.adjList[interfering_node_idx])
@@ -1050,6 +1075,19 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
             logging.debug("egdes({}) after after update : {} ".format(len(edges), edges))
             logging.debug("self.obs.graph_topology.adjList : {} ".format(self.obs.graph_topology.adjList))
+            # adjs = {} 
+            # for  i, x in enumerate(self.obs.graph_topology.adjList):
+            #     for y in x:
+            #         fro = self.obs.idx_nid[i]
+            #         to = self.obs.idx_nid[y]
+
+            #         if fro not in adjs.keys():
+            #             adjs[fro] = [to]
+            #         else:
+            #             adjs[fro].append(to)
+
+            # logging.debug("register ids adjacney after update: {} ".format(adjs))
+
 
             self.obs.adjacency_lists = [ AdjacencyList(node_num=self.obs.graph_topology.num_nodes, adj_list=edges, device=self.obs.adjacency_lists[0].device)]
         else:

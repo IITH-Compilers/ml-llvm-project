@@ -340,7 +340,7 @@ def get_observationsInf(graph):
         # print(node.vectors)
         if len(node.vectors) > 0:
             # print("Node vectors : ", node.vectors[0].vec)
-            node_mat = [ list(map(lambda x: float(x), vector.split())) for vector in node.vectors.split(" ; ")[:-1]]
+            node_mat = [ vector.vec for vector in node.vectors]
         else:
             node_mat = [[0]*100]
         

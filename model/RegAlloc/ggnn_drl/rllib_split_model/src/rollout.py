@@ -291,6 +291,8 @@ class DefaultMapping(collections.defaultdict):
 
 class RollOutInference:
     def __init__(self,  args):
+
+        assert args.arch is not None, "Arch is None."
         # Load configuration from checkpoint file.
         config_path = ""
         if args.checkpoint:
@@ -337,7 +339,7 @@ class RollOutInference:
         if not config.get("evaluation_num_episodes"):
             config["evaluation_num_episodes"] = 1
         
-        config_other = { 'mode' :'inference', 'state_size':300, 'target' : 'X86', 'intermediate_data' : '/tmp'}
+        config_other = { 'mode' :'inference', 'state_size':100, 'target' : args.arch, 'intermediate_data' : '/tmp'}
         utils_1.set_config(config_other)
         logdir='./'
         logger = logging.getLogger(__file__)
@@ -361,8 +363,8 @@ class RollOutInference:
         # config["env_config"]["intermediate_data"] = './temp'
 
         config["env_config"] = {
-            "target": "X86",
-            "state_size": 300,
+            "target": args.arch,
+            "state_size": config_other['state_size'],
             "max_number_nodes": 1000,
             "max_usepoint_count": 200,
             "mode": 'inference',
@@ -371,7 +373,7 @@ class RollOutInference:
             "intermediate_data": './temp',
             "dataset": "/lfs/usrhome/staff/nvk1tb/scratch/mlra_data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/",
             "graphs_num": 50000,
-            "action_space_size": RegisterActionSpace("X86").ac_sp_normlize_size
+            "action_space_size": RegisterActionSpace(args.arch).ac_sp_normlize_size
         }
 
        
@@ -425,7 +427,7 @@ class RollOutInference:
                                         "model": {
                                             "custom_model": "select_node_model",
                                             "custom_model_config": {
-                                                "state_size": 300,
+                                                "state_size" : config["env_config"]['state_size'],
                                                 "fc1_units": 64,
                                                 "fc2_units": 64
                                             },
@@ -437,7 +439,7 @@ class RollOutInference:
                                         "model": {
                                             "custom_model": "select_task_model",
                                             "custom_model_config": {
-                                                "state_size": 300,
+                                                "state_size":  config["env_config"]['state_size'],
                                                 "fc1_units": 64,
                                                 "fc2_units": 64
                                             },
@@ -449,7 +451,7 @@ class RollOutInference:
                                         "model": {
                                             "custom_model": "colour_node_model",
                                             "custom_model_config": {
-                                                "state_size": 300,
+                                                "state_size": config["env_config"]['state_size'],
                                                 "fc1_units": 64,
                                                 "fc2_units": 64
                                             },
@@ -461,7 +463,7 @@ class RollOutInference:
                                         "model": {
                                             "custom_model": "split_node_model",
                                             "custom_model_config": {
-                                                "state_size": 300,
+                                                "state_size": config["env_config"]['state_size'],
                                                 "fc1_units": 64,
                                                 "fc2_units": 64
                                             },
@@ -664,8 +666,8 @@ class RollOutInference:
                     # print(policy_id)
                     p_use_lstm = self.use_lstm[policy_id]
                     if p_use_lstm:
-                        a_action, p_state, _ = self.agent.compute_action(
-                        # a_action, p_state, _ = self.agent.compute_single_action(
+                        # a_action, p_state, _ = self.agent.compute_action(
+                        a_action, p_state, _ = self.agent.compute_single_action(
                             a_obs,
                             state=agent_states[agent_id],
                             prev_action=prev_actions[agent_id],
@@ -683,8 +685,8 @@ class RollOutInference:
                         #         if math.isnan(v):
                         #             print('******NAN**** ', v, i)
                             # print('\n')
-                        a_action = self.agent.compute_action(
-                        # a_action = self.agent.compute_single_action(
+                        # a_action = self.agent.compute_action(
+                        a_action = self.agent.compute_single_action(
                             a_obs,
                             prev_action=prev_actions[agent_id],
                             prev_reward=prev_rewards[agent_id],
