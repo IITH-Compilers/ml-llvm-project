@@ -115,7 +115,8 @@ class service_server(RegisterAllocationInference_pb2_grpc.RegisterAllocationInfe
             elif inter_graphs.result:
                 # exit()
                 # self.inference_model.update_obs(request, self.inference_model.env.virtRegId, self.inference_model.env.split_point)
-                self.inference_model.update_obs(request)
+                if not self.inference_model.update_obs(request):
+                    self.inference_model.setCurrentNodeAsNotVisited()
 
             action, count = self.inference_model.compute_action()
             # print('action= {}, count={}'.format(action,count))

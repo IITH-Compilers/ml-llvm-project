@@ -629,8 +629,11 @@ class RollOutInference:
         self.obs = self.env.reset(graph)
 
     def update_obs(self, request):
-        self.env.update_obs(request, self.env.virtRegId, self.env.split_point)
+        return self.env.update_obs(request, self.env.virtRegId, self.env.split_point)
         # self.env.update_obs(request)
+
+    def setCurrentNodeAsNotVisited(self):
+        self.env.obs.graph_topology.markNodeAsNotVisited(self.env.curr_node)
 
     def compute_action(self):
         #obs = env.reset()
