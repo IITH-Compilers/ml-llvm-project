@@ -43,7 +43,7 @@ def experiment(config):
     train_agent = SimpleQTrainer(config=config, env=HierarchicalGraphColorEnv)
     print('------------------------ aegent --------------------------------- ', train_agent)
     # Train
-    # checkpoint = "/home/cs20mtech12003/ray_results/experiment_2021-10-25_14-15-16/experiment_HierarchicalGraphColorEnv_e0779_00000_0_2021-10-25_14-15-16/checkpoint_002228/checkpoint-2228"
+    # checkpoint = "/home/cs20mtech12003/ray_results/experiment_2021-10-29_13-09-18/experiment_HierarchicalGraphColorEnv_52d6b_00000_0_2021-10-29_13-09-18/checkpoint_000893/checkpoint-893"
     # train_agent = SimpleQTrainer(config=config, env=GraphColorEnv)
     if checkpoint is not None:
         train_agent.restore(checkpoint)
@@ -58,7 +58,7 @@ def experiment(config):
             checkpoint = train_agent.save(tune.get_trial_dir())
             # print("***************Checkpoint****************", checkpoint)
         tune.report(**train_results)
-        if train_results['episodes_total'] > 29999:
+        if train_results['episodes_total'] > 9:
             print("Traning Ended")
             checkpoint = train_agent.save(tune.get_trial_dir())
             break
@@ -173,7 +173,8 @@ if __name__ == "__main__":
         "state": box_obs_select_node
         }) 
     obs_select_task = Dict({
-        "node_properties": Box(-10000000000000.0, 10000000000000.0, shape=(4,)), 
+        "node_properties": Box(-10000000000000.0, 10000000000000.0, shape=(4,)),
+        "action_mask": Box(0, 1, shape=(2,)),
         "state": box_obs
         })
     

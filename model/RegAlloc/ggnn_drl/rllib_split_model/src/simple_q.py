@@ -89,7 +89,7 @@ DEFAULT_CONFIG = with_common_config({
     # Size of a batch sampled from replay buffer for training. Note that
     # if async_updates is set, then each worker returns gradients for a
     # batch of this size.
-    "train_batch_size": 320,
+    "train_batch_size": 160,
 
     "batch_mode": "complete_episodes",
     
@@ -104,7 +104,7 @@ DEFAULT_CONFIG = with_common_config({
     },
 
     "env_config": {
-        "target": "AArch64",
+        "target": "X86",
         "state_size": 100,
         "max_number_nodes": 1000,
         "max_usepoint_count": 200,
@@ -113,10 +113,10 @@ DEFAULT_CONFIG = with_common_config({
         "dump_color_graph": True,
         "intermediate_data": './temp',
         # "dataset": "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data_100d/",
-        "dataset": "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_aarch64_split_data/",
+        "dataset": "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data_100d/",
         # "dataset": "/home/cs20mtech12003/ML-Register-Allocation/data/test_dict/graphs/IG/",
         "graphs_num": 5000,
-        "action_space_size": RegisterActionSpace("AArch64").ac_sp_normlize_size
+        "action_space_size": RegisterActionSpace("X86").ac_sp_normlize_size
     },
 
     "framework": "torch",
@@ -124,11 +124,11 @@ DEFAULT_CONFIG = with_common_config({
     # Number of workers for collecting samples with. This only makes sense
     # to increase if your environment is particularly slow to sample, or if
     # you"re using the Async or Ape-X optimizers.
-    "num_workers": 10,
+    "num_workers": 1,
     # Prevent iterations from going lower than this time span
     "min_iter_time_s": 1,
 
-    "num_gpus": 2,
+    "num_gpus": 1,
 
     # "num_cpus_for_driver": 4,
     # "num_gpus_per_worker": 0,

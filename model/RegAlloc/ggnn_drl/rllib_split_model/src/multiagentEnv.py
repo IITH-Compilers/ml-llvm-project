@@ -93,7 +93,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
             self.graph_counter = 0
             self.reset_count = 0
-            self.training_graphs=glob.glob(os.path.join(dataset, 'graphs/IG/set2/*.json'))
+            self.training_graphs=glob.glob(os.path.join(dataset, 'graphs/IG/set1/*.json'))
             # self.training_graphs=glob.glob(os.path.join(dataset, 'json/*.json'))
             assert len(self.training_graphs) > 0, 'training set is empty' 
             if len(self.training_graphs) > self.graphs_num:
@@ -254,6 +254,32 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             
         return mask
 
+    def creatTaskSelectMask(self):
+        splitpoints = self.obs.split_points[self.cur_node]
+        if type(splitpoints) == np.ndarray:
+            splitpoints = splitpoints.tolist()
+        usepoint_prop = self.getUsepointProperties()
+        usepoint_prop_value = np.array(list(usepoint_prop.values())).transpose()
+        usepoint_prop_mat = self.getUsepointPropertiesMatrix(usepoint_prop_value)            
+        split_node_mask = []
+        use_distance_list = self.obs.use_distances[self.cur_node]
+        for i in range(usepoint_prop_mat.shape[0]):
+            # if i < usepoint_prop_value.shape[0] - 1:
+            # print("Split points", splitpoints, type(i))
+            if i in splitpoints and i != len(use_distance_list) - 1:
+                split_node_mask.append(1)
+            else:
+                split_node_mask.append(0)
+
+        mask = [0]*2
+        if all(v == 0 for v in split_node_mask):
+            mask[0] = 1
+        else:
+            mask = [1]*2
+        print("Task Select mask", mask)
+        return mask
+
+
     def getSpillWeightListExpanded(self):
         spill_weight_list = [0]*self.max_number_nodes
         for i in range(len(self.obs.spill_cost_list)):
@@ -336,7 +362,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             print("UpdateVisitList failed for {} graph at {} node".format(self.path, self.cur_node))
             assert False, 'discovered node visited.'
         self.virtRegId = self.obs.idx_nid[self.cur_node]
-        # print("Node selected = {}, corresponding register id = {}".format(action, self.virtRegId))
+        print("Node selected = {}, corresponding register id = {}".format(action, self.virtRegId))
         logging.info("Node selected = {}, corresponding register id = {}".format(action, self.virtRegId))
         state = self.obs
         hidden_state =  self.ggnn(initial_node_representation=state.initial_node_representation, annotations=state.annotations, adjacency_lists=state.adjacency_lists)
@@ -346,12 +372,13 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         
         prop = self.getNodeProperties()
         prop_value_list = list(prop.values())
+        select_task_mask = self.creatTaskSelectMask()
         reward = {
             self.select_task_agent_id: 0
         }
         done = {"__all__": False}
         obs = {
-            self.select_task_agent_id: { 'node_properties': np.array(prop_value_list, dtype=np.float), 'state' : self.cur_obs},
+            self.select_task_agent_id: { 'action_mask': np.array(select_task_mask), 'node_properties': np.array(prop_value_list, dtype=np.float), 'state' : self.cur_obs},
         }
         # self.cur_obs = hidden_state[node_index]
         # print("Select Node Reward", reward)
@@ -361,7 +388,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
     def _select_task_step(self, action):
         logging.debug("Enter _select_task_step")
         done = {"__all__": False}
-        # print("Select Task action", action)
+        print("Select Task action", action)
         splitpoints = self.obs.split_points[self.cur_node]
         # self.select_task_agent_id = "select_task_agent_{}".format(self.agent_count)
         self.task_selected = action
@@ -466,6 +493,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         if select_node_mask is None and not done_all:
             done_all = True
 
+        select_task_mask = self.creatTaskSelectMask()
+
         spill_weight_list = self.getSpillWeightListExpanded()
         state = self.obs
         hidden_state =  self.ggnn(initial_node_representation=state.initial_node_representation, annotations=state.annotations, adjacency_lists=state.adjacency_lists)        
@@ -498,7 +527,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
         colour_node_obs = { 'action_mask': np.array(colour_node_mask),'node_properties': np.array(prop_value_list_colouring), 'state' : self.cur_obs}
         select_node_obs = { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(select_node_mask), 'state' : cur_obs}
-        select_task_obs = { 'node_properties': np.array(prop_value_list, dtype=np.float), 'state' : self.cur_obs}
+        select_task_obs = { 'action_mask': np.array(select_task_mask), 'node_properties': np.array(prop_value_list, dtype=np.float), 'state' : self.cur_obs}
         split_node_obs = { 'action_mask': np.array(split_node_mask), 'state' : self.cur_obs, "usepoint_properties": usepoint_prop_mat}
         
         # if self.first_time:
@@ -590,6 +619,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             self.obs.graph_topology.markNodeAsNotVisited(nodeChoosen)
             print("Skipping split step")
         
+        select_task_mask = self.creatTaskSelectMask()
+
         self.total_reward += split_reward
 
         colour_node_mask = []
@@ -641,7 +672,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         obs = {
             self.colour_node_agent_id: { 'action_mask': np.array(colour_node_mask),'node_properties': np.array(prop_value_list_colouring), 'state' : self.cur_obs},
             self.select_node_agent_id: { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(select_node_mask), 'state' : cur_obs},
-            self.select_task_agent_id: { 'node_properties': np.array(prop_value_list, dtype=np.float), 'state' : self.cur_obs},
+            self.select_task_agent_id: { 'action_mask': np.array(select_task_mask), 'node_properties': np.array(prop_value_list, dtype=np.float), 'state' : self.cur_obs},
             self.split_node_agent_id: { 'action_mask': np.array(split_node_mask), 'state' : self.cur_obs, "usepoint_properties": usepoint_prop_mat},
         }
         done = {

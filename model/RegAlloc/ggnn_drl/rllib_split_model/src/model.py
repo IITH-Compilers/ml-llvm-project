@@ -39,7 +39,13 @@ class SelectTaskNetwork(TorchModelV2, nn.Module):
         x = F.relu(self.fc2(x))
         x = torch.cat((x, input_dict["obs"]["node_properties"]), 1)
         x = self.fc3(x)
-        # print("Select task out", x.shape)        
+
+        for i in range(input_dict["obs"]["action_mask"].shape[0]):
+            action_mask = input_dict["obs"]["action_mask"][i, :]
+            for j in range(action_mask.shape[0]):
+                if action_mask[j] == 0:                    
+                    x[i, j] = FLOAT_MIN
+        
         return x, state
 
 class SelectNodeNetwork(TorchModelV2, nn.Module):
