@@ -266,17 +266,20 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         for i in range(usepoint_prop_mat.shape[0]):
             # if i < usepoint_prop_value.shape[0] - 1:
             # print("Split points", splitpoints, type(i))
-            if i in splitpoints and i != len(use_distance_list) - 1:
-                split_node_mask.append(1)
-            else:
-                split_node_mask.append(0)
-
+            try:
+                if not isinstance(splitpoints, str) and i in splitpoints and i != len(use_distance_list) - 1:
+                    split_node_mask.append(1)
+                else:
+                    split_node_mask.append(0)
+            except:
+                print("Splitpoint and i type and value", type(splitpoints), type(i), splitpoints, i)
+                raise
         mask = [0]*2
         if all(v == 0 for v in split_node_mask):
             mask[0] = 1
         else:
             mask = [1]*2
-        print("Task Select mask", mask)
+        # print("Task Select mask", mask)
         return mask
 
 
