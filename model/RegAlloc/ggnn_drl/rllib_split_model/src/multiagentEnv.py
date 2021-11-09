@@ -746,7 +746,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             updated_graphs = self.stable_grpc('Split', int(node_id), int(split_point))
             if updated_graphs is None:
                 return reward, True
-            if split_point == 0 or not self.update_obs(updated_graphs, int(node_id), int(split_point)):
+            # if split_point == 0 or not self.update_obs(updated_graphs, int(node_id), int(split_point)):
+            if not self.update_obs(updated_graphs, int(node_id), int(split_point)):
                 self.obs.graph_topology.markNodeAsNotVisited(nodeChoosen)
         else:
             done = True
@@ -830,7 +831,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             # path="/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/graphs/IG/json/500.perlbench_r_51.ll_F2.json"
             # path = "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/graphs/IG/json_new/523.xalancbmk_r_392.ll_F21.json"
             # path = "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/graphs/IG/json_new/523.xalancbmk_r_682.ll_F12.json"
-            # path ="/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data_new/graphs/IG/set1/508.namd_r_11.ll_F4.json"
+            # path ="/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data_100d/graphs/IG/set1/526.blender_r_188.ll_F15.json"
             logging.debug('Graphs selected : {}'.format(path))
             print('Graphs selected : {}'.format(path))
             self.reset_count+=1
@@ -966,10 +967,18 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             else:
                 splited_node_idx = self.obs.nid_idx[register_id]
             self.obs.graph_topology.indegree[splited_node_idx] = 0
-            
-            for adj in self.obs.graph_topology.adjList[splited_node_idx]:
-                self.obs.graph_topology.adjList[adj].remove(splited_node_idx)
-                self.obs.graph_topology.indegree[adj] = self.obs.graph_topology.indegree[adj] - 1
+            cur_adj = None
+            try:
+                for adj in self.obs.graph_topology.adjList[splited_node_idx]:
+                    cur_adj = adj
+                    if splited_node_idx in self.obs.graph_topology.adjList[adj]:
+                        self.obs.graph_topology.adjList[adj].remove(splited_node_idx)
+                        self.obs.graph_topology.indegree[adj] = self.obs.graph_topology.indegree[adj] - 1
+                    else:
+                        print("Adjency list for {} is {} for register {}".format(adj, self.obs.graph_topology.adjList[adj], register_id))        
+            except:
+                # print("Adjency list for {} is {} for register {}".format(cur_adj, self.obs.graph_topology.adjList[cur_adj], register_id))
+                raise
 
             self.obs.graph_topology.adjList[splited_node_idx] = []
             
@@ -1010,11 +1019,15 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                      
 
                     for neigh in node_prof.interferences:
-                        if self.mode != 'inference':
-                            self.obs.graph_topology.adjList[self.obs.nid_idx[str(neigh)]].append(self.obs.nid_idx[nodeId])
-                        else:
-                            self.obs.graph_topology.adjList[self.obs.nid_idx[neigh]].append(self.obs.nid_idx[nodeId])
-
+                        try:
+                            if self.mode != 'inference':
+                                self.obs.graph_topology.adjList[self.obs.nid_idx[str(neigh)]].append(self.obs.nid_idx[str(nodeId)])
+                            else:
+                                self.obs.graph_topology.adjList[self.obs.nid_idx[neigh]].append(self.obs.nid_idx[nodeId])
+                        except:
+                            print("Node idx map and type", self.obs.nid_idx, type(neigh), neigh)
+                            # print("updated_graphs regProf", updated_graphs.regProf)
+                            raise
 
                     self.obs.spill_cost_list.append(node_prof.spillWeight)
                     self.obs.reg_class_list.append(self.obs.reg_class_list[splited_node_idx])
@@ -1053,6 +1066,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                     # interfering_node_idx = self.obs.nid_idx[nodeId]
 
                     # self.obs.graph_topology.adjList[interfering_node_idx] = list(map(lambda x: self.obs.nid_idx[str(x)], node_prof.interferences))
+                # else:
+                #     print("Already in map NodeId and index", nodeId, register_id)
 
             logging.debug('update the interfering node data.')
             adjList_helper = [[] for _ in range(self.obs.graph_topology.num_nodes)]
@@ -1071,7 +1086,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                         # self.obs.graph_topology.adjList[interfering_node_idx] = list(set().union(self.obs.graph_topology.adjList[interfering_node_idx], list(map(lambda x: self.obs.nid_idx[x], node_prof.interferences)))) 
                         self.obs.graph_topology.adjList[interfering_node_idx] = list(set(self.obs.graph_topology.adjList[interfering_node_idx] + list(map(lambda x: self.obs.nid_idx[x], node_prof.interferences))))
                 except:
-                    print("Node idx map", self.obs.nid_idx)
+                    print("Node idx map", self.obs.graph_topology.adjList[interfering_node_idx], node_prof.interferences, self.obs.nid_idx)
+                    raise
                 self.obs.graph_topology.indegree[interfering_node_idx] = len(self.obs.graph_topology.adjList[interfering_node_idx])
                 
                 self.obs.spill_cost_list[interfering_node_idx] = node_prof.spillWeight
