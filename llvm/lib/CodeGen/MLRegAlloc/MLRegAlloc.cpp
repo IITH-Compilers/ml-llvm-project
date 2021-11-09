@@ -1285,9 +1285,8 @@ void MLRA::updateRegisterProfileAfterSplit(
           rp.interferences.insert(interference);
           rp.frwdInterferences.insert(interference);
 
-          regProfMap[interference].interferences.remove(OldVRegIdx);
-          regProfMap[interference].frwdInterferences.remove(OldVRegIdx);
           regProfMap[interference].interferences.insert(NewVRegIdx + step);
+          regProfMap[interference].frwdInterferences.insert(NewVRegIdx + step);
 
           // regProfMap[interference].overlapsStart.erase(OldVRegIdx);
           // regProfMap[interference].overlapsEnd.erase(OldVRegIdx);
@@ -1306,14 +1305,14 @@ void MLRA::updateRegisterProfileAfterSplit(
         auto Reg1 =
             NewVirtReg->begin() < InterVReg->begin() ? NewVirtReg : InterVReg;
         auto Reg2 = Reg1 == InterVReg ? NewVirtReg : InterVReg;
+
         if (Reg1->overlaps(*Reg2)) {
           LLVM_DEBUG(errs() << "\n\t It overlaps\n");
           rp.interferences.insert(interference);
           rp.frwdInterferences.insert(interference);
 
-          regProfMap[interference].interferences.remove(OldVRegIdx);
-          regProfMap[interference].frwdInterferences.remove(OldVRegIdx);
           regProfMap[interference].interferences.insert(NewVRegIdx + step);
+          regProfMap[interference].frwdInterferences.insert(NewVRegIdx + step);
 
           // SmallVector<SlotIndex, 8> startpts, endpts;
           // findOverlapingInterval(NewVirtReg, InterVReg, startpts, endpts);
@@ -1362,6 +1361,8 @@ void MLRA::updateRegisterProfileAfterSplit(
           updatedRegs.insert(interference);
         }
       }
+      regProfMap[interference].interferences.remove(OldVRegIdx);
+      regProfMap[interference].frwdInterferences.remove(OldVRegIdx);
     }
     regProfMap[NewVRegIdx + step] = rp;
     updatedRegs.insert(NewVRegIdx + step);
