@@ -23,13 +23,15 @@ from ray.rllib.policy import Policy
 from ray.rllib.policy.sample_batch import SampleBatch
 
 from gym.spaces import Discrete, Box, Dict
-from simple_q import SimpleQTrainer, DEFAULT_CONFIG
+# from simple_q import SimpleQTrainer, DEFAULT_CONFIG
+from ppo import PPOTrainer, DEFAULT_CONFIG
 # from env import GraphColorEnv, set_config
 from multiagentEnv import HierarchicalGraphColorEnv
 from register_action_space import RegisterActionSpace
 from ray.rllib.models import ModelCatalog
 from model import SelectTaskNetwork, SelectNodeNetwork, ColorNetwork, SplitNodeNetwork
 import logging
+from ray.rllib.utils.torch_ops import FLOAT_MIN, FLOAT_MAX
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--train-iterations", type=int, default=100000)
@@ -40,10 +42,11 @@ def experiment(config):
     global checkpoint
     train_results = {}
     # config["env_config"]["path"] = path
-    train_agent = SimpleQTrainer(config=config, env=HierarchicalGraphColorEnv)
+    # train_agent = SimpleQTrainer(config=config, env=HierarchicalGraphColorEnv)
+    train_agent = PPOTrainer(config=config, env=HierarchicalGraphColorEnv)
     print('------------------------ aegent --------------------------------- ', train_agent)
     # Train
-    # checkpoint = "/home/cs20mtech12003/ray_results/experiment_2021-10-29_13-09-18/experiment_HierarchicalGraphColorEnv_52d6b_00000_0_2021-10-29_13-09-18/checkpoint_000893/checkpoint-893"
+    # checkpoint = "/home/cs20mtech12003/ray_results/experiment_2021-10-27_22-38-27/experiment_HierarchicalGraphColorEnv_80a83_00000_0_2021-10-27_22-38-27/checkpoint_000040/checkpoint-40"
     # train_agent = SimpleQTrainer(config=config, env=GraphColorEnv)
     if checkpoint is not None:
         train_agent.restore(checkpoint)
@@ -58,7 +61,7 @@ def experiment(config):
             checkpoint = train_agent.save(tune.get_trial_dir())
             # print("***************Checkpoint****************", checkpoint)
         tune.report(**train_results)
-        if train_results['episodes_total'] > 9:
+        if train_results['episodes_total'] > 49:
             print("Traning Ended")
             checkpoint = train_agent.save(tune.get_trial_dir())
             break
@@ -124,7 +127,7 @@ class Counter:
 
 if __name__ == "__main__":
 
-    os.environ['GRPC_VERBOSITY']='DEBUG'
+    # os.environ['GRPC_VERBOSITY']='DEBUG'
 
     args = parser.parse_args()
     logger = logging.getLogger(__file__)
@@ -259,7 +262,8 @@ if __name__ == "__main__":
     tune.run(
         experiment,
         config=config,
-        resources_per_trial=SimpleQTrainer.default_resource_request(config),
+        # resources_per_trial=SimpleQTrainer.default_resource_request(config),
+        resources_per_trial=PPOTrainer.default_resource_request(config),
         # fail_fast=True,
         # max_failures=10
         )

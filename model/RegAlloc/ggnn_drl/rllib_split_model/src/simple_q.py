@@ -40,7 +40,7 @@ DEFAULT_CONFIG = with_common_config({
         # Config for the Exploration class' constructor:
         "initial_epsilon": 1.0,
         "final_epsilon": 0.1,
-        "epsilon_timesteps": 1000000,  # Timesteps over which to anneal epsilon.
+        "epsilon_timesteps": 500000,  # Timesteps over which to anneal epsilon.
 
         # For soft_q, use:
         # "exploration_config" = {
@@ -102,6 +102,10 @@ DEFAULT_CONFIG = with_common_config({
             "fc2_units": 64
         },
     },
+
+    # "log_level": "DEBUG",
+
+    "remote_env_batch_wait_ms": 100000,
 
     "env_config": {
         "target": "X86",

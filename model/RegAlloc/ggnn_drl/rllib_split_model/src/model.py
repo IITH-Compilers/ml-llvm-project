@@ -6,7 +6,8 @@ from ggnn import GatedGraphNeuralNetwork
 from register_action_space import RegisterActionSpace
 from ray.rllib.models.torch.torch_modelv2 import TorchModelV2
 from ray.rllib.utils.torch_ops import FLOAT_MIN
-
+from ray.rllib.models.torch.misc import SlimFC, normc_initializer
+import numpy as np
 
 logger = logging.getLogger(__file__) 
 class SelectTaskNetwork(TorchModelV2, nn.Module):
@@ -31,22 +32,42 @@ class SelectTaskNetwork(TorchModelV2, nn.Module):
         self.fc1 = nn.Linear(custom_config["state_size"], custom_config["fc1_units"])
         self.fc2 = nn.Linear(custom_config["fc1_units"], custom_config["fc2_units"])
         self.fc3 = nn.Linear( custom_config["fc2_units"] + 4, num_outputs)
+        self._value_branch = SlimFC(
+            in_size=num_outputs,
+            out_size=1,
+            initializer=normc_initializer(0.01),
+            activation_fn=None)
+        self._features = None
+
         
     def forward(self, input_dict, state, seq_lens):
         """Build a network that maps state -> action values."""
         # print("Select task GPU", next(self.parameters()).is_cuda)
+        # print("Task select model output", input_dict["obs"]["state"])
         x = F.relu(self.fc1(input_dict["obs"]["state"]))
+        # print("Task select model output 1", x)
         x = F.relu(self.fc2(x))
+        # print("Task select model output 2", x)
         x = torch.cat((x, input_dict["obs"]["node_properties"]), 1)
+        
         x = self.fc3(x)
+
+        self._features = x.clone().detach()
 
         for i in range(input_dict["obs"]["action_mask"].shape[0]):
             action_mask = input_dict["obs"]["action_mask"][i, :]
+            
+            # if all(v == 0 for v in action_mask):
+            #     print("Mask is all zero task select")
+
             for j in range(action_mask.shape[0]):
                 if action_mask[j] == 0:                    
                     x[i, j] = FLOAT_MIN
         
         return x, state
+
+    def value_function(self):
+        return self._value_branch(self._features).squeeze(1)
 
 class SelectNodeNetwork(TorchModelV2, nn.Module):
     """Actor (Policy) Model."""
@@ -69,7 +90,14 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
         self.fc1 = nn.Linear(custom_config["state_size"], custom_config["fc1_units"])
         self.fc2 = nn.Linear(custom_config["fc1_units"], custom_config["fc2_units"])
         self.fc3 = nn.Linear( custom_config["fc2_units"], 1)
-        
+        self._value_branch = SlimFC(
+            in_size=1000,
+            out_size=1,
+            initializer=normc_initializer(0.01),
+            activation_fn=None)
+        self._features = None
+
+
     def forward(self, input_dict, state, seq_lens):
         """Build a network that maps state -> action values."""
 
@@ -78,6 +106,8 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
         x = F.relu(self.fc1(input_dict["obs"]["state"]))
         x = F.relu(self.fc2(x))
         x = self.fc3(x)
+
+
         # print(seq_lens)
         # print(type(input_dict["obs"]))
 
@@ -87,15 +117,15 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
         #     print("list")
         # else:
         #     inp = in
-        x = torch.squeeze(x, 2)
-        x = torch.add(input_dict["obs"]["spill_weights"], x)
+        self._features = torch.squeeze(x, 2)        
+        x = torch.add(input_dict["obs"]["spill_weights"], self._features)
         x = F.relu(x)
         
         for i in range(input_dict["obs"]["action_mask"].shape[0]):
             action_mask = input_dict["obs"]["action_mask"][i, :]
 
             # if all(v == 0 for v in action_mask):
-            #     print("Mask is all zero node select", input_dict["obs"]["state"].shape)
+            #     print("Mask is all zero node select")
 
             for j in range(action_mask.shape[0]):
                 if action_mask[j] == 0:                    
@@ -103,6 +133,9 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
 
         # print("Select node forward Input", input_dict["obs"]["action_mask"][:, 0], x, input_dict["obs"]["spill_weights"].shape)
         return x, state
+
+    def value_function(self):
+        return self._value_branch(self._features).squeeze(1)
 
 class ColorNetwork(TorchModelV2, nn.Module):
     """Actor (Policy) Model."""
@@ -126,7 +159,12 @@ class ColorNetwork(TorchModelV2, nn.Module):
         self.fc1 = nn.Linear(custom_config["state_size"], custom_config["fc1_units"])
         self.fc2 = nn.Linear(custom_config["fc1_units"], custom_config["fc2_units"])
         self.fc3 = nn.Linear( custom_config["fc2_units"] + 3, num_outputs)
-        print("ColorNetwork colour size", num_outputs)
+        self._value_branch = SlimFC(
+            in_size=custom_config["fc2_units"],
+            out_size=1,
+            initializer=normc_initializer(0.01),
+            activation_fn=None)
+        self._features = None
         
     def forward(self, input_dict, state, seq_lens):
         """Build a network that maps state -> action values."""
@@ -143,8 +181,8 @@ class ColorNetwork(TorchModelV2, nn.Module):
         #     input_dict["obs"]["action_mask"] = input_dict["obs"]["action_mask"].to("cpu")
 
         x = F.relu(self.fc1(input_dict["obs"]["state"]))
-        x = F.relu(self.fc2(x))
-        x = torch.cat((x, input_dict["obs"]["node_properties"]), 1)
+        self._features = F.relu(self.fc2(x))
+        x = torch.cat((self._features, input_dict["obs"]["node_properties"]), 1)
         # print("Colouring forward", x.shape, input_dict["obs"]["node_properties"])
         # assert False, "Hoho"
         x = self.fc3(x)
@@ -163,6 +201,9 @@ class ColorNetwork(TorchModelV2, nn.Module):
                         x[i, j] = FLOAT_MIN             
         # print("OFF GPU", x.shape)        
         return x, state
+    
+    def value_function(self):
+        return self._value_branch(self._features).squeeze(1)
 
 class SplitNodeNetwork(TorchModelV2, nn.Module):
     """Actor (Policy) Model."""
@@ -185,15 +226,21 @@ class SplitNodeNetwork(TorchModelV2, nn.Module):
         self.fc1 = nn.Linear(custom_config["state_size"], custom_config["fc1_units"])
         self.fc2 = nn.Linear(custom_config["fc1_units"], custom_config["fc2_units"])
         self.fc3 = nn.Linear( custom_config["fc2_units"] + 2, 1)
+        self._value_branch = SlimFC(
+            in_size=custom_config["fc2_units"],
+            out_size=1,
+            initializer=normc_initializer(0.01),
+            activation_fn=None)
+        self._features = None
         
     def forward(self, input_dict, state, seq_lens):
         """Build a network that maps state -> action values."""
         # print("Split node GPU", next(self.parameters()).is_cuda)
         x = F.relu(self.fc1(input_dict["obs"]["state"]))
-        x = F.relu(self.fc2(x))
+        self._features = F.relu(self.fc2(x))
         input_dict["obs"]["usepoint_properties"] = F.pad(input_dict["obs"]["usepoint_properties"], (0, 64))
-        for i in range(x.shape[0]):
-            vec = x[i, :]
+        for i in range(self._features.shape[0]):
+            vec = self._features[i, :]
             
             for j in range(input_dict["obs"]["usepoint_properties"].shape[1]):
                 input_dict["obs"]["usepoint_properties"][i][j][2:] = vec 
@@ -216,6 +263,9 @@ class SplitNodeNetwork(TorchModelV2, nn.Module):
         # print("X shape", x.shape, x[0, :])
         # assert False, "Hehe"                
         return x, state
+    
+    def value_function(self):
+        return self._value_branch(self._features).squeeze(1)
 
 # class QNetwork(TorchModelV2):
 #     """Actor (Policy) Model."""

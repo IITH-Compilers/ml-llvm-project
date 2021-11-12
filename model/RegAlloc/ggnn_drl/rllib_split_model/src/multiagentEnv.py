@@ -93,7 +93,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
             self.graph_counter = 0
             self.reset_count = 0
-            self.training_graphs=glob.glob(os.path.join(dataset, 'graphs/IG/set1/*.json'))
+            self.training_graphs=glob.glob(os.path.join(dataset, 'graphs/IG/bench_run/*.json'))
             # self.training_graphs=glob.glob(os.path.join(dataset, 'json/*.json'))
             assert len(self.training_graphs) > 0, 'training set is empty' 
             if len(self.training_graphs) > self.graphs_num:
@@ -384,7 +384,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             self.select_task_agent_id: { 'action_mask': np.array(select_task_mask), 'node_properties': np.array(prop_value_list, dtype=np.float), 'state' : self.cur_obs},
         }
         # self.cur_obs = hidden_state[node_index]
-        # print("Select Node Reward", reward)
+        # print("Select Task input", self.cur_obs)
         logging.debug("Exit _select_node_step")
         return obs, reward, done, {}
 
@@ -635,7 +635,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         select_node_mask = self.createNodeSelectMask()
         # Handling mask all zero issue
         if select_node_mask is None:
-           split_done = True 
+           split_done = True
+           print("Select node mask is all zero")
 
         spill_weight_list = self.getSpillWeightListExpanded()
         state = self.obs
@@ -831,7 +832,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             # path="/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/graphs/IG/json/500.perlbench_r_51.ll_F2.json"
             # path = "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/graphs/IG/json_new/523.xalancbmk_r_392.ll_F21.json"
             # path = "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/graphs/IG/json_new/523.xalancbmk_r_682.ll_F12.json"
-            # path ="/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data_100d/graphs/IG/set1/526.blender_r_188.ll_F15.json"
+            # path ="/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data_100d/graphs/IG/set1/502.gcc_r_114.ll_F4.json"
             logging.debug('Graphs selected : {}'.format(path))
             print('Graphs selected : {}'.format(path))
             self.reset_count+=1
@@ -872,7 +873,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
             hostip = "0.0.0.0"
 
-            hostport = str(int("50060") + self.worker_index)
+            hostport = str(int("50050") + self.worker_index)
             # self.port_number += 1
             # hostport=str(self.port_number)
             ipadd = "{}:{}".format(hostip, hostport)
