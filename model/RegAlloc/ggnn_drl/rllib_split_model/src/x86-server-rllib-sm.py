@@ -126,6 +126,7 @@ class service_server(RegisterAllocationInference_pb2_grpc.RegisterAllocationInfe
                 #     exit()
 
             action, count = self.inference_model.compute_action()
+            # action, count = self.inference_model.evaluate()
             # print('action= {}, count={}'.format(action,count))
             select_node_agent = "select_node_agent_{}".format(count)
             select_task_agent = "select_task_agent_{}".format(count)

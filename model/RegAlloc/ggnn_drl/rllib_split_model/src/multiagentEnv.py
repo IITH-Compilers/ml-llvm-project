@@ -67,10 +67,10 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.split_point = None
         # self.flat_env = GraphColorEnv(env_config)
         self.new_obs = None
+        self.ggnn = GatedGraphNeuralNetwork(hidden_size=env_config["state_size"], annotation_size=3, num_edge_types=1, layer_timesteps=[1], residual_connections={}, nodelevel=True)
 
         self.spill_color_idx = 0
         self.action_space = None
-        self.ggnn = GatedGraphNeuralNetwork(hidden_size=env_config["state_size"], annotation_size=3, num_edge_types=1, layer_timesteps=[1], residual_connections={}, nodelevel=True)
         self.graph = None
         self.topology = None # Have the graph formed from adjency list using dependence edges only.
         self.cur_node = None
@@ -156,7 +156,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
     def getReward(self, action):
         return self.getReward_Static(action)
 
-    # @profile
     def reset(self, graph=None):
             
         # self.cur_obs = self.flat_env.reset()        
@@ -188,6 +187,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         select_node_mask = self.createNodeSelectMask()
         spill_weight_list = self.getSpillWeightListExpanded()
         state = self.obs
+        # print("Some node in eligible nodes", self.obs.graph_topology.get_eligibleNodes())
+        # print('Print the mask : ', select_node_mask)
         # import math
         # for i, vec in enumerate(state.initial_node_representation):
         #     for v in vec:
@@ -788,6 +789,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         return reward, done, response
     
     def reset_env(self, graph=None):
+        self.ggnn = GatedGraphNeuralNetwork(hidden_size=self.emb_size, annotation_size=3, num_edge_types=1, layer_timesteps=[1], residual_connections={}, nodelevel=True)
         if graph is None:
             inx = (((self.worker_index-1)*200) + self.graph_counter)
             # print("Worker index", self.worker_index, inx)
