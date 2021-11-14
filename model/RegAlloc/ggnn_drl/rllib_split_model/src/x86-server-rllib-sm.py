@@ -120,6 +120,8 @@ class service_server(RegisterAllocationInference_pb2_grpc.RegisterAllocationInfe
                 # self.inference_model.update_obs(request, self.inference_model.env.virtRegId, self.inference_model.env.split_point)
                 if not self.inference_model.update_obs(request):
                     self.inference_model.setCurrentNodeAsNotVisited()
+                else:
+                    self.inference_model.updateSelectNodeObs()
                 # print('stopping for spliting check, enter to continue...')
                 # stop = input()
                 # if stop == 0:
