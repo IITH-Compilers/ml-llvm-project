@@ -83,6 +83,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
         self.max_number_nodes = env_config["max_number_nodes"]
         self.emb_size = env_config["state_size"]
+        self.last_task_done = 0
 
         print("env_config.worker_index", env_config.worker_index)
         
@@ -370,6 +371,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             splitpoints = splitpoints.tolist()
             # print("splitpoints type", len(splitpoints.tolist()), type(splitpoints))
         if action == 0 or len(splitpoints) < 1 or self.split_steps > self.split_threshold: # Colour node
+            self.last_task_done = 0
             self.colour_steps += 1
             if self.task_selected == 1:
                 self.split_steps += 1
@@ -396,6 +398,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 self.colour_node_agent_id : { 'action_mask': np.array(colour_node_mask),'node_properties': np.array(prop_value_list_colouring), 'state' : self.cur_obs},
             }
         else:
+            self.last_task_done = 1
             self.split_steps += 1
             usepoint_prop = self.getUsepointProperties()
             usepoint_prop_value = np.array(list(usepoint_prop.values())).transpose()

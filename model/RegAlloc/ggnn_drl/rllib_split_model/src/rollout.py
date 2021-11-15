@@ -647,6 +647,9 @@ class RollOutInference:
         curr_obs['action_mask'] = np.array(select_node_mask)
         self.obs[self.env.select_node_agent_id] = curr_obs
 
+    def getLastTaskDone():
+        return self.env.last_task_done
+
     def compute_action(self):
         #obs = env.reset()
     
