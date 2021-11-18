@@ -232,7 +232,6 @@ RDGData RDGWrapperPass::computeRDGForFunction(Function &F) {
     Loop *L = *i;
     for (auto il = df_begin(L), el = df_end(L); il != el; ++il) {
       if (il->getSubLoops().size() > 0) {
-        // if (il->getSubLoops().size() == 0) {
         continue;
       }
 
@@ -245,6 +244,8 @@ RDGData RDGWrapperPass::computeRDGForFunction(Function &F) {
       auto *LAA = &getAnalysis<LoopAccessLegacyAnalysis>();
       const LoopAccessInfo &LAI = LAA->getInfo(*il);
       auto RDGraph = RDG(*AA, *SE, *LI, DI, LAI, ORE);
+      // errs() << "Function Name: " << F.getName() <<"\n";
+
       auto SCC_Graph = RDGraph.computeRDGForInnerLoop(**il);
 
       if (SCC_Graph == nullptr) {
@@ -290,6 +291,9 @@ RDGData RDGWrapperPass::computeRDGForFunction(Function &F) {
 
       LLVM_DEBUG(errs() << "Writing " + Input_Filename + "\n");
       Print_IR2Vec_File(SCCGraph, Input_Filename, s2, loopNum);
+
+      errs() << "FileName: " << F.getParent()->getName() << "\n";
+      errs() << "Writing " + Input_Filename + "\n";
 
       std::ifstream ifs_inputfile(Input_Filename);
       std::string content_input;

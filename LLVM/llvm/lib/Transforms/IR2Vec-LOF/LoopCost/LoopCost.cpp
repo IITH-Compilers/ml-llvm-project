@@ -16,6 +16,7 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
@@ -110,10 +111,13 @@ public:
     if (F.getName() != funcName)
       return false;
 
+    // auto *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
     auto *LI = &getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo();
     auto *LAA = &getAnalysis<LoopAccessLegacyAnalysis>(F);
     auto *TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
     SE = &getAnalysis<ScalarEvolutionWrapperPass>(F).getSE();
+    // AAResults *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
+    auto *DI = &getAnalysis<DependenceAnalysisWrapperPass>(F).getDI();
 
     SmallVector<Loop *, 32> InnerLoops;
     for (Loop *L : *LI)
@@ -124,6 +128,7 @@ public:
     for (Loop *L : InnerLoops) {
       uint64_t LoopCost = 0;
       auto Latch = L->getLoopLatch();
+      
       MDNode *MD1 =
           Latch->getTerminator()->getMetadata("IR2Vec-Distributed-LoopID");
       MDNode *MD2 = Latch->getTerminator()->getMetadata("IR2Vec-SCC-LoopID");
@@ -226,10 +231,13 @@ public:
         }
       }
 
-      const LoopAccessInfo &LAI_WR = LAA->getInfo(L);
-      const LoopAccessInfo &LAI_RAR = LAA->getInfo(L, 1);
-      Locality CL(LAI_WR, LAI_RAR, TTI);
-      int64_t CacheMisses = CL.computeLocalityCost(L, TripCount, SE);
+      // const LoopAccessInfo &LAI_WR = LAA->getInfo(L);
+      // const LoopAccessInfo &LAI_RAR = LAA->getInfo(L, 1);
+
+      errs() << "aaaaaaaaaaaaaaaaaaaaa\n";
+
+      Locality CL(TTI);
+      int64_t CacheMisses = CL.computeLocalityCost(L, TripCount, SE, DI);
       LoopCost = LoopCost * (TripCount / (VF * IF));
       dbgs() << "Loop cost with only instructions: " << LoopCost << "\n";
       uint64_t TotalMemAccess =
@@ -252,6 +260,7 @@ public:
     AU.addRequired<LoopInfoWrapperPass>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
     AU.addRequired<LoopAccessLegacyAnalysis>();
+    AU.addRequired<DependenceAnalysisWrapperPass>();
     AU.setPreservesAll();
   }
 };
@@ -326,7 +335,7 @@ void Locality::clearDS() {
 }
 
 int64_t Locality::computeLocalityCost(Loop *L, unsigned TripCount,
-                                      ScalarEvolution *SE) {
+                                      ScalarEvolution *SE, DependenceInfo *DI) {
   clearDS();
   assert(TripCount > 0 && "Trip count expected to greater than zero");
   unsigned CLS = 64;
@@ -343,63 +352,54 @@ int64_t Locality::computeLocalityCost(Loop *L, unsigned TripCount,
   //      2. Memory instructions accessing same base arrays and with spatial
   //      distance < Threshold
 
-  // Get memory instructions and dependences from LAI
-  const SmallVectorImpl<Instruction *> &MemroyInstuctions =
-      LAI_WR.getDepChecker().getMemoryInstructions();
-  const SmallVectorImpl<llvm::MemoryDepChecker::Dependence> *WriteDependences =
-      LAI_WR.getDepChecker().getDependences();
-  const SmallVectorImpl<llvm::MemoryDepChecker::Dependence> *ReadDependences =
-      LAI_RAR.getDepChecker().getDependences();
-  const SmallVector<int64_t, 8> WriteDependenceDistances =
-      LAI_WR.getDepChecker().getDDist();
-  const SmallVector<int64_t, 8> ReadDependenceDistances =
-      LAI_RAR.getDepChecker().getDDist();
-  if (ReadDependences){
-  assert( (ReadDependences->size() == ReadDependenceDistances.size()) &&
-         "Dep Distances are not there??");
-//    errs () << "ReadDependences size : " << ReadDependences->size() << " " << " ReadDependenceDistances size : "<< ReadDependenceDistances.size() << "\n";
-  }
-  if (WriteDependences){
-  assert( (WriteDependences->size() == WriteDependenceDistances.size()) &&
-         "Dep Distances are not there??");
-  //  errs () << "WriteDependences size : " << WriteDependences->size() << " " << " WriteDependenceDistances size : "<< WriteDependenceDistances.size() << "\n";
-  }
-// errs () << &ReadDependenceDistances << " " << ReadDependences  << " "  << ReadDependenceDistances.size() << "\n";
-//  errs () << &WriteDependenceDistances << " " << WriteDependences  << " " << WriteDependenceDistances.size() << "\n";
+  // Get memory instructions and dependences from DA
+  // const SmallVectorImpl<Instruction *> &MemroyInstuctions;
 
-  // Insert MemoryInstruction in the Graph
-  for (auto *I : MemroyInstuctions) {
-    MemGraph[I] = new SmallVector<Instruction *, 4>();
-  }
-
-  // Insert the write memory dependences
-  if (WriteDependences){
-  for (unsigned Ind = 0; Ind < WriteDependences->size(); Ind++) {
-    auto Dep = (*WriteDependences)[Ind];
-    unsigned Dist = WriteDependenceDistances[Ind];
-    Instruction *Src = Dep.getSource(LAI_WR), *Dst = Dep.getDestination(LAI_WR);
-    if (Dist <= TemporalThreshold) {
-      MemGraph[Src]->push_back(Dst);
-      MemGraph[Dst]->push_back(Src);
+  for (auto BB : L->getBlocks()) {
+    for (BasicBlock::iterator SrcI = BB->begin(), SrcE = BB->end(); SrcI != SrcE; ++SrcI) {
+      if (SrcI->mayReadOrWriteMemory()) {
+        MemGraph[&*SrcI] = new SmallVector<Instruction *, 4>();
+      }
     }
   }
-  }
 
-  // Insert the read memory dependences
-  if (ReadDependences){ 
-  for (unsigned Ind = 0; Ind < ReadDependences->size(); Ind++) {
-    auto Dep = (*ReadDependences)[Ind];
-    unsigned Dist = ReadDependenceDistances[Ind];
-    Instruction *Src = Dep.getSource(LAI_RAR),
-                *Dst = Dep.getDestination(LAI_RAR);
-    if (Dist <= TemporalThreshold) {
-      MemGraph[Src]->push_back(Dst);
-      MemGraph[Dst]->push_back(Src);
+  // Insert the memory dependences
+  for (auto BB : L->getBlocks()) {
+    for (BasicBlock::iterator SrcI = BB->begin(), SrcE = BB->end(); SrcI != SrcE; ++SrcI) {
+      if (SrcI->mayReadOrWriteMemory()) {
+        for (BasicBlock::iterator DstI = SrcI, DstE = BB->end(); DstI != DstE; ++DstI) {
+          if (DstI->mayReadOrWriteMemory()) {
+            if (SrcI != DstI) {
+              if (auto D = DI->depends(&*SrcI, &*DstI, true)) {
+                unsigned Level = D->getLevels();
+                const SCEV *Distance = D->getDistance(Level);
+                if (Distance != nullptr)
+                    if(auto x = dyn_cast<SCEVConstant>(D->getDistance(Level))) {
+                      int DepDist = x->getValue()->getSExtValue();
+                      if (DepDist < 0){
+                        DepDist = -DepDist;
+                        if (DepDist <= TemporalThreshold) {
+                          MemGraph[&*SrcI]->push_back(&*SrcI);
+                          MemGraph[&*DstI]->push_back(&*DstI);
+                        }
+                      } else {
+                        if (DepDist <= TemporalThreshold) {
+                          MemGraph[&*SrcI]->push_back(&*DstI);
+                          MemGraph[&*DstI]->push_back(&*SrcI);
+                        }
+                      }
+                    }
+
+                // errs() << "Src:" << *SrcI << " --> Dst:" << *DstI << "\n";
+              }
+            }
+          }
+        }
+      }
     }
   }
-  }
 
-  // Insert instructions that are spartially close
+  // Insert instructions that are spatially close
   SmallVector<Instruction *, 4> IndependentInsts;
   for (auto Vertex : MemGraph) {
     if (Vertex.second->size() == 0)
@@ -493,348 +493,3 @@ Locality::findVertexCover(MemroyInstructionGraph &MemGraph) {
   }
   return VertexCover;
 }
-
-#if 0
-
-int Locality::computeLocalityCost(Loop &IL, ScalarEvolution *SE) {
-  clearDS();
-  // Compute TripCount of the loop
-  const SCEV *TC = SE->getBackedgeTakenCount(&IL);
-  assert(TC && "TC expected");
-  int64_t TripCount;
-  const SCEVConstant *SCEVConst_TC = dyn_cast_or_null<SCEVConstant>(TC);
-  if (SCEVConst_TC) {
-    TripCount = SCEVConst_TC->getValue()->getSExtValue();
-    if (TripCount == -1)
-      TripCount = 1000;
-    else
-      TripCount++; // BackedgeTakenCount is one less than tripcount
-  } else
-    TripCount = 1000;
-
-  assert(TripCount > 0 && "Trip count expected to greater than zero");
-
-  // Compute CacheLineSize
-  // unsigned CLS = TTI->getCacheLineSize();
-  unsigned CLS = 64;
-  // errs() << "CacheLineSize: " << CLS << "\n";
-
-  assert(CLS > 0 && "Unknown cache line size");
-
-  const DataLayout &DL = IL.getHeader()->front().getModule()->getDataLayout();
-  // Create Mem_InstList: Consist all the accesses to memory
-  for (BasicBlock *BB : IL.blocks()) {
-    for (Instruction &I : BB->instructionsWithoutDebug()) {
-      if (I.mayReadOrWriteMemory()) {
-        if (isa<LoadInst>(I) || isa<StoreInst>(I)) {
-          bool Mflag = 0;
-          for (auto i : Mem_InstList)
-            if (&I == i) {
-              Mflag = 1;
-              break;
-            }
-          if (Mflag == 0)
-            Mem_InstList.push_back(&I);
-        }
-      }
-    }
-  }
-
-  // Calculate number of acceses to same array (Base Pointer)
-  // Create dep_InstList: Consist all the accesses that is part of dependences
-  for (auto i : Mem_InstList) {
-    bool depFlag = 0;
-    Value *Ptr = getLoadStorePointerOperand(i);
-    assert(Ptr && "Ptr expected");
-    assert(Ptr && "Pointer operand doesn't exit");
-    const SCEV *AccessFn = SE->getSCEV(Ptr);
-    const SCEV *BasePointer = nullptr;
-    if (isa<SCEVUnknown>(SE->getPointerBase(AccessFn))) {
-      BasePointer = SE->getPointerBase(AccessFn);
-    } else if (Value *BPtr = llvm::GetUnderlyingObject(Ptr, DL)) {
-      BasePointer = SE->getSCEV(BPtr);
-    } else
-      BasePointer = AccessFn;
-
-    if (dependence_Inst_Count.find(BasePointer) !=
-        dependence_Inst_Count.end()) {
-      dependence_Inst_Count.find(BasePointer)->second++;
-    } else {
-      dep_InstList.push_back(i);
-      dependence_Inst_Count.insert(std::make_pair(BasePointer, 1));
-      // Initialize dep_threshold with false
-      dep_threshold.insert(std::make_pair(BasePointer, false));
-    }
-  }
-
-  // Calculate dependences For Write/Read
-  const auto dependences_Write =
-      LAI_WR.getDepChecker().getDependences(); // List of dependences
-  const SmallVector<int64_t, 8> DependenceDistances_Write =
-      LAI_WR.getDepChecker().getDDist(); // List of dependence distances
-
-  // Check for all Write-Read and Write-Write dependences
-  if (dependences_Write == nullptr) {
-    LLVM_DEBUG(errs() << "LAI Write/Read dependences is a nullptr.\n");
-  } else {
-    int x = 1;
-    // Check for all dependences
-    for (auto dep : *dependences_Write) {
-      // Collect Source and Destination instuction of a Memory dependence
-      Instruction *Src, *Dst;
-      if (dep.Type == MemoryDepChecker::Dependence::DepType::Forward ||
-          dep.Type == MemoryDepChecker::Dependence::DepType::
-                          ForwardButPreventsForwarding) {
-        Src = dep.getSource(LAI_WR);
-        Dst = dep.getDestination(LAI_WR);
-      }
-
-      if (dep.Type == MemoryDepChecker::Dependence::DepType::Backward ||
-          dep.Type ==
-              MemoryDepChecker::Dependence::DepType::BackwardVectorizable ||
-          dep.Type == MemoryDepChecker::Dependence::DepType::
-                          BackwardVectorizableButPreventsForwarding) {
-        Dst = dep.getSource(LAI_WR);
-        Src = dep.getDestination(LAI_WR);
-      }
-
-      if (dep.Type == MemoryDepChecker::Dependence::DepType::Unknown) {
-        Src = dep.getSource(LAI_WR);
-        Dst = dep.getDestination(LAI_WR);
-      }
-
-      int tmp = 1;
-      for (auto i : DependenceDistances_Write) {
-        if (x == tmp) {
-          int64_t ui = i;
-          if (i < 0) {
-            ui = -i;
-          }
-          if (ui > TemporalThreshold) {
-            continue;
-
-            Value *Ptr = getLoadStorePointerOperand(Src);
-            assert(Ptr && "Ptr expected");
-            const SCEV *AccessFn = SE->getSCEV(Ptr);
-
-            const SCEV *BasePointer = nullptr;
-            if (isa<SCEVUnknown>(SE->getPointerBase(AccessFn))) {
-              BasePointer = SE->getPointerBase(AccessFn);
-            } else if (Value *BPtr = llvm::GetUnderlyingObject(Ptr, DL)) {
-              BasePointer = SE->getSCEV(BPtr);
-            } else
-              BasePointer = AccessFn;
-
-            if (dep_threshold.find(BasePointer)->second == false)
-              dep_threshold.find(BasePointer)->second = true;
-          }
-        }
-        tmp++;
-      }
-      x++;
-    }
-  }
-
-  // Calculate dependences For Write/Read
-  const auto dependences_Read =
-      LAI_RAR.getDepChecker().getDependences(); // List of dependences
-  const SmallVector<int64_t, 8> DependenceDistances_Read =
-      LAI_RAR.getDepChecker().getDDist(); // List of dependence
-  // errs() << "depWrite: " << dependences_Write->size() << "\n";
-  // errs() << "depRead: " << dependences_Read->size() << "\n";
-  /*  for (auto i : DependenceDistances_Read) {
-     errs() << "Distance Read: " << i << "\n";
-   } */
-
-  // Check for all Read-Read Dependences
-  if (dependences_Read == nullptr) {
-    LLVM_DEBUG(errs() << "LAI Write/Read dependences is a nullptr.\n");
-  } else {
-    int x = 1;
-    // Check for all dependences
-    for (auto dep : *dependences_Read) {
-      // Collect Source and Destination instuction of a Memory dependence
-      Instruction *Src, *Dst;
-      if (dep.Type == MemoryDepChecker::Dependence::DepType::Forward ||
-          dep.Type == MemoryDepChecker::Dependence::DepType::
-                          ForwardButPreventsForwarding) {
-        Src = dep.getSource(LAI_RAR);
-        Dst = dep.getDestination(LAI_RAR);
-      }
-
-      if (dep.Type == MemoryDepChecker::Dependence::DepType::Backward ||
-          dep.Type ==
-              MemoryDepChecker::Dependence::DepType::BackwardVectorizable ||
-          dep.Type == MemoryDepChecker::Dependence::DepType::
-                          BackwardVectorizableButPreventsForwarding) {
-        Dst = dep.getSource(LAI_RAR);
-        Src = dep.getDestination(LAI_RAR);
-      }
-
-      if (dep.Type == MemoryDepChecker::Dependence::DepType::Unknown) {
-        Src = dep.getSource(LAI_RAR);
-        Dst = dep.getDestination(LAI_RAR);
-      }
-
-      int tmp = 1;
-      for (auto i : DependenceDistances_Read) {
-        if (x == tmp) {
-          int64_t ui = i;
-          if (i < 0) {
-            ui = -i;
-          }
-          if (ui > TemporalThreshold) {
-            continue;
-
-            Value *Ptr = getLoadStorePointerOperand(Src);
-            assert(Ptr && "Ptr expected");
-            const SCEV *AccessFn = SE->getSCEV(Ptr);
-            const SCEV *BasePointer = nullptr;
-            if (isa<SCEVUnknown>(SE->getPointerBase(AccessFn))) {
-              BasePointer = SE->getPointerBase(AccessFn);
-            } else if (Value *BPtr = llvm::GetUnderlyingObject(Ptr, DL)) {
-              BasePointer = SE->getSCEV(BPtr);
-            } else
-              BasePointer = AccessFn;
-
-            if (dep_threshold.find(BasePointer)->second == false)
-              dep_threshold.find(BasePointer)->second = true;
-          }
-        }
-        tmp++;
-      }
-      x++;
-    }
-  }
-
-  // Compute compulsary Cache misses
-  for (auto Inst : Mem_InstList) {
-    // errs() << "\tMem_List: " << *Inst << "\n";
-
-    Value *Ptr = getLoadStorePointerOperand(Inst);
-    // assert(Ptr && "Pointer expected");
-    const SCEV *SCEVPtr = SE->getSCEV(Ptr);
-    if (!isa<SCEVAddRecExpr>(SCEVPtr)) {
-      Locality_Cost += TripCount;
-    } else {
-      // Calculate Stride
-      const SCEVAddRecExpr *Expr = dyn_cast<SCEVAddRecExpr>(SCEVPtr);
-      assert(Expr && "AddrecExpr expected");
-      // Expr should not be null
-      if (Expr == nullptr) {
-        continue;
-      }
-
-      const SCEV *stride = Expr->getStepRecurrence(*SE);
-      const SCEVConstant *SCEVConst_stride =
-          dyn_cast_or_null<SCEVConstant>(stride);
-
-      if (!isa<SCEVConstant>(stride)) {
-        Locality_Cost += TripCount;
-      } else {
-        // assert(SCEVConst_stride && "Not constant stride");
-        auto Stride = SCEVConst_stride->getValue()->getSExtValue();
-        Stride = (Stride < 0) ? -Stride : Stride;
-        assert(Stride > 0 && "Stride is zero?");
-        if (Stride < CLS) { // make sure Stride is in bytes
-          // auto miss = TripCount * Stride * dataType_Size / CLS;
-          auto miss = (int64_t)(ceil((float)TripCount * Stride / CLS));
-          // auto miss = TripCount * Stride /
-          //             CLS; // Access stride will have stride*dataType
-          assert(miss > 0 && "Zero misses?");
-          Locality_Cost += miss;
-        } else {
-          Locality_Cost += TripCount;
-        }
-      }
-    }
-    errs() << "miss: " << Locality_Cost << "\n";
-  }
-
-  // Substract Cache hits by dependence accesses, from Cache_miss
-  if (Mem_InstList.size() == 0 and dep_InstList.size() > 0)
-    assert(false);
-
-  MemoryInstList temp_dependence_Inst_Count;
-  // for (auto Inst : dep_InstList) {
-  for (auto Inst : Mem_InstList) {
-    // errs() << "\tdep_List: " << *Inst << "\n";
-    bool dep_flag = 0;
-    for (auto dep_Inst : dep_InstList) {
-      if (Inst == dep_Inst)
-        dep_flag = 1;
-    }
-
-    if (dep_flag == 1)
-      continue;
-
-    Value *Ptr = getLoadStorePointerOperand(Inst);
-    assert(Ptr && "Ptr expected");
-    const SCEV *SCEVPtr = SE->getSCEV(Ptr);
-
-    if (!isa<SCEVAddRecExpr>(SCEVPtr)) {
-      continue;
-    } else {
-      // Check for number for accesses to same array (Base Pointer)
-      const SCEV *BasePointer = nullptr;
-      if (isa<SCEVUnknown>(SE->getPointerBase(SCEVPtr))) {
-        BasePointer = SE->getPointerBase(SCEVPtr);
-      } else if (Value *BPtr = llvm::GetUnderlyingObject(Ptr, DL)) {
-        BasePointer = SE->getSCEV(BPtr);
-      } else
-        BasePointer = SCEVPtr;
-
-      /* if (dependence_Inst_Count.find(BasePointer) !=
-          dependence_Inst_Count.end()) {
-        errs() << "bbbbbbbbbbbbbbbbbbbbbbb\n";
-        // dependence_Inst_Count.find(BasePointer)->second++;
-      } */
-
-      int n = dependence_Inst_Count.find(BasePointer)->second;
-      // errs() << "Count: " << n << "\n";
-
-      // Bail out if array access is only once
-      if (n < 2)
-        continue;
-
-      // In case of dependence > threshold
-      if (dep_threshold.find(BasePointer)->second == true)
-        continue;
-
-      // Calculate Stride
-      const SCEVAddRecExpr *Expr = dyn_cast<SCEVAddRecExpr>(SCEVPtr);
-      assert(Expr && "AddRec expected");
-      if (Expr == nullptr) {
-        continue;
-      }
-
-      const SCEV *stride = Expr->getStepRecurrence(*SE);
-      const SCEVConstant *SCEVConst_stride =
-          dyn_cast_or_null<SCEVConstant>(stride);
-      if (!isa<SCEVConstant>(stride)) {
-        Locality_Cost += TripCount;
-      } else {
-        auto Stride = SCEVConst_stride->getValue()->getSExtValue();
-        Stride = (Stride < 0) ? -Stride : Stride;
-
-        if (Stride < CLS) {
-          auto hit = (long)(ceil((float)TripCount * Stride / CLS));
-          // auto hit = (n - 1) * h;
-          // auto hit = (n - 1) * TripCount * Stride / CLS;
-          Locality_Cost -= hit;
-        } else {
-          Locality_Cost -= TripCount;
-          // Locality_Cost -= (n - 1) * TripCount;
-        }
-      }
-    }
-    errs() << "hit: " << Locality_Cost << "\n";
-  }
-
-  errs() << "Locality Cost: " << Locality_Cost << "\n";
-  if (Mem_InstList.size() > 0)
-    assert(Locality_Cost > 0 && "Locality cost is zero?");
-
-  return Locality_Cost;
-}
-#endif

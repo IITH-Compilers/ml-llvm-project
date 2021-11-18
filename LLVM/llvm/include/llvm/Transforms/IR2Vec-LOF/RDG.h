@@ -54,8 +54,7 @@ public:
   void PrintDotFile_LAI(DataDependenceGraph &G, std::string Filename,
                         std::string ll_name);
 
-  bool BuildRDG_LAI(DataDependenceGraph &G, DependenceInfo &DI,
-                    const LoopAccessInfo &LAI);
+  bool BuildRDG_DA(raw_ostream &OS, DataDependenceGraph &G ,DependenceInfo *DI, Loop &IL);
 
   void createMemoryEdgeMergedNode(DataDependenceGraph &G, DependenceInfo &DI,
                                   NodeType &FinalNode, NodeType &MergingNode,

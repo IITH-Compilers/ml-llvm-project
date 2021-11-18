@@ -20,8 +20,8 @@ private:
 
   int64_t Locality_Cost = 0;
 
-  const LoopAccessInfo &LAI_WR;
-  const LoopAccessInfo &LAI_RAR;
+  // const LoopAccessInfo &LAI_WR;
+  // const LoopAccessInfo &LAI_RAR;
   TargetTransformInfo *TTI;
 
   // uint64_t Cache_Miss;
@@ -49,16 +49,15 @@ private:
 public:
   static char ID;
 
-  Locality(const LoopAccessInfo &LAI_WR, const LoopAccessInfo &LAI_RAR,
-           TargetTransformInfo *TTI)
-      : LAI_WR(LAI_WR), LAI_RAR(LAI_RAR), TTI(TTI) {}
+  Locality(TargetTransformInfo *TTI)
+      : TTI(TTI) {}
 
   // void Insert_dep_InstList(Instruction *I) { dep_InstList.insert(I); }
 
   // InstructionListType get_dep_InstList() { return dep_InstList; }
   // bool runOnFunction(Function &F);
 
-  int64_t computeLocalityCost(Loop *L, unsigned TripCount, ScalarEvolution *SE);
+  int64_t computeLocalityCost(Loop *L, unsigned TripCount, ScalarEvolution *SE, DependenceInfo *DI);
 
   // int computeLocalityCost(Loop &IL, ScalarEvolution *SE);
 };

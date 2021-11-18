@@ -13,6 +13,7 @@
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/Support/GraphWriter.h"
 #include <algorithm>
 #include <string>
@@ -91,112 +92,6 @@ void RDG::PrintDotFile_LAI(DataDependenceGraph &G, std::string Filename,
     errs() << "error opening file for writing! \n";
     G.SCCExist = false;
   }
-}
-
-// Append the Memory Dependence Edges with weights into Graph
-bool RDG::BuildRDG_LAI(DataDependenceGraph &G, DependenceInfo &DI,
-                       const LoopAccessInfo &LAI) {
-  const auto alldependences =
-      LAI.getDepChecker().getDependences(); // List of dependences
-  const SmallVector<int64_t, 8> DependenceDistances =
-      LAI.getDepChecker().getDDist(); // List of dependence distances
-
-  if (alldependences == nullptr) {
-    LLVM_DEBUG(errs() << "LAI dependences is a nullptr.\n");
-    return false;
-  }
-
-  LLVM_DEBUG(errs() << "+++++++++++++++++++++++++++++ "
-                    << alldependences->size() << "\n");
-  // errs() << "+++++++++++++++++++++++++++++ " << alldependences->size() <<
-  // "\n";
-
-  G.dependenceSize = alldependences->size();
-  // for (auto di : DependenceDistances) {
-  //   errs() << "dep: " << di << "\n";
-  // }
-
-  int x = 1;
-  // Check for all dependences
-  for (auto dep : *alldependences) {
-    // Collect Source and Destination instuction of an Memory dependence
-    Instruction *Src, *Dst;
-    if (dep.Type == MemoryDepChecker::Dependence::DepType::Forward ||
-        dep.Type == MemoryDepChecker::Dependence::DepType::
-                        ForwardButPreventsForwarding) {
-      Src = dep.getSource(LAI);
-      Dst = dep.getDestination(LAI);
-    }
-
-    if (dep.Type == MemoryDepChecker::Dependence::DepType::Backward ||
-        dep.Type ==
-            MemoryDepChecker::Dependence::DepType::BackwardVectorizable ||
-        dep.Type == MemoryDepChecker::Dependence::DepType::
-                        BackwardVectorizableButPreventsForwarding) {
-      Dst = dep.getSource(LAI);
-      Src = dep.getDestination(LAI);
-    }
-
-    if (dep.Type == MemoryDepChecker::Dependence::DepType::Unknown) {
-      Src = dep.getSource(LAI);
-      Dst = dep.getDestination(LAI);
-    }
-
-    // if (Src->getParent() != Dst->getParent()) {
-    //   LLVM_DEBUG(errs() << "Ignoring a dependence from LLVM.\n");
-    //   continue;
-    // }
-
-    // errs() << "Src: " << *Src << "\nDst: " << *Dst << "\n";
-
-    // Make List of source and destination nodes to connect by an edge
-    // by checking the presence of instruction inside Node
-    SmallPtrSet<NodeType *, 4> SrcNodeList;
-    SmallPtrSet<NodeType *, 4> DstNodeList;
-
-    for (NodeType *N : G) {
-      // errs() << "Node: " << *N << "\n";
-      InstructionListType InstList;
-      N->collectInstructions([](const Instruction *I) { return true; },
-                             InstList);
-      for (Instruction *II : InstList) {
-        if (Src == II) {
-          SrcNodeList.insert(N);
-        }
-        if (Dst == II) {
-          DstNodeList.insert(N);
-        }
-      }
-    }
-    // Create Memory dependence edge by connecting Source and Destination node
-    // from SrcNodeList and DstNodeList respectively
-    // Take weight from DependenceDistances
-    int tmp = 1;
-    for (auto i : DependenceDistances) {
-      if (x == tmp) {
-        for (NodeType *SrcIt : SrcNodeList) {
-          for (NodeType *DstIt : DstNodeList) {
-            bool ew = 0;
-            for (EdgeType *e : *SrcIt) {
-              if (&e->getTargetNode() == DstIt) {
-                if (e->getEdgeWeight() == i) {
-                  ew = 1; // set 1 for removing redundant edges (same weight)
-                          // between two nodes
-                }
-              }
-            }
-            if (ew == 0) {
-              DDGBuilder(G, DI, BBList, ReductionPHIList)
-                  .createMemoryWeightedEdge(*SrcIt, *DstIt, i);
-            }
-          }
-        }
-      }
-      tmp++;
-    }
-    x++;
-  }
-  return true;
 }
 
 void RDG::createMemoryEdgeMergedNode(DataDependenceGraph &G, DependenceInfo &DI,
@@ -468,23 +363,73 @@ void RDG::Merge_NonLabel_Nodes(DataDependenceGraph &G, DependenceInfo &DI) {
   }
 }
 
+bool RDG::BuildRDG_DA(raw_ostream &OS, DataDependenceGraph &G, DependenceInfo *DI, Loop &IL) {
+  for (auto b : IL.blocks()) {
+    // b->dump();
+    for (BasicBlock::iterator SrcI = b->begin(), SrcE = b->end(); SrcI != SrcE; ++SrcI) {
+      // errs() << "instruction: " << *SrcI << "\n";
+      if (SrcI->mayReadOrWriteMemory()) {
+        for (BasicBlock::iterator DstI = SrcI, DstE = b->end(); DstI != DstE; ++DstI) {
+          if (DstI->mayReadOrWriteMemory()) {
+            if (SrcI != DstI) {
+              if (auto D = DI->depends(&*SrcI, &*DstI, true)) {
+                if (!D->isInput()) {
+                  // OS << "Src:" << *SrcI << " --> Dst:" << *DstI << "\n";
+                  Instruction &si = *SrcI;
+                  Instruction &di = *DstI;
+
+                  NodeType *SrcNode, *DstNode;
+
+                  for (NodeType *N : G) {
+                    // errs() << "Node: " << *N << "\n";
+                    InstructionListType InstList;
+                    N->collectInstructions([](const Instruction *I) { return true; },
+                             InstList);
+                    for (Instruction *II : InstList) {
+                      if (&si == II) {
+                        SrcNode = N;
+                      }
+                      if (&di == II) {
+                        DstNode = N;
+                      }
+                    }
+                  }
+
+                  // OS << "  da analyze - ";
+                  // D->dump(OS);
+                  // errs() << D->getLevels() << "\n";
+                  unsigned Level = D->getLevels();
+                  const SCEV *Distance = D->getDistance(Level);
+                  if (Distance != nullptr)
+                    if (auto x = dyn_cast<SCEVConstant>(D->getDistance(Level))) {
+                      int DepDist = x->getValue()->getSExtValue();
+                      if (DepDist < 0){
+                        DDGBuilder(G, *DI, BBList, ReductionPHIList).createMemoryWeightedEdge(*DstNode, *SrcNode, -DepDist);
+                      } else {
+                        DDGBuilder(G, *DI, BBList, ReductionPHIList).createMemoryWeightedEdge(*SrcNode, *DstNode, DepDist);
+                      }
+                                        
+                      // errs() << "aaaaaaaaaaa: " << DepDist << "\n";
+                    }
+                  // if (Distance) {
+                  //   OS << *Distance << "\n";
+                  // }
+                }
+              }   
+            }
+          }
+        }
+      }
+    }
+  }
+  return true;
+}
+
 DataDependenceGraph *RDG::computeRDGForInnerLoop(Loop &IL) {
   raw_ostream &operator<<(raw_ostream &OS, const DataDependenceGraph &G);
-  /* errs() << LAI.getMaxSafeDepDistBytes() << " : " << LAI.canVectorizeMemory()
-         << "\n"; */
-  if (LAI.getDepChecker().getDependences() == nullptr) {
-    LLVM_DEBUG(errs() << "LAI dependences is a nullptr.\n");
-    fail("CannotResolveDependences", "LAI dependences is a nullptr.", &IL);
-    return nullptr;
-  }
-  //   errs() << "LAI.getDepChecker().getDependences()->size() : "  <<
-  //   LAI.getDepChecker().getDependences()->size() << "\n";
-  if (LAI.getDepChecker().getDependences()->size() == 0 &&
-      !LAI.canVectorizeMemory()) {
-    //    errs() << "No need to make RDG\n";
-    fail("CannotResolveDependences", "LAI cannot analyze dependences", &IL);
-    return nullptr;
-  }
+
+  // raw_ostream &OS = errs();
+  // dumpExampleDependence(OS, &DI, IL);
 
   if (!IL.isLoopSimplifyForm()) {
     fail("NotLoopSimplifyForm", "loop is not in loop-simplify form", &IL);
@@ -518,15 +463,7 @@ DataDependenceGraph *RDG::computeRDGForInnerLoop(Loop &IL) {
         InductionDescriptor ID;
 
         if (Phi->getNumIncomingValues() == 2) {
-          // errs() << "PHI: " << *Phi << "\n";
-          // errs() << "Loop Address: " << &IL << "\n";
-          // errs() << "Loop: " << LI.getLoopFor(Phi->getParent()) << "\n";
-
           if (LI.getLoopFor(Phi->getParent()) == &IL) {
-
-            // for (auto i : IL.blocks()) {
-            //   i->dump();
-            // }
             if (Phi->getBasicBlockIndex(IL.getLoopPreheader()) < 0) {
               if (ORE)
                 fail("PHIBranchPH",
@@ -557,6 +494,7 @@ DataDependenceGraph *RDG::computeRDGForInnerLoop(Loop &IL) {
         }
       }
     }
+
     auto br = dyn_cast<BranchInst>(BB->getTerminator());
     if (br && br->isConditional() && BB != IL.getLoopLatch()) {
       LLVM_DEBUG(errs() << "Conditions Present: no need to make RDG in case of "
@@ -576,12 +514,14 @@ DataDependenceGraph *RDG::computeRDGForInnerLoop(Loop &IL) {
   DataDependenceGraph *G2 = new DataDependenceGraph(IL, LI, DI, &SE);
 
   // Append Memory Dependence Edges with weights into Graph
-  auto res = BuildRDG_LAI(*G2, DI, LAI);
-  if (!res) {
-    if (ORE)
-      fail("EmptyDeps", "LAI is empty..", &IL);
-    return nullptr;
-  }
+  // auto res = BuildRDG_LAI(*G2, DI, LAI);
+  raw_ostream &OS = errs();
+  BuildRDG_DA(OS, *G2, &DI, IL);
+  // if (!res) {
+  //   if (ORE)
+  //     fail("EmptyDeps", "LAI is empty..", &IL);
+  //   return nullptr;
+  // }
 
   // Create SCC Graph
   CreateSCC(*G2, DI);

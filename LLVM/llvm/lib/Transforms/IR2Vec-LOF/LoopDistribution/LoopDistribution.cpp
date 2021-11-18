@@ -440,8 +440,10 @@ bool LoopDistribution::computeDistributionOnLoop(DataDependenceGraph *SCCGraph,
                                                  std::string vecfactor) {
 
   LLVM_DEBUG(errs() << "Partition pattern : " << partitionp << "\n");
+  // errs() << "Partition pattern : " << partitionp << "\n";
   createContainer(*SCCGraph);
   Ordering order = populatePartitions(*SCCGraph, il, partitionp);
+  // errs() << "container size: " << container.size() << "\n";
 
   LLVM_DEBUG(errs() << "#nodes - container = " << container.size() << "\n");
 

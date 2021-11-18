@@ -5,7 +5,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/Instruction.h"
-// #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/DependenceAnalysis.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
@@ -28,31 +27,31 @@ void DependenceDistanceMutation::Mutate_InstList(
     for (auto i = S->op_begin(), e = S->op_end(); i != e; ++i) {
       if (dyn_cast<Instruction>(&(**i))) {
         Instruction *OP = dyn_cast<Instruction>(&(**i));
-        errs() << "OP: " << *OP << "\n";
+        // errs() << "OP: " << *OP << "\n";
         if (isa<GetElementPtrInst>(OP)) {
           auto array_OP = dyn_cast<GetElementPtrInst>(OP);
-          errs() << "Number of indices: " << array_OP->getNumOperands() << "\n";
+          // errs() << "Number of indices: " << array_OP->getNumOperands() << "\n";
 
           unsigned op_i = array_OP->getNumOperands() - 1;
           // for (unsigned op_i = 1; op_i < array_OP->getNumOperands(); ++op_i)
           // {
           auto array_index = dyn_cast<Instruction>(array_OP->getOperand(op_i));
-          errs() << "op_i: " << *array_index << "\n";
+          // errs() << "op_i: " << *array_index << "\n";
 
           // Create new "add" instruction
           IRBuilder<> builder(array_OP);
           auto *OP_type = array_OP->getOperand(op_i)->getType();
           Value *Right = ConstantInt::get(Type::getInt64Ty(Context), mutate);
-          errs() << "aaaaaaaaaaa: " << *OP_type << " : " << *Right->getType()
-                 << "\n";
+          // errs() << "aaaaaaaaaaa: " << *OP_type << " : " << *Right->getType()
+          //        << "\n";
           Value *Result = builder.CreateAdd(array_OP->getOperand(op_i), Right);
-          errs() << "bbbbbbbbbbbbbbbbbb: " << *Result << "\n";
+          // errs() << "bbbbbbbbbbbbbbbbbb: " << *Result << "\n";
 
           array_OP->setOperand(op_i, Result);
           // }
         }
       }
-      errs() << "\n";
+      // errs() << "\n";
     }
   }
 }
@@ -76,6 +75,7 @@ void DependenceDistanceMutation::Compute_InstList(Instruction *Src,
     if (flag_Src == 0) {
       StoreInstList.push_back(Src);
     }
+
     if (isa<StoreInst>(Dst)) {
       for (auto WI : WAWInstList) {
         if (WI == Src) {
@@ -101,10 +101,15 @@ void DependenceDistanceMutation::Compute_InstList(Instruction *Src,
 }
 
 bool DependenceDistanceMutation::runOnFunction(Function &F) {
-
+  // auto *DI = &getAnalysis<DependenceAnalysisWrapperPass>(F).getDI();
+  AAResults *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
+  ScalarEvolution *SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
   LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+  
+  DependenceInfo DI = DependenceInfo(&F, AA, SE, LI);
+  
   LLVMContext &Context = F.getContext();
-
+  
   for (LoopInfo::iterator i = LI->begin(), e = LI->end(); i != e; ++i) {
     Loop *L = *i;
     for (auto il = df_begin(L), el = df_end(L); il != el; ++il) {
@@ -113,52 +118,81 @@ bool DependenceDistanceMutation::runOnFunction(Function &F) {
       }
 
       // Compute dependences
-      auto *LAA = &getAnalysis<LoopAccessLegacyAnalysis>();
-      const LoopAccessInfo &LAI = LAA->getInfo(*il);
-      const auto alldependences =
-          LAI.getDepChecker().getDependences(); // List of dependences
-
-      // Check if dependences is a nullptr
-      if (alldependences == nullptr) {
-        // LLVM_DEBUG(errs() << "LAI dependences is a nullptr.\n");
-        return false;
+      for (auto b : L->blocks()) {
+        for (BasicBlock::iterator SrcI = b->begin(), SrcE = b->end(); SrcI != SrcE; ++SrcI) {
+          if (SrcI->mayReadOrWriteMemory()) {
+            for (BasicBlock::iterator DstI = SrcI, DstE = b->end(); DstI != DstE; ++DstI) {
+              if (DstI->mayReadOrWriteMemory()) {
+                if (SrcI != DstI) {
+                  if (auto D = DI.depends(&*SrcI, &*DstI, true)) {
+                    Instruction &si = *SrcI;
+                    Instruction &di = *DstI;
+                    unsigned Level = D->getLevels();
+                    const SCEV *Distance = D->getDistance(Level);
+                    if (Distance != nullptr)
+                      if(auto x = dyn_cast<SCEVConstant>(D->getDistance(Level))) {
+                        int DepDist = x->getValue()->getSExtValue();
+                        if (DepDist < 0){
+                          // DepDist = -DepDist;
+                          Compute_InstList(&di, &si);
+                        } else {
+                          Compute_InstList(&si, &di);
+                        }
+                      }
+                  }
+                }
+              }
+            }
+          }
+        }
       }
 
-      // LLVM_DEBUG(errs() << "+++++++++++++++++++++++++++++ "
-      //                   << alldependences->size() << "\n");
-      errs() << "+++++++++++++++++++++++++++++ " << alldependences->size()
-             << "\n";
+      // auto *LAA = &getAnalysis<LoopAccessLegacyAnalysis>();
+      // const LoopAccessInfo &LAI = LAA->getInfo(*il);
+      // const auto alldependences =
+      //     LAI.getDepChecker().getDependences(); // List of dependences
 
-      // Check for all dependences
-      for (auto dep : *alldependences) {
-        // Collect Source and Destination instuction of each Memory dependence
-        Instruction *Src, *Dst;
-        if (dep.Type == MemoryDepChecker::Dependence::DepType::Forward ||
-            dep.Type == MemoryDepChecker::Dependence::DepType::
-                            ForwardButPreventsForwarding) {
-          Src = dep.getSource(LAI);
-          Dst = dep.getDestination(LAI);
-        }
+      // // Check if dependences is a nullptr
+      // if (alldependences == nullptr) {
+      //   // LLVM_DEBUG(errs() << "LAI dependences is a nullptr.\n");
+      //   return false;
+      // }
 
-        if (dep.Type == MemoryDepChecker::Dependence::DepType::Backward ||
-            dep.Type ==
-                MemoryDepChecker::Dependence::DepType::BackwardVectorizable ||
-            dep.Type == MemoryDepChecker::Dependence::DepType::
-                            BackwardVectorizableButPreventsForwarding) {
-          Dst = dep.getSource(LAI);
-          Src = dep.getDestination(LAI);
-        }
+      // // LLVM_DEBUG(errs() << "+++++++++++++++++++++++++++++ "
+      // //                   << alldependences->size() << "\n");
+      // errs() << "+++++++++++++++++++++++++++++ " << alldependences->size()
+      //        << "\n";
 
-        if (dep.Type == MemoryDepChecker::Dependence::DepType::Unknown) {
-          Src = dep.getSource(LAI);
-          Dst = dep.getDestination(LAI);
-        }
+      // // Check for all dependences
+      // for (auto dep : *alldependences) {
+      //   // Collect Source and Destination instuction of each Memory dependence
+      //   Instruction *Src, *Dst;
+      //   if (dep.Type == MemoryDepChecker::Dependence::DepType::Forward ||
+      //       dep.Type == MemoryDepChecker::Dependence::DepType::
+      //                       ForwardButPreventsForwarding) {
+      //     Src = dep.getSource(LAI);
+      //     Dst = dep.getDestination(LAI);
+      //   }
 
-        errs() << "Src: " << *Src << "\nDst: " << *Dst << "\n";
+      //   if (dep.Type == MemoryDepChecker::Dependence::DepType::Backward ||
+      //       dep.Type ==
+      //           MemoryDepChecker::Dependence::DepType::BackwardVectorizable ||
+      //       dep.Type == MemoryDepChecker::Dependence::DepType::
+      //                       BackwardVectorizableButPreventsForwarding) {
+      //     Dst = dep.getSource(LAI);
+      //     Src = dep.getDestination(LAI);
+      //   }
 
-        // Compute StoreInstList and WAWInstList
-        Compute_InstList(Src, Dst);
-      }
+      //   if (dep.Type == MemoryDepChecker::Dependence::DepType::Unknown) {
+      //     Src = dep.getSource(LAI);
+      //     Dst = dep.getDestination(LAI);
+      //   }
+
+      //   errs() << "Src: " << *Src << "\nDst: " << *Dst << "\n";
+
+      //   // Compute StoreInstList and WAWInstList
+      //   Compute_InstList(Src, Dst);
+      // }
 
       // Mutate all instruction inside StoreInstList
       Mutate_InstList(StoreInstList, Context);
@@ -172,7 +206,10 @@ bool DependenceDistanceMutation::runOnFunction(Function &F) {
 
 void DependenceDistanceMutation::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<LoopInfoWrapperPass>();
+  AU.addRequired<ScalarEvolutionWrapperPass>();
+  AU.addRequired<AAResultsWrapperPass>();
   AU.addRequired<LoopAccessLegacyAnalysis>();
+  AU.addRequired<DependenceAnalysisWrapperPass>();
 }
 
 // Registering the pass
