@@ -338,7 +338,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             print("UpdateVisitList failed for {} graph at {} node".format(self.path, self.cur_node))
             assert False, 'discovered node visited.'
         self.virtRegId = self.obs.idx_nid[self.cur_node]
-        # print("Node selected = {}, corresponding register id = {}".format(action, self.virtRegId))
+        print("Node selected = {}, corresponding register id = {}".format(action, self.virtRegId))
         logging.info("Node selected = {}, corresponding register id = {}".format(action, self.virtRegId))
         state = self.obs
         hidden_state =  self.ggnn(initial_node_representation=state.initial_node_representation, annotations=state.annotations, adjacency_lists=state.adjacency_lists)
@@ -468,6 +468,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         # Handling mask all zero issue
         select_node_mask = self.createNodeSelectMask()
         if select_node_mask is None and not done_all:
+            print("setting done_all")
             done_all = True
 
         spill_weight_list = self.getSpillWeightListExpanded()
@@ -605,6 +606,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         select_node_mask = self.createNodeSelectMask()
         # Handling mask all zero issue
         if select_node_mask is None:
+           print("setting split_done") 
            split_done = True 
 
         spill_weight_list = self.getSpillWeightListExpanded()
@@ -939,6 +941,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             self.obs.graph_topology.indegree[splited_node_idx] = 0
             
             for adj in self.obs.graph_topology.adjList[splited_node_idx]:
+                print("splited_node_idx = ")
+                print(splited_node_idx)
                 self.obs.graph_topology.adjList[adj].remove(splited_node_idx)
                 self.obs.graph_topology.indegree[adj] = self.obs.graph_topology.indegree[adj] - 1
 
@@ -958,7 +962,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             def sc(vec, sw):
                 vec[-1] = sw
                 return vec
-            # print("Node Profile", updated_graphs.regProf)
+            #print("Node Profile", updated_graphs)
             for node_prof in updated_graphs.regProf:
                 if self.mode != 'inference':
                     nodeId = str(node_prof.regID)
@@ -971,7 +975,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                     logging.info('{}th New node {} '.format(new_nodes, nodeId))
                     # assert new_nodes < 3, "Splitting having more than 2 intervals"
                     self.obs.nid_idx[nodeId] = self.obs.graph_topology.num_nodes
-                    # print("NodeId and index", nodeId, self.obs.graph_topology.num_nodes, register_id)
+                    print("NodeId and index", nodeId, self.obs.graph_topology.num_nodes, register_id)
                     self.obs.idx_nid[self.obs.graph_topology.num_nodes] = nodeId
                     self.obs.graph_topology.num_nodes = self.obs.graph_topology.num_nodes + 1
                     self.obs.graph_topology.discovered.append(False)
@@ -980,11 +984,12 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                     self.obs.graph_topology.colored.append(-1)
                      
 
-                    for neigh in node_prof.interferences:
-                        if self.mode != 'inference':
-                            self.obs.graph_topology.adjList[self.obs.nid_idx[str(neigh)]].append(self.obs.nid_idx[nodeId])
-                        else:
-                            self.obs.graph_topology.adjList[self.obs.nid_idx[neigh]].append(self.obs.nid_idx[nodeId])
+                    #for neigh in node_prof.interferences:
+                        #if self.mode != 'inference':
+                            #self.obs.graph_topology.adjList[self.obs.nid_idx[str(neigh)]].append(self.obs.nid_idx[nodeId])
+                        #else:
+                            #print("Nid_idx", self.obs.nid_idx)
+                            #self.obs.graph_topology.adjList[self.obs.nid_idx[neigh]].append(self.obs.nid_idx[nodeId])
 
 
                     self.obs.spill_cost_list.append(node_prof.spillWeight)

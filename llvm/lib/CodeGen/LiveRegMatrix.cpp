@@ -32,16 +32,16 @@ using namespace llvm;
 
 #define DEBUG_TYPE "regalloc"
 
-STATISTIC(NumAssigned   , "Number of registers assigned");
-STATISTIC(NumUnassigned , "Number of registers unassigned");
+STATISTIC(NumAssigned, "Number of registers assigned");
+STATISTIC(NumUnassigned, "Number of registers unassigned");
 
 char LiveRegMatrix::ID = 0;
-INITIALIZE_PASS_BEGIN(LiveRegMatrix, "liveregmatrix",
-                      "Live Register Matrix", false, false)
+INITIALIZE_PASS_BEGIN(LiveRegMatrix, "liveregmatrix", "Live Register Matrix",
+                      false, false)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervals)
 INITIALIZE_PASS_DEPENDENCY(VirtRegMap)
-INITIALIZE_PASS_END(LiveRegMatrix, "liveregmatrix",
-                    "Live Register Matrix", false, false)
+INITIALIZE_PASS_END(LiveRegMatrix, "liveregmatrix", "Live Register Matrix",
+                    false, false)
 
 LiveRegMatrix::LiveRegMatrix() : MachineFunctionPass(ID) {}
 
@@ -86,16 +86,20 @@ static bool foreachUnit(const TargetRegisterInfo *TRI,
       LaneBitmask Mask = (*Units).second;
       for (LiveInterval::SubRange &S : VRegInterval.subranges()) {
         if ((S.LaneMask & Mask).any()) {
-          if (Func(Unit, S))
+          if (Func(Unit, S)) {
+            errs() << "in first foreachunit - returning true\n";
             return true;
+          }
           break;
         }
       }
     }
   } else {
     for (MCRegUnitIterator Units(PhysReg, TRI); Units.isValid(); ++Units) {
-      if (Func(*Units, VRegInterval))
+      if (Func(*Units, VRegInterval)) {
+        errs() << "in second foreachunit - returning true\n";
         return true;
+      }
     }
   }
   return false;
@@ -167,11 +171,11 @@ bool LiveRegMatrix::checkRegUnitInterference(LiveInterval &VirtReg,
     return false;
   CoalescerPair CP(VirtReg.reg, PhysReg, *TRI);
 
-  bool Result = foreachUnit(TRI, VirtReg, PhysReg, [&](unsigned Unit,
-                                                       const LiveRange &Range) {
-    const LiveRange &UnitRange = LIS->getRegUnit(Unit);
-    return Range.overlaps(UnitRange, CP, *LIS->getSlotIndexes());
-  });
+  bool Result = foreachUnit(
+      TRI, VirtReg, PhysReg, [&](unsigned Unit, const LiveRange &Range) {
+        const LiveRange &UnitRange = LIS->getRegUnit(Unit);
+        return Range.overlaps(UnitRange, CP, *LIS->getSlotIndexes());
+      });
   return Result;
 }
 
@@ -184,25 +188,36 @@ LiveIntervalUnion::Query &LiveRegMatrix::query(const LiveRange &LR,
 
 LiveRegMatrix::InterferenceKind
 LiveRegMatrix::checkInterference(LiveInterval &VirtReg, unsigned PhysReg) {
-  if (VirtReg.empty())
+  // errs() << "checking interference between -- ";
+  // VirtReg.dump();
+  // errs() << "and phy reg - " << PhysReg << "\n";
+  if (VirtReg.empty()) {
+    // errs() << "here1\n";
     return IK_Free;
+  }
 
   // Regmask interference is the fastest check.
-  if (checkRegMaskInterference(VirtReg, PhysReg))
+  if (checkRegMaskInterference(VirtReg, PhysReg)) {
+    // errs() << "here2\n";
     return IK_RegMask;
+  }
 
   // Check for fixed interference.
-  if (checkRegUnitInterference(VirtReg, PhysReg))
+  if (checkRegUnitInterference(VirtReg, PhysReg)) {
+    // errs() << "here3\n";
     return IK_RegUnit;
+  }
 
   // Check the matrix for virtual register interference.
   bool Interference = foreachUnit(TRI, VirtReg, PhysReg,
                                   [&](unsigned Unit, const LiveRange &LR) {
-    return query(LR, Unit).checkInterference();
-  });
-  if (Interference)
+                                    return query(LR, Unit).checkInterference();
+                                  });
+  if (Interference) {
+    // errs() << "here4\n";
     return IK_VirtReg;
-
+  }
+  // errs() << "here5\n";
   return IK_Free;
 }
 

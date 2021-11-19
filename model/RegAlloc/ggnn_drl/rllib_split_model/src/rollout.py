@@ -639,7 +639,7 @@ class RollOutInference:
         # self.env.update_obs(request)
 
     def setCurrentNodeAsNotVisited(self):
-        self.env.obs.graph_topology.markNodeAsNotVisited(self.env.curr_node)
+        self.env.obs.graph_topology.markNodeAsNotVisited(self.env.cur_node)
 
     def updateSelectNodeObs(self):
         select_node_mask = self.env.createNodeSelectMask()
@@ -647,7 +647,7 @@ class RollOutInference:
         curr_obs['action_mask'] = np.array(select_node_mask)
         self.obs[self.env.select_node_agent_id] = curr_obs
 
-    def getLastTaskDone():
+    def getLastTaskDone(self):
         return self.env.last_task_done
 
     def compute_action(self):
