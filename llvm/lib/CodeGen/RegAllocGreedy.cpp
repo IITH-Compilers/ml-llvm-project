@@ -255,8 +255,6 @@ class RAGreedy : public MachineFunctionPass,
   IndexedMap<RegInfo, VirtReg2IndexFunctor> ExtraRegInfo;
 
   LiveRangeStage getStage(const LiveInterval &VirtReg) const {
-    errs() << printReg(VirtReg.reg, TRI)
-           << "====[getStage of RegAllocGreedy.cpp]\n";
     return ExtraRegInfo[VirtReg.reg].Stage;
   }
 
@@ -3258,30 +3256,11 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
     }
   }
 
-  errs() << MF->getName() << " [starting greedy flow]Post alloc VirtRegMap:\n"
-         << *VRM << "\n";
-
   allocatePhysRegs();
-  errs() << MF->getName()
-         << " [allocatePhysRegs greedy flow] Post alloc VirtRegMap :\n " << *VRM
-         << "\n";
   tryHintsRecoloring();
-  errs() << MF->getName()
-         << " [tryHintsRecoloring greedy flow] Post alloc VirtRegMap :\n "
-         << *VRM << "\n";
   postOptimization();
-  errs() << MF->getName()
-         << " [postOptimization greedy flow] Post alloc VirtRegMap :\n " << *VRM
-         << "\n";
   reportNumberOfSplillsReloads();
-  errs()
-      << MF->getName()
-      << " [reportNumberOfSplillsReloads greedy flow] Post alloc VirtRegMap:\n "
-      << *VRM << "\n";
 
   releaseMemory();
-  errs() << MF->getName()
-         << " [releaseMemory greedy flow] Post alloc VirtRegMap :\n " << *VRM
-         << "\n";
   return true;
 }

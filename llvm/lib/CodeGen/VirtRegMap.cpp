@@ -88,10 +88,6 @@ void VirtRegMap::assignVirt2Phys(Register virtReg, MCPhysReg physReg) {
   assert(!getRegInfo().isReserved(physReg) &&
          "Attempt to map virtReg to a reserved physReg");
   Virt2PhysMap[virtReg.id()] = physReg;
-  errs() << "[" << MF->getName()
-         << "][assignVirt2Phys] Setting virt2physmap for "
-         << printReg(virtReg.id()) << "as:" << Virt2PhysMap[virtReg.id()]
-         << "\n";
 }
 
 unsigned VirtRegMap::createSpillSlot(const TargetRegisterClass *RC) {

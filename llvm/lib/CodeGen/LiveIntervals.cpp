@@ -389,8 +389,6 @@ void LiveIntervals::extendSegmentsToUses(LiveRange &Segments,
     VNInfo *VNI = WorkList.back().second;
     WorkList.pop_back();
     const MachineBasicBlock *MBB = Indexes->getMBBFromIndex(Idx.getPrevSlot());
-    errs() << "In LiveIntervals - extendSegmentsToUses:\n";
-    MBB->dump();
     SlotIndex BlockStart = Indexes->getMBBStartIdx(MBB);
 
     // Extend the live range for VNI to be live at Idx.
@@ -422,8 +420,6 @@ void LiveIntervals::extendSegmentsToUses(LiveRange &Segments,
       if (!LiveOut.insert(Pred).second)
         continue;
       SlotIndex Stop = Indexes->getMBBEndIdx(Pred);
-      errs() << "in liveintervals again\n";
-      Stop.dump();
       if (VNInfo *OldVNI = OldRange.getVNInfoBefore(Stop)) {
         assert(OldVNI == VNI && "Wrong value out of predecessor");
         (void)OldVNI;
@@ -434,7 +430,6 @@ void LiveIntervals::extendSegmentsToUses(LiveRange &Segments,
         // by <undef>s for this live range.
         assert(LaneMask.any() &&
                "Missing value out of predecessor for main range");
-        errs() << "Live intervals after assert lanemask\n";
         SmallVector<SlotIndex, 8> Undefs;
         LI.computeSubRangeUndefs(Undefs, LaneMask, *MRI, *Indexes);
         assert(LiveRangeCalc::isJointlyDominated(Pred, Undefs, *Indexes) &&
@@ -711,11 +706,6 @@ void LiveIntervals::addKillFlags(const VirtRegMap *VRM) {
     const LiveInterval &LI = getInterval(Reg);
     if (LI.empty())
       continue;
-    errs() << "index = " << i << "and reg = " << printReg(Reg, TRI) << "-"
-           << Reg << "\n";
-    errs() << "[addKillFlags] Fetching phyreg for " << printReg(Reg, TRI)
-           << " as: " << VRM->getPhys(Reg) << "-" << printReg(VRM->getPhys(Reg))
-           << "\n";
     // Find the regunit intervals for the assigned register. They may overlap
     // the virtual register live range, cancelling any kills.
     RU.clear();

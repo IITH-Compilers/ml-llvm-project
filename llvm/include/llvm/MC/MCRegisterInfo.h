@@ -656,7 +656,6 @@ public:
   MCRegUnitIterator() = default;
 
   MCRegUnitIterator(MCRegister Reg, const MCRegisterInfo *MCRI) {
-    errs() << "--- " << Reg << "\n";
     assert(Reg && "Null register has no regunits");
     // Decode the RegUnits MCRegisterDesc field.
     unsigned RU = MCRI->get(Reg).RegUnits;

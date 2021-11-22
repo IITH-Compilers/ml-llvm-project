@@ -1515,10 +1515,8 @@ void SplitEditor::finish(SmallVectorImpl<unsigned> *LRMap) {
     ++NumSimple;
 
   // Delete defs that were rematted everywhere.
-  if (Skipped) {
-    errs() << "calling deleterematvictims from splitkit::finish\n";
+  if (Skipped)
     deleteRematVictims();
-  }
 
   // Get rid of unused values and set phi-kill flags.
   for (unsigned Reg : *Edit) {

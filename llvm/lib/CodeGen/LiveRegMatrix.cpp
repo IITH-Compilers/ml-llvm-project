@@ -86,20 +86,16 @@ static bool foreachUnit(const TargetRegisterInfo *TRI,
       LaneBitmask Mask = (*Units).second;
       for (LiveInterval::SubRange &S : VRegInterval.subranges()) {
         if ((S.LaneMask & Mask).any()) {
-          if (Func(Unit, S)) {
-            errs() << "in first foreachunit - returning true\n";
+          if (Func(Unit, S))
             return true;
-          }
           break;
         }
       }
     }
   } else {
     for (MCRegUnitIterator Units(PhysReg, TRI); Units.isValid(); ++Units) {
-      if (Func(*Units, VRegInterval)) {
-        errs() << "in second foreachunit - returning true\n";
+      if (Func(*Units, VRegInterval))
         return true;
-      }
     }
   }
   return false;
@@ -188,36 +184,25 @@ LiveIntervalUnion::Query &LiveRegMatrix::query(const LiveRange &LR,
 
 LiveRegMatrix::InterferenceKind
 LiveRegMatrix::checkInterference(LiveInterval &VirtReg, unsigned PhysReg) {
-  // errs() << "checking interference between -- ";
-  // VirtReg.dump();
-  // errs() << "and phy reg - " << PhysReg << "\n";
-  if (VirtReg.empty()) {
-    // errs() << "here1\n";
+  if (VirtReg.empty()) 
     return IK_Free;
-  }
 
   // Regmask interference is the fastest check.
-  if (checkRegMaskInterference(VirtReg, PhysReg)) {
-    // errs() << "here2\n";
+  if (checkRegMaskInterference(VirtReg, PhysReg)) 
     return IK_RegMask;
-  }
 
   // Check for fixed interference.
-  if (checkRegUnitInterference(VirtReg, PhysReg)) {
-    // errs() << "here3\n";
+  if (checkRegUnitInterference(VirtReg, PhysReg)) 
     return IK_RegUnit;
-  }
 
   // Check the matrix for virtual register interference.
   bool Interference = foreachUnit(TRI, VirtReg, PhysReg,
                                   [&](unsigned Unit, const LiveRange &LR) {
                                     return query(LR, Unit).checkInterference();
                                   });
-  if (Interference) {
-    // errs() << "here4\n";
+  if (Interference) 
     return IK_VirtReg;
-  }
-  // errs() << "here5\n";
+  
   return IK_Free;
 }
 
