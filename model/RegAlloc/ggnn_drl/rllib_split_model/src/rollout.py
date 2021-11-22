@@ -320,7 +320,14 @@ class RollOutInference:
     
         # Make sure worker 0 has an Env.
         config["create_env_on_driver"] = True
+        config["explore"] = False
+        config["num_workers"] = 0
+        # config['seed'] = None
+        config["render_env"] = not args.no_render
+        # config["record_env"] = args.video_dir
         
+        config["evaluation_config"]["explore"] = False
+       
         # print(config)
 
         # Merge with `evaluation_config` (first try from command line, then from
@@ -334,10 +341,10 @@ class RollOutInference:
         config = merge_dicts(config, args.config)
     
         # Make sure we have evaluation workers.
-        if not config.get("evaluation_num_workers"):
-            config["evaluation_num_workers"] = config.get("num_workers", 0)
-        if not config.get("evaluation_num_episodes"):
-            config["evaluation_num_episodes"] = 1
+        # if not config.get("evaluation_num_workers"):
+        config["evaluation_num_workers"] = 1 # config.get("num_workers", 0)
+        # if not config.get("evaluation_num_episodes"):
+        config["evaluation_num_episodes"] = 1
         
         config_other = { 'mode' :'inference', 'state_size':100, 'target' : args.arch, 'intermediate_data' : '/tmp'}
         utils_1.set_config(config_other)
@@ -345,10 +352,7 @@ class RollOutInference:
         logger = logging.getLogger(__file__)
         logging.basicConfig(filename='running.log', format='%(thread)d - %(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
 
-
-        config["render_env"] = not args.no_render
-        # config["record_env"] = args.video_dir
-    
+                   
         # ray.init(local_mode=args.local_mode)
 
         config["env"] = HierarchicalGraphColorEnv
@@ -384,27 +388,27 @@ class RollOutInference:
         ModelCatalog.register_custom_model("split_node_model", SplitNodeNetwork)
 
         box_obs = Box(
-                -100000.0, 100000.0, shape=(config["env_config"]["state_size"], ), dtype=np.float32)
+                -10000000000000.0, 10000000000000.0, shape=(config["env_config"]["state_size"], ), dtype=np.float32)
         box_1000d = Box(
-                -100000.0, 100000.0, shape=(1000, config["env_config"]["state_size"]), dtype=np.float32)
+                -10000000000000.0, 10000000000000.0, shape=(1000, config["env_config"]["state_size"]), dtype=np.float32)
 
         obs_space = Dict({
             "action_mask": Box(0, 1, shape=(config["env_config"]["action_space_size"],)),
-            "node_properties": Box(-100000.0, 100000.0, shape=(3,)), 
+            "node_properties": Box(-10000000000000.0, 10000000000000.0, shape=(3,)), 
             "state": box_obs
             })
         obs_space_1000d = Dict({
-            "spill_weights": Box(-100000.0, 100000.0, shape=(1000,)), 
+            "spill_weights": Box(-10000000000000.0, 10000000000000.0, shape=(1000,)), 
             "action_mask": Box(0.0, 1.0, shape=(1000,)),
             "state": box_1000d
             }) 
         obs_select_task = Dict({
-            "node_properties": Box(-100000.0, 100000.0, shape=(4,)), 
+            "node_properties": Box(-10000000000000.0, 10000000000000.0, shape=(4,)), 
             "state": box_obs
             })
         
         obs_node_spliting = Dict({
-            "usepoint_properties": Box(-100000.0, 100000.0, shape=(config["env_config"]["max_usepoint_count"], 2)), 
+            "usepoint_properties": Box(-10000000000000.0, 10000000000000.0, shape=(config["env_config"]["max_usepoint_count"], 2)), 
             "action_mask": Box(0, 1, shape=(config["env_config"]["max_usepoint_count"],)),
             "state": box_obs
             }) 
@@ -485,13 +489,13 @@ class RollOutInference:
         cls = get_trainable_cls(args.run)
         # print(cls)
         del config["train-iterations"]
-        # print(config)
+        print(config)
         agent = cls(env=args.env, config=config)
    
         logging.info("Agent is loaded succesfully - {}".format(agent))
         # Load state from checkpoint, if provided.
-        if args.checkpoint:
-            agent.restore(args.checkpoint)
+        assert  args.checkpoint is not None, "Not valid checkpoint"
+        agent.restore(args.checkpoint)
     
         num_steps = int(args.steps)
         num_episodes = int(args.episodes)
@@ -635,7 +639,16 @@ class RollOutInference:
         # self.env.update_obs(request)
 
     def setCurrentNodeAsNotVisited(self):
-        self.env.obs.graph_topology.markNodeAsNotVisited(self.env.curr_node)
+        self.env.obs.graph_topology.markNodeAsNotVisited(self.env.cur_node)
+
+    def updateSelectNodeObs(self):
+        select_node_mask = self.env.createNodeSelectMask()
+        curr_obs = self.obs[self.env.select_node_agent_id]
+        curr_obs['action_mask'] = np.array(select_node_mask)
+        self.obs[self.env.select_node_agent_id] = curr_obs
+
+    def getLastTaskDone(self):
+        return self.env.last_task_done
 
     def compute_action(self):
         #obs = env.reset()
@@ -666,13 +679,13 @@ class RollOutInference:
                     # print(policy_id)
                     p_use_lstm = self.use_lstm[policy_id]
                     if p_use_lstm:
-                        # a_action, p_state, _ = self.agent.compute_action(
-                        a_action, p_state, _ = self.agent.compute_single_action(
+                        a_action, p_state, _ = self.agent.compute_action(
+                        # a_action, p_state, _ = self.agent.compute_single_action(
                             a_obs,
                             state=agent_states[agent_id],
                             prev_action=prev_actions[agent_id],
                             prev_reward=prev_rewards[agent_id],
-                            policy_id=policy_id)
+                            policy_id=policy_id, explore=False)
                         agent_states[agent_id] = p_state
                     else:
                         # print(a_obs['action_mask'].shape, a_obs['spill_weights'].shape, a_obs['state'].shape)
@@ -685,12 +698,12 @@ class RollOutInference:
                         #         if math.isnan(v):
                         #             print('******NAN**** ', v, i)
                             # print('\n')
-                        # a_action = self.agent.compute_action(
-                        a_action = self.agent.compute_single_action(
+                        a_action = self.agent.compute_action(
+                        # a_action = self.agent.compute_single_action(
                             a_obs,
                             prev_action=prev_actions[agent_id],
                             prev_reward=prev_rewards[agent_id],
-                            policy_id=policy_id)
+                            policy_id=policy_id, explore = False)
                     a_action = flatten_to_single_ndarray(a_action)
                     action_dict[agent_id] = a_action
                     prev_actions[agent_id] = a_action
