@@ -706,7 +706,6 @@ void LiveIntervals::addKillFlags(const VirtRegMap *VRM) {
     const LiveInterval &LI = getInterval(Reg);
     if (LI.empty())
       continue;
-
     // Find the regunit intervals for the assigned register. They may overlap
     // the virtual register live range, cancelling any kills.
     RU.clear();

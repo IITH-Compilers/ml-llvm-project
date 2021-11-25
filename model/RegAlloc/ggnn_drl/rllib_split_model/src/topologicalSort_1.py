@@ -59,7 +59,7 @@ class Graph:
             for u in self.adjList[v]:
                 self.indegree[u] = self.indegree[u] + 1
             self.discovered[v] = False
-            # self.colored[v] = color
+            print("Following node is marked as un visited", v)
         else:
             assert False, 'discovered is node visited.'
 

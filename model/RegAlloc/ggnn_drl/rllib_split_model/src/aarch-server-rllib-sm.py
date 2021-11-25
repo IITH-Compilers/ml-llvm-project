@@ -1,5 +1,5 @@
 import sys
-sys.path.append('/home/venkat/IF-DV/Rohit/regAlloc/iith-compilers/ML-Register-Allocation/llvm-grpc/Python-Utilities')
+sys.path.append('/home/venkat/IF-DV/Rohit/regAlloc/iith-compilers/benchmarking/ML-Register-Allocation/llvm-grpc/Python-Utilities')
 import RegisterAllocationInference_pb2_grpc, RegisterAllocationInference_pb2
 
 from concurrent import futures
@@ -10,7 +10,7 @@ import json
 import ray
 import os
 # sys.path.append(os.path.realpath('../../model/RegAlloc/ggnn_drl/rllib_split_model/src'))
-sys.path.append('/home/venkat/IF-DV/Rohit/regAlloc/iith-compilers/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src')
+sys.path.append('/home/venkat/IF-DV/Rohit/regAlloc/iith-compilers/benchmarking/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src')
 # import inference
 import rollout as inference
 # import register_action_space
@@ -26,8 +26,11 @@ class service_server(RegisterAllocationInference_pb2_grpc.RegisterAllocationInfe
         # model_path = '/home/cs18mtech11030/ray_results/model/experiment_2021-08-09_16-11-00/experiment_HierarchicalGraphColorEnv_49c97_00000_0_2021-08-09_16-11-01/checkpoint_000100/checkpoint-100'
         # model_path = '/home/venkat/ray_results/split_model/experiment_2021-09-05_01-20-13/experiment_HierarchicalGraphColorEnv_521df_00000_0_2021-09-05_01-20-14/checkpoint_000040/checkpoint-40'
         # self.inference_model = inference.Inference(model_path)
-        model_path = '/home/venkat/ray_results/split_model/experiment_2021-09-09_22-09-20/experiment_HierarchicalGraphColorEnv_7b793_00000_0_2021-09-09_22-09-21/checkpoint_001969/checkpoint-1969'
-        args = {'no_render' : True, 'checkpoint' : model_path, 'run' : 'SimpleQ' , 'env' : '' , 'config' : {}, 'video_dir' : '', 'steps' : 0, 'episodes' : 0}
+        # model_path = '/home/venkat/ray_results/split_model/experiment_2021-09-09_22-09-20/experiment_HierarchicalGraphColorEnv_7b793_00000_0_2021-09-09_22-09-21/checkpoint_001969/checkpoint-1969'
+        # model_path = '/home/venkat/ray_results/split_model/experiment_2021-10-21_12-22-45/experiment_HierarchicalGraphColorEnv_7f0ef_00000_0_2021-10-21_12-22-45/checkpoint_001575/checkpoint-1575'
+        # model_path = '/home/venkat/ray_results/split_model/X86models/checkpoint_001156/checkpoint-1156'
+        model_path = '/home/venkat/ray_results/split_model/home/cs20mtech12003/ray_results/experiment_2021-11-16_00-00-39/experiment_HierarchicalGraphColorEnv_22215_00000_0_2021-11-16_00-00-39/checkpoint_004877/checkpoint-4877'
+        args = {'no_render' : True, 'checkpoint' : model_path, 'run' : 'SimpleQ' , 'env' : '' , 'config' : {}, 'video_dir' : '', 'steps' : 0, 'episodes' : 0, 'arch' : 'AArch64'}
         args = Namespace(**args)
         self.inference_model = inference.RollOutInference(args)
 
@@ -116,24 +119,36 @@ class service_server(RegisterAllocationInference_pb2_grpc.RegisterAllocationInfe
                 # exit()
                 # self.inference_model.update_obs(request, self.inference_model.env.virtRegId, self.inference_model.env.split_point)
                 if not self.inference_model.update_obs(request):
+                    print("Current split failed")
                     self.inference_model.setCurrentNodeAsNotVisited()
-                else:
-                    self.inference_model.updateSelectNodeObs()
-
+                # else:
+                self.inference_model.updateSelectNodeObs()
+                # print('stopping for spliting check, enter to continue...')
+                # stop = input()
+                # if stop == 0:
+                #     exit()
+            else:
+                print("LLVM responce", inter_graphs)
+                self.inference_model.setCurrentNodeAsNotVisited()
+                self.inference_model.updateSelectNodeObs()
+                print("Inside else; doing nothing here")
             action, count = self.inference_model.compute_action()
+            # action, count = self.inference_model.evaluate()
             # print('action= {}, count={}'.format(action,count))
             select_node_agent = "select_node_agent_{}".format(count)
             select_task_agent = "select_task_agent_{}".format(count)
             split_agent = "split_node_agent_{}".format(count)
             color_agent = "colour_node_agent_{}".format(count)
 
-            if action[select_task_agent] == 1:
+            if self.inference_model.getLastTaskDone() == 1:
                 reply=RegisterAllocationInference_pb2.Data(message="Split", regidx=action[select_node_agent], payload=action[split_agent])
-            elif  action[select_task_agent] == 0:
+            elif self.inference_model.getLastTaskDone() == 0:
+                print("Returned colour map is:", action[color_agent])
                 reply=RegisterAllocationInference_pb2.Data(message="Color", color=action[color_agent], funcName=request.funcName)
             else:
                 reply=RegisterAllocationInference_pb2.Data(message="Exit")
-            print('------Bye-----' , reply)
+            # print('------Bye-----' , reply)
+            print('------Bye-----')
             return reply
         except:
             print('Error')
@@ -158,7 +173,7 @@ class Server:
 
         RegisterAllocationInference_pb2_grpc.add_RegisterAllocationInferenceServicer_to_server(service_server(),server)
 
-        server.add_insecure_port('localhost:50031')
+        server.add_insecure_port('localhost:50062')
 
         server.start()
         print("Server Running")
