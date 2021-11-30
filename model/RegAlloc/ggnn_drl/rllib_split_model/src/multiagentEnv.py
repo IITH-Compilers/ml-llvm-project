@@ -120,7 +120,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.interference_difference_threshold = 50
         self.task_selected = 0
         self.split_threshold = 10
-        self.reward_max_value = 1000000.0
+        self.reward_max_value = 10000.0
 
         self.grpc_rtt = 0
 
@@ -447,7 +447,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
             for i in range(usepoint_prop_mat.shape[0]):
                 # if i < usepoint_prop_value.shape[0] - 1:
-                if i in splitpoints and i != len(use_distance_list) - 1:
+                if i in splitpoints and i != len(use_distance_list) - 1 and i != 0:
                     split_node_mask.append(1)
                 else:
                     split_node_mask.append(0)
@@ -520,8 +520,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         cur_obs[0:node_mat.shape[0], :] = node_mat
 
         # discount_factor = (1.001*self.split_steps)/10
-        discount_factor = 0 if self.split_steps < 11 else (
-            pow(10, self.split_steps - 10) if pow(10, self.split_steps - 10) < self.reward_max_value else self.reward_max_value)
+        discount_factor = 0 if self.split_steps < 11 else (1.001*self.split_steps)
         # print("Discount factor colour", discount_factor)
         prop = self.getNodeProperties()
         prop_value_list = list(prop.values())
@@ -535,7 +534,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         use_distance_list = self.obs.use_distances[self.cur_node]
         for i in range(usepoint_prop_mat.shape[0]):
             # if i < usepoint_prop_value.shape[0] - 1 :
-            if i in splitpoints and i != len(use_distance_list) - 1:
+            if i in splitpoints and i != len(use_distance_list) - 1 and i != 0:
                 split_node_mask.append(1)
             else:
                 split_node_mask.append(0)
@@ -626,8 +625,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 self.interference_difference = self.interference_difference_threshold
             # discount_factor = (1.001*self.split_steps)/10
             split_reward = userDistanceDiff + self.spliting_reward_scaling_factor*self.interference_difference
-            discount_factor = 0 if self.split_steps < 11 else (
-                pow(10, self.split_steps - 10) if pow(10, self.split_steps - 10) < self.reward_max_value else self.reward_max_value)
+            discount_factor = 0 if self.split_steps < 11 else (1.001*self.split_steps)
             
             print("Split rewards and its components", split_reward, userDistanceDiff, self.spliting_reward_scaling_factor*self.interference_difference)
             # print("Discount factor split", discount_factor)
@@ -682,7 +680,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         use_distance_list = self.obs.use_distances[self.cur_node]
         for i in range(usepoint_prop_mat.shape[0]):
             # if i < usepoint_prop_value.shape[0] - 1:
-            if i in splitpoints and i != len(use_distance_list) - 1:
+            if i in splitpoints and i != len(use_distance_list) - 1 and i != 0:
                 split_node_mask.append(1)
             else:
                 split_node_mask.append(0)
