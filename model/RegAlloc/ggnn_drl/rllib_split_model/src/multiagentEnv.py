@@ -320,10 +320,17 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         psw = self.obs.positionalSpillWeights[self.cur_node]
         use_distances = self.obs.use_distances[self.cur_node]
         assert len(use_distances) == len(psw), "Usepoints and positionalSpillWeights have diffrent length {}({}) {}({}) for node {}".format(use_distances, len(use_distances), psw, len(psw), self.cur_node)
+        useDistancesDifference = []
+        if len(use_distances) > 0:            
+            for i in range(0, len(use_distances)-1):
+                useDistancesDifference.append(use_distances[i+1] - use_distances[i])
+            useDistancesDifference.append(0)
 
+        # print("UsedistanceDifference", useDistancesDifference)
+        # print("Usedistance list", use_distances)
         prop = {
             "positionalSpillWeights": psw,
-            "usepoints": use_distances
+            "usepoints": useDistancesDifference
         }
         return prop
 
@@ -447,7 +454,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
             for i in range(usepoint_prop_mat.shape[0]):
                 # if i < usepoint_prop_value.shape[0] - 1:
-                if i in splitpoints and i != len(use_distance_list) - 1 and i != 0:
+                if i in splitpoints and i != len(use_distance_list) - 1:
                     split_node_mask.append(1)
                 else:
                     split_node_mask.append(0)
@@ -534,7 +541,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         use_distance_list = self.obs.use_distances[self.cur_node]
         for i in range(usepoint_prop_mat.shape[0]):
             # if i < usepoint_prop_value.shape[0] - 1 :
-            if i in splitpoints and i != len(use_distance_list) - 1 and i != 0:
+            if i in splitpoints and i != len(use_distance_list) - 1:
                 split_node_mask.append(1)
             else:
                 split_node_mask.append(0)
@@ -680,7 +687,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         use_distance_list = self.obs.use_distances[self.cur_node]
         for i in range(usepoint_prop_mat.shape[0]):
             # if i < usepoint_prop_value.shape[0] - 1:
-            if i in splitpoints and i != len(use_distance_list) - 1 and i != 0:
+            if i in splitpoints and i != len(use_distance_list) - 1:
                 split_node_mask.append(1)
             else:
                 split_node_mask.append(0)

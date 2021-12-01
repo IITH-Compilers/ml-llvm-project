@@ -400,7 +400,8 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
     pos++;
   }
   assert(found && "Invalid split point");
-  if (idxPos == 0 || idxPos >= useSlots.size() - 1)
+  // if (idxPos == 0 || idxPos >= useSlots.size() - 1)
+  if (idxPos >= useSlots.size() - 1)
     return false;
 
   auto MI = LIS->getInstructionFromIndex(idx);
