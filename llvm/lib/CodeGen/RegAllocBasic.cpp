@@ -240,6 +240,7 @@ bool RABasic::spillInterferences(LiveInterval &VirtReg, unsigned PhysReg,
     // Spill the extracted interval.
     LiveRangeEdit LRE(&Spill, SplitVRegs, *MF, *LIS, VRM, this, &DeadRemats);
     spiller().spill(LRE);
+    // LLVM_DEBUG(dbgs() << "Spilled Virtual Registor Count for Function " << MF->getName() << "is: "<< std::to_string(VRM->SpillCountMF) << '\n');
   }
   return true;
 }
@@ -334,7 +335,12 @@ bool RABasic::runOnMachineFunction(MachineFunction &mf) {
   // Diagnostic output before rewriting
   LLVM_DEBUG(dbgs() << "Post alloc VirtRegMap:\n" << *VRM << "\n");
 
+  LLVM_DEBUG(dbgs() << "Spilled Virtual Registor Count for Function " << MF->getName() << " is: "<< std::to_string(VRM->SpillCountMF) << '\n');
+  LLVM_DEBUG(dbgs() << "Spilled Live Range Count for Function " << MF->getName() << " is: "<< std::to_string(SpillerInstance->NumSpilledRangesMF) << '\n');
+  LLVM_DEBUG(dbgs() << "Number of reloads inserted for Function " << MF->getName() << " is: "<< std::to_string(SpillerInstance->NumReloadsMF) << '\n');
+
   releaseMemory();
+  
   return true;
 }
 

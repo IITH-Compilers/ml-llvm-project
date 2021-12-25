@@ -202,7 +202,10 @@ public:
         MRI(mf.getRegInfo()), TII(*mf.getSubtarget().getInstrInfo()),
         TRI(*mf.getSubtarget().getRegisterInfo()),
         MBFI(pass.getAnalysis<MachineBlockFrequencyInfo>()),
-        HSpiller(pass, mf, vrm) {}
+        HSpiller(pass, mf, vrm) {
+          NumSpilledRangesMF = 0;
+          NumReloadsMF = 0;
+        }
 
   void spill(LiveRangeEdit &) override;
   void postOptimization() override;
@@ -737,6 +740,7 @@ bool InlineSpiller::coalesceStackAccess(MachineInstr *MI, unsigned Reg) {
   if (IsLoad) {
     ++NumReloadsRemoved;
     --NumReloads;
+    --NumReloadsMF;
   } else {
     ++NumSpillsRemoved;
     --NumSpills;
@@ -896,6 +900,7 @@ bool InlineSpiller::foldMemoryOperand(
     HSpiller.addToMergeableSpills(*FoldMI, StackSlot, Original);
   } else
     ++NumReloads;
+    ++NumReloadsMF;
   return true;
 }
 
@@ -912,6 +917,7 @@ void InlineSpiller::insertReload(unsigned NewVReg, SlotIndex Idx,
   LLVM_DEBUG(dumpMachineInstrRangeWithSlotIndex(MIS.begin(), MI, LIS, "reload",
                                                 NewVReg));
   ++NumReloads;
+  ++NumReloadsMF;
 }
 
 /// Check if \p Def fully defines a VReg with an undefined value.
@@ -1106,6 +1112,8 @@ void InlineSpiller::spillAll() {
 
 void InlineSpiller::spill(LiveRangeEdit &edit) {
   ++NumSpilledRanges;
+  ++NumSpilledRangesMF;
+  // LLVM_DEBUG(dbgs() << "Inline Spilled Live Range Count for Function " << NumSpilledRangesMF << '\n');
   Edit = &edit;
   assert(!Register::isStackSlot(edit.getReg()) &&
          "Trying to spill a stack slot.");
