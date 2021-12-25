@@ -64,6 +64,7 @@ bool VirtRegMap::runOnMachineFunction(MachineFunction &mf) {
   TII = mf.getSubtarget().getInstrInfo();
   TRI = mf.getSubtarget().getRegisterInfo();
   MF = &mf;
+  SpillCountMF = 0;
 
   Virt2PhysMap.clear();
   Virt2StackSlotMap.clear();
@@ -95,6 +96,7 @@ unsigned VirtRegMap::createSpillSlot(const TargetRegisterClass *RC) {
   unsigned Align = TRI->getSpillAlignment(*RC);
   int SS = MF->getFrameInfo().CreateSpillStackObject(Size, Align);
   ++NumSpillSlots;
+  ++SpillCountMF;
   return SS;
 }
 
@@ -177,6 +179,7 @@ class VirtRegRewriter : public MachineFunctionPass {
   SlotIndexes *Indexes;
   LiveIntervals *LIS;
   VirtRegMap *VRM;
+  int SpillCountMF;
 
   void rewrite();
   void addMBBLiveIns();
@@ -189,7 +192,9 @@ class VirtRegRewriter : public MachineFunctionPass {
 public:
   static char ID;
 
-  VirtRegRewriter() : MachineFunctionPass(ID) {}
+  VirtRegRewriter() : MachineFunctionPass(ID) {
+    SpillCountMF = 0;
+  }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
@@ -257,6 +262,9 @@ bool VirtRegRewriter::runOnMachineFunction(MachineFunction &fn) {
   // replaced. Remove the virtual registers and release all the transient data.
   VRM->clearAllVirt();
   MRI->clearVirtRegs();
+
+  // LLVM_DEBUG(dbgs() << "Spilled Virtual Registor Count for Function " << MF->getName() << "is: "<< std::to_string(SpillCountMF) << '\n');
+  // std::cout << "Spilled Virtual Registor Count for Function" << MF->getName() << "is: "<< SpillCountMF << '\n';
   return true;
 }
 

@@ -37,12 +37,14 @@ class TargetInstrInfo;
       NO_STACK_SLOT = (1L << 30)-1,
       MAX_STACK_SLOT = (1L << 18)-1
     };
+    int SpillCountMF;
 
   private:
     MachineRegisterInfo *MRI;
     const TargetInstrInfo *TII;
     const TargetRegisterInfo *TRI;
     MachineFunction *MF;
+
 
     /// Virt2PhysMap - This is a virtual to physical register
     /// mapping. Each virtual register is required to have an entry in
