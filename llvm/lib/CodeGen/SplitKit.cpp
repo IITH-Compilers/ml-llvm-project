@@ -371,7 +371,9 @@ SplitEditor::SplitEditor(SplitAnalysis &sa, AliasAnalysis &aa,
       MRI(vrm.getMachineFunction().getRegInfo()), MDT(mdt),
       TII(*vrm.getMachineFunction().getSubtarget().getInstrInfo()),
       TRI(*vrm.getMachineFunction().getSubtarget().getRegisterInfo()),
-      MBFI(mbfi), RegAssign(Allocator) {}
+      MBFI(mbfi), RegAssign(Allocator) {
+        NumFinishedMF = 0;
+      }
 
 void SplitEditor::reset(LiveRangeEdit &LRE, ComplementSpillMode SM) {
   Edit = &LRE;
@@ -1475,6 +1477,7 @@ void SplitEditor::forceRecomputeVNI(const VNInfo &ParentVNI) {
 
 void SplitEditor::finish(SmallVectorImpl<unsigned> *LRMap) {
   ++NumFinished;
+  ++NumFinishedMF;
 
   // At this point, the live intervals in Edit contain VNInfos corresponding to
   // the inserted copies.

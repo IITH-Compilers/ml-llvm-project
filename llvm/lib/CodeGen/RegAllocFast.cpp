@@ -44,9 +44,11 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/IR/Module.h"
 #include <cassert>
 #include <tuple>
 #include <vector>
+#include <fstream>
 
 using namespace llvm;
 
@@ -64,8 +66,13 @@ namespace {
   class RegAllocFast : public MachineFunctionPass {
   public:
     static char ID;
+    int NumStoresMF = 0;
+    int NumLoadsMF = 0;
 
-    RegAllocFast() : MachineFunctionPass(ID), StackSlotForVirtReg(-1) {}
+    RegAllocFast() : MachineFunctionPass(ID), StackSlotForVirtReg(-1) {
+      NumStoresMF = 0;
+      NumLoadsMF = 0;
+    }
 
   private:
     MachineFrameInfo *MFI;
@@ -322,6 +329,7 @@ void RegAllocFast::spill(MachineBasicBlock::iterator Before, Register VirtReg,
   const TargetRegisterClass &RC = *MRI->getRegClass(VirtReg);
   TII->storeRegToStackSlot(*MBB, Before, AssignedReg, Kill, FI, &RC, TRI);
   ++NumStores;
+  // ++NumStoresMF;
 
   // If this register is used by DBG_VALUE then insert new DBG_VALUE to
   // identify spilled location as the place to find corresponding variable's
@@ -348,6 +356,7 @@ void RegAllocFast::reload(MachineBasicBlock::iterator Before, Register VirtReg,
   const TargetRegisterClass &RC = *MRI->getRegClass(VirtReg);
   TII->loadRegFromStackSlot(*MBB, Before, PhysReg, FI, &RC, TRI);
   ++NumLoads;
+  // ++NumLoadsMF;
 }
 
 /// Return true if MO is the only remaining reference to its virtual register,
@@ -1314,13 +1323,27 @@ bool RegAllocFast::runOnMachineFunction(MachineFunction &MF) {
   // Loop over all of the basic blocks, eliminating virtual register references
   for (MachineBasicBlock &MBB : MF)
     allocateBasicBlock(MBB);
-
+  
   // All machine operands and other references to virtual registers have been
   // replaced. Remove the virtual registers.
   MRI->clearVirtRegs();
 
   StackSlotForVirtReg.clear();
   LiveDbgValueMap.clear();
+
+  
+  std::ofstream outfile;
+  outfile.open("fast_stats.csv", std::ios::app);
+  outfile << MF.getFunction().getParent()->getSourceFileName() << "," << MF.getName().str() << "," << std::to_string(NumStores - NumStoresMF) << "," << std::to_string(NumLoads - NumLoadsMF) << std::endl;
+  outfile.close();
+  // MF.getFunction().getParent()->getSourceFile;
+
+  // LLVM_DEBUG(dbgs() << "Spilled Virtual Registor Count for Function " << MF.getName() << " is: "<< std::to_string(VRM.spillCountMF) << '\n');
+  LLVM_DEBUG(dbgs() << "Spilled Live Range Count for Function " << MF.getName() << " is: "<< std::to_string(NumStores - NumStoresMF) << '\n');
+  LLVM_DEBUG(dbgs() << "Number of reloads inserted for Function " << MF.getName() << " is: "<< std::to_string(NumLoads - NumLoadsMF) << '\n');
+  NumStoresMF = NumStores;
+  NumLoadsMF = NumLoads;
+
   return true;
 }
 

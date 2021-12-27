@@ -86,6 +86,7 @@
 #include <tuple>
 #include <utility>
 #include <vector>
+#include <fstream>
 
 using namespace llvm;
 
@@ -860,6 +861,15 @@ bool RegAllocPBQP::runOnMachineFunction(MachineFunction &MF) {
       ++Round;
     }
   }
+
+  std::ofstream outfile;
+  outfile.open("pbqp_stats.csv", std::ios::app);
+  outfile << MF.getFunction().getParent()->getSourceFileName() << "," << MF.getName().str() << "," << std::to_string(VRM.SpillCountMF) << "," << std::to_string(VRegSpiller->NumSpilledRangesMF) << "," << std::to_string(VRegSpiller->NumReloadsMF) << std::endl;
+  outfile.close();
+
+  LLVM_DEBUG(dbgs() << "Spilled Virtual Registor Count for Function " << MF.getName() << " is: "<< std::to_string(VRM.SpillCountMF) << '\n');
+  LLVM_DEBUG(dbgs() << "Spilled Live Range Count for Function " << MF.getName() << " is: "<< std::to_string(VRegSpiller->NumSpilledRangesMF) << '\n');
+  LLVM_DEBUG(dbgs() << "Number of reloads inserted for Function " << MF.getName() << " is: "<< std::to_string(VRegSpiller->NumReloadsMF) << '\n');
 
   // Finalise allocation, allocate empty ranges.
   finalizeAlloc(MF, LIS, VRM);

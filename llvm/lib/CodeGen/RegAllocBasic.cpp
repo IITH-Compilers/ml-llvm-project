@@ -335,6 +335,11 @@ bool RABasic::runOnMachineFunction(MachineFunction &mf) {
   // Diagnostic output before rewriting
   LLVM_DEBUG(dbgs() << "Post alloc VirtRegMap:\n" << *VRM << "\n");
 
+  std::ofstream outfile;
+  outfile.open("basic_stats.csv", std::ios::app);
+  outfile << MF->getFunction().getParent()->getSourceFileName() << "," << MF->getName().str() << "," << std::to_string(VRM->SpillCountMF) << "," << std::to_string(SpillerInstance->NumSpilledRangesMF) << "," << std::to_string(SpillerInstance->NumReloadsMF) << std::endl;
+  outfile.close();
+
   LLVM_DEBUG(dbgs() << "Spilled Virtual Registor Count for Function " << MF->getName() << " is: "<< std::to_string(VRM->SpillCountMF) << '\n');
   LLVM_DEBUG(dbgs() << "Spilled Live Range Count for Function " << MF->getName() << " is: "<< std::to_string(SpillerInstance->NumSpilledRangesMF) << '\n');
   LLVM_DEBUG(dbgs() << "Number of reloads inserted for Function " << MF->getName() << " is: "<< std::to_string(SpillerInstance->NumReloadsMF) << '\n');

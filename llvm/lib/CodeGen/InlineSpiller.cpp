@@ -898,9 +898,10 @@ bool InlineSpiller::foldMemoryOperand(
   else if (Ops.front().second == 0) {
     ++NumSpills;
     HSpiller.addToMergeableSpills(*FoldMI, StackSlot, Original);
-  } else
+  } else {
     ++NumReloads;
     ++NumReloadsMF;
+  }    
   return true;
 }
 

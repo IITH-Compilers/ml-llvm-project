@@ -291,6 +291,7 @@ public:
     /// the complement interval may get some extra PHI-defs.
     SM_Speed
   };
+  int NumFinishedMF = 0;
 
 private:
   /// Edit - The current parent register and new intervals created.
