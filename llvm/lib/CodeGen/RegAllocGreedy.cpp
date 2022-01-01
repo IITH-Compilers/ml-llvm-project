@@ -73,11 +73,11 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
+#include <fstream>
 #include <memory>
 #include <queue>
 #include <tuple>
 #include <utility>
-#include <fstream>
 
 using namespace llvm;
 
@@ -3263,15 +3263,27 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
   reportNumberOfSplillsReloads();
 
   std::ofstream outfile;
-  outfile.open("greedy_stats.csv", std::ios::app);
-  outfile << MF->getFunction().getParent()->getSourceFileName() << "," << MF->getName().str() << "," << std::to_string(VRM->SpillCountMF) << "," << std::to_string(SpillerInstance->NumSpilledRangesMF) << "," << std::to_string(SpillerInstance->NumReloadsMF) << "," << std::to_string(SE->NumFinishedMF) << std::endl;
+  outfile.open(appendCurrentTimeForFileName("greedy_stats") + ".csv",
+               std::ios::app);
+  outfile << MF->getFunction().getParent()->getSourceFileName() << ","
+          << MF->getName().str() << "," << std::to_string(VRM->SpillCountMF)
+          << "," << std::to_string(SpillerInstance->NumSpilledRangesMF) << ","
+          << std::to_string(SpillerInstance->NumReloadsMF) << ","
+          << std::to_string(SE->NumFinishedMF) << std::endl;
   outfile.close();
 
-
-  LLVM_DEBUG(dbgs() << "Spilled Virtual Registor Count for Function " << MF->getName() << " is: "<< std::to_string(VRM->SpillCountMF) << '\n');
-  LLVM_DEBUG(dbgs() << "Spilled Live Range Count for Function " << MF->getName() << " is: "<< std::to_string(SpillerInstance->NumSpilledRangesMF) << '\n');
-  LLVM_DEBUG(dbgs() << "Number of reloads inserted for Function " << MF->getName() << " is: "<< std::to_string(SpillerInstance->NumReloadsMF) << '\n');
-  LLVM_DEBUG(dbgs() << "Number of split finished for Function " << MF->getName() << " is: "<< std::to_string(SE->NumFinishedMF) << '\n');
+  LLVM_DEBUG(dbgs() << "Spilled Virtual Registor Count for Function "
+                    << MF->getName()
+                    << " is: " << std::to_string(VRM->SpillCountMF) << '\n');
+  LLVM_DEBUG(dbgs() << "Spilled Live Range Count for Function " << MF->getName()
+                    << " is: "
+                    << std::to_string(SpillerInstance->NumSpilledRangesMF)
+                    << '\n');
+  LLVM_DEBUG(dbgs() << "Number of reloads inserted for Function "
+                    << MF->getName() << " is: "
+                    << std::to_string(SpillerInstance->NumReloadsMF) << '\n');
+  LLVM_DEBUG(dbgs() << "Number of split finished for Function " << MF->getName()
+                    << " is: " << std::to_string(SE->NumFinishedMF) << '\n');
   releaseMemory();
   return true;
 }

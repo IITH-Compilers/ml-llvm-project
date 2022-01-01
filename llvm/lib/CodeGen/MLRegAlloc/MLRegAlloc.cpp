@@ -1941,4 +1941,14 @@ void MLRA::MLRegAlloc(MachineFunction &MF, SlotIndexes &Indexes,
   LLVM_DEBUG(dbgs() << "unsupportedClsFreq in MLRA for function "
                     << MF.getName() << " is: "
                     << std::to_string(unsupportedClsFreq.size()) << "\n");
+
+  std::ofstream outfile;
+  outfile.open(appendCurrentTimeForFileName("mlra_stats") + ".csv",
+               std::ios::app);
+  outfile << MF.getFunction().getParent()->getSourceFileName() << ","
+          << MF.getName().str() << "," << std::to_string(SE->NumFinishedMF)
+          << "," << std::to_string(mlAllocatedRegs.size()) << ","
+          << std::to_string(numUnsupportedRegs) << ","
+          << std::to_string(unsupportedClsFreq.size()) << std::endl;
+  outfile.close();
 }
