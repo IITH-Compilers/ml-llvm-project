@@ -52,7 +52,7 @@ config_path=None
 
 logger = logging.getLogger(__file__)
 # logging.basicConfig(filename=os.path.join("/home/cs18mtech11030/project/grpc_llvm/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src", 'running.log'), format='%(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
-logging.basicConfig(filename='running.log', format='%(thread)d - %(threadName)s %(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
+logging.basicConfig(filename='running_spill.log', format='%(thread)d - %(threadName)s %(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
 
 
 def set_config(path):
@@ -123,6 +123,9 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.reward_max_value = 10000.0
 
         self.grpc_rtt = 0
+        self.spill_successful = 0
+        self.split_successful = 0
+        self.colour_successful = 0
 
     def reward_formula(self, value, action):
         if value == float("inf"):
@@ -137,6 +140,9 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         if action == self.spill_color_idx:
             reward = -reward
             logging.warning('Spill is choosen so rewarded {} to node_id={} with spillcost={}'.format(reward, self.obs.idx_nid[self.cur_node], value))
+            self.spill_successful += 1
+        else:
+            self.colour_successful += 1
         # self.total_reward = self.total_reward + reward
         
         return reward
@@ -229,6 +235,10 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             self.select_node_agent_id: { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(select_node_mask), 'state' : cur_obs}
         }
         # print("Cur_obs shape", cur_obs.shape)
+        self.spill_successful = 0
+        self.split_successful = 0
+        self.colour_successful = 0
+
         print("Total time in grpc rtt", self.grpc_rtt)
         return obs
 
@@ -425,15 +435,17 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             adj_colors = self.obs.graph_topology.getColorOfVisitedAdjNodes(self.cur_node)
 
             masked_action_space = self.registerAS.maskActionSpace(regclass, adj_colors)
-
+            is_mask_empty = True
             colour_node_mask = []
             for i in range(self.action_space_size):
                 if i in masked_action_space:
                     colour_node_mask.append(1)
+                    is_mask_empty = False
                 else:
                     colour_node_mask.append(0)
             
-            colour_node_mask[0] = 1
+            if is_mask_empty:
+                colour_node_mask[0] = 1
 
             node_properties = self.getNodePropertiesforColoring()
             prop_value_list_colouring = list(node_properties.values())
@@ -585,12 +597,27 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
         if done_all:
             reward = {
-                self.colour_node_agent_id: self.total_reward,
-                self.select_node_agent_id: self.total_reward,
-                self.select_task_agent_id: self.total_reward,
-                self.split_node_agent_id: self.total_reward
+                self.colour_node_agent_id: 0,
+                self.select_node_agent_id: 0,
+                self.select_task_agent_id: 0,
+                self.split_node_agent_id: 0
             }
             done['__all__'] = True
+            from csv import writer
+            with open('traning_stats_'+str(self.worker_index)+'.csv', 'a') as f_object:
+  
+                # Pass this file object to csv.writer()
+                # and get a writer object
+                writer_object = writer(f_object)
+            
+                # Pass the list as an argument into
+                # the writerow()
+                episode_stat = [self.path, self.colour_successful, self.spill_successful, self.split_successful]
+                writer_object.writerow(episode_stat)
+            
+                #Close the file object
+                f_object.close()
+
         # if self.mode == 'inference':
         #     done['__all__'] = True
         else:
@@ -654,7 +681,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         
         select_task_mask = self.creatTaskSelectMask()
 
-        self.total_reward += split_reward
+        # self.total_reward += split_reward
 
         colour_node_mask = []
         for i in range(self.action_space_size):
@@ -779,6 +806,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 return reward, True
             if not self.update_obs(updated_graphs, int(node_id), int(split_point)):
                 self.obs.graph_topology.markNodeAsNotVisited(nodeChoosen)
+            else:
+                self.split_successful += 1
         else:
             done = True
         
@@ -855,7 +884,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
     def reset_env(self, graph=None):
         self.ggnn = GatedGraphNeuralNetwork(hidden_size=self.emb_size, annotation_size=3, num_edge_types=1, layer_timesteps=[1], residual_connections={}, nodelevel=True)
         if graph is None:
-            inx = (((self.worker_index-1)*200) + self.graph_counter)
+            inx = (((self.worker_index-1)*280) + self.graph_counter)
             # print("Worker index", self.worker_index, inx)
             path=self.training_graphs[inx]
             # path="/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/graphs/IG/json/526.blender_r_756.ll_F15.json"
@@ -868,7 +897,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             self.reset_count+=1
             if self.reset_count % 1 == 0:
                 self.graph_counter+=1
-                self.graph_counter = self.graph_counter%200
+                self.graph_counter = self.graph_counter%280
             try:
                 with open(path) as f:
                    graph = json.load(f)
@@ -903,7 +932,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
             hostip = "0.0.0.0"
 
-            hostport = str(int("60060") + self.worker_index)
+            hostport = str(int("50130") + self.worker_index)
             # self.port_number += 1
             # hostport=str(self.port_number)
             ipadd = "{}:{}".format(hostip, hostport)
