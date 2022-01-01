@@ -1623,7 +1623,8 @@ void MLRA::allocatePhysRegsViaRL() {
       // for (auto i : regProfMap[AvailablePhysReg].frwdInterferences)
       //   errs() << i << ", ";
       // errs() << "Matrix->checkInterference(*VirtReg, AvailablePhysReg)"
-      //        << Matrix->checkInterference(*VirtReg, AvailablePhysReg) << "\n";
+      //        << Matrix->checkInterference(*VirtReg, AvailablePhysReg) <<
+      //        "\n";
       assert(Matrix->checkInterference(*VirtReg, AvailablePhysReg) ==
                  LiveRegMatrix::InterferenceKind::IK_Free &&
              "Reg interfere with existing allocation");
@@ -1929,4 +1930,15 @@ void MLRA::MLRegAlloc(MachineFunction &MF, SlotIndexes &Indexes,
   if (enable_mlra_inference && regProfMap.size() > 0) {
     inference();
   }
+  LLVM_DEBUG(dbgs() << "Number of split finished for Function " << MF.getName()
+                    << " is: " << std::to_string(SE->NumFinishedMF) << '\n');
+  LLVM_DEBUG(dbgs() << "Number of regs allocated by MLRA for function "
+                    << MF.getName() << " is: "
+                    << std::to_string(mlAllocatedRegs.size()) << "\n");
+  LLVM_DEBUG(dbgs() << "Number of unsupported regs - MLRA for function "
+                    << MF.getName()
+                    << " is: " << std::to_string(numUnsupportedRegs) << "\n");
+  LLVM_DEBUG(dbgs() << "unsupportedClsFreq in MLRA for function "
+                    << MF.getName() << " is: "
+                    << std::to_string(unsupportedClsFreq.size()) << "\n");
 }
