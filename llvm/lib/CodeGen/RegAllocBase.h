@@ -39,10 +39,6 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 
-#include <algorithm>
-#include <iomanip>
-#include <sstream>
-
 namespace llvm {
 
 class LiveInterval;
@@ -115,16 +111,6 @@ protected:
 
   /// Method called when the allocator is about to remove a LiveInterval.
   virtual void aboutToRemoveInterval(LiveInterval &LI) {}
-
-  std::string appendCurrentTimeForFileName(std::string name) {
-    auto time = std::time(nullptr);
-    std::stringstream ss;
-    ss << std::put_time(std::localtime(&time),
-                        "%F_%T"); // ISO 8601 without timezone information.
-    auto s = ss.str();
-    std::replace(s.begin(), s.end(), ':', '-');
-    return name + "_" + s;
-  }
 
 public:
   /// VerifyEnabled - True when -verify-regalloc is given.

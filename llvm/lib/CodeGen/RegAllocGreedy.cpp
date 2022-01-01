@@ -145,6 +145,9 @@ static cl::opt<bool> ConsiderLocalIntervalCost(
              "candidate when choosing the best split candidate."),
     cl::init(false));
 
+cl::opt<std::string> statsFPGreedy("stats-path-greedy", cl::Hidden,
+                                   cl::init("/home/"));
+
 static RegisterRegAlloc greedyRegAlloc("greedy", "greedy register allocator",
                                        createGreedyRegisterAllocator);
 
@@ -3263,8 +3266,7 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
   reportNumberOfSplillsReloads();
 
   std::ofstream outfile;
-  outfile.open(appendCurrentTimeForFileName("greedy_stats") + ".csv",
-               std::ios::app);
+  outfile.open(statsFPGreedy + "/greedy_stats.csv", std::ios::app);
   outfile << MF->getFunction().getParent()->getSourceFileName() << ","
           << MF->getName().str() << "," << std::to_string(VRM->SpillCountMF)
           << "," << std::to_string(SpillerInstance->NumSpilledRangesMF) << ","

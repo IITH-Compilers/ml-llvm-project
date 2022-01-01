@@ -88,12 +88,11 @@
 #include <utility>
 #include <vector>
 
-#include <algorithm>
-#include <iomanip>
-#include <sstream>
 using namespace llvm;
 
 #define DEBUG_TYPE "regalloc"
+cl::opt<std::string> statsFPPbqp("stats-path-pbqp", cl::Hidden,
+                                 cl::init("/home/"));
 
 static RegisterRegAlloc
     RegisterPBQPRepAlloc("pbqp", "PBQP register allocator",
@@ -856,15 +855,8 @@ bool RegAllocPBQP::runOnMachineFunction(MachineFunction &MF) {
     }
   }
 
-  auto time = std::time(nullptr);
-  std::stringstream ss;
-  ss << std::put_time(std::localtime(&time),
-                      "%F_%T"); // ISO 8601 without timezone information.
-  auto s = ss.str();
-  std::replace(s.begin(), s.end(), ':', '-');
-
   std::ofstream outfile;
-  outfile.open(s + "pbqp_stats.csv", std::ios::app);
+  outfile.open(statsFPPbqp + "/pbqp_stats.csv", std::ios::app);
   outfile << MF.getFunction().getParent()->getSourceFileName() << ","
           << MF.getName().str() << "," << std::to_string(VRM.SpillCountMF)
           << "," << std::to_string(VRegSpiller->NumSpilledRangesMF) << ","

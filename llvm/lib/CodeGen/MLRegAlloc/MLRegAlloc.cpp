@@ -139,6 +139,9 @@ cl::opt<std::string> MLRA::mlra_server_address(
     cl::desc("Starts the server in the given address; format <ip>:<port>"),
     cl::init("0.0.0.0:50051"));
 
+cl::opt<std::string> statsFPMLRA("stats-path-mlra", cl::Hidden,
+                                 cl::init("/home/"));
+
 registerallocationinference::RegisterAllocationInference::Stub *Stub = nullptr;
 // gRPCUtil client;
 
@@ -1943,8 +1946,7 @@ void MLRA::MLRegAlloc(MachineFunction &MF, SlotIndexes &Indexes,
                     << std::to_string(unsupportedClsFreq.size()) << "\n");
 
   std::ofstream outfile;
-  outfile.open(appendCurrentTimeForFileName("mlra_stats") + ".csv",
-               std::ios::app);
+  outfile.open(statsFPMLRA + "/mlra_stats.csv", std::ios::app);
   outfile << MF.getFunction().getParent()->getSourceFileName() << ","
           << MF.getName().str() << "," << std::to_string(SE->NumFinishedMF)
           << "," << std::to_string(mlAllocatedRegs.size()) << ","

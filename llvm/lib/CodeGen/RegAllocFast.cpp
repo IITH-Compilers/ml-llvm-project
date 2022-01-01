@@ -45,11 +45,8 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
 #include <fstream>
-#include <iomanip>
-#include <sstream>
 #include <tuple>
 #include <vector>
 using namespace llvm;
@@ -59,6 +56,9 @@ using namespace llvm;
 STATISTIC(NumStores, "Number of stores added");
 STATISTIC(NumLoads, "Number of loads added");
 STATISTIC(NumCoalesced, "Number of copies coalesced");
+
+cl::opt<std::string> statsFPFast("stats-path-fast", cl::Hidden,
+                                 cl::init("/home/"));
 
 static RegisterRegAlloc fastRegAlloc("fast", "fast register allocator",
                                      createFastRegisterAllocator);
@@ -1341,14 +1341,7 @@ bool RegAllocFast::runOnMachineFunction(MachineFunction &MF) {
   LiveDbgValueMap.clear();
 
   std::ofstream outfile;
-  auto time = std::time(nullptr);
-  std::stringstream ss;
-  ss << std::put_time(std::localtime(&time),
-                      "%F_%T"); // ISO 8601 without timezone information.
-  auto s = ss.str();
-  std::replace(s.begin(), s.end(), ':', '-');
-
-  outfile.open(s + "fast_stats.csv", std::ios::app);
+  outfile.open(statsFPFast + "/fast_stats.csv", std::ios::app);
   outfile << MF.getFunction().getParent()->getSourceFileName() << ","
           << MF.getName().str() << ","
           << std::to_string(NumStores - NumStoresMF) << ","

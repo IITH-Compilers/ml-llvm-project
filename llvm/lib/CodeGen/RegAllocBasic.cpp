@@ -41,6 +41,9 @@ using namespace llvm;
 
 #define DEBUG_TYPE "regalloc"
 
+cl::opt<std::string> statsFPBasic("stats-path-basic", cl::Hidden,
+                                  cl::init("/home/"));
+
 static RegisterRegAlloc basicRegAlloc("basic", "basic register allocator",
                                       createBasicRegisterAllocator);
 
@@ -337,8 +340,7 @@ bool RABasic::runOnMachineFunction(MachineFunction &mf) {
   LLVM_DEBUG(dbgs() << "Post alloc VirtRegMap:\n" << *VRM << "\n");
 
   std::ofstream outfile;
-  outfile.open(appendCurrentTimeForFileName("basic_stats") + ".csv",
-               std::ios::app);
+  outfile.open(statsFPBasic + "/basic_stats.csv", std::ios::app);
   outfile << MF->getFunction().getParent()->getSourceFileName() << ","
           << MF->getName().str() << "," << std::to_string(VRM->SpillCountMF)
           << "," << std::to_string(SpillerInstance->NumSpilledRangesMF) << ","
