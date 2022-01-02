@@ -41,6 +41,9 @@ using namespace llvm;
 
 #define DEBUG_TYPE "regalloc"
 
+cl::opt<std::string> statsFPBasic("stats-path-basic", cl::Hidden,
+                                  cl::init("/home/"));
+
 static RegisterRegAlloc basicRegAlloc("basic", "basic register allocator",
                                       createBasicRegisterAllocator);
 
@@ -240,7 +243,8 @@ bool RABasic::spillInterferences(LiveInterval &VirtReg, unsigned PhysReg,
     // Spill the extracted interval.
     LiveRangeEdit LRE(&Spill, SplitVRegs, *MF, *LIS, VRM, this, &DeadRemats);
     spiller().spill(LRE);
-    // LLVM_DEBUG(dbgs() << "Spilled Virtual Registor Count for Function " << MF->getName() << "is: "<< std::to_string(VRM->SpillCountMF) << '\n');
+    // LLVM_DEBUG(dbgs() << "Spilled Virtual Registor Count for Function " <<
+    // MF->getName() << "is: "<< std::to_string(VRM->SpillCountMF) << '\n');
   }
   return true;
 }
@@ -320,13 +324,13 @@ bool RABasic::runOnMachineFunction(MachineFunction &mf) {
 
   SpillerInstance.reset(createInlineSpiller(*this, *MF, *VRM));
   if (enable_dump_ig_dot || enable_mlra_inference || enable_mlra_training) {
-    MLRegAlloc(
-        *MF, getAnalysis<SlotIndexes>(),
-        getAnalysis<MachineBlockFrequencyInfo>(),
-        getAnalysis<MachineDominatorTree>(), getAnalysis<MachineLoopInfo>(),
-        getAnalysis<AAResultsWrapperPass>().getAAResults(),
-        getAnalysis<LiveDebugVariables>(), getAnalysis<SpillPlacement>(),
-        getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE());
+    MLRegAlloc(*MF, getAnalysis<SlotIndexes>(),
+               getAnalysis<MachineBlockFrequencyInfo>(),
+               getAnalysis<MachineDominatorTree>(),
+               getAnalysis<MachineLoopInfo>(),
+               getAnalysis<AAResultsWrapperPass>().getAAResults(),
+               getAnalysis<LiveDebugVariables>(), getAnalysis<SpillPlacement>(),
+               getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE());
   }
 
   allocatePhysRegs();
@@ -335,12 +339,27 @@ bool RABasic::runOnMachineFunction(MachineFunction &mf) {
   // Diagnostic output before rewriting
   LLVM_DEBUG(dbgs() << "Post alloc VirtRegMap:\n" << *VRM << "\n");
 
-  LLVM_DEBUG(dbgs() << "Spilled Virtual Registor Count for Function " << MF->getName() << " is: "<< std::to_string(VRM->SpillCountMF) << '\n');
-  LLVM_DEBUG(dbgs() << "Spilled Live Range Count for Function " << MF->getName() << " is: "<< std::to_string(SpillerInstance->NumSpilledRangesMF) << '\n');
-  LLVM_DEBUG(dbgs() << "Number of reloads inserted for Function " << MF->getName() << " is: "<< std::to_string(SpillerInstance->NumReloadsMF) << '\n');
+  std::ofstream outfile;
+  outfile.open(statsFPBasic + "/basic_stats.csv", std::ios::app);
+  outfile << MF->getFunction().getParent()->getSourceFileName() << ","
+          << MF->getName().str() << "," << std::to_string(VRM->SpillCountMF)
+          << "," << std::to_string(SpillerInstance->NumSpilledRangesMF) << ","
+          << std::to_string(SpillerInstance->NumReloadsMF) << std::endl;
+  outfile.close();
+
+  LLVM_DEBUG(dbgs() << "Spilled Virtual Registor Count for Function "
+                    << MF->getName()
+                    << " is: " << std::to_string(VRM->SpillCountMF) << '\n');
+  LLVM_DEBUG(dbgs() << "Spilled Live Range Count for Function " << MF->getName()
+                    << " is: "
+                    << std::to_string(SpillerInstance->NumSpilledRangesMF)
+                    << '\n');
+  LLVM_DEBUG(dbgs() << "Number of reloads inserted for Function "
+                    << MF->getName() << " is: "
+                    << std::to_string(SpillerInstance->NumReloadsMF) << '\n');
 
   releaseMemory();
-  
+
   return true;
 }
 

@@ -73,6 +73,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
+#include <fstream>
 #include <memory>
 #include <queue>
 #include <tuple>
@@ -143,6 +144,9 @@ static cl::opt<bool> ConsiderLocalIntervalCost(
     cl::desc("Consider the cost of local intervals created by a split "
              "candidate when choosing the best split candidate."),
     cl::init(false));
+
+cl::opt<std::string> statsFPGreedy("stats-path-greedy", cl::Hidden,
+                                   cl::init("/home/"));
 
 static RegisterRegAlloc greedyRegAlloc("greedy", "greedy register allocator",
                                        createGreedyRegisterAllocator);
@@ -3261,6 +3265,27 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
   postOptimization();
   reportNumberOfSplillsReloads();
 
+  std::ofstream outfile;
+  outfile.open(statsFPGreedy + "/greedy_stats.csv", std::ios::app);
+  outfile << MF->getFunction().getParent()->getSourceFileName() << ","
+          << MF->getName().str() << "," << std::to_string(VRM->SpillCountMF)
+          << "," << std::to_string(SpillerInstance->NumSpilledRangesMF) << ","
+          << std::to_string(SpillerInstance->NumReloadsMF) << ","
+          << std::to_string(SE->NumFinishedMF) << std::endl;
+  outfile.close();
+
+  LLVM_DEBUG(dbgs() << "Spilled Virtual Registor Count for Function "
+                    << MF->getName()
+                    << " is: " << std::to_string(VRM->SpillCountMF) << '\n');
+  LLVM_DEBUG(dbgs() << "Spilled Live Range Count for Function " << MF->getName()
+                    << " is: "
+                    << std::to_string(SpillerInstance->NumSpilledRangesMF)
+                    << '\n');
+  LLVM_DEBUG(dbgs() << "Number of reloads inserted for Function "
+                    << MF->getName() << " is: "
+                    << std::to_string(SpillerInstance->NumReloadsMF) << '\n');
+  LLVM_DEBUG(dbgs() << "Number of split finished for Function " << MF->getName()
+                    << " is: " << std::to_string(SE->NumFinishedMF) << '\n');
   releaseMemory();
   return true;
 }
