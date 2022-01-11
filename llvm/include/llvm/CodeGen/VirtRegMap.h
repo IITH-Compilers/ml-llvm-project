@@ -178,6 +178,8 @@ class TargetInstrInfo;
     /// the specified stack slot
     void assignVirt2StackSlot(Register virtReg, int SS);
 
+    void getStats(int &numAssigned);
+
     void print(raw_ostream &OS, const Module* M = nullptr) const override;
     void dump() const;
   };

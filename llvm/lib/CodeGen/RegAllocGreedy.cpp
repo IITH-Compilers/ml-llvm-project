@@ -3266,12 +3266,14 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
   reportNumberOfSplillsReloads();
 
   std::ofstream outfile;
+  int numAlloc = 0;
+  VRM->getStats(numAlloc);
   outfile.open(statsFPGreedy + "/greedy_stats.csv", std::ios::app);
   outfile << MF->getFunction().getParent()->getSourceFileName() << ","
           << MF->getName().str() << "," << std::to_string(VRM->SpillCountMF)
           << "," << std::to_string(SpillerInstance->NumSpilledRangesMF) << ","
           << std::to_string(SpillerInstance->NumReloadsMF) << ","
-          << std::to_string(SE->NumFinishedMF) << std::endl;
+          << std::to_string(SE->NumFinishedMF) << "," << std::to_string(numAlloc) << std::endl;
   outfile.close();
 
   LLVM_DEBUG(dbgs() << "Spilled Virtual Registor Count for Function "

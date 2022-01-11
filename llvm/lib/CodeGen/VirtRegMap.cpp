@@ -156,6 +156,17 @@ void VirtRegMap::print(raw_ostream &OS, const Module *) const {
   OS << '\n';
 }
 
+void VirtRegMap::getStats(int &numAssigned){
+  numAssigned = 0;
+  for (unsigned i = 0, e = MRI->getNumVirtRegs(); i != e; ++i) {
+    unsigned Reg = Register::index2VirtReg(i);
+    if (Virt2PhysMap[Reg] != (unsigned)VirtRegMap::NO_PHYS_REG && Virt2StackSlotMap[Reg] == VirtRegMap::NO_STACK_SLOT) {
+      numAssigned++;
+    }
+  }
+  // errs () << numAssigned << "\n";
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void VirtRegMap::dump() const { print(dbgs()); }
 #endif
