@@ -856,11 +856,15 @@ bool RegAllocPBQP::runOnMachineFunction(MachineFunction &MF) {
   }
 
   std::ofstream outfile;
+  int numAlloc = 0;
+  VRM.getStats(numAlloc);
+  errs() << "numAlloc = " << numAlloc << "\n";
   outfile.open(statsFPPbqp + "/pbqp_stats.csv", std::ios::app);
   outfile << MF.getFunction().getParent()->getSourceFileName() << ","
           << MF.getName().str() << "," << std::to_string(VRM.SpillCountMF)
           << "," << std::to_string(VRegSpiller->NumSpilledRangesMF) << ","
-          << std::to_string(VRegSpiller->NumReloadsMF) << std::endl;
+          << std::to_string(VRegSpiller->NumReloadsMF) << ","
+          << std::to_string(numAlloc) << std::endl;
   outfile.close();
 
   LLVM_DEBUG(dbgs() << "Spilled Virtual Registor Count for Function "

@@ -340,11 +340,15 @@ bool RABasic::runOnMachineFunction(MachineFunction &mf) {
   LLVM_DEBUG(dbgs() << "Post alloc VirtRegMap:\n" << *VRM << "\n");
 
   std::ofstream outfile;
+  int numAlloc = 0;
+  VRM.getStats(numAlloc);
+  errs() << "numAlloc = " << numAlloc << "\n";
   outfile.open(statsFPBasic + "/basic_stats.csv", std::ios::app);
   outfile << MF->getFunction().getParent()->getSourceFileName() << ","
           << MF->getName().str() << "," << std::to_string(VRM->SpillCountMF)
           << "," << std::to_string(SpillerInstance->NumSpilledRangesMF) << ","
-          << std::to_string(SpillerInstance->NumReloadsMF) << std::endl;
+          << std::to_string(SpillerInstance->NumReloadsMF) << ","
+          << std::to_string(numAlloc) << std::endl;
   outfile.close();
 
   LLVM_DEBUG(dbgs() << "Spilled Virtual Registor Count for Function "
