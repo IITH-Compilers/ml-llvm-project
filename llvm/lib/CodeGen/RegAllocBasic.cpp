@@ -341,7 +341,7 @@ bool RABasic::runOnMachineFunction(MachineFunction &mf) {
 
   std::ofstream outfile;
   int numAlloc = 0;
-  VRM.getStats(numAlloc);
+  VRM->getStats(numAlloc);
   errs() << "numAlloc = " << numAlloc << "\n";
   outfile.open(statsFPBasic + "/basic_stats.csv", std::ios::app);
   outfile << MF->getFunction().getParent()->getSourceFileName() << ","

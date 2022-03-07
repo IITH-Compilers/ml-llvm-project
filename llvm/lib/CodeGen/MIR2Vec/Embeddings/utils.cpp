@@ -6,12 +6,15 @@
 //
 
 #include "llvm/CodeGen/MIR2Vec/utils.h"
+#include "llvm/CodeGen/MachineFunction.h"
+
+#include "Config.h"
 
 #include <fstream>
 
 using namespace llvm;
 using namespace IR2Vec;
-
+// class MachineFunction;
 void IR2Vec::collectDataFromVocab(std::string vocab,
                                   std::map<std::string, Vector> &opcMap) {
   // LLVM_DEBUG(errs() << "Reading from " + vocab + "\n");
@@ -41,4 +44,39 @@ void IR2Vec::scaleVector(Vector &vec, float factor) {
   for (unsigned i = 0; i < vec.size(); i++) {
     vec[i] = vec[i] * factor;
   }
+}
+
+std::map<int, std::string>
+IR2Vec::createOpcodeMap(llvm::Triple::ArchType archType) {
+  std::map<int, std::string> opcDescMap;
+  std::string extFile = OPCODE_DESC_PATH;
+  switch (archType) {
+  case Triple::ArchType::aarch64: {
+    extFile += "/extracted_aarch64.csv";
+    break;
+  }
+  case Triple::ArchType::x86:
+  case Triple::ArchType::x86_64: {
+    extFile += "/extracted_x86.csv";
+    break;
+  }
+  default:
+    llvm_unreachable("Should be one among the supported targets");
+  }
+
+  std::ifstream opcDesc(extFile);
+  assert(!opcDesc.fail() && "Config file is not present.");
+
+  std::string delimiter = ",";
+  for (std::string line; getline(opcDesc, line);) {
+    std::string strkey = line.substr(0, line.find(delimiter));
+    int key = std::stoi(strkey);
+    // errs() << key << "-";
+
+    std::string tmp = line.substr(line.find(delimiter) + 1, line.length());
+    std::string val = tmp.substr(0, tmp.find(delimiter));
+    // errs() << val << "\n";
+    opcDescMap[key] = val;
+  }
+  return opcDescMap;
 }

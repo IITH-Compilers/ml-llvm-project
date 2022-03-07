@@ -29,12 +29,11 @@ private:
   std::ofstream o;
   const TargetInstrInfo *TII;
   const TargetRegisterInfo *TRI;
+  std::map<int, std::string> opcDescMap;
 
   void traverseBasicBlock(llvm::MachineBasicBlock &MB);
-  void createOpcodeMap(MachineFunction &mf);
+  // void createOpcodeMap(MachineFunction &mf);
   bool runOnMachineFunction(MachineFunction &mf) override;
-
-  std::map<int, std::string> opcDescMap;
 
 public:
   static char ID;
