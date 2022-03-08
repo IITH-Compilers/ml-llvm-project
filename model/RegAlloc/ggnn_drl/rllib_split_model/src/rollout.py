@@ -350,7 +350,7 @@ class RollOutInference:
         utils_1.set_config(config_other)
         logdir='./'
         logger = logging.getLogger(__file__)
-        logging.basicConfig(filename='running.log', format='%(thread)d - %(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
+        logging.basicConfig(filename='running_spill.log', format='%(thread)d - %(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
 
                    
         # ray.init(local_mode=args.local_mode)

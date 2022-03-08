@@ -884,7 +884,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
     def reset_env(self, graph=None):
         self.ggnn = GatedGraphNeuralNetwork(hidden_size=self.emb_size, annotation_size=3, num_edge_types=1, layer_timesteps=[1], residual_connections={}, nodelevel=True)
         if graph is None:
-            inx = (((self.worker_index-1)*280) + self.graph_counter)
+            inx = (((self.worker_index-1)*180) + self.graph_counter)
             # print("Worker index", self.worker_index, inx)
             path=self.training_graphs[inx]
             # path="/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/graphs/IG/json/526.blender_r_756.ll_F15.json"
@@ -897,7 +897,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             self.reset_count+=1
             if self.reset_count % 1 == 0:
                 self.graph_counter+=1
-                self.graph_counter = self.graph_counter%280
+                self.graph_counter = self.graph_counter%180
             try:
                 with open(path) as f:
                    graph = json.load(f)
@@ -932,7 +932,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
             hostip = "0.0.0.0"
 
-            hostport = str(int("50130") + self.worker_index)
+            hostport = str(int("50170") + self.worker_index)
             # self.port_number += 1
             # hostport=str(self.port_number)
             ipadd = "{}:{}".format(hostip, hostport)
