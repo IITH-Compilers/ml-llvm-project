@@ -12,6 +12,8 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 
+#include "Config.h"
+
 #include <algorithm> // for transform
 #include <ctype.h>
 #include <cxxabi.h>
@@ -52,6 +54,12 @@ bool MIR2Vec_Symbolic::getValue(std::string key, Vector &value) {
 void MIR2Vec_Symbolic::generateSymbolicEncodings(MachineFunction &F,
                                                  std::ostream *o) {
   int noOfFunc = 0;
+  static bool run = false;
+  if (!run) {
+    opcDescMap =
+        IR2Vec::createOpcodeMap(F.getTarget().getTargetTriple().getArch());
+    run = true;
+  }
 
   if (!F.empty()) {
     SmallVector<MachineFunction *, 15> funcStack;
@@ -89,7 +97,7 @@ void MIR2Vec_Symbolic::generateSymbolicEncodings(MachineFunction &F,
   if (o)
     *o << res;
 
-  //errs() << "res = " << res;
+  // errs() << "res = " << res;
 }
 
 Vector
@@ -127,7 +135,7 @@ Vector MIR2Vec_Symbolic::bb2Vec(MachineBasicBlock &MB,
   for (auto &I : MB) {
     Vector instVector(DIM, 0);
     Vector vec(DIM, 0);
-    if (getValue("OPC_" + std::to_string(I.getOpcode()), vec)) {
+    if (getValue(opcDescMap[I.getOpcode()], vec)) {
       scaleVector(vec, WO);
       std::transform(instVector.begin(), instVector.end(), vec.begin(),
                      instVector.begin(), std::plus<double>());

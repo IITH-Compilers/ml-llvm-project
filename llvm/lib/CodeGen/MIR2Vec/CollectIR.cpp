@@ -13,10 +13,12 @@
 #include "llvm/Target/TargetMachine.h"
 
 #include "Config.h"
+#include "llvm/CodeGen/MIR2Vec/utils.h"
 
 #include <fstream>
 
 using namespace llvm;
+using namespace IR2Vec;
 
 char CollectMachineIR::ID = 0;
 char &llvm::CollectMachineIRID = CollectMachineIR::ID;
@@ -31,42 +33,43 @@ FunctionPass *llvm::createCollectMachineIRPass() {
   return new CollectMachineIR();
 }
 
-void CollectMachineIR::createOpcodeMap(MachineFunction &MF) {
-  std::string extFile = OPCODE_DESC_PATH;
-  switch (MF.getTarget().getTargetTriple().getArch()) {
-  case Triple::ArchType::aarch64: {
-    extFile += "/extracted_aarch64.csv";
-    break;
-  }
-  case Triple::ArchType::x86:
-  case Triple::ArchType::x86_64: {
-    extFile += "/extracted_x86.csv";
-    break;
-  }
-  default:
-    llvm_unreachable("Should be one among the supported targets");
-  }
+// void CollectMachineIR::createOpcodeMap(MachineFunction &MF) {
+//   std::string extFile = OPCODE_DESC_PATH;
+//   switch (MF.getTarget().getTargetTriple().getArch()) {
+//   case Triple::ArchType::aarch64: {
+//     extFile += "/extracted_aarch64.csv";
+//     break;
+//   }
+//   case Triple::ArchType::x86:
+//   case Triple::ArchType::x86_64: {
+//     extFile += "/extracted_x86.csv";
+//     break;
+//   }
+//   default:
+//     llvm_unreachable("Should be one among the supported targets");
+//   }
 
-  std::ifstream opcDesc(extFile);
-  assert(!opcDesc.fail() && "Config file is not present.");
+//   std::ifstream opcDesc(extFile);
+//   assert(!opcDesc.fail() && "Config file is not present.");
 
-  std::string delimiter = ",";
-  for (std::string line; getline(opcDesc, line);) {
-    std::string strkey = line.substr(0, line.find(delimiter));
-    int key = std::stoi(strkey);
-    // errs() << key << "-";
+//   std::string delimiter = ",";
+//   for (std::string line; getline(opcDesc, line);) {
+//     std::string strkey = line.substr(0, line.find(delimiter));
+//     int key = std::stoi(strkey);
+//     // errs() << key << "-";
 
-    std::string tmp = line.substr(line.find(delimiter) + 1, line.length());
-    std::string val = tmp.substr(0, tmp.find(delimiter));
-    // errs() << val << "\n";
-    opcDescMap[key] = val;
-  }
-}
+//     std::string tmp = line.substr(line.find(delimiter) + 1, line.length());
+//     std::string val = tmp.substr(0, tmp.find(delimiter));
+//     // errs() << val << "\n";
+//     opcDescMap[key] = val;
+//   }
+// }
 
 bool CollectMachineIR::runOnMachineFunction(MachineFunction &MF) {
   static bool run = false;
   if (!run) {
-    createOpcodeMap(MF);
+    opcDescMap =
+        IR2Vec::createOpcodeMap(MF.getTarget().getTargetTriple().getArch());
     run = true;
   }
   TRI = MF.getSubtarget().getRegisterInfo();

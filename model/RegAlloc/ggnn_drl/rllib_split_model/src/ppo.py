@@ -50,7 +50,7 @@ DEFAULT_CONFIG = with_common_config({
     "rollout_fragment_length": 64,
     # Number of timesteps collected for each SGD round. This defines the size
     # of each SGD epoch.
-    "train_batch_size": 256,
+    "train_batch_size": 512,
     # Total SGD batch size across all devices for SGD. This defines the
     # minibatch size within each epoch.
     "sgd_minibatch_size": 128,
@@ -60,9 +60,12 @@ DEFAULT_CONFIG = with_common_config({
     # execute per train batch).
     "num_sgd_iter": 3,
     # Stepsize of SGD.
-    "lr": 5e-5,
+    "lr": 5e-4,
     # Learning rate schedule.
-    "lr_schedule": None,
+    "lr_schedule": [
+        [0, 5e-4],
+        [2000000, 5e-5]
+    ],
     # Coefficient of the value function loss. IMPORTANT: you must tune this if
     # you set vf_share_layers=True inside your model's config.
     "vf_loss_coeff": 1.0,
@@ -76,7 +79,7 @@ DEFAULT_CONFIG = with_common_config({
     # Decay schedule for the entropy regularizer.
     "entropy_coeff_schedule": None,
     # PPO clip parameter.
-    "clip_param": 0.3,
+    "clip_param": 0.2,
     # Clip param for the value function. Note that this is sensitive to the
     # scale of the rewards. If your expected V is large, increase this.
     "vf_clip_param": 10.0,
@@ -115,12 +118,14 @@ DEFAULT_CONFIG = with_common_config({
         "dump_type": 'One',
         "dump_color_graph": True,
         "intermediate_data": './temp',
-        "dataset": "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data_100d/",
         # "dataset": "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_aarch64_split_data/",
+        "dataset": "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_new_data_100d/",
         # "dataset": "/home/cs20mtech12003/ML-Register-Allocation/temp_data/",
-        "graphs_num": 5000,
+        "graphs_num": 10000,
         "action_space_size": RegisterActionSpace("X86").ac_sp_normlize_size
     },
+
+    "horizon": 1000,
 
     "framework": "torch",
     # === Parallelism ===

@@ -39,6 +39,7 @@ private:
   llvm::SmallMapVector<const llvm::MachineInstr *, IR2Vec::Vector, 128>
       instVecMap;
   std::map<std::string, IR2Vec::Vector> opcMap;
+  std::map<int, std::string> opcDescMap;
 
 public:
   MIR2Vec_Symbolic(std::string vocab);

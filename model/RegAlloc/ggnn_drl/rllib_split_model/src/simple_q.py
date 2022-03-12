@@ -39,8 +39,8 @@ DEFAULT_CONFIG = with_common_config({
         "type": "EpsilonGreedy",
         # Config for the Exploration class' constructor:
         "initial_epsilon": 1.0,
-        "final_epsilon": 0.1,
-        "epsilon_timesteps": 500000,  # Timesteps over which to anneal epsilon.
+        "final_epsilon": 0.02,
+        "epsilon_timesteps": 2000000,  # Timesteps over which to anneal epsilon.
 
         # For soft_q, use:
         # "exploration_config" = {
@@ -76,7 +76,10 @@ DEFAULT_CONFIG = with_common_config({
     # Learning rate for adam optimizer
     "lr": 5e-4,
     # Learning rate schedule
-    "lr_schedule": None,
+    "lr_schedule": [
+        [0, 5e-4],
+        [2000000, 5e-5]
+    ],
     # Adam epsilon hyper parameter
     "adam_epsilon": 1e-8,
     # If not None, clip gradients during optimization at this value
@@ -119,7 +122,7 @@ DEFAULT_CONFIG = with_common_config({
         # "dataset": "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data_100d/",
         "dataset": "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data_100d/",
         # "dataset": "/home/cs20mtech12003/ML-Register-Allocation/data/test_dict/graphs/IG/",
-        "graphs_num": 5000,
+        "graphs_num": 10000,
         "action_space_size": RegisterActionSpace("X86").ac_sp_normlize_size
     },
 
@@ -128,7 +131,7 @@ DEFAULT_CONFIG = with_common_config({
     # Number of workers for collecting samples with. This only makes sense
     # to increase if your environment is particularly slow to sample, or if
     # you"re using the Async or Ape-X optimizers.
-    "num_workers": 1,
+    "num_workers": 5,
     # Prevent iterations from going lower than this time span
     "min_iter_time_s": 1,
 

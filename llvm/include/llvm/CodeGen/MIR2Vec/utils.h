@@ -10,17 +10,18 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetMachine.h"
 
 #include <map>
 
 namespace IR2Vec {
-
 #define DIM 100
 using Vector = llvm::SmallVector<double, DIM>;
 
 void collectDataFromVocab(std::string vocab,
                           std::map<std::string, Vector> &opcMap);
 void scaleVector(Vector &vec, float factor);
+std::map<int, std::string> createOpcodeMap(llvm::Triple::ArchType archType);
 } // namespace IR2Vec
 
 #endif

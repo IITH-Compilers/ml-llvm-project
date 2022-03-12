@@ -9,6 +9,7 @@ import numpy as np
 from typing import Dict as type_dict
 import psutil
 import gc
+import torch
 
 import ray
 from ray import tune
@@ -61,7 +62,7 @@ def experiment(config):
             checkpoint = train_agent.save(tune.get_trial_dir())
             # print("***************Checkpoint****************", checkpoint)
         tune.report(**train_results)
-        if train_results['episodes_total'] > 49:
+        if train_results['episodes_total'] > 49999:
             print("Traning Ended")
             checkpoint = train_agent.save(tune.get_trial_dir())
             break
@@ -127,7 +128,10 @@ class Counter:
 
 if __name__ == "__main__":
 
-    # os.environ['GRPC_VERBOSITY']='DEBUG'
+    os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"   
+    os.environ["CUDA_VISIBLE_DEVICES"]='0'
+
+    os.environ['GRPC_VERBOSITY']='DEBUG'
 
     args = parser.parse_args()
     logger = logging.getLogger(__file__)
@@ -136,10 +140,10 @@ if __name__ == "__main__":
     #     log_level=logging.WARNING
     # elif args.log_level == 'INFO':
     #     log_level=logging.INFO
-    if os.path.exists('running.log'):
-        os.remove('running.log')
+    if os.path.exists('running_spill.log'):
+        os.remove('running_spill.log')
 
-    logging.basicConfig(filename='running.log', format='%(thread)d - %(threadName)s - %(levelname)s - %(filename)s - %(message)s', level=log_level)
+    logging.basicConfig(filename='running_spill.log', format='%(thread)d - %(threadName)s - %(levelname)s - %(filename)s - %(message)s', level=log_level)
     logging.info('Starting training')
     logging.info(args)
 
