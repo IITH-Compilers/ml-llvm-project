@@ -16,6 +16,13 @@ import logging
 logger = logging.getLogger('utils.py') 
 # error_runtime=100000000
 
+LLVM_BUILD = '/home/shalini/LOF_test/LD_VF/IR2Vec-LoopOptimizationFramework/build_release/'
+# LLVM_BUILD = '/home/shalini/LOF_test/LD_VF/IR2Vec-LoopOptimizationFramework/debug_build/'
+llvm = LLVM_BUILD
+opt = '{}bin/opt'.format(LLVM_BUILD)
+CLANG = '{}bin/clang'.format(LLVM_BUILD)
+MCA = '{}bin/llvm-mca'.format(LLVM_BUILD)
+
 LL_DIR_CONST='llfiles'
 OUT_DIR_CONST='outfiles'
 INP_DIR_CONST='inputd'
@@ -27,14 +34,29 @@ O0_LL_DIR_CONST='{}/level-O0'.format(LL_DIR_CONST)
 SSA_LL_DIR_CONST='{}/ssa'.format(LL_DIR_CONST)
 META_SSA_LL_DIR_CONST='{}/meta_ssa'.format(LL_DIR_CONST)
 
+# TrainingGraphs = "/home/shalini/LOF_test/LD_VF/IR2Vec-LoopOptimizationFramework/data/Opt_cld_O3_individualfile/mutation/tsvc_train/GIF_train_v4/graphs/loops/json/"
+TrainingGraphs = "/home/shalini/LOF_test/LD_VF/IR2Vec-LoopOptimizationFramework/data/Opt_cld_O3_individualfile/mutation/spec_train/GIF_train_v4/graphs/loops/json/"
+# TrainingGraphs = "/home/shalini/LOF_test/LD_VF/IR2Vec-LoopOptimizationFramework/data/Opt_cld_O3_individualfile/mutation/temp/GIF_train_v4/graphs/loops/json/"
+TrainingGraphList = []
+
+# test_dir = "/home/shalini/LOF_test/LD_VF/IR2Vec-LoopOptimizationFramework/data/Opt_cld_O3_individualfile/mutation/tsvc_train/GIF_train_v4/graphs/loops/json/"
+
 ## Use for replicate the O3
 # POST_DIST_O3_PASSES='-branch-prob -block-freq -scalar-evolution -basicaa -aa -loop-accesses -demanded-bits -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -loop-vectorize -loop-simplify -LoopCost -scalar-evolution -aa -loop-accesses -lazy-branch-prob -lazy-block-freq -loop-load-elim -basicaa -aa -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -instcombine -simplifycfg -domtree -loops -scalar-evolution -basicaa -aa -demanded-bits -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -slp-vectorizer -opt-remark-emitter -instcombine -loop-simplify -lcssa-verification -lcssa -scalar-evolution -loop-unroll -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -instcombine -memoryssa -loop-simplify -lcssa-verification -lcssa -scalar-evolution -licm -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -transform-warning -alignment-from-assumptions -strip-dead-prototypes -globaldce -constmerge -domtree -loops -branch-prob -block-freq -loop-simplify -lcssa-verification -lcssa -basicaa -aa -scalar-evolution -block-freq -loop-sink -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -instsimplify -div-rem-pairs -simplifycfg -verify'
 
-POST_DIST_O3_PASSES='-branch-prob -block-freq -scalar-evolution -basicaa -aa -loop-accesses -demanded-bits -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -loop-vectorize -loop-simplify -scalar-evolution -aa -loop-accesses -lazy-branch-prob -lazy-block-freq -loop-load-elim -basicaa -aa -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -instcombine -simplifycfg -domtree -loops -scalar-evolution -basicaa -aa -demanded-bits -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -slp-vectorizer -opt-remark-emitter -instcombine -loop-simplify -lcssa-verification -lcssa -scalar-evolution          -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -instcombine -memoryssa -loop-simplify -lcssa-verification -lcssa -scalar-evolution -licm -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -transform-warning -alignment-from-assumptions -strip-dead-prototypes -globaldce -constmerge -domtree -loops -branch-prob -block-freq -loop-simplify -lcssa-verification -lcssa -basicaa -aa -scalar-evolution -block-freq -loop-sink -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -instsimplify -div-rem-pairs -simplifycfg -verify'
-
-POST_DIS_PASSES_MAP= { 0 : "",  1 : "-loop-vectorize", 2 : POST_DIST_O3_PASSES }
+# POST_DIST_O3_PASSES='-branch-prob -block-freq -scalar-evolution -basicaa -aa -loop-accesses -demanded-bits -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -loop-vectorize -loop-simplify -scalar-evolution -aa -loop-accesses -lazy-branch-prob -lazy-block-freq -loop-load-elim -basicaa -aa -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -instcombine -simplifycfg -domtree -loops -scalar-evolution -basicaa -aa -demanded-bits -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -slp-vectorizer -opt-remark-emitter -instcombine -loop-simplify -lcssa-verification -lcssa -scalar-evolution          -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -instcombine -memoryssa -loop-simplify -lcssa-verification -lcssa -scalar-evolution -licm -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -transform-warning -alignment-from-assumptions -strip-dead-prototypes -globaldce -constmerge -domtree -loops -branch-prob -block-freq -loop-simplify -lcssa-verification -lcssa -basicaa -aa -scalar-evolution -block-freq -loop-sink -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -instsimplify -div-rem-pairs -simplifycfg -verify'
+POST_DIST_O3_PASSES="-loop-vectorize"
+# POST_DIS_PASSES_MAP= { 0 : "", 1 : POST_DIST_O3_PASSES }
+# POST_DIS_PASSES_MAP= { 0 : "",  1 : "-loop-vectorize", 2 : POST_DIST_O3_PASSES }
 
 config=None
+
+def generateTrainingData():
+    # self.TrainingDataPath = os.path.join(self.TrainingGraphs,path)
+    # print(self.TrainingDataPath)
+    for file in os.listdir(TrainingGraphs):
+        TrainingGraphList.append(file)
+    return TrainingGraphList
 
 def getllFileAttributes_old(file):
     record = {}
@@ -73,35 +95,40 @@ def getllFileAttributes(file):
     record['INLINE_TY'] = inlinetype
     return record
 
-def call_distributionPass(filename, distributeSeq, method_name, loop_id, hfun_id, hloop_id, distributed_data,vecfactor=None):
-    
-
+def call_distributionPass(filename, distributeSeq, method_name, loop_id, hfun_id, hloop_id, distributed_data):
     try:
         task = 'Distribute'
-        vecfactorflag=""
-        if vecfactor is not None :
-            vecfactorflag="--vecfactor=\"{}\"".format(vecfactor)
-            task = task + 'Vectorize'
-            logging.info("vecfactor --------------------------> {}".format(vecfactor))
+        # vecfactorflag=""
+        # if vecfactor is not None :
+        #     vecfactorflag="--vecfactor=\"{}\"".format(vecfactor)
+        #     task = task + 'Vectorize'
+        #     logging.info("vecfactor --------------------------> {}".format(vecfactor))
 
         parts = os.path.split(filename)
-        if config.mode == 'train':
-            dist_llfile = "{task}_{filename}_F{hfun_id}_L{hloop_id}.ll".format(task=task, filename=parts[1],hloop_id=hloop_id,hfun_id=hfun_id)
-        else:    
-            dist_llfile = "{filename}".format(filename=parts[1], method_name=method_name, loop_id=loop_id,fun_id=fun_id)
+        dist_llfile = "{task}_{filename}_F{hfun_id}_L{hloop_id}.ll".format(task=task, filename=parts[1],hloop_id=hloop_id,hfun_id=hfun_id)
+        
+        # if config.mode == 'train':
+        #     dist_llfile = "{task}_{filename}_F{hfun_id}_L{hloop_id}.ll".format(task=task, filename=parts[1],hloop_id=hloop_id,hfun_id=hfun_id)
+        # else:    
+        #     dist_llfile = "{filename}".format(filename=parts[1], method_name=method_name, loop_id=loop_id,fun_id=fun_id)
         dist_ll_dir=os.path.join(distributed_data, LL_DIR_CONST)
         if not os.path.exists(dist_ll_dir):
             os.makedirs(dist_ll_dir)
         dist_llfile = os.path.join(dist_ll_dir, dist_llfile)
+        print("dist_llfile: {}".format(dist_llfile))
         # logging.info(dist_llfile) 
         logging.info("{} --------------------------> {}".format(parts[1],distributeSeq))
         
-        cmd = "{opt}  -LoopDistribution -lID={loop_id} -function {method_name} --partition=\"{dseq}\" {vecfactorflag} -S {input_file} -o {dist_llfile}".format(opt=os.environ['OPT'], LLVM=os.environ['LLVM'], dseq=distributeSeq ,input_file=filename, dist_llfile=dist_llfile, method_name=method_name, loop_id=loop_id, vecfactorflag=vecfactorflag)
+        print(opt)
+        cmd = opt + " -LoopDistribution -lID=" + loop_id + " -function " + method_name + ' --partition=\"' + distributeSeq + '\" ' + "-S " + filename + " -o " + dist_llfile
+        # ".format(opt=os.environ['OPT'], LLVM=os.environ['LLVM'], dseq=distributeSeq ,input_file=filename, dist_llfile=dist_llfile, method_name=method_name, loop_id=loop_id, vecfactorflag=vecfactorflag)
 ## Use for replicate the O3
-
+        print("cmd: {}".format(cmd))
+        
         logging.info('Call to LoopDistribute pass thru command line {} \n: '.format(cmd))
 
-        response=os.system(cmd)
+        response = os.system(cmd)
+        
         if response != 0:
             # os.system('mv {path}/*{filename}.ll* {distribute_error}'.format(path=os.path.join(parts[0],'../../graphs/train/'), filename=parts[1][:-3], distribute_error=os.path.join(parts[0],'../../graphs/distribute_error/')))
             raise Exception('Distribution Pass error')
@@ -111,6 +138,7 @@ def call_distributionPass(filename, distributeSeq, method_name, loop_id, hfun_id
         logging.critical('CallLoopDistribute: Exception ocurred : {}'.format(err))
         # raise
     except:
+        print("EEEEEEEEEEEEEEEE")
         dist_llfile = None #None if fails
         logging.critical('CallLoopDistribute: Some error occured while calling the distribution pass for {filename}. '.format(filename=filename))
         raise 
@@ -137,17 +165,17 @@ def get_parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset', dest='dataset', metavar='DIRECTORY', help='Location of the dataSet..')
     
-    parser.add_argument('--trained_model', dest='trained_model', required=True,  help=' location ')
-    parser.add_argument('--mode', dest='mode', required=True,  help='Train or test Mode')
-    parser.add_argument('--script', dest='script', required=True,  help='Train or test script')
+    # parser.add_argument('--trained_model', dest='trained_model', required=True,  help=' location ')
+    # parser.add_argument('--mode', dest='mode', required=True,  help='Train or test Mode')
+    # parser.add_argument('--script', dest='script', required=True,  help='Train or test script')
 
-    parser.add_argument('--distributed_data', dest='distributed_data', required=True,  help=' location of the distributed llfiles and outfiles.', default=None)
+    # parser.add_argument('--distributed_data', dest='distributed_data', required=True,  help=' location of the distributed llfiles and outfiles.', default=None)
     
     parser.add_argument('--post_pass_key', dest='post_pass_key', required=False,  type=int, help='Key of the post distribution passes map.', default=2)
 
     parser.add_argument('--rewardtype', dest='rewardtype', required=False,  help='Static or Runtime rewards..', default='runtime')
     global config 
-    parser.add_argument('--logdir', dest='logdir', metavar='DIRECTORY', help='Location of the log directory.', required=True)
+    # parser.add_argument('--logdir', dest='logdir', metavar='DIRECTORY', help='Location of the log directory.', required=True)
     parser.add_argument('--loop-cost', dest='loop_cost', required=False, default=False, type=bool, help='Cost model: loop-cost')
     parser.add_argument('--mca-cost', dest='mca_cost', required=False, default=False, type=bool, help='Cost model: mca-cost')
     parser.add_argument('--gpu', dest='gpu', required=False, default=False, type=bool, help='device')
@@ -157,9 +185,14 @@ def get_parse_args():
     if config.mca_cost and config.loop_cost:
         parser.error("Only one of loop-cost and mca-cost can be specified")
         
-    if not config.mca_cost and not config.loop_cost:
-        parser.error("Atleast one of loop-cost and mca-cost should be specified")
+    # if not config.mca_cost and not config.loop_cost:
+    #     parser.error("Atleast one of loop-cost and mca-cost should be specified")
 
+    return config
+
+def set_config(config_):
+    global config 
+    config = Namespace(**config_)
     return config
 
 def log_subprocess_output(pipe):
@@ -169,17 +202,26 @@ def log_subprocess_output(pipe):
 def getLoopCost(filepath, loopId, fname):
     this_function_name = sys._getframe().f_code.co_name
     loopCost = 0 # []
+    # print("filepath: {}".format(filepath))
+    # print("loopId: {}".format(loopId))
+    # print("fname: {}".format(fname))
     try:
-       # TODO 
-        cmd = "{opt} -S -load {llvm}/lib/LoopCost.so {post_distribution_passes} -LoopCost -lc-lID {loopId} -lc-function {fname}  {input_file} -o /dev/null ".format(opt=os.environ['OPT'], llvm=os.environ['LLVM'], input_file=filepath, loopId=loopId,fname=fname, post_distribution_passes=POST_DIS_PASSES_MAP[config.post_pass_key])
+        # TODO 
+        # cmd = "{opt} -S -load {llvm}/lib/LoopCost.so {post_distribution_passes} -LoopCost -lc-lID {loopId} -lc-function {fname}  {input_file} -o /dev/null ".format(opt=os.environ['OPT'], llvm=os.environ['LLVM'], input_file=filepath, loopId=loopId,fname=fname, post_distribution_passes=POST_DIS_PASSES_MAP[config.post_pass_key])
+        cmd = opt + " -S -load " + llvm + "lib/LoopCost.so " + POST_DIST_O3_PASSES + " -LoopCost -lc-lID " + loopId + " -lc-function " + fname + " " + filepath + " -o /dev/null"
+        # .format(opt=os.environ['OPT'], llvm=os.environ['LLVM'], input_file=filepath, loopId=loopId,fname=fname, post_distribution_passes=POST_DIS_PASSES_MAP[config.post_pass_key])
         # analysedInfo = subprocess.Popen(cmd, executable='/bin/bash', shell=True, stdout=subprocess.PIPE).stdout.read()
+        # print("LoopCost cmd: {}".format(cmd))
         logging.info(cmd)
+        # print("Loopcost cmd: {}".format(cmd))
 
         pro = subprocess.Popen(cmd, executable='/bin/bash', shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         output = pro.stdout
         line = output.readline()
+        # print("line: {}".format(line))
         
         if pro.stderr is not None:
+            # print("pro.stderr: {}".format(pro.stderr))
             logging.critical('Error : {}'.format(pro.stderr))
         
         logging.info('***Metric for the loop****')
@@ -187,8 +229,10 @@ def getLoopCost(filepath, loopId, fname):
             line = line.decode('utf-8').rstrip("\n")
             
             pair = line.split(':')
+            # print("pair: {}".format(pair))
             if pair[0] == 'TotalLoopCost for Loop':
                 lc=int(pair[1].strip(' '))
+                # print("lc: {}".format(lc))
                 if lc > 0:
                     loopCost+=lc
                 else:
@@ -204,10 +248,12 @@ def getLoopCost(filepath, loopId, fname):
         # factors = analysedInfo.split(',')
         # loopCost = analysedInfo
     except Exception as inst :
+        # print("insttttttttttttt: {}".format(sys.exc_info()))
         logging.critical(sys.exc_info())
         logging.critical(': Exception ocurred : {}'.format(inst))
         logging.critical('{this_function_name}: Some error occured .. for {filename}'.format(this_function_name=this_function_name,filename=filepath))
     except :
+        # print("exceptionnnnnnnnnnnnnnnnnnnnnn: {}".format(sys.exc_info()))
         logging.critical(sys.exc_info())
         logging.critical('{this_function_name}: Some Other Unknown error occured .. for {filename}'.format(this_function_name=this_function_name, filename=filepath))
     return loopCost

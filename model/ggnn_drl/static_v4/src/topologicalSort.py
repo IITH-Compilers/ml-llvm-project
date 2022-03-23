@@ -26,14 +26,18 @@ class Graph:
             self.indegree[dest] = self.indegree[dest] + 1
 
     def UpdateVisitList(self, v):
-        if self.indegree[v] == 0 and not self.discovered[v]:
-
-            # for every adjacent vertex u of v, reduce in-degree of u by 1
-            for u in self.adjList[v]:
-                self.indegree[u] = self.indegree[u] - 1
-            self.discovered[v] = True
-        else:
-            assert(0)
+        # print("11111111111111")
+        try:
+            if self.indegree[v] == 0 and not self.discovered[v]:
+                # for every adjacent vertex u of v, reduce in-degree of u by 1
+                for u in self.adjList[v]:
+                    self.indegree[u] = self.indegree[u] - 1
+                self.discovered[v] = True
+                return True
+            else:
+                return False
+        except:
+            return False
 
 
     def findAllVertaxWithZeroWeights(self):
