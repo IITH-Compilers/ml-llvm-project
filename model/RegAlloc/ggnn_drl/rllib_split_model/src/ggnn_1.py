@@ -482,7 +482,7 @@ def get_observations(graph):
             # print(matr)
 
             matr = node['label'].replace(" ][",",").replace('\n','')
-            print("Node string", matr)
+            # print("Node string", matr)
 
             node_mat = json.loads(eval(matr))
             # node_mat = json.loads(matr)
