@@ -8,6 +8,7 @@ This example shows:
 You can visualize experiment results in ~/ray_results using TensorBoard.
 """
 import argparse
+from codecs import register_error
 import gym
 import numpy as np
 import os
@@ -438,26 +439,34 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             adj_colors = self.obs.graph_topology.getColorOfVisitedAdjNodes(self.cur_node)
 
             masked_action_space = self.registerAS.maskActionSpace(regclass, adj_colors)
-            is_mask_empty = True
-            colour_node_mask = []
-            for i in range(self.action_space_size):
-                if i in masked_action_space:
-                    colour_node_mask.append(1)
-                    is_mask_empty = False
-                else:
-                    colour_node_mask.append(0)
-            
-            if is_mask_empty:
-                colour_node_mask[0] = 1
+            if len(masked_action_space) > 0:
+                idx = random.readint(1, len(masked_action_space))
+                reg_selected = masked_action_space[idx]
+                obs, reward, done, _ = self._colour_node_step(reg_selected)
+            else:
+                reg_selected = 0
+                obs, reward, done, _ = self._colour_node_step(reg_selected)
 
-            node_properties = self.getNodePropertiesforColoring()
-            prop_value_list_colouring = list(node_properties.values())
-            reward = {
-                self.colour_node_agent_id : 0,
-            }
-            obs = {
-                self.colour_node_agent_id : { 'action_mask': np.array(colour_node_mask),'node_properties': np.array(prop_value_list_colouring), 'state' : self.cur_obs},
-            }
+            # is_mask_empty = True
+            # colour_node_mask = []
+            # for i in range(self.action_space_size):
+            #     if i in masked_action_space:
+            #         colour_node_mask.append(1)
+            #         is_mask_empty = False
+            #     else:
+            #         colour_node_mask.append(0)
+            
+            # if is_mask_empty:
+            #     colour_node_mask[0] = 1
+
+            # node_properties = self.getNodePropertiesforColoring()
+            # prop_value_list_colouring = list(node_properties.values())
+            # reward = {
+            #     self.colour_node_agent_id : 0,
+            # }
+            # obs = {
+            #     self.colour_node_agent_id : { 'action_mask': np.array(colour_node_mask),'node_properties': np.array(prop_value_list_colouring), 'state' : self.cur_obs},
+            # }
         else:
             self.last_task_done = 1
             self.split_steps += 1
