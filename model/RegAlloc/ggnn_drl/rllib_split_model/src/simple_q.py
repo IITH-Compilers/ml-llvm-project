@@ -39,8 +39,8 @@ DEFAULT_CONFIG = with_common_config({
         "type": "EpsilonGreedy",
         # Config for the Exploration class' constructor:
         "initial_epsilon": 1.0,
-        "final_epsilon": 0.02,
-        "epsilon_timesteps": 2000000,  # Timesteps over which to anneal epsilon.
+        "final_epsilon": 0.002,
+        "epsilon_timesteps": 80000,  # Timesteps over which to anneal epsilon.
 
         # For soft_q, use:
         # "exploration_config" = {
@@ -57,7 +57,7 @@ DEFAULT_CONFIG = with_common_config({
     # not affect learning, only the length of iterations.
     "timesteps_per_iteration": 0,
     # Update the target network every `target_network_update_freq` steps.
-    "target_network_update_freq": 512,
+    "target_network_update_freq": 10240,
 
     "metrics_smoothing_episodes": 1,
 
@@ -78,21 +78,21 @@ DEFAULT_CONFIG = with_common_config({
     # Learning rate schedule
     "lr_schedule": [
         [0, 5e-4],
-        [2000000, 5e-5]
+        [80000, 5e-6]
     ],
     # Adam epsilon hyper parameter
     "adam_epsilon": 1e-8,
     # If not None, clip gradients during optimization at this value
-    "grad_clip": 40,
+    "grad_clip": 10,
     # How many steps of the model to sample before learning starts.
-    "learning_starts": 64,
+    "learning_starts": 1000,
     # Update the replay buffer with this many samples at once. Note that
     # this setting applies per-worker if num_workers > 1.
-    "rollout_fragment_length": 64,
+    "rollout_fragment_length": 32,
     # Size of a batch sampled from replay buffer for training. Note that
     # if async_updates is set, then each worker returns gradients for a
     # batch of this size.
-    "train_batch_size": 160,
+    "train_batch_size": 128,
 
     "batch_mode": "complete_episodes",
     
@@ -120,7 +120,7 @@ DEFAULT_CONFIG = with_common_config({
         "dump_color_graph": True,
         "intermediate_data": './temp',
         # "dataset": "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data_100d/",
-        "dataset": "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data_100d/",
+        "dataset": "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_new_data_100d/",
         # "dataset": "/home/cs20mtech12003/ML-Register-Allocation/data/test_dict/graphs/IG/",
         "graphs_num": 10000,
         "action_space_size": RegisterActionSpace("X86").ac_sp_normlize_size
@@ -131,7 +131,7 @@ DEFAULT_CONFIG = with_common_config({
     # Number of workers for collecting samples with. This only makes sense
     # to increase if your environment is particularly slow to sample, or if
     # you"re using the Async or Ape-X optimizers.
-    "num_workers": 5,
+    "num_workers": 1,
     # Prevent iterations from going lower than this time span
     "min_iter_time_s": 1,
 
