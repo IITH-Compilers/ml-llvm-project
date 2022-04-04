@@ -161,7 +161,7 @@ if __name__ == "__main__":
 
     ModelCatalog.register_custom_model("select_node_model", SelectNodeNetwork)
     ModelCatalog.register_custom_model("select_task_model", SelectTaskNetwork)
-    ModelCatalog.register_custom_model("colour_node_model", ColorNetwork)
+    # ModelCatalog.register_custom_model("colour_node_model", ColorNetwork)
     ModelCatalog.register_custom_model("split_node_model", SplitNodeNetwork)
 
     box_obs = Box(
@@ -169,11 +169,11 @@ if __name__ == "__main__":
     box_obs_select_node = Box(
             -10000000000000.0, 10000000000000.0, shape=(config["env_config"]["max_number_nodes"], config["env_config"]["state_size"]), dtype=np.float32)
 
-    obs_colour_node = Dict({
-        "action_mask": Box(0, 1, shape=(config["env_config"]["action_space_size"],)),
-        "node_properties": Box(-10000000000000.0, 10000000000000.0, shape=(3,)), 
-        "state": box_obs
-        })
+    # obs_colour_node = Dict({
+    #     "action_mask": Box(0, 1, shape=(config["env_config"]["action_space_size"],)),
+    #     "node_properties": Box(-10000000000000.0, 10000000000000.0, shape=(3,)), 
+    #     "state": box_obs
+    #     })
     obs_select_node = Dict({
         "spill_weights": Box(-10000000000000.0, 10000000000000.0, shape=(config["env_config"]["max_number_nodes"],)), 
         "action_mask": Box(0, 1, shape=(config["env_config"]["max_number_nodes"],)),
@@ -196,8 +196,8 @@ if __name__ == "__main__":
             return "select_node_policy"
         elif agent_id.startswith("select_task_agent"):
             return "select_task_policy"
-        elif agent_id.startswith("colour_node_agent"):
-            return "colour_node_policy"
+        # elif agent_id.startswith("colour_node_agent"):
+        #     return "colour_node_policy"
         else:
             return "split_node_policy"
 
@@ -227,18 +227,18 @@ if __name__ == "__main__":
                                         },
                                     },
                                 }),
-        "colour_node_policy": (None, obs_colour_node,
-                                Discrete(config["env_config"]["action_space_size"]), {
-                                    "gamma": 0.9,
-                                    "model": {
-                                        "custom_model": "colour_node_model",
-                                        "custom_model_config": {
-                                            "state_size": config["env_config"]["state_size"],
-                                            "fc1_units": 64,
-                                            "fc2_units": 64
-                                        },
-                                    },
-                                }),
+        # "colour_node_policy": (None, obs_colour_node,
+        #                         Discrete(config["env_config"]["action_space_size"]), {
+        #                             "gamma": 0.9,
+        #                             "model": {
+        #                                 "custom_model": "colour_node_model",
+        #                                 "custom_model_config": {
+        #                                     "state_size": config["env_config"]["state_size"],
+        #                                     "fc1_units": 64,
+        #                                     "fc2_units": 64
+        #                                 },
+        #                             },
+        #                         }),
         "split_node_policy": (None, obs_node_spliting,
                                 Discrete(config["env_config"]["max_usepoint_count"]), {
                                     "gamma": 0.9,

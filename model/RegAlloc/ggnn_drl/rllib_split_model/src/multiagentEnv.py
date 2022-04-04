@@ -8,6 +8,7 @@ This example shows:
 You can visualize experiment results in ~/ray_results using TensorBoard.
 """
 import argparse
+from codecs import register_error
 import gym
 import numpy as np
 import os
@@ -94,7 +95,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
             self.graph_counter = 0
             self.reset_count = 0
-            self.training_graphs=glob.glob(os.path.join(dataset, 'graphs/IG/set_70-120/*.json'))
+            self.training_graphs=glob.glob(os.path.join(dataset, 'graphs/IG/set1/*.json'))
             # self.training_graphs=glob.glob(os.path.join(dataset, 'json/*.json'))
             assert len(self.training_graphs) > 0, 'training set is empty' 
             if len(self.training_graphs) > self.graphs_num:
@@ -126,6 +127,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.spill_successful = 0
         self.split_successful = 0
         self.colour_successful = 0
+        self.path = None
 
     def reward_formula(self, value, action):
         if value == float("inf"):
@@ -201,7 +203,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.select_node_agent_id = "select_node_agent_{}".format(self.agent_count)
         self.select_task_agent_id = "select_task_agent_{}".format(self.agent_count)
         self.split_node_agent_id = "split_node_agent_{}".format(self.agent_count)
-        self.colour_node_agent_id = "colour_node_agent_{}".format(self.agent_count)
+        # self.colour_node_agent_id = "colour_node_agent_{}".format(self.agent_count)
 
         select_node_mask = self.createNodeSelectMask()
         spill_weight_list = self.getSpillWeightListExpanded()
@@ -251,8 +253,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             return self._select_node_step(action_dict[self.select_node_agent_id])
         if self.select_task_agent_id in action_dict:
             return self._select_task_step(action_dict[self.select_task_agent_id])
-        if self.colour_node_agent_id in action_dict:
-            return self._colour_node_step(action_dict[self.colour_node_agent_id])
+        # if self.colour_node_agent_id in action_dict:
+        #     return self._colour_node_step(action_dict[self.colour_node_agent_id])
         if self.split_node_agent_id in action_dict:
             return self._split_node_step(action_dict[self.split_node_agent_id])
 
@@ -438,26 +440,34 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             adj_colors = self.obs.graph_topology.getColorOfVisitedAdjNodes(self.cur_node)
 
             masked_action_space = self.registerAS.maskActionSpace(regclass, adj_colors)
-            is_mask_empty = True
-            colour_node_mask = []
-            for i in range(self.action_space_size):
-                if i in masked_action_space:
-                    colour_node_mask.append(1)
-                    is_mask_empty = False
-                else:
-                    colour_node_mask.append(0)
-            
-            if is_mask_empty:
-                colour_node_mask[0] = 1
+            if len(masked_action_space) > 0:
+                idx = random.randint(1, len(masked_action_space))
+                reg_selected = masked_action_space[idx-1]
+                obs, reward, done, _ = self._colour_node_step(reg_selected)
+            else:
+                reg_selected = 0
+                obs, reward, done, _ = self._colour_node_step(reg_selected)
 
-            node_properties = self.getNodePropertiesforColoring()
-            prop_value_list_colouring = list(node_properties.values())
-            reward = {
-                self.colour_node_agent_id : 0,
-            }
-            obs = {
-                self.colour_node_agent_id : { 'action_mask': np.array(colour_node_mask),'node_properties': np.array(prop_value_list_colouring), 'state' : self.cur_obs},
-            }
+            # is_mask_empty = True
+            # colour_node_mask = []
+            # for i in range(self.action_space_size):
+            #     if i in masked_action_space:
+            #         colour_node_mask.append(1)
+            #         is_mask_empty = False
+            #     else:
+            #         colour_node_mask.append(0)
+            
+            # if is_mask_empty:
+            #     colour_node_mask[0] = 1
+
+            # node_properties = self.getNodePropertiesforColoring()
+            # prop_value_list_colouring = list(node_properties.values())
+            # reward = {
+            #     self.colour_node_agent_id : 0,
+            # }
+            # obs = {
+            #     self.colour_node_agent_id : { 'action_mask': np.array(colour_node_mask),'node_properties': np.array(prop_value_list_colouring), 'state' : self.cur_obs},
+            # }
         else:
             self.last_task_done = 1
             self.split_steps += 1
@@ -580,19 +590,19 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.total_reward += colour_reward
 
         reward = {
-            self.colour_node_agent_id: colour_reward,
+            # self.colour_node_agent_id: colour_reward,
             self.select_node_agent_id: colour_reward,
             self.select_task_agent_id: colour_reward - (self.task_selected * discount_factor),
             self.split_node_agent_id: 0
         }
         obs = {
-            self.colour_node_agent_id: colour_node_obs,
+            # self.colour_node_agent_id: colour_node_obs,
             self.select_node_agent_id: select_node_obs,
             self.select_task_agent_id: select_task_obs,
             self.split_node_agent_id: split_node_obs,
         }
         done = {
-            self.colour_node_agent_id: True,
+            # self.colour_node_agent_id: True,
             self.select_node_agent_id: True,
             self.select_task_agent_id: True,
             self.split_node_agent_id: True,
@@ -601,7 +611,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
         if done_all:
             reward = {
-                self.colour_node_agent_id: 0,
+                # self.colour_node_agent_id: 0,
                 self.select_node_agent_id: 0,
                 self.select_task_agent_id: 0,
                 self.split_node_agent_id: 0
@@ -629,7 +639,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             self.select_node_agent_id = "select_node_agent_{}".format(self.agent_count)
             self.select_task_agent_id = "select_task_agent_{}".format(self.agent_count)
             self.split_node_agent_id = "split_node_agent_{}".format(self.agent_count)
-            self.colour_node_agent_id = "colour_node_agent_{}".format(self.agent_count)
+            # self.colour_node_agent_id = "colour_node_agent_{}".format(self.agent_count)
             
 
             obs[self.select_node_agent_id] = { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(select_node_mask), 'state' : cur_obs}
@@ -731,19 +741,19 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
         done = {"__all__": False}
         reward = {
-            self.colour_node_agent_id: 0,
+            # self.colour_node_agent_id: 0,
             self.select_node_agent_id: 0,
             self.select_task_agent_id: 0,
             self.split_node_agent_id: split_reward
         }
         obs = {
-            self.colour_node_agent_id: { 'action_mask': np.array(colour_node_mask),'node_properties': np.array(prop_value_list_colouring), 'state' : self.cur_obs},
+            # self.colour_node_agent_id: { 'action_mask': np.array(colour_node_mask),'node_properties': np.array(prop_value_list_colouring), 'state' : self.cur_obs},
             self.select_node_agent_id: { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(select_node_mask), 'state' : cur_obs},
             self.select_task_agent_id: { 'action_mask': np.array(select_task_mask), 'node_properties': np.array(prop_value_list, dtype=np.float), 'state' : self.cur_obs},
             self.split_node_agent_id: { 'action_mask': np.array(split_node_mask), 'state' : self.cur_obs, "usepoint_properties": usepoint_prop_mat},
         }
         done = {
-            self.colour_node_agent_id: True,
+            # self.colour_node_agent_id: True,
             self.select_node_agent_id: True,
             self.select_task_agent_id: True,
             self.split_node_agent_id: True,
@@ -757,7 +767,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             self.select_node_agent_id = "select_node_agent_{}".format(self.agent_count)
             self.select_task_agent_id = "select_task_agent_{}".format(self.agent_count)
             self.split_node_agent_id = "split_node_agent_{}".format(self.agent_count)
-            self.colour_node_agent_id = "colour_node_agent_{}".format(self.agent_count)
+            # self.colour_node_agent_id = "colour_node_agent_{}".format(self.agent_count)
 
             
             # print("hidden_state", node_mat.shape, cur_obs[1, :10])
@@ -769,7 +779,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         
         if split_done and self.mode != 'inference':
             done = {
-                self.colour_node_agent_id: True,
+                # self.colour_node_agent_id: True,
                 self.select_node_agent_id: True,
                 self.select_task_agent_id: True,
                 self.split_node_agent_id: True,
@@ -891,7 +901,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
     def reset_env(self, graph=None):
         self.ggnn = GatedGraphNeuralNetwork(hidden_size=self.emb_size, annotation_size=3, num_edge_types=1, layer_timesteps=[1], residual_connections={}, nodelevel=True)
         if graph is None:
-            inx = (((self.worker_index-1)*1) + self.graph_counter)
+            inx = (((self.worker_index-1)*15) + self.graph_counter)
             # print("Worker index", self.worker_index, inx)
             path=self.training_graphs[inx]
             # path="/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/graphs/IG/json/526.blender_r_756.ll_F15.json"
@@ -904,7 +914,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             self.reset_count+=1
             if self.reset_count % 1 == 0:
                 self.graph_counter+=1
-                self.graph_counter = self.graph_counter%1
+                self.graph_counter = self.graph_counter%15
             try:
                 with open(path) as f:
                    graph = json.load(f)
