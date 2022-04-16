@@ -129,6 +129,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.colour_successful = 0
         self.path = None
 
+        self.path = None
+
     def reward_formula(self, value, action):
         if value == float("inf"):
             reward = self.reward_max_value

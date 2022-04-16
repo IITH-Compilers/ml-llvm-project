@@ -2534,6 +2534,7 @@ bool RAGreedy::mayRecolorAllInterferences(
     }
     for (unsigned i = Q.interferingVRegs().size(); i; --i) {
       LiveInterval *Intf = Q.interferingVRegs()[i - 1];
+      LLVM_DEBUG(dbgs() << "Intf for recoloring : " << *Intf << "\n");
       // If Intf is done and sit on the same register class as VirtReg,
       // it would not be recolorable as it is in the same state as VirtReg.
       // However, if VirtReg has tied defs and Intf doesn't, then
@@ -3046,6 +3047,7 @@ unsigned RAGreedy::selectOrSplitImpl(LiveInterval &VirtReg,
     } else
       return PhysReg;
   }
+  LLVM_DEBUG(dbgs() << "======After tryAssign3\n"; LIS->dump());
 
   LiveRangeStage Stage = getStage(VirtReg);
   LLVM_DEBUG(dbgs() << StageName[Stage] << " Cascade "
@@ -3072,6 +3074,7 @@ unsigned RAGreedy::selectOrSplitImpl(LiveInterval &VirtReg,
     }
 
   assert((NewVRegs.empty() || Depth) && "Cannot append to existing NewVRegs");
+  LLVM_DEBUG(dbgs() << "======After Spilt4\n"; LIS->dump());
 
   // The first time we see a live range, don't try to split or spill.
   // Wait until the second time, when all smaller ranges have been allocated.
@@ -3082,6 +3085,7 @@ unsigned RAGreedy::selectOrSplitImpl(LiveInterval &VirtReg,
     NewVRegs.push_back(VirtReg.reg);
     return 0;
   }
+  LLVM_DEBUG(dbgs() << "======After Spilt5\n"; LIS->dump());
 
   if (Stage < RS_Spill) {
     // Try splitting VirtReg or interferences.
@@ -3094,6 +3098,7 @@ unsigned RAGreedy::selectOrSplitImpl(LiveInterval &VirtReg,
     }
   }
 
+  LLVM_DEBUG(dbgs() << "======6\n"; LIS->dump());
   // If we couldn't allocate a register from spilling, there is probably some
   // invalid inline assembly. The base class will report it.
   if (Stage >= RS_Done || !VirtReg.isSpillable())
@@ -3240,7 +3245,7 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
 
   calculateSpillWeightsAndHints(*LIS, mf, VRM, *Loops, *MBFI);
 
-  LLVM_DEBUG(LIS->dump());
+  LLVM_DEBUG(dbgs() << "======1\n"; LIS->dump());
 
   SA.reset(new SplitAnalysis(*VRM, *LIS, *Loops));
   SE.reset(new SplitEditor(*SA, *AA, *LIS, *VRM, *DomTree, *MBFI));
@@ -3255,10 +3260,21 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
   if (enable_dump_ig_dot || enable_mlra_inference || enable_mlra_training) {
     MLRegAlloc(*MF, *Indexes, *MBFI, *DomTree, *Loops, *AA, *DebugVars,
                *SpillPlacer, *ORE);
+
+    LLVM_DEBUG(dbgs() << "======2\n"; LIS->dump());
+    for (auto i : mlSpilledRegs) {
+      if (i->isSpillable()) {
+        SmallVector<unsigned int, 4> NewVRegs;
+        LiveRangeEdit LRE(i, NewVRegs, *MF, *LIS, VRM, this, &DeadRemats);
+        spiller().spill(LRE);
+      }
+    }
     for (auto i : mlAllocatedRegs) {
       setStage(LIS->getInterval(i), RS_Done);
     }
+    LLVM_DEBUG(errs() << "Starting greedy flow here\n");
   }
+  LLVM_DEBUG(dbgs() << "======3\n"; LIS->dump());
 
   allocatePhysRegs();
   tryHintsRecoloring();
@@ -3273,7 +3289,8 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
           << MF->getName().str() << "," << std::to_string(VRM->SpillCountMF)
           << "," << std::to_string(SpillerInstance->NumSpilledRangesMF) << ","
           << std::to_string(SpillerInstance->NumReloadsMF) << ","
-          << std::to_string(SE->NumFinishedMF) << "," << std::to_string(numAlloc) << std::endl;
+          << std::to_string(SE->NumFinishedMF) << ","
+          << std::to_string(numAlloc) << std::endl;
   outfile.close();
 
   LLVM_DEBUG(dbgs() << "Spilled Virtual Registor Count for Function "

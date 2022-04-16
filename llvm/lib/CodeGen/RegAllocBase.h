@@ -68,11 +68,13 @@ protected:
   LiveRegMatrix *Matrix = nullptr;
   RegisterClassInfo RegClassInfo;
   SmallVector<unsigned, 10> mlAllocatedRegs;
+  SmallVector<LiveInterval *, 10> mlSpilledRegs;
 
-  /// Inst which is a def of an original reg and whose defs are already all
-  /// dead after remat is saved in DeadRemats. The deletion of such inst is
-  /// postponed till all the allocations are done, so its remat expr is
-  /// always available for the remat of all the siblings of the original reg.
+  /// Inst which is a def of an original reg and whose defs are already
+  /// all dead after remat is saved in DeadRemats. The deletion of such
+  /// inst is postponed till all the allocations are done, so its remat
+  /// expr is always available for the remat of all the siblings of the
+  /// original reg.
   SmallPtrSet<MachineInstr *, 32> DeadRemats;
 
   RegAllocBase() = default;

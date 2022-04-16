@@ -377,6 +377,10 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
     return false;
   }
 
+  if (std::find(mlSpilledRegs.begin(), mlSpilledRegs.end(), VirtReg) ==
+      mlSpilledRegs.end())
+    return false;
+
   SA->analyze(VirtReg);
   LiveRangeEdit LREdit(VirtReg, NewVRegs, *MF, *LIS, VRM);
   SE->reset(LREdit, SplitEditor::SM_Speed);
@@ -391,9 +395,8 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
       idx = use;
       idxPos = pos - 1;
       if (use.getBoundaryIndex() >= useSlots.back().getBoundaryIndex()) {
-        LLVM_DEBUG(
-            errs()
-            << "No use of splitting at/after the last use slot -- exiting\n");
+        LLVM_DEBUG(errs() << "No use of splitting at/after the last use "
+                             "slot -- exiting\n");
         llvm_unreachable("No use of splitting at/after the last use slot");
         return false;
       }
@@ -410,6 +413,11 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
   auto MI = LIS->getInstructionFromIndex(idx);
   assert(MI && "Empty instruction found for splitting");
 
+  // if (MI->isCompare()) {
+  //   errs() << "Compare inst so bailing out of the optimization\n";
+  //   return false;
+  // }
+
   if (MI->isCopy()) {
     LLVM_DEBUG(
         errs() << "No use of splitting at/before the copy instruction -- would "
@@ -422,6 +430,11 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
   if (nextInst &&
       LIS->getInstructionFromIndex(useSlots[idxPos + 1]) == nextInst)
     return false;
+
+  // if (nextInst && nextInst->isCompare()) {
+  //   errs() << "Compare inst so bailing out of the optimization\n";
+  //   return false;
+  // }
 
   auto MBB = MI->getParent();
   assert(MBB && "MI should be part of a MBB");
@@ -517,7 +530,8 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
         } else {
           prevEnd = endIdx;
           prevBI = UB;
-          errs() << "prev blk same as the current- just changing the prevend\n";
+          errs() << "prev blk same as the current- just changing the "
+                    "prevend\n";
         }
       }
       prevMBB = UB.MBB;
@@ -568,6 +582,7 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
 
   SmallVector<unsigned, 8> IntvMap;
   SE->finish(&IntvMap);
+
   DebugVars->splitRegister(VirtReg->reg, LREdit.regs(), *LIS);
   splitInvalidRegs.push_back(splitReg);
 
@@ -1037,13 +1052,14 @@ void MLRA::calculatePositionalSpillWeights(
     LiveInterval *VirtReg, SmallVector<float, 8> &spillWeights) {
   VirtRegAuxInfo VRAI(*MF, *LIS, VRM, *Loops, *MBFI);
   SA->analyze(VirtReg);
+
   auto uses = SA->getUseSlots();
   auto startIdx = uses.front();
-
   for (auto use : uses) {
     auto *MIR = LIS->getInstructionFromIndex(use);
-    if (!MIR)
+    if (!MIR) {
       continue;
+    }
     if (MIR->getParent() != LIS->getMBBFromIndex(startIdx)) {
       startIdx = LIS->getMBBStartIdx(LIS->getMBBFromIndex(use));
     }
@@ -1148,7 +1164,8 @@ bool MLRA::captureRegisterProfile() {
     LLVM_DEBUG(errs() << "Starting to process - " << printReg(Reg, TRI)
                       << "\n");
     LiveInterval *VirtReg = &LIS->getInterval(Reg);
-    if (MRI->reg_nodbg_empty(Reg))
+    SA->analyze(VirtReg);
+    if (SA->getUseSlots().empty() || MRI->reg_nodbg_empty(Reg))
       continue;
     // Check for the supported register class.
     regProf.cls = TRI->getRegClassName(MRI->getRegClass(VirtReg->reg));
@@ -1176,7 +1193,7 @@ bool MLRA::captureRegisterProfile() {
     SmallVector<int, 8> useDistances;
     SmallVector<unsigned, 8> splitPoints;
 
-    SA->analyze(VirtReg);
+    // SA->analyze(VirtReg);
     auto uses = SA->getUseSlots();
     auto firstUse = uses.front();
     int useIdx = 0;
@@ -1636,6 +1653,8 @@ void MLRA::allocatePhysRegsViaRL() {
       LLVM_DEBUG(errs() << "Post alloc VirtRegMap:\n"
                         << *VRM << "\n";
                  errs() << "Insertion done\n");
+    } else {
+      mlSpilledRegs.push_back(VirtReg);
     }
   }
   LLVM_DEBUG(errs() << "********************************* Running ML "
@@ -1863,14 +1882,14 @@ void MLRA::MLRegAlloc(MachineFunction &MF, SlotIndexes &Indexes,
   SplitCounter = 0;
 
   mlAllocatedRegs.clear();
+  mlSpilledRegs.clear();
   if (enable_mlra_training) {
     assert(funcID != 0 && "Function ID is expected in training flow");
     if (FunctionCounter != funcID)
       return;
   }
   // remove this later
-  // if (!MF.getName().equals("_ZN3pov32Create_Blob_Element_Texture_ListEPNS_"
-  //                          "11Blob_StructEPNS_16Blob_List_StructEi")) {
+  // if (!MF.getName().equals("main")) {
   //   errs() << MF.getName() << " - not allocating with mlra\n";
   //   // errs() << mlAllocatedRegs.size();
   //   return;
