@@ -30,8 +30,10 @@ class service_server(RegisterAllocationInference_pb2_grpc.RegisterAllocationInfe
         # model_path = '/home/venkat/ray_results/split_model/experiment_2021-10-21_12-22-45/experiment_HierarchicalGraphColorEnv_7f0ef_00000_0_2021-10-21_12-22-45/checkpoint_001575/checkpoint-1575'
         # model_path = '/home/venkat/ray_results/split_model/X86models/checkpoint_001156/checkpoint-1156'
         #model_path = '/home/venkat/ray_results/split_model/X86models/checkpoint_001274/checkpoint-1274'
-        model_path = '/home/venkat/ray_results/home/cs17m20p100001/ray_results/experiment_2021-11-18_16-10-12/experiment_HierarchicalGraphColorEnv_e8bf3_00000_0_2021-11-18_16-10-12/checkpoint_001128/checkpoint-1128'
-        args = {'no_render' : True, 'checkpoint' : model_path, 'run' : 'SimpleQ' , 'env' : '' , 'config' : {}, 'video_dir' : '', 'steps' : 0, 'episodes' : 0, 'arch' : 'X86'}
+        #model_path = '/home/venkat/ray_results/experiment_2022-03-12_13-28-43/experiment_HierarchicalGraphColorEnv_3c7aa_00000_0_2022-03-12_13-28-43/checkpoint_004010/checkpoint-4010'
+        model_path = '/home/venkat/ray_results/home/cs20mtech12003/ray_results/experiment_2022-04-12_12-51-19/experiment_HierarchicalGraphColorEnv_25d71_00000_0_2022-04-12_12-51-19/checkpoint_001721/checkpoint-1721'
+        #model_path = '/home/venkat/ray_results/split_model/home/cs17m20p100001/ray_results/experiment_2022-01-04_21-47-31/experiment_HierarchicalGraphColorEnv_d1a8f_00000_0_2022-01-04_21-47-32/checkpoint_001500/checkpoint-1500'
+        args = {'no_render' : True, 'checkpoint' : model_path, 'run' : 'PPO' , 'env' : '' , 'config' : {}, 'video_dir' : '', 'steps' : 0, 'episodes' : 0, 'arch' : 'X86'}
         args = Namespace(**args)
         self.inference_model = inference.RollOutInference(args)
 
@@ -174,7 +176,7 @@ class Server:
 
         RegisterAllocationInference_pb2_grpc.add_RegisterAllocationInferenceServicer_to_server(service_server(),server)
 
-        server.add_insecure_port('localhost:50040')
+        server.add_insecure_port('localhost:' + str(sys.argv[1]))
 
         server.start()
         print("Server Running")
@@ -182,5 +184,5 @@ class Server:
         server.wait_for_termination()
 
 if __name__ == '__main__' :
-
+    assert(len(sys.argv) == 2)
     Server.run()
