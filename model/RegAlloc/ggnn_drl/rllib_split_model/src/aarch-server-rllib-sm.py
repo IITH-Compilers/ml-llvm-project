@@ -138,7 +138,8 @@ class service_server(RegisterAllocationInference_pb2_grpc.RegisterAllocationInfe
             select_node_agent = "select_node_agent_{}".format(count)
             select_task_agent = "select_task_agent_{}".format(count)
             split_agent = "split_node_agent_{}".format(count)
-            color_agent = "colour_node_agent_{}".format(count)
+            # color_agent = "colour_node_agent_{}".format(count)
+            color_agent = "colour_node_agent_id"
 
             if self.inference_model.getLastTaskDone() == 1:
                 reply=RegisterAllocationInference_pb2.Data(message="Split", regidx=action[select_node_agent], payload=action[split_agent])
