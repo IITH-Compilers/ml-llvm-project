@@ -1,5 +1,5 @@
 import sys
-sys.path.append('/home/venkat/IF-DV/Rohit/regAlloc/iith-compilers/benchmarking/ML-Register-Allocation/llvm-grpc/Python-Utilities')
+sys.path.append('/home/cs20mtech12003/ML-Register-Allocation/llvm-grpc/Python-Utilities')
 import RegisterAllocationInference_pb2_grpc, RegisterAllocationInference_pb2
 
 from concurrent import futures
@@ -10,7 +10,7 @@ import json
 import ray
 import os
 # sys.path.append(os.path.realpath('../../model/RegAlloc/ggnn_drl/rllib_split_model/src'))
-sys.path.append('/home/venkat/IF-DV/Rohit/regAlloc/iith-compilers/benchmarking/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src')
+sys.path.append('/home/cs20mtech12003/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src')
 # import inference
 import rollout as inference
 # import register_action_space
@@ -141,7 +141,8 @@ class service_server(RegisterAllocationInference_pb2_grpc.RegisterAllocationInfe
             select_node_agent = "select_node_agent_{}".format(count)
             select_task_agent = "select_task_agent_{}".format(count)
             split_agent = "split_node_agent_{}".format(count)
-            color_agent = "colour_node_agent_{}".format(count)
+            # color_agent = "colour_node_agent_{}".format(count)
+            color_agent = "colour_node_agent_id"
 
             if self.inference_model.getLastTaskDone() == 1:
                 reply=RegisterAllocationInference_pb2.Data(message="Split", regidx=action[select_node_agent], payload=action[split_agent])
