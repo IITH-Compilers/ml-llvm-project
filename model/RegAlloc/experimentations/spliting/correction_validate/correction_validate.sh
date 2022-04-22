@@ -2,10 +2,10 @@
 # bash runtime_validate <Test DataSet Dir Path> <Directoy path of the predicted colored json> <BenchmarkName>
 PWD=`pwd`
 HOME=`realpath ${PWD}/../../../../../`
-
 # BUILD_TYPE="_release"
 
-LLVM_BUILD="${HOME}/build_release_split"
+#LLVM_BUILD="/home/venkat/IF-DV/Rohit/regAlloc/iith-compilers/benchmarking/ML-Register-Allocation/x86DebugBuild/"
+LLVM_BUILD="/home/venkat/IF-DV/Rohit/regAlloc/iith-compilers/benchmarking/ML-Register-Allocation/x86AarchBuild/"
 [[ ! -d ${LLVM_BUILD} ]] && echo "LLVM build directory does not exist : ${LLVM_BUILD}" && exit
 
 
@@ -216,7 +216,8 @@ then
     echo "INCLUDES Header path : ${INCLUDES}" 
      INCLUDE_F="${INCLUDES}"
      
-    for d in $(find ${SRCH_FLR} -name "*.c");
+    #for d in $(find ${SRCH_FLR} -name "*.c");
+    for d in $(find ${SRCH_FLR} -name ${INP_REGEX});
     do 
      # echo "INCLUDES Header path : ${INCLUDE_F}" 
       generate "$d" "${INCLUDE_F}" # & 

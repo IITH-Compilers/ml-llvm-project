@@ -29,8 +29,8 @@ class service_server(RegisterAllocationInference_pb2_grpc.RegisterAllocationInfe
         # model_path = '/home/venkat/ray_results/split_model/experiment_2021-09-09_22-09-20/experiment_HierarchicalGraphColorEnv_7b793_00000_0_2021-09-09_22-09-21/checkpoint_001969/checkpoint-1969'
         # model_path = '/home/venkat/ray_results/split_model/experiment_2021-10-21_12-22-45/experiment_HierarchicalGraphColorEnv_7f0ef_00000_0_2021-10-21_12-22-45/checkpoint_001575/checkpoint-1575'
         # model_path = '/home/venkat/ray_results/split_model/X86models/checkpoint_001156/checkpoint-1156'
-        model_path = '/home/venkat/ray_results/split_model/home/cs20mtech12003/ray_results/experiment_2021-11-16_00-00-39/experiment_HierarchicalGraphColorEnv_22215_00000_0_2021-11-16_00-00-39/checkpoint_004877/checkpoint-4877'
-        args = {'no_render' : True, 'checkpoint' : model_path, 'run' : 'SimpleQ' , 'env' : '' , 'config' : {}, 'video_dir' : '', 'steps' : 0, 'episodes' : 0, 'arch' : 'AArch64'}
+        model_path = '/home/venkat/ray_results/split_model/home/cs20mtech12003/ray_results/experiment_2021-12-24_23-51-11/experiment_HierarchicalGraphColorEnv_45a5a_00000_0_2021-12-24_23-51-11/checkpoint_005399/checkpoint-5399'
+        args = {'no_render' : True, 'checkpoint' : model_path, 'run' : 'PPO' , 'env' : '' , 'config' : {}, 'video_dir' : '', 'steps' : 0, 'episodes' : 0, 'arch' : 'AArch64'}
         args = Namespace(**args)
         self.inference_model = inference.RollOutInference(args)
 
@@ -168,13 +168,13 @@ class Server:
         ray.init()
 
         server=grpc.server(futures.ThreadPoolExecutor(max_workers=20),options = [
-                    ('grpc.max_send_message_length', 50*1024*1024), #50MB
-                            ('grpc.max_receive_message_length', 50*1024*1024) #50MB
+                    ('grpc.max_send_message_length', 200*1024*1024), #200MB
+                            ('grpc.max_receive_message_length', 200*1024*1024) #200MB
                                 ])
 
         RegisterAllocationInference_pb2_grpc.add_RegisterAllocationInferenceServicer_to_server(service_server(),server)
 
-        server.add_insecure_port('localhost:50062')
+        server.add_insecure_port('localhost:60032')
 
         server.start()
         print("Server Running")
