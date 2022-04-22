@@ -891,7 +891,7 @@ bool RAGreedy::canEvictInterference(LiveInterval &VirtReg, unsigned PhysReg,
 
     // Check if any interfering live range is heavier than MaxWeight.
     for (LiveInterval *Intf : reverse(Interferences)) {
-      assert(Register::isVirtualRegister(Intf->reg()) &&
+      assert(Register::isVirtualRegister(Intf->reg) &&
              "Only expecting virtual register interference from query");
 
       // Do not allow eviction of a virtual register if we are in the middle
@@ -1058,7 +1058,7 @@ void RAGreedy::evictInterference(LiveInterval &VirtReg, unsigned PhysReg,
     // should be fast, we may need to recalculate if when different physregs
     // overlap the same register unit so we had different SubRanges queried
     // against it.
-    ArrayRef<LiveInterval*> IVR = Q.interferingVRegs();
+    ArrayRef<LiveInterval *> IVR = Q.interferingVRegs();
     Intfs.append(IVR.begin(), IVR.end());
   }
 
@@ -2766,6 +2766,7 @@ unsigned RAGreedy::selectOrSplit(LiveInterval &VirtReg,
   CutOffInfo = CO_None;
   LLVMContext &Ctx = MF->getFunction().getContext();
   SmallVirtRegSet FixedRegisters;
+  FixedRegisters.insert(mlAllocatedRegs.begin(), mlAllocatedRegs.end());
   unsigned Reg = selectOrSplitImpl(VirtReg, NewVRegs, FixedRegisters);
   if (Reg == ~0U && (CutOffInfo != CO_None)) {
     uint8_t CutOffEncountered = CutOffInfo & (CO_Depth | CO_Interf);
@@ -3046,7 +3047,7 @@ unsigned RAGreedy::selectOrSplitImpl(LiveInterval &VirtReg,
     } else
       return PhysReg;
   }
-  LLVM_DEBUG(dbgs() << "======After tryAssign3\n"; LIS->dump());
+  LLVM_DEBUG(dbgs() << "======After tryAssign3\n";); //  LIS->dump());
 
   LiveRangeStage Stage = getStage(VirtReg);
   LLVM_DEBUG(dbgs() << StageName[Stage] << " Cascade "
@@ -3073,7 +3074,7 @@ unsigned RAGreedy::selectOrSplitImpl(LiveInterval &VirtReg,
     }
 
   assert((NewVRegs.empty() || Depth) && "Cannot append to existing NewVRegs");
-  LLVM_DEBUG(dbgs() << "======After Spilt4\n"; LIS->dump());
+  LLVM_DEBUG(dbgs() << "======After Spilt4\n";); // LIS->dump());
 
   // The first time we see a live range, don't try to split or spill.
   // Wait until the second time, when all smaller ranges have been allocated.
@@ -3084,7 +3085,7 @@ unsigned RAGreedy::selectOrSplitImpl(LiveInterval &VirtReg,
     NewVRegs.push_back(VirtReg.reg);
     return 0;
   }
-  LLVM_DEBUG(dbgs() << "======After Spilt5\n"; LIS->dump());
+  LLVM_DEBUG(dbgs() << "======After Spilt5\n";); // LIS->dump());
 
   if (Stage < RS_Spill) {
     // Try splitting VirtReg or interferences.
@@ -3097,7 +3098,7 @@ unsigned RAGreedy::selectOrSplitImpl(LiveInterval &VirtReg,
     }
   }
 
-  LLVM_DEBUG(dbgs() << "======6\n"; LIS->dump());
+  LLVM_DEBUG(dbgs() << "======6\n";); // LIS->dump());
   // If we couldn't allocate a register from spilling, there is probably some
   // invalid inline assembly. The base class will report it.
   if (Stage >= RS_Done || !VirtReg.isSpillable())
@@ -3244,7 +3245,7 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
 
   calculateSpillWeightsAndHints(*LIS, mf, VRM, *Loops, *MBFI);
 
-  LLVM_DEBUG(dbgs() << "======1\n"; LIS->dump());
+  LLVM_DEBUG(dbgs() << "======1\n";); // LIS->dump());
 
   SA.reset(new SplitAnalysis(*VRM, *LIS, *Loops));
   SE.reset(new SplitEditor(*SA, *AA, *LIS, *VRM, *DomTree, *MBFI));
@@ -3260,20 +3261,20 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
     MLRegAlloc(*MF, *Indexes, *MBFI, *DomTree, *Loops, *AA, *DebugVars,
                *SpillPlacer, *ORE);
 
-    LLVM_DEBUG(dbgs() << "======2\n"; LIS->dump());
-    for (auto i : mlSpilledRegs) {
-      if (i->isSpillable()) {
-        SmallVector<unsigned int, 4> NewVRegs;
-        LiveRangeEdit LRE(i, NewVRegs, *MF, *LIS, VRM, this, &DeadRemats);
-        spiller().spill(LRE);
-      }
-    }
+    LLVM_DEBUG(dbgs() << "======2\n";); // LIS->dump());
+    // for (auto i : mlSpilledRegs) {
+    //   if (i->isSpillable()) {
+    //     SmallVector<unsigned int, 4> NewVRegs;
+    //     LiveRangeEdit LRE(i, NewVRegs, *MF, *LIS, VRM, this, &DeadRemats);
+    //     spiller().spill(LRE);
+    //   }
+    // }
     for (auto i : mlAllocatedRegs) {
       setStage(LIS->getInterval(i), RS_Done);
     }
     LLVM_DEBUG(errs() << "Starting greedy flow here\n");
   }
-  LLVM_DEBUG(dbgs() << "======3\n"; LIS->dump());
+  LLVM_DEBUG(dbgs() << "======3\n";); // LIS->dump());
 
   allocatePhysRegs();
   tryHintsRecoloring();

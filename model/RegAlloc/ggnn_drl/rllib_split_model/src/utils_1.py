@@ -133,8 +133,7 @@ def log_subprocess_output(pipe):
 import time
 def startServer(filename, fun_id, ip):
     def run(filename, fun_id):
-        cmd = "{clang} -O3 -mllvm -regalloc=greedy  -march=core2 -mllvm -mlra-training -mllvm -debug-only=mlra-regalloc -mllvm -mlra-funcID={fun_id} -mllvm -mlra-server-address={ip} {src_file} -o /dev/null &> llvm_logs_x86.log".format(clang=os.environ['CLANG'], src_file=filename, fun_id=fun_id, ip=ip)
-        # cmd = "{clang} -O3 -mllvm -regalloc=greedy -mcpu=cortex-a72 -mllvm -mlra-training -mllvm -debug-only=mlra-regalloc -mllvm -mlra-funcID={fun_id} -mllvm -mlra-server-address={ip} {src_file} -o /dev/null &> llvm_logs_ppo_28dec_spill_change.log".format(clang=os.environ['CLANG'], src_file=filename, fun_id=fun_id, ip=ip)
+        cmd = "{clang} -O3 -mllvm -regalloc=greedy -mcpu=cascadelake -mllvm -mlra-training -mllvm -debug-only=mlra-regalloc -mllvm -mlra-funcID={fun_id} -mllvm -mlra-server-address={ip} {src_file} -o /dev/null &> llvm_logs_1.log".format(clang=os.environ['CLANG'], src_file=filename, fun_id=fun_id, ip=ip)
         # print(cmd)
         #os.system(cmd)
         pid = subprocess.Popen(cmd, executable='/bin/bash', shell=True, preexec_fn=os.setsid)

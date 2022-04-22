@@ -142,13 +142,6 @@ public:
       UserTag = NewUserTag;
     }
 
-  public:
-    Query() = default;
-    Query(const LiveRange &LR, const LiveIntervalUnion &LIU):
-      LiveUnion(&LIU), LR(&LR) {}
-    Query(const Query &) = delete;
-    Query &operator=(const Query &) = delete;
-
     void init(unsigned NewUserTag, const LiveRange &NewLR,
               const LiveIntervalUnion &NewLiveUnion) {
       if (UserTag == NewUserTag && LR == &NewLR && LiveUnion == &NewLiveUnion &&
