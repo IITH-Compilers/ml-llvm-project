@@ -45,7 +45,7 @@ class GatedGraphNeuralNetwork(nn.Module):
                  use_bias_for_message_linear=True, nodelevel=False,seed=0):
         
         super(GatedGraphNeuralNetwork, self).__init__()
-        self.seed = torch.manual_seed(seed)
+        # self.seed = torch.manual_seed(seed)
         self.spill_color_idx = 0
 
         self.nodelevel = nodelevel

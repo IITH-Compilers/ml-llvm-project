@@ -97,7 +97,9 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
             initializer=normc_initializer(0.01),
             activation_fn=None)
         self._features = None
-        self.ggnn = GatedGraphNeuralNetwork(hidden_size=custom_config["state_size"], annotation_size=custom_config["annotations_size"], num_edge_types=1, layer_timesteps=[1], residual_connections={}, nodelevel=True)
+        state_size: int = custom_config["state_size"]
+        annotations_size: int = custom_config["annotations_size"]
+        self.ggnn = GatedGraphNeuralNetwork(hidden_size=state_size, annotation_size=annotations_size, num_edge_types=1, layer_timesteps=[1], residual_connections={}, nodelevel=True)
         self.max_number_nodes = custom_config["max_number_nodes"]
         self.emb_size = custom_config["state_size"]
 
@@ -137,8 +139,8 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
         # if 'infos' in input_dict.keys():
         #     print("Info value", input_dict['infos'])
         # x = self.ggnn(input_dict["obs"]["state"], input_dict["obs"]["annotations"], input_dict["obs"]["adjacency_lists"])
-        # print("GGNN output size", x.size())
-        # print("Input state type", input_state_list.shape, input_dict["obs"]["state"].shape)
+        # print("GGNN output size", x.size())        
+        input_state_list = input_state_list.to(input_dict["obs"]["state"].device)
         x = F.relu(self.fc1(input_state_list))
         # x = F.relu(self.fc1(input_dict["obs"]["state"]))
         x = F.relu(self.fc2(x))
