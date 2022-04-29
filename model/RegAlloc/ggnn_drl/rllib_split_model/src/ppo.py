@@ -112,14 +112,16 @@ DEFAULT_CONFIG = with_common_config({
     "env_config": {
         "target": "X86",
         "state_size": 100,
-        "max_number_nodes": 1000,
+        "max_number_nodes": 300,
         "max_usepoint_count": 200,
+        "annotations": 3,
+        "max_edge_count": 90000,
         "mode": 'training',
         "dump_type": 'One',
         "dump_color_graph": True,
         "intermediate_data": './temp',
         # "dataset": "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_aarch64_split_data/",
-        "dataset": "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_new_data_100d/",
+        "dataset": "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data_100d/",
         # "dataset": "/home/cs20mtech12003/ML-Register-Allocation/temp_data/",
         "graphs_num": 10000,
         "action_space_size": RegisterActionSpace("X86").ac_sp_normlize_size
@@ -132,9 +134,9 @@ DEFAULT_CONFIG = with_common_config({
     # Number of workers for collecting samples with. This only makes sense
     # to increase if your environment is particularly slow to sample, or if
     # you"re using the Async or Ape-X optimizers.
-    "num_workers": 10,
+    "num_workers": 1,
 
-    "num_gpus": 1,
+    "num_gpus": 0,
 })
 
 # __sphinx_doc_end__

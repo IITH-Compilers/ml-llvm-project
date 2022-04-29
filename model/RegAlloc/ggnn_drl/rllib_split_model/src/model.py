@@ -2,14 +2,16 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import logging
-from ggnn import GatedGraphNeuralNetwork
 from register_action_space import RegisterActionSpace
 from ray.rllib.models.torch.torch_modelv2 import TorchModelV2
 from ray.rllib.utils.torch_ops import FLOAT_MIN
 from ray.rllib.models.torch.misc import SlimFC, normc_initializer
 import numpy as np
+from ggnn_1 import get_observations, get_observationsInf, GatedGraphNeuralNetwork, constructVectorFromMatrix, AdjacencyList
 
 logger = logging.getLogger(__file__) 
+
+
 class SelectTaskNetwork(TorchModelV2, nn.Module):
     """Actor (Policy) Model."""
 
@@ -63,8 +65,7 @@ class SelectTaskNetwork(TorchModelV2, nn.Module):
             for j in range(action_mask.shape[0]):
                 if action_mask[j] == 0:                    
                     x[i, j] = FLOAT_MIN
-        
-        return x, state
+        return x, state, self._features
 
     def value_function(self):
         return self._value_branch(self._features).squeeze(1)
@@ -91,19 +92,57 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
         self.fc2 = nn.Linear(custom_config["fc1_units"], custom_config["fc2_units"])
         self.fc3 = nn.Linear( custom_config["fc2_units"], 1)
         self._value_branch = SlimFC(
-            in_size=1000,
+            in_size=custom_config["max_number_nodes"],
             out_size=1,
             initializer=normc_initializer(0.01),
             activation_fn=None)
         self._features = None
+        state_size: int = custom_config["state_size"]
+        annotations_size: int = custom_config["annotations_size"]
+        self.ggnn = GatedGraphNeuralNetwork(hidden_size=state_size, annotation_size=annotations_size, num_edge_types=1, layer_timesteps=[1], residual_connections={}, nodelevel=True)
+        self.max_number_nodes = custom_config["max_number_nodes"]
+        self.emb_size = custom_config["state_size"]
 
-
+        
     def forward(self, input_dict, state, seq_lens):
         """Build a network that maps state -> action values."""
-
-        # print("Select node GPU", next(self.parameters()).is_cuda)        
-        # print(input_dict)
-        x = F.relu(self.fc1(input_dict["obs"]["state"]))
+        # print("Obs keys are:", input_dict['obs'].keys())
+        node_count = (input_dict["obs"]["node_edge_count"][0]).argmax(1)
+        edge_count = (input_dict["obs"]["node_edge_count"][1]).argmax(1)
+        # print("Types of node and edge count:", node_count, edge_count)
+        input_state_list = torch.zeros(input_dict["obs"]["adjacency_lists"].shape[0], self.max_number_nodes, self.emb_size)
+        
+        for t in range(input_dict["obs"]["adjacency_lists"].shape[0]):
+            curr_edge_count = edge_count[t]
+            temp_edge = []
+            for i in range(curr_edge_count):
+                temp_edge.append((input_dict["obs"]["adjacency_lists"][t][2*i], input_dict["obs"]["adjacency_lists"][t][2*i+1]))
+            temp_edge = list(set(temp_edge))
+            adjacency_lists = [ AdjacencyList(node_num=node_count[t], adj_list=temp_edge, device=input_dict["obs"]["state"].device)]
+            initial_node_representation = (input_dict["obs"]["state"])[t, 0:node_count[t], :]
+            annotations = (input_dict["obs"]["annotations"])[t, 0:node_count[t], :]
+            node_mat = self.ggnn(initial_node_representation=initial_node_representation, annotations=annotations, adjacency_lists=adjacency_lists)
+            input_state_list[t, 0:node_mat.shape[0], :] = node_mat
+            # print("Node mat type", type(node_mat))
+            # cur_obs = torch.zeros((self.max_number_nodes, self.emb_size))
+            # cur_obs[0:node_mat.shape[0], :] = node_mat            
+            
+        # if len((input_dict["obs"]["state"]).shape) == 3:
+        #     initial_node_representation = (input_dict["obs"]["state"])[:, 0:node_count, :]
+        #     annotations = (input_dict["obs"]["annotations"])[:, 0:node_count, :]
+        # elif len((input_dict["obs"]["state"]).shape) == 2:
+        #     initial_node_representation = (input_dict["obs"]["state"])[0:node_count, :]
+        #     annotations = (input_dict["obs"]["annotations"])[0:node_count, :]
+        # print("Types of node and edge count:", annotations.shape, initial_node_representation.shape)
+        
+        
+        # if 'infos' in input_dict.keys():
+        #     print("Info value", input_dict['infos'])
+        # x = self.ggnn(input_dict["obs"]["state"], input_dict["obs"]["annotations"], input_dict["obs"]["adjacency_lists"])
+        # print("GGNN output size", x.size())        
+        input_state_list = input_state_list.to(input_dict["obs"]["state"].device)
+        x = F.relu(self.fc1(input_state_list))
+        # x = F.relu(self.fc1(input_dict["obs"]["state"]))
         x = F.relu(self.fc2(x))
         x = self.fc3(x)
 
@@ -132,7 +171,7 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
                     x[i, j] = FLOAT_MIN
 
         # print("Select node forward Input", input_dict["obs"]["action_mask"][:, 0], x, input_dict["obs"]["spill_weights"].shape)
-        return x, state
+        return x, state, input_state_list
 
     def value_function(self):
         return self._value_branch(self._features).squeeze(1)
@@ -199,8 +238,8 @@ class ColorNetwork(TorchModelV2, nn.Module):
                 for j in range(action_mask.shape[0]):
                     if action_mask[j] == 0:
                         x[i, j] = FLOAT_MIN             
-        # print("OFF GPU", x.shape)        
-        return x, state
+        # print("OFF GPU", x.shape)
+        return x, state, self._features
     
     def value_function(self):
         return self._value_branch(self._features).squeeze(1)
@@ -261,8 +300,8 @@ class SplitNodeNetwork(TorchModelV2, nn.Module):
                     x[i, j] = FLOAT_MIN
         
         # print("X shape", x.shape, x[0, :])
-        # assert False, "Hehe"                
-        return x, state
+        # assert False, "Hehe"
+        return x, state, self._features
     
     def value_function(self):
         return self._value_branch(self._features).squeeze(1)
