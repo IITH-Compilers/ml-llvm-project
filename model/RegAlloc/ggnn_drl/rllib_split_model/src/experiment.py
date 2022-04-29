@@ -6,7 +6,7 @@ import json
 import glob
 import time
 import numpy as np
-from typing import Dict as type_dict
+from typing import Dict as type_dict, List
 import psutil
 import gc
 import torch
@@ -23,7 +23,7 @@ from ray.rllib.evaluation import MultiAgentEpisode, RolloutWorker
 from ray.rllib.policy import Policy
 from ray.rllib.policy.sample_batch import SampleBatch
 
-from gym.spaces import Discrete, Box, Dict
+from gym.spaces import Discrete, Box, Dict, Tuple
 # from simple_q import SimpleQTrainer, DEFAULT_CONFIG
 from ppo import PPOTrainer, DEFAULT_CONFIG
 # from env import GraphColorEnv, set_config
@@ -33,6 +33,7 @@ from ray.rllib.models import ModelCatalog
 from model import SelectTaskNetwork, SelectNodeNetwork, ColorNetwork, SplitNodeNetwork
 import logging
 from ray.rllib.utils.torch_ops import FLOAT_MIN, FLOAT_MAX
+# from ray.rllib.utils.spaces.repeated import Repeated
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--train-iterations", type=int, default=100000)
@@ -168,7 +169,13 @@ if __name__ == "__main__":
             -10000000000000.0, 10000000000000.0, shape=(config["env_config"]["state_size"], ), dtype=np.float32)
     box_obs_select_node = Box(
             -10000000000000.0, 10000000000000.0, shape=(config["env_config"]["max_number_nodes"], config["env_config"]["state_size"]), dtype=np.float32)
-
+    
+    # tuple_edge = Tuple((Discrete(config["env_config"]["max_number_nodes"]), Discrete(config["env_config"]["max_number_nodes"])))
+    # repeat_tuple_edges = Repeated(tuple_edge, max_len=max_edge_count)
+    # tuple_adjacency_lists = Tuple((Discrete(config["env_config"]["max_number_nodes"]), repeat_tuple_edges))
+    max_edge_count = config["env_config"]["max_edge_count"]
+    edges_unroll_box = Box(0.0, config["env_config"]["max_number_nodes"], shape=(2*max_edge_count,))
+    node_edge_count = Tuple((Discrete(config["env_config"]["max_number_nodes"]), Discrete(max_edge_count)))
     obs_colour_node = Dict({
         "action_mask": Box(0, 1, shape=(config["env_config"]["action_space_size"],)),
         "node_properties": Box(-10000000000000.0, 10000000000000.0, shape=(3,)), 
@@ -177,7 +184,10 @@ if __name__ == "__main__":
     obs_select_node = Dict({
         "spill_weights": Box(-10000000000000.0, 10000000000000.0, shape=(config["env_config"]["max_number_nodes"],)), 
         "action_mask": Box(0, 1, shape=(config["env_config"]["max_number_nodes"],)),
-        "state": box_obs_select_node
+        "state": box_obs_select_node,
+        "annotations": Box(-10000000000000.0, 10000000000000.0, shape=(config["env_config"]["max_number_nodes"], config["env_config"]["annotations"])),
+        "adjacency_lists": edges_unroll_box,
+        "node_edge_count": node_edge_count
         }) 
     obs_select_task = Dict({
         "node_properties": Box(-10000000000000.0, 10000000000000.0, shape=(4,)),
@@ -211,7 +221,9 @@ if __name__ == "__main__":
                                         "custom_model_config": {
                                             "state_size": config["env_config"]["state_size"],
                                             "fc1_units": 64,
-                                            "fc2_units": 64
+                                            "fc2_units": 64,
+                                            "max_number_nodes": config["env_config"]["max_number_nodes"],
+                                            "annotations_size": config["env_config"]["annotations"]
                                         },
                                     },
                                 }),

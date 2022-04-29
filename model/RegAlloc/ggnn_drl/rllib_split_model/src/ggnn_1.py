@@ -27,6 +27,12 @@ class AdjacencyList:
     def device(self):
         return self.data.device
 
+    def getData(self):
+        return self.data
+    
+    def getNodeNum(self):
+        return self.node_num
+
     def __getitem__(self, item):
         return self.data[item]
 
@@ -107,24 +113,43 @@ class GatedGraphNeuralNetwork(nn.Module):
         #     for v in vec:
         #         if math.isnan(v):
         #             print('ggnn_1 computeGraph ****NAN****', v, i)
-        initial_node_representation = torch.cat([initial_node_representation, annotations], dim=1)
-        # logging.debug('DLOOP H+A {}'.format(initial_node_representation.shape))
-        
-        initial_node_representation = self.hidden_layer(initial_node_representation) #.to(device)
-        # for i, vec in enumerate(initial_node_representation):
-        #     print('23232', vec)
-        #     for v in vec:
-        #         if math.isnan(v):
-        #             print('ggnn_1 computeGraph ****NAN****', v, i)
+        if len(initial_node_representation.shape) == 2:
+            initial_node_representation = torch.cat([initial_node_representation, annotations], dim=1)
+            # logging.debug('DLOOP H+A {}'.format(initial_node_representation.shape))
+            
+            initial_node_representation = self.hidden_layer(initial_node_representation) #.to(device)
+            # for i, vec in enumerate(initial_node_representation):
+            #     print('23232', vec)
+            #     for v in vec:
+            #         if math.isnan(v):
+            #             print('ggnn_1 computeGraph ****NAN****', v, i)
 
 
-        init_node_repr_size = initial_node_representation.size(1)
-        ndevice = adjacency_lists[0].data.device
-        if init_node_repr_size < self.hidden_size:
-            pad_size = self.hidden_size - init_node_repr_size
-            zero_pads = torch.zeros(initial_node_representation.size(0), pad_size, dtype=torch.float, device=ndevice)
-            initial_node_representation = torch.cat([initial_node_representation, zero_pads], dim=-1)
-        
+            init_node_repr_size = initial_node_representation.size(1)
+            ndevice = adjacency_lists[0].data.device
+            if init_node_repr_size < self.hidden_size:
+                pad_size = self.hidden_size - init_node_repr_size
+                zero_pads = torch.zeros(initial_node_representation.size(0), pad_size, dtype=torch.float, device=ndevice)
+                initial_node_representation = torch.cat([initial_node_representation, zero_pads], dim=-1)
+        elif len(initial_node_representation.shape) == 3:
+            initial_node_representation = torch.cat([initial_node_representation, annotations], dim=2)
+            # logging.debug('DLOOP H+A {}'.format(initial_node_representation.shape))
+            
+            initial_node_representation = self.hidden_layer(initial_node_representation) #.to(device)
+            # for i, vec in enumerate(initial_node_representation):
+            #     print('23232', vec)
+            #     for v in vec:
+            #         if math.isnan(v):
+            #             print('ggnn_1 computeGraph ****NAN****', v, i)
+
+
+            init_node_repr_size = initial_node_representation.size(2)
+            ndevice = adjacency_lists[0].data.device
+            if init_node_repr_size < self.hidden_size:
+                pad_size = self.hidden_size - init_node_repr_size
+                zero_pads = torch.zeros(initial_node_representation.size(0), initial_node_representation.size(1), pad_size, dtype=torch.float, device=ndevice)
+                initial_node_representation = torch.cat([initial_node_representation, zero_pads], dim=-1)
+
         node_states_per_layer = [initial_node_representation]
 
         node_num = initial_node_representation.size(0)
