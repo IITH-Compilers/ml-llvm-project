@@ -52,7 +52,7 @@ config_path=None
 
 logger = logging.getLogger(__file__)
 # logging.basicConfig(filename=os.path.join("/home/cs18mtech11030/project/grpc_llvm/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src", 'running.log'), format='%(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
-logging.basicConfig(filename='running_spill.log', format='%(thread)d - %(threadName)s %(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
+#logging.basicConfig(filename='running_spill.log', format='%(thread)d - %(threadName)s %(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
 
 
 def set_config(path):
@@ -63,6 +63,7 @@ def set_config(path):
 
 class HierarchicalGraphColorEnv(MultiAgentEnv):
     def __init__(self, env_config):
+        self.env_config = env_config
         self.colormap = None
         self.split_point = None
         # self.flat_env = GraphColorEnv(env_config)
@@ -96,7 +97,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
             self.graph_counter = 0
             self.reset_count = 0
-            self.training_graphs=glob.glob(os.path.join(dataset, 'graphs/IG/set1/*.json'))
+            self.training_graphs=glob.glob(os.path.join(dataset, 'graphs/IG/'+env_config['dataset_bucket']+'/*.json'))
             # self.training_graphs=glob.glob(os.path.join(dataset, 'json/*.json'))
             assert len(self.training_graphs) > 0, 'training set is empty' 
             if len(self.training_graphs) > self.graphs_num:
@@ -849,8 +850,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 print('Force stop')
             self.server_pid = None
             print('Stop server')
-            time.sleep(5)
-        
+            #time.sleep(5)
+            
         logging.debug("Exit _split_node_step")
         return obs, reward, done, {}
 
@@ -957,8 +958,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
     def reset_env(self, graph=None):
         # self.ggnn = GatedGraphNeuralNetwork(hidden_size=self.emb_size, annotation_size=3, num_edge_types=1, layer_timesteps=[1], residual_connections={}, nodelevel=True)
         if graph is None:
-            inx = (((self.worker_index-1)*1) + self.graph_counter)
-            # print("Worker index", self.worker_index, inx)
+            inx = (((self.worker_index-1) * self.env_config['current_batch']) + self.graph_counter)
+            # print("Worker index", self.worker_index, inx, len(self.training_graphs))
             path=self.training_graphs[inx]
             # path="/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/graphs/IG/json/526.blender_r_756.ll_F15.json"
             # path="/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/graphs/IG/json/500.perlbench_r_51.ll_F2.json"
@@ -970,7 +971,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             self.reset_count+=1
             if self.reset_count % 1 == 0:
                 self.graph_counter+=1
-                self.graph_counter = self.graph_counter%1
+                self.graph_counter = self.graph_counter % self.env_config['current_batch']
             try:
                 with open(path) as f:
                    graph = json.load(f)
@@ -1005,14 +1006,20 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
             hostip = "0.0.0.0"
 
-            hostport = str(int("50191") + self.worker_index)
+            hostport = str(int(self.env_config['Workers_starting_port']) + self.worker_index)
             # self.port_number += 1
             # hostport=str(self.port_number)
             ipadd = "{}:{}".format(hostip, hostport)
             # print('Active thread before the server starts : ', threading.active_count())
-            self.server_pid = utils_1.startServer(self.fileName, self.fun_id, ipadd)
+            clang_path = self.env_config["CLANG_PATH"]
+            if self.env_config["target"] == 'X86':
+                cflags = self.env_config["X86_CFLAGS"]
+            else:
+                cflags = self.env_config["AArch64_CFLAGS"]
+            logdir = self.env_config["log_dir"]
+            self.server_pid = utils_1.startServer(self.fileName, self.fun_id, ipadd, clang_path, cflags, logdir)
             print("Server pid", self.server_pid.pid, hostport)
-            time.sleep(5)
+            #time.sleep(5)
             # print('Active thread mid the server starts : ', threading.active_count())
             self.queryllvm = RegisterAllocationClient(hostport=hostport)
             self.color_assignment_map = {}
