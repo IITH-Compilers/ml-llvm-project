@@ -1,4 +1,5 @@
 """Example of a custom experiment wrapped around an RLlib trainer."""
+import datetime
 import argparse
 from tqdm import tqdm
 import os
@@ -48,7 +49,7 @@ def experiment(config):
     train_agent = PPOTrainer(config=config, env=HierarchicalGraphColorEnv)
     print('------------------------ aegent --------------------------------- ', train_agent)
     # Train
-    # checkpoint = "/home/cs20mtech12003/ray_results/experiment_2021-10-27_22-38-27/experiment_HierarchicalGraphColorEnv_80a83_00000_0_2021-10-27_22-38-27/checkpoint_000040/checkpoint-40"
+    checkpoint = config["env_config"]["check_point"]
     # train_agent = SimpleQTrainer(config=config, env=GraphColorEnv)
     if checkpoint is not None:
         train_agent.restore(checkpoint)
@@ -63,7 +64,7 @@ def experiment(config):
             checkpoint = train_agent.save(tune.get_trial_dir())
             # print("***************Checkpoint****************", checkpoint)
         tune.report(**train_results)
-        if train_results['episodes_total'] > 49999:
+        if train_results['episodes_total'] > config["env_config"]["episode_number"]:
             print("Traning Ended")
             checkpoint = train_agent.save(tune.get_trial_dir())
             break
@@ -129,32 +130,40 @@ class Counter:
 
 if __name__ == "__main__":
 
-    os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"   
-    os.environ["CUDA_VISIBLE_DEVICES"]='0'
+    config = DEFAULT_CONFIG.copy()
 
-    os.environ['GRPC_VERBOSITY']='DEBUG'
+    os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
+    os.environ["CUDA_VISIBLE_DEVICES"]= config["env_config"]["GPU_ID"]
+
+    # os.environ['GRPC_VERBOSITY']='DEBUG'
 
     args = parser.parse_args()
     logger = logging.getLogger(__file__)
+    #logging.info("root")
     log_level=logging.DEBUG
     # if args.log_level == 'WARN':
     #     log_level=logging.WARNING
     # elif args.log_level == 'INFO':
     #     log_level=logging.INFO
-    if os.path.exists('running_spill.log'):
-        os.remove('running_spill.log')
-
-    logging.basicConfig(filename='running_spill.log', format='%(thread)d - %(threadName)s - %(levelname)s - %(filename)s - %(message)s', level=log_level)
+    log_path = config["env_config"]["log_path"]
+    if not os.path.isdir(log_path):
+        os.mkdir(log_path)
+    logdir_name = config["env_config"]["target"] + '_' + str(config["env_config"]["episode_number"]) + 'Eps_' + config["env_config"]["dataset_bucket"]
+    logdir = os.path.join(log_path, logdir_name + '_' + datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
+    os.makedirs(logdir)
+    config['env_config']['log_dir'] = logdir
+    python_log = os.path.join(logdir, 'running.log')
+    #if os.path.exists(python_log):
+     #   os.remove(python_log)
+    print(python_log)
+    logging.basicConfig(filename='running.log', format='%(thread)d - %(threadName)s - %(levelname)s - %(filename)s - %(message)s', level=log_level, force=True)
     logging.info('Starting training')
     logging.info(args)
-
-
 
     ray.init(object_store_memory=10000000000, local_mode=False)
     
     # c = Counter.remote()
 
-    config = DEFAULT_CONFIG.copy()
     config["train-iterations"] = args.train_iterations
 
     config["env"] = HierarchicalGraphColorEnv    
@@ -269,7 +278,7 @@ if __name__ == "__main__":
         "policies" : policies,
         "policy_mapping_fn": function(policy_mapping_fn)
     }
-
+    print("Training Config", config)
     # file_count = 0
     start_time = time.time()
     # for path in tqdm (training_graphs, desc="Running..."): # Number of the iterations        

@@ -131,16 +131,19 @@ def log_subprocess_output(pipe):
 
 
 import time
-def startServer(filename, fun_id, ip):
-    def run(filename, fun_id):
-        cmd = "{clang} -O3 -mllvm -regalloc=greedy -mcpu=cascadelake -mllvm -mlra-training -mllvm -debug-only=mlra-regalloc -mllvm -mlra-funcID={fun_id} -mllvm -mlra-server-address={ip} {src_file} -o /dev/null &> llvm_logs_1.log".format(clang=os.environ['CLANG'], src_file=filename, fun_id=fun_id, ip=ip)
-        # print(cmd)
+def startServer(filename, fun_id, ip, clang_path, cflags, logdir):
+    def run(filename, fun_id, clang_path, cflags, logdir):
+        llvm_log = os.path.join(logdir, 'llvm_log.log')
+        #cmd = "{clang} -O3 -mllvm -regalloc=greedy  -march=core2 -mllvm -mlra-training -mllvm -debug-only=mlra-regalloc -mllvm -mlra-funcID={fun_id} -mllvm -mlra-server-address={ip} {src_file} -o /dev/null &> llvm_logs_x86_PPO_120-300_ggnn_27-04-22.log".format(clang=os.environ['CLANG'], src_file=filename, fun_id=fun_id, ip=ip)
+        cmd = "{clang} -O3 {cflags} -mllvm -mlra-training -mllvm -debug-only=mlra-regalloc -mllvm -mlra-funcID={fun_id} -mllvm -mlra-server-address={ip} {src_file} -o /dev/null &> {llvm_log}".format(clang=clang_path, cflags=cflags,  src_file=filename, fun_id=fun_id, ip=ip, llvm_log=llvm_log)
+
+        # print("Clang cmd:", cmd)
         #os.system(cmd)
         pid = subprocess.Popen(cmd, executable='/bin/bash', shell=True, preexec_fn=os.setsid)
         return pid
         
     
-    pid = run(filename, fun_id)#multiprocessing.Process(target=run, args=(filename, fun_id,))
+    pid = run(filename, fun_id, clang_path, cflags, logdir)#multiprocessing.Process(target=run, args=(filename, fun_id,))
     # pid.start()
     # time.sleep(5)
     # print(pid)
