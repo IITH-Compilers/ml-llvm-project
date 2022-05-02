@@ -50,10 +50,10 @@ DEFAULT_CONFIG = with_common_config({
     "rollout_fragment_length": 64,
     # Number of timesteps collected for each SGD round. This defines the size
     # of each SGD epoch.
-    "train_batch_size": 512,
+    "train_batch_size": 64,
     # Total SGD batch size across all devices for SGD. This defines the
     # minibatch size within each epoch.
-    "sgd_minibatch_size": 64,
+    "sgd_minibatch_size": 32,
     # Whether to shuffle sequences in the batch when training (recommended).
     "shuffle_sequences": True,
     # Number of SGD iterations in each outer loop (i.e., number of epochs to
@@ -120,22 +120,27 @@ DEFAULT_CONFIG = with_common_config({
         "dump_type": 'One',
         "dump_color_graph": True,
         "intermediate_data": './temp',
-        "CLANG_PATH": "/raid/cs17m20P100001/ML-Register-Allocation/build_x86_wo_colouring/bin/clang++",
-        "Register_config": "/raid/cs17m20P100001/ML-Register-Allocation/llvm/lib/CodeGen/MLRegAlloc/config_json",
-        "log_path": "/raid/cs17m20P100001/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src/log",
+        "build_path": "/home/cs20mtech12003/ML-Register-Allocation/build_x86_debug",
+        "Register_config": "/home/cs20mtech12003/ML-Register-Allocation/llvm/lib/CodeGen/MLRegAlloc/config_json",
+        "log_path": "/home/cs20mtech12003/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src/log",
         #"dataset": "/raid/cs17m20P100001/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_new_data/",
-        "dataset": "/raid/cs17m20P100001/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_new_data/",
+        "dataset": "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/",
         # "dataset": "/home/cs20mtech12003/ML-Register-Allocation/temp_data/",
         "graphs_num": 10000,
         "action_space_size": RegisterActionSpace("X86").ac_sp_normlize_size,
-        "check_point": "/raid/cs17m20P100001/ray_results/experiment_2022-04-21_15-58-48/experiment_HierarchicalGraphColorEnv_756b9_00000_0_2022-04-21_15-58-48/checkpoint_003161/checkpoint-3161",
-        "episode_number": 49999,
-        "GPU_ID": '2',
+        "check_point": None,
+        "episode_number": 19,
+        "GPU_ID": '0',
         "X86_CFLAGS": "-mllvm -regalloc=greedy  -march=core2",
         "AArch64_CFLAGS": "-mllvm -regalloc=greedy  -mcpu=cortex-a72",
         "dataset_bucket": "set_70-120",
-        "current_batch": 620,
-        "Workers_starting_port": "50078",
+        "current_batch": 100,
+        "Workers_starting_port": "50001",
+        "action_space_size": RegisterActionSpace("X86").ac_sp_normlize_size,
+        "use_mca_reward": True,
+        "mca_timeout": 30,
+        "mca_throughput_file_path": "/home/cs20mtech12003/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src/greedy-throughput.json",
+        "mca_cycles_file_path": "/home/cs20mtech12003/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src/greedy-cycles.json"
 
     },
 

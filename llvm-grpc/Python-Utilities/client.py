@@ -41,13 +41,15 @@ class RegisterAllocationClient(object):
 
         return (self.stub.getGraphs(request))
 
-    def codeGen(self, message, register, payload):
+    def codeGen(self, message, register, payload, color=None):
 
         # with open(FilePath,'rb') as f:
         #    file_content=f.read()
         
-
-        request=RegisterAllocation_pb2.Data(message=message, regidx=register, payload=payload)
+        if color:
+            request=RegisterAllocation_pb2.Data(message=message, regidx=register, payload=payload, color=color)
+        else:
+            request=RegisterAllocation_pb2.Data(message=message, regidx=register, payload=payload)
         
         return self.stub.codeGen(request) 
 

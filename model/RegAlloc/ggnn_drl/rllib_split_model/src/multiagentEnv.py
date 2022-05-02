@@ -43,10 +43,11 @@ from tqdm import tqdm
 import traceback
 import random
 import sys
+import re
 
 sys.path.append('../../../../../llvm-grpc/Python-Utilities/')
 from client import *
-import RegisterAllocationInference_pb2_grpc, RegisterAllocationInference_pb2
+import RegisterAllocationInference_pb2_grpc, RegisterAllocationInference_pb2, RegisterAllocation_pb2
 
 config_path=None
 
@@ -87,11 +88,16 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.last_task_done = 0
         self.node_representation_mat = None
         self.max_edge_count = env_config["max_edge_count"]
+        self.use_mca_reward = env_config["use_mca_reward"]
+        self.mca_timeout = env_config["mca_timeout"]
+        self.mca_throughput_file_path = env_config["mca_throughput_file_path"]
+        self.mca_cycles_file_path = env_config["mca_cycles_file_path"]
 
         print("env_config.worker_index", env_config.worker_index)
         
         if self.mode != 'inference':
-            self.color_assignment_map = {}
+            # self.color_assignment_map = {}
+            self.color_assignment_map = []
             dataset = env_config["dataset"]
             self.graphs_num = env_config["graphs_num"]
 
@@ -265,7 +271,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
     def step(self, action_dict, extra_info=None):
         if extra_info and 'select_node_policy' in extra_info.keys():
             self.node_representation_mat = extra_info['select_node_policy'][0, :, :]
-            print("N1 representation", self.node_representation_mat[0, :])
+            # print("N1 representation", self.node_representation_mat[0, :])
             # print("Extra info dict", type(self.node_representation_mat), self.node_representation_mat.shape, type(self.obs.initial_node_representation), self.obs.initial_node_representation.shape)
         # self.select_task_agent_id = "select_task_agent_{}".format(self.agent_count)
         if self.select_node_agent_id in action_dict:
@@ -425,10 +431,11 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.cur_obs = self.node_representation_mat[self.cur_node][0:self.emb_size]
         if self.cur_obs is not None and not isinstance(self.cur_obs, np.ndarray):
             self.cur_obs = self.cur_obs.detach().numpy()
-        
+        # print("N1 node representations", hidden_state[0])
         prop = self.getNodeProperties()
         prop_value_list = list(prop.values())
         select_task_mask = self.creatTaskSelectMask()
+        # select_task_mask = [0, 1]
         reward = {
             self.select_task_agent_id: 0
         }
@@ -645,10 +652,10 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
         if done_all:
             reward = {
-                self.colour_node_agent_id: 0,
-                self.select_node_agent_id: 0,
-                self.select_task_agent_id: 0,
-                self.split_node_agent_id: 0
+                self.colour_node_agent_id: colour_reward,
+                self.select_node_agent_id: colour_reward,
+                self.select_task_agent_id: colour_reward,
+                self.split_node_agent_id: colour_reward
             }
             done['__all__'] = True
             from csv import writer
@@ -876,7 +883,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         if self.mode != 'inference':
             updated_graphs = self.stable_grpc('Split', int(node_id), int(split_point))
             if updated_graphs is None:
-                return reward, True
+                self.obs.graph_topology.markNodeAsNotVisited(nodeChoosen)
+                return reward, False
             if not self.update_obs(updated_graphs, int(node_id), int(split_point)):
                 self.obs.graph_topology.markNodeAsNotVisited(nodeChoosen)
             else:
@@ -897,7 +905,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         
         node_id =  self.obs.idx_nid[nodeChoosen]
         if self.mode != 'inference':
-            self.color_assignment_map[node_id] = int(reg_allocated)
+            # self.color_assignment_map[node_id] = int(reg_allocated)
+            self.color_assignment_map.append(RegisterAllocation_pb2.Data.colorData(key=str(node_id), value=int(reg_allocated)))
         else:
             # grpccolor = RegisterAllocationInference_pb2.Data.color(key=node_id, value=int(reg_allocated))
             # print()
@@ -916,11 +925,14 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         response = None 
         if False not in self.obs.graph_topology.discovered:
             if self.mode != 'inference': 
-                response = utils_1.get_colored_graph(self.fun_id, self.fileName, self.functionName, self.color_assignment_map)
-                logging.info("Colour map for {} file : {}".format(self.fun_id, response['Predictions'][0]['mapping']))
+                # response = utils_1.get_colored_graph(self.fun_id, self.fileName, self.functionName, self.color_assignment_map)
+                # self.colormap = json.dumps(response)
+
+                response = self.color_assignment_map
+                self.colormap = response
+                # logging.info("Colour map for {} file : {}".format(self.fun_id, response['Predictions'][0]['mapping']))
                 logging.debug("Number of split steps are {}, colour steps are {}".format(self.split_steps, self.colour_steps))
-                print("Colour Map:", response)
-                self.colormap = json.dumps(response)
+                # print("Colour Map:", response)                
             else:
                 response = self.color_assignment_map
                 self.colormap = response
@@ -932,16 +944,81 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             # print('Seerver : {}'.format(self.server_pid))
             # self.server_pid.join()# terminate()
             if self.mode != 'inference':
-                self.stable_grpc('Exit', 0, 0)   
-                print("Killing Server pid", self.server_pid.pid)         
-                os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
-                # self.server_pid.kill()
-                # self.server_pid.communicate()
-                # while self.server_pid.poll() is None:
-                #     print("Tring to kill server")
-                #     self.server_pid.kill()
-                #     self.server_pid.communicate()
-                #     time.sleep(1)
+                self.stable_grpc('Exit', 0, 0)                   
+                if self.use_mca_reward:
+                    # starttime = time.time()                    
+                    # while self.server_pid.poll() is None:
+                    #     # print("Inside while loop")
+                    #     totaltime = time.time() - starttime
+                    #     # if totaltime > self.mca_timeout:
+                    #     #     process_completed = False
+                    #     #     # os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
+                    #     #     break
+                    
+                    process_completed = True
+                    try:
+                        outs, errs = self.server_pid.communicate(timeout=self.mca_timeout)
+                    except:
+                        self.server_pid.kill()
+                        process_completed = False
+                        print("Clang failing")
+                    outs, errs = self.server_pid.communicate()
+                    if process_completed:                    
+                        print("Clang process finished")
+                        # while 1:
+                        #     a = 1
+                        build_path = self.env_config["build_path"]
+                        self.mca_pid = utils_1.runMCA(self.functionName, self.worker_index, build_path)
+                        # while self.mca_pid.poll() is None:
+                        try:
+                            outs, errs = self.mca_pid.communicate(timeout=self.mca_timeout)
+                        except:
+                            self.mca_pid.kill()
+                            outs, errs = self.mca_pid.communicate()
+                        if outs != "":
+                            try:
+                                mlra_cycles = re.search('Total Cycles:      [0-9]+', outs).group()
+                                mlra_cycles = int(re.search('[0-9]+', mlra_cycles).group())
+                                mlra_throughput = re.search('Block RThroughput: [0-9]+.[0-9]+', outs).group()
+                                mlra_throughput = float(re.search('[0-9]+.[0-9]+', mlra_throughput).group())                                                                
+                            except AttributeError:
+                                pass
+                            
+                            with open(self.mca_cycles_file_path) as f:
+                                greedy_cycles_map = json.load(f)
+                            # Reward from cycles
+                            # if self.path in greedy_cycles_map.keys():
+                            #     greedy_cycles = greedy_cycles_map[self.path]
+                            #     reward = greedy_cycles - mlra_cycles
+                            #     print("Cycle:", mlra_cycles, greedy_cycles)
+                            #     print("Reward from cycles:", reward)
+                            # else:
+                            #     print("Path:", self.path)
+                            #     print("Greedy map keys", greedy_cycles_map.keys())
+                            
+                            # Reward from throughout
+                            with open(self.mca_throughput_file_path) as f:
+                                greedy_throughput_map = json.load(f)
+                            # with open('greedy-throughput.json') as f:
+                            #     greedy_throughput_map = json.load(f)
+                            if self.path in greedy_throughput_map.keys():
+                                greedy_throughput = greedy_throughput_map[self.path]
+                                throughput_diff = (greedy_throughput - mlra_throughput)
+                                reward = (throughput_diff/greedy_throughput)*100
+                                print("Throughput:", mlra_throughput, greedy_throughput)
+                                print("Reward from throughput:", reward)
+                            # else:
+                            #     print("Path:", self.path)
+                            #     print("Greedy map keys", greedy_throughput_map.keys())
+                        else:
+                            print("MCA timeout happned")                    
+                    else:
+                        print("Excided timer for asembly generation")
+                        reward = 0
+                else:
+                    print("Killing Server pid", self.server_pid.pid)         
+                    os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
+
                 if self.server_pid.poll() is not None:
                     print('Force stop')
                 self.server_pid = None
@@ -965,7 +1042,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             # path="/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/graphs/IG/json/500.perlbench_r_51.ll_F2.json"
             # path = "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/graphs/IG/json_new/523.xalancbmk_r_392.ll_F21.json"
             # path = "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/graphs/IG/json_new/523.xalancbmk_r_682.ll_F12.json"
-            # path ="/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data_100d/graphs/IG/set1/502.gcc_r_114.ll_F4.json"
+            path ="/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/graphs/IG/set_70-120/526.blender_r_120.ll_F28.json"
             logging.debug('Graphs selected : {}'.format(path))
             print('Graphs selected : {}'.format(path))
             self.reset_count+=1
@@ -1011,18 +1088,19 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             # hostport=str(self.port_number)
             ipadd = "{}:{}".format(hostip, hostport)
             # print('Active thread before the server starts : ', threading.active_count())
-            clang_path = self.env_config["CLANG_PATH"]
+            build_path = self.env_config["build_path"]
             if self.env_config["target"] == 'X86':
                 cflags = self.env_config["X86_CFLAGS"]
             else:
                 cflags = self.env_config["AArch64_CFLAGS"]
             logdir = self.env_config["log_dir"]
-            self.server_pid = utils_1.startServer(self.fileName, self.fun_id, ipadd, clang_path, cflags, logdir)
+            self.server_pid = utils_1.startServer(self.fileName, self.functionName, self.fun_id, ipadd, build_path, cflags, logdir, self.worker_index, self.use_mca_reward)
             print("Server pid", self.server_pid.pid, hostport)
             #time.sleep(5)
             # print('Active thread mid the server starts : ', threading.active_count())
             self.queryllvm = RegisterAllocationClient(hostport=hostport)
-            self.color_assignment_map = {}
+            # self.color_assignment_map = {}
+            self.color_assignment_map = []
             assert not bool(self.color_assignment_map), "Colour assignment map is non empty"
         else:
             self.fileName = graph.fileName
@@ -1041,7 +1119,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
     def stable_grpc(self, op, register_id, split_point):
         attempt = 0
-        max_retries=10
+        max_retries=5
         retry_wait_seconds=0.1
         retry_wait_backoff_exponent=1.5
         while True:
@@ -1049,7 +1127,10 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 logging.debug("Observation {}, register id {} and split point {}".format(op, register_id,  split_point))
                 # print("LLVM grpc called")
                 t1 = time.time()
-                updated_graphs = self.queryllvm.codeGen(op, register_id,  split_point)
+                if op != "Exit":
+                    updated_graphs = self.queryllvm.codeGen(op, register_id,  split_point)
+                else:
+                    updated_graphs = self.queryllvm.codeGen(op, register_id,  split_point, color=self.colormap)
                 t2 = time.time()
                 # print("LLVM grpc response came in {} sec".format(t2 -t1))
                 self.grpc_rtt += t2-t1
@@ -1060,6 +1141,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 
                 if e.code() == grpc.StatusCode.UNAVAILABLE:
                     print("Error in grpc")
+                    if op == 'Exit' and self.last_task_done == 0:
+                        raise
                     attempt += 1
                     if attempt > max_retries:
                         print("Maximum attempts completed")

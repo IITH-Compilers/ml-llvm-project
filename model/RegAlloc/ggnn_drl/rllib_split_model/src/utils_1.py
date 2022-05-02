@@ -131,19 +131,37 @@ def log_subprocess_output(pipe):
 
 
 import time
-def startServer(filename, fun_id, ip, clang_path, cflags, logdir):
-    def run(filename, fun_id, clang_path, cflags, logdir):
+def startServer(filename, fun_name, fun_id, ip, build_path, cflags, logdir, worker_index=None, use_mca_reward=False):
+    def run(filename, fun_id, build_path, cflags, logdir, worker_index, use_mca_reward):
+        # cmd = "{clang} -O3 -mllvm -regalloc=greedy -march=core2 -mllvm -mlra-training -mllvm -debug-only=mlra-regalloc -mllvm -mlra-funcID={fun_id} -mllvm -mlra-server-address={ip} {src_file} -o /dev/null &> llvm_logs_1.log".format(clang=os.environ['CLANG'], src_file=filename, fun_id=fun_id, ip=ip)
         llvm_log = os.path.join(logdir, 'llvm_log.log')
-        #cmd = "{clang} -O3 -mllvm -regalloc=greedy  -march=core2 -mllvm -mlra-training -mllvm -debug-only=mlra-regalloc -mllvm -mlra-funcID={fun_id} -mllvm -mlra-server-address={ip} {src_file} -o /dev/null &> llvm_logs_x86_PPO_120-300_ggnn_27-04-22.log".format(clang=os.environ['CLANG'], src_file=filename, fun_id=fun_id, ip=ip)
-        cmd = "{clang} -O3 {cflags} -mllvm -mlra-training -mllvm -debug-only=mlra-regalloc -mllvm -mlra-funcID={fun_id} -mllvm -mlra-server-address={ip} {src_file} -o /dev/null &> {llvm_log}".format(clang=clang_path, cflags=cflags,  src_file=filename, fun_id=fun_id, ip=ip, llvm_log=llvm_log)
-
-        # print("Clang cmd:", cmd)
+        if use_mca_reward:
+            cmd = "{build_path}/bin/clang++ -S -Xclang -load -Xclang {build_path}/lib/MCAInstrument.so -O3 -mllvm -mca-funcID={fun_name} {cflags} -mllvm -mlra-training -mllvm -debug-only=mlra-regalloc -mllvm -mlra-funcID={fun_id} -mllvm -mlra-server-address={ip} {src_file} -o mca-out{worker_index}.s &> {llvm_log}".format(build_path=build_path, cflags=cflags, src_file=filename, fun_name=fun_name, fun_id=fun_id, ip=ip, worker_index=worker_index, llvm_log=llvm_log)
+        else:
+            cmd = "{build_path}/bin/clang++ -O3 {cflags} -mllvm -mlra-training -mllvm -debug-only=mlra-regalloc -mllvm -mlra-funcID={fun_id} -mllvm -mlra-server-address={ip} {src_file} -o /dev/null &> {llvm_log}".format(build_path=build_path, cflags=cflags, src_file=filename, fun_name=fun_name, fun_id=fun_id, ip=ip, llvm_log=llvm_log)
+        # print(cmd)
         #os.system(cmd)
-        pid = subprocess.Popen(cmd, executable='/bin/bash', shell=True, preexec_fn=os.setsid)
+        pid = subprocess.Popen(cmd, executable='/bin/bash', shell=True, preexec_fn=os.setsid, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+        return pid
+            
+    pid = run(filename, fun_id, build_path, cflags, logdir, worker_index, use_mca_reward)#multiprocessing.Process(target=run, args=(filename, fun_id,))
+    # pid.start()
+    # time.sleep(5)
+    # print(pid)
+    return pid
+
+def runMCA(fun_name, worker_index, build_path):
+    def run(fun_name, worker_index, build_path):
+        # cmd = "{clang} -O3 -mllvm -regalloc=greedy -mcpu=cascadelake -mllvm -mlra-training -mllvm -debug-only=mlra-regalloc -mllvm -mlra-funcID={fun_id} -mllvm -mlra-server-address={ip} {src_file} -o /dev/null &> llvm_logs_1.log".format(clang=os.environ['CLANG'], src_file=filename, fun_id=fun_id, ip=ip)
+        # cmd = "{mca} mca-out{worker_index}.s &> mca-{fun_name}.log".format(mca=os.environ['MCA'], fun_name=fun_name, worker_index=worker_index, universal_newlines=True)
+        cmd = "{build_path}/bin/llvm-mca mca-out{worker_index}.s".format(build_path=build_path, fun_name=fun_name, worker_index=worker_index)
+        print(cmd)
+        #os.system(cmd)
+        pid = subprocess.Popen(cmd, executable='/bin/bash', shell=True, preexec_fn=os.setsid, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
         return pid
         
     
-    pid = run(filename, fun_id, clang_path, cflags, logdir)#multiprocessing.Process(target=run, args=(filename, fun_id,))
+    pid = run(fun_name, worker_index, build_path)#multiprocessing.Process(target=run, args=(filename, fun_id,))
     # pid.start()
     # time.sleep(5)
     # print(pid)

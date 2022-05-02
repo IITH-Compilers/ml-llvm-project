@@ -381,7 +381,7 @@ class RollOutInference:
         }
 
        
-        config["num_gpus"]=1
+        config["num_gpus"]=0
         ModelCatalog.register_custom_model("select_node_model", SelectNodeNetwork)
         ModelCatalog.register_custom_model("select_task_model", SelectTaskNetwork)
         ModelCatalog.register_custom_model("colour_node_model", ColorNetwork)
@@ -641,6 +641,13 @@ class RollOutInference:
 
     def setCurrentNodeAsNotVisited(self):
         self.env.obs.graph_topology.markNodeAsNotVisited(self.env.cur_node)
+
+    def setNodeAsNotVisited(self, regid):
+        reginx = self.env.obs.nid_idx[regid]
+        self.env.obs.graph_topology.markNodeAsNotVisited(reginx)
+
+    def resetSplitNodeBuffer(self):
+        self.env.split_node_buffer = []
 
     def updateSelectNodeObs(self):
         select_node_mask = self.env.createNodeSelectMask()

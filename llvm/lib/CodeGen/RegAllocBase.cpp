@@ -154,16 +154,16 @@ void RegAllocBase::allocatePhysRegs() {
       LiveInterval *SplitVirtReg = &LIS->getInterval(Reg);
       assert(!VRM->hasPhys(SplitVirtReg->reg) && "Register already assigned");
       if (MRI->reg_nodbg_empty(SplitVirtReg->reg)) {
-        errs() << "Checking in regallocbase - " << printReg(SplitVirtReg->reg)
-               << "\n";
-        if (!SplitVirtReg->empty()) {
-          errs() << "empty segments check: \n";
-          for (auto i : SplitVirtReg->segments) {
-            errs() << "\t not empty: ";
-            i.dump();
-          }
-          VRM->getMachineFunction().dump();
-        }
+        // errs() << "Checking in regallocbase - " << printReg(SplitVirtReg->reg)
+        //        << "\n";
+        // if (!SplitVirtReg->empty()) {
+        //   errs() << "empty segments check: \n";
+        //   for (auto i : SplitVirtReg->segments) {
+        //     errs() << "\t not empty: ";
+        //     i.dump();
+        //   }
+        //   VRM->getMachineFunction().dump();
+        // }
         // assert(SplitVirtReg->empty() && "Non-empty but used interval");
         LLVM_DEBUG(dbgs() << "not queueing unused  " << *SplitVirtReg << '\n');
         aboutToRemoveInterval(*SplitVirtReg);

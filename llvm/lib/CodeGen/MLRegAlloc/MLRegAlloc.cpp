@@ -203,8 +203,18 @@ grpc::Status MLRA::codeGen(grpc::ServerContext *context,
   errs() << request->message();
   // std::string str = "LLVM\n";
   // response->set_payload(str);
-  if (request->message() == "Exit")
+  if (request->message() == "Exit"){
+    std::map<std::string, int64_t> colorMap;
+    unsigned numSpills = 0;
+    for (auto i : request->color()) {
+      colorMap[i.key()] = i.value();
+      if (i.value() == 0)
+        numSpills++;
+    }
+    this->FunctionVirtRegToColorMap[MF->getName()] = colorMap;
     exit_requested->set_value();
+  }
+    
   if (request->message() == "Split" ||
       request->message() == "SplitAndCapture") {
     unsigned splitRegIdx = request->regidx();
@@ -418,10 +428,10 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
   //   return false;
   // }
 
-  if (MI->isCopy()) {
+  if (MI->isCopy() || MI->isInlineAsm()) {
     LLVM_DEBUG(
         errs() << "No use of splitting at/before the copy instruction -- would "
-                  "create more redundant copies\n");
+                  "create more redundant copies or at InlineAsm calls\n");
     return false;
   }
 
