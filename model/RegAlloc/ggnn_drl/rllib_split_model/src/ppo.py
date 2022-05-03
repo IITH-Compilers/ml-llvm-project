@@ -50,7 +50,7 @@ DEFAULT_CONFIG = with_common_config({
     "rollout_fragment_length": 64,
     # Number of timesteps collected for each SGD round. This defines the size
     # of each SGD epoch.
-    "train_batch_size": 512,
+    "train_batch_size": 256,
     # Total SGD batch size across all devices for SGD. This defines the
     # minibatch size within each epoch.
     "sgd_minibatch_size": 64,
@@ -110,7 +110,7 @@ DEFAULT_CONFIG = with_common_config({
     },
 
     "env_config": {
-        "target": "X86",
+        "target": "AArch64",
         "state_size": 100,
         "max_number_nodes": 300,
         "max_usepoint_count": 200,
@@ -120,22 +120,27 @@ DEFAULT_CONFIG = with_common_config({
         "dump_type": 'One',
         "dump_color_graph": True,
         "intermediate_data": './temp',
-        "CLANG_PATH": "/raid/cs17m20P100001/ML-Register-Allocation/build_x86_wo_colouring/bin/clang++",
-        "Register_config": "/raid/cs17m20P100001/ML-Register-Allocation/llvm/lib/CodeGen/MLRegAlloc/config_json",
-        "log_path": "/raid/cs17m20P100001/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src/log",
+        #"build_path": "/home/cs20mtech12003/ML-Register-Allocation/X86Build",
+        "build_path": "/home/cs20mtech12003/ML-Register-Allocation/AArch64Build",
+        "Register_config": "/home/cs20mtech12003/ML-Register-Allocation/llvm/lib/CodeGen/MLRegAlloc/config_json",
+        "log_path": "/home/cs20mtech12003/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src/log",
         #"dataset": "/raid/cs17m20P100001/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_new_data/",
-        "dataset": "/raid/cs17m20P100001/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_new_data/",
-        # "dataset": "/home/cs20mtech12003/ML-Register-Allocation/temp_data/",
+        #"dataset": "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_new_data/",
+        "dataset": "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_aarch64_new_data/",
         "graphs_num": 10000,
-        "action_space_size": RegisterActionSpace("X86").ac_sp_normlize_size,
-        "check_point": "/raid/cs17m20P100001/ray_results/experiment_2022-04-21_15-58-48/experiment_HierarchicalGraphColorEnv_756b9_00000_0_2022-04-21_15-58-48/checkpoint_003161/checkpoint-3161",
+        "action_space_size": RegisterActionSpace("AArch64").ac_sp_normlize_size,
+        "check_point": None,
         "episode_number": 49999,
-        "GPU_ID": '2',
+        "GPU_ID": '0',
         "X86_CFLAGS": "-mllvm -regalloc=greedy  -march=core2",
         "AArch64_CFLAGS": "-mllvm -regalloc=greedy  -mcpu=cortex-a72",
         "dataset_bucket": "set_70-120",
-        "current_batch": 620,
-        "Workers_starting_port": "50078",
+        "current_batch": 200,
+        "Workers_starting_port": "50023",
+        "use_mca_reward": True,
+        "mca_timeout": 30,
+        "mca_throughput_file_path": "/home/cs20mtech12003/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src/aarch64-greedy-throughput_set_70-120.json",
+        "mca_cycles_file_path": "/home/cs20mtech12003/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src/aarch64-greedy-cycles_set_70-120.json"
 
     },
 
@@ -146,9 +151,9 @@ DEFAULT_CONFIG = with_common_config({
     # Number of workers for collecting samples with. This only makes sense
     # to increase if your environment is particularly slow to sample, or if
     # you"re using the Async or Ape-X optimizers.
-    "num_workers": 1,
+    "num_workers": 5,
 
-    "num_gpus": 0,
+    "num_gpus": 1,
 })
 
 # __sphinx_doc_end__

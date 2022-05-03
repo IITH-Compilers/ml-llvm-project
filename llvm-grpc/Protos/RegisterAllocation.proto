@@ -41,9 +41,14 @@ message RegisterProfileList {
 }
 
 message Data {
+  message colorData {
+    string key = 1;
+    uint32 value = 2;
+  }
   string message = 1;
   uint32 regidx = 2;
   int64 payload = 3;
+  repeated colorData color = 4;
 }
 
 message Empty {

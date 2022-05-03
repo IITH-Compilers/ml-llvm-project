@@ -1,6 +1,7 @@
 import sys
 
 sys.path.append("./Python-Utilities/")
+import RegisterAllocationInference_pb2_grpc, RegisterAllocationInference_pb2, RegisterAllocation_pb2
 
 from client import *
 
@@ -22,7 +23,7 @@ if __name__ == '__main__':
     jsonFile2="/media/lavo07/lavo07/LLVM_GRPC/test/jsonfiles/fib3.json"
     jsonFile3="/media/lavo07/lavo07/LLVM_GRPC/test/newPredColor.json"
 
-    client=RegisterAllocationClient(hostip='localhost', hostport=50051) # Creating register allocation client
+    client=RegisterAllocationClient(hostip='localhost', hostport=50002) # Creating register allocation client
 
     #client.startServer(binaryPath)  # Starting the server
 
@@ -33,9 +34,17 @@ if __name__ == '__main__':
         msg = input("Message: ")
         reg = input("Register: ")
         point = input("SplitPoint: ")        
-        if msg == '':
+        if msg == 'Split':
             msg = "Split"
-        print(client.codeGen(msg, int(reg), int(point)))
+            print(client.codeGen(msg, int(reg), int(point)))
+        if msg == 'Exit':
+            color_assignment_map = []
+            map_length = input("Map length:")
+            for i in range(int(map_length)):
+                vreg = input("Virtual Register: ")
+                clr = input("Color: ")
+                color_assignment_map.append(RegisterAllocation_pb2.Data.colorData(key=str(vreg), value=int(clr)))
+            print(client.codeGen(msg, int(reg), int(point), color_assignment_map))
     #client.codeGen(jsonFile,testFiles) # generate code from json graphs
     #client.codeGen(jsonFile1,testFiles1) 
     #client.codeGen(jsonFile2,testFiles2)
