@@ -136,10 +136,11 @@ DEFAULT_CONFIG = with_common_config({
         "AArch64_CFLAGS": "-mllvm -regalloc=greedy  -mcpu=cortex-a72",
         "dataset_bucket": "set_70-120",
         "current_batch": 200,
-        "Workers_starting_port": "50023",
+        "Workers_starting_port": "50045",
         "use_mca_reward": True,
+        "mca_reward_clip": 10,
         "mca_timeout": 30,
-        "mca_throughput_file_path": "/home/cs20mtech12003/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src/aarch64-greedy-throughput_set_70-120.json",
+        "greedy_mca_throughput_file_path": "/home/cs20mtech12003/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src/aarch64-greedy-throughput_set_70-120.json",
         "mca_cycles_file_path": "/home/cs20mtech12003/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src/aarch64-greedy-cycles_set_70-120.json"
 
     },
@@ -153,7 +154,7 @@ DEFAULT_CONFIG = with_common_config({
     # you"re using the Async or Ape-X optimizers.
     "num_workers": 5,
 
-    "num_gpus": 1,
+    "num_gpus": 0,
 })
 
 # __sphinx_doc_end__

@@ -91,7 +91,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.max_edge_count = env_config["max_edge_count"]
         self.use_mca_reward = env_config["use_mca_reward"]
         self.mca_timeout = env_config["mca_timeout"]
-        self.mca_throughput_file_path = env_config["mca_throughput_file_path"]
+        self.greedy_mca_throughput_file_path = env_config["greedy_mca_throughput_file_path"]
         self.mca_cycles_file_path = env_config["mca_cycles_file_path"]
 
         print("env_config.worker_index", env_config.worker_index)
@@ -591,7 +591,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         annotations[0:state.annotations.shape[0], :] = state.annotations
         # annotations = state.annotations
         adjacency_lists = (state.adjacency_lists[0].getNodeNum(), np.array(state.adjacency_lists[0].getData()))
-        results = None
+        result = None
         for inx, i in enumerate(state.adjacency_lists[0].getData()):
             
             if inx ==0:
@@ -782,7 +782,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         annotations[0:state.annotations.shape[0], :] = state.annotations
         # annotations = state.annotations
         adjacency_lists = (state.adjacency_lists[0].getNodeNum(), np.array(state.adjacency_lists[0].getData()))
-        results = None
+        result = None
         for inx, i in enumerate(state.adjacency_lists[0].getData()):
             
             if inx ==0:
@@ -979,6 +979,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                         process_completed = False
                         print("Clang failing")
                     outs, errs = self.server_pid.communicate()
+                    mlra_throughput = 0
                     if process_completed:                    
                         print("Clang process finished")
                         # while 1:
@@ -1004,9 +1005,9 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                             except AttributeError:
                                 pass
                             
-                            with open(self.mca_cycles_file_path) as f:
-                                greedy_cycles_map = json.load(f)
                             # Reward from cycles
+                            # with open(self.mca_cycles_file_path) as f:
+                            #     greedy_cycles_map = json.load(f)
                             # if self.path in greedy_cycles_map.keys():
                             #     greedy_cycles = greedy_cycles_map[self.path]
                             #     reward = greedy_cycles - mlra_cycles
@@ -1017,7 +1018,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                             #     print("Greedy map keys", greedy_cycles_map.keys())
                             
                             # Reward from throughout
-                            with open(self.mca_throughput_file_path) as f:
+                            with open(self.greedy_mca_throughput_file_path) as f:
                                 greedy_throughput_map = json.load(f)
                             # with open('greedy-throughput.json') as f:
                             #     greedy_throughput_map = json.load(f)
@@ -1026,17 +1027,36 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                             if key in greedy_throughput_map.keys():
                                 greedy_throughput = greedy_throughput_map[key]
                                 throughput_diff = (greedy_throughput - mlra_throughput)
-                                reward = (throughput_diff/greedy_throughput)*100
+                                reward = (throughput_diff/greedy_throughput)*self.env_config["mca_reward_clip"]
                                 print("Throughput:", mlra_throughput, greedy_throughput)
                                 print("Reward from throughput:", reward)
                             # else:
                             #     print("Path:", self.path)
                             #     print("Greedy map keys", greedy_throughput_map.keys())
+                            
                         else:
                             print("MCA timeout happned")                    
                     else:
                         print("Excided timer for asembly generation")
                         reward = 0
+                    
+                    logdir = self.env_config["log_dir"]
+                    mlra_mca_throughput_file_path = os.path.join(logdir, str(self.worker_index) + '_mlra_throughput.json')
+                    if os.path.exists(mlra_mca_throughput_file_path):
+                        with open(mlra_mca_throughput_file_path) as f:
+                            mlra_throughput_map = json.load(f)
+                            f.close()
+                    else:
+                        mlra_throughput_map = {}
+                    
+                    with open(mlra_mca_throughput_file_path, 'w') as f:
+                        fileName = os.path.basename(self.fileName)
+                        key = fileName + "_" + self.functionName
+                        if key not in mlra_throughput_map.keys():
+                            mlra_throughput_map[key] = []
+                        mlra_throughput_map[key].append(mlra_throughput)
+                        json.dump(mlra_throughput_map, f)
+                        f.close()
                 else:
                     print("Killing Server pid", self.server_pid.pid)         
                     os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
