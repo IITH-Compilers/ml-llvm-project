@@ -387,9 +387,11 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
     return false;
   }
 
-  if (std::find(mlSpilledRegs.begin(), mlSpilledRegs.end(), VirtReg) ==
-      mlSpilledRegs.end())
-    return false;
+  /*if (std::find(mlSpilledRegs.begin(), mlSpilledRegs.end(), VirtReg) ==
+      mlSpilledRegs.end()) {
+    LLVM_DEBUG(errs() <<  "Returning false, from find() \n");
+	  return false;
+  }*/
 
   SA->analyze(VirtReg);
   LiveRangeEdit LREdit(VirtReg, NewVRegs, *MF, *LIS, VRM);
@@ -417,8 +419,9 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
   }
   assert(found && "Invalid split point");
   // if (idxPos == 0 || idxPos >= useSlots.size() - 1)
-  if (idxPos >= useSlots.size() - 1)
+  if (idxPos >= useSlots.size() - 1) {
     return false;
+  }
 
   auto MI = LIS->getInstructionFromIndex(idx);
   assert(MI && "Empty instruction found for splitting");
@@ -438,8 +441,9 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
   // No use of splitting at a point whose next inst itself has a use
   auto nextInst = MI->getNextNode();
   if (nextInst &&
-      LIS->getInstructionFromIndex(useSlots[idxPos + 1]) == nextInst)
+      LIS->getInstructionFromIndex(useSlots[idxPos + 1]) == nextInst){
     return false;
+  }
 
   // if (nextInst && nextInst->isCompare()) {
   //   errs() << "Compare inst so bailing out of the optimization\n";

@@ -151,6 +151,7 @@ if __name__ == "__main__":
     logdir_name = config["env_config"]["target"] + '_' + str(config["env_config"]["episode_number"]) + 'Eps_' + config["env_config"]["dataset_bucket"]
     logdir = os.path.join(log_path, logdir_name + '_' + datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
     os.makedirs(logdir)
+    print("Log directory:", logdir)
     config['env_config']['log_dir'] = logdir
     python_log = os.path.join(logdir, 'running.log')
     #if os.path.exists(python_log):
