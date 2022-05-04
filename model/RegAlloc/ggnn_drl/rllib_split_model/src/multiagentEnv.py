@@ -591,6 +591,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         annotations[0:state.annotations.shape[0], :] = state.annotations
         # annotations = state.annotations
         adjacency_lists = (state.adjacency_lists[0].getNodeNum(), np.array(state.adjacency_lists[0].getData()))
+        results = None
         for inx, i in enumerate(state.adjacency_lists[0].getData()):
             
             if inx ==0:
@@ -599,7 +600,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 result = torch.cat([result, i], dim=0)
         max_edge_count = self.max_edge_count
         edges_unroll = np.zeros((2*max_edge_count,))
-        edges_unroll[0:result.shape[0]] = result
+        if result is not None:
+            edges_unroll[0:result.shape[0]] = result
         node_edge_count = (state.adjacency_lists[0].getNodeNum(), state.adjacency_lists[0].getData().shape[0])
         # print("elements of edge", result)
 
@@ -780,6 +782,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         annotations[0:state.annotations.shape[0], :] = state.annotations
         # annotations = state.annotations
         adjacency_lists = (state.adjacency_lists[0].getNodeNum(), np.array(state.adjacency_lists[0].getData()))
+        results = None
         for inx, i in enumerate(state.adjacency_lists[0].getData()):
             
             if inx ==0:
@@ -788,7 +791,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 result = torch.cat([result, i], dim=0)
         max_edge_count = self.max_edge_count
         edges_unroll = np.zeros((2*max_edge_count,))
-        edges_unroll[0:result.shape[0]] = result
+        if result is not None:
+            edges_unroll[0:result.shape[0]] = result
         node_edge_count = (state.adjacency_lists[0].getNodeNum(), state.adjacency_lists[0].getData().shape[0])
         # print("elements of edge", result)
 
