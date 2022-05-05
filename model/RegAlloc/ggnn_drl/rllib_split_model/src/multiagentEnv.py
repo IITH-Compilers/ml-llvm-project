@@ -90,6 +90,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.node_representation_mat = None
         self.max_edge_count = env_config["max_edge_count"]
         self.use_mca_reward = env_config["use_mca_reward"]
+        self.use_local_reward =  env_config["use_local_reward"]
         self.mca_timeout = env_config["mca_timeout"]
         self.greedy_mca_throughput_file_path = env_config["greedy_mca_throughput_file_path"]
         self.mca_cycles_file_path = env_config["mca_cycles_file_path"]
@@ -643,13 +644,20 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         #     print("Split node obs size", sys.getsizeof(split_node_obs))
             # self.first_time = False
         self.total_reward += colour_reward
-
-        reward = {
-            # self.colour_node_agent_id: colour_reward,
-            self.select_node_agent_id: colour_reward,
-            self.select_task_agent_id: colour_reward - (self.task_selected * discount_factor),
-            self.split_node_agent_id: 0
-        }
+        if self.use_local_reward:
+            reward = {
+                # self.colour_node_agent_id: colour_reward,
+                self.select_node_agent_id: colour_reward,
+                self.select_task_agent_id: colour_reward - (self.task_selected * discount_factor),
+                self.split_node_agent_id: 0
+            }
+        else:
+            reward = {
+                # self.colour_node_agent_id: colour_reward,
+                self.select_node_agent_id: 0,
+                self.select_task_agent_id: 0,
+                self.split_node_agent_id: 0
+            }
         obs = {
             # self.colour_node_agent_id: colour_node_obs,
             self.select_node_agent_id: select_node_obs,
@@ -818,12 +826,20 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         prop_value_list_colouring = list(node_properties.values())
 
         done = {"__all__": False}
-        reward = {
-            # self.colour_node_agent_id: 0,
-            self.select_node_agent_id: 0,
-            self.select_task_agent_id: 0,
-            self.split_node_agent_id: split_reward
-        }
+        if self.use_local_reward:
+            reward = {
+                # self.colour_node_agent_id: 0,
+                self.select_node_agent_id: 0,
+                self.select_task_agent_id: 0,
+                self.split_node_agent_id: split_reward
+            }
+        else:
+            reward = {
+                # self.colour_node_agent_id: 0,
+                self.select_node_agent_id: 0,
+                self.select_task_agent_id: 0,
+                self.split_node_agent_id: 0
+            }
         obs = {
             # self.colour_node_agent_id: { 'action_mask': np.array(colour_node_mask),'node_properties': np.array(prop_value_list_colouring), 'state' : self.cur_obs},
             # self.select_node_agent_id: { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(select_node_mask), 'state' : cur_obs},
@@ -901,8 +917,11 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             if updated_graphs is None:
                 self.obs.graph_topology.markNodeAsNotVisited(nodeChoosen)
                 return reward, False
-            if not self.update_obs(updated_graphs, int(node_id), int(split_point)):
+            update_obs_result = self.update_obs(updated_graphs, int(node_id), int(split_point))
+            if not update_obs_result:
                 self.obs.graph_topology.markNodeAsNotVisited(nodeChoosen)
+            elif update_obs_result == "error":
+                done = True
             else:
                 self.split_successful += 1
         else:
@@ -1243,8 +1262,9 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                     else:
                         print("Adjency list for {} is {} for register {}".format(adj, self.obs.graph_topology.adjList[adj], register_id))        
             except:
-                # print("Adjency list for {} is {} for register {}".format(cur_adj, self.obs.graph_topology.adjList[cur_adj], register_id))
-                raise
+                print("Adjency list for {} is {} for register {}".format(cur_adj, self.obs.graph_topology.adjList[cur_adj], register_id))
+                return "error"
+                # raise
 
             self.obs.graph_topology.adjList[splited_node_idx] = []
             
@@ -1297,7 +1317,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                         except:
                             print("Node idx map and type", self.obs.nid_idx, type(neigh), neigh)
                             # print("updated_graphs regProf", updated_graphs.regProf)
-                            raise
+                            return "error"
+                            # raise
 
                     self.obs.spill_cost_list.append(node_prof.spillWeight)
                     self.obs.reg_class_list.append(self.obs.reg_class_list[splited_node_idx])
@@ -1357,7 +1378,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                         self.obs.graph_topology.adjList[interfering_node_idx] = list(set(self.obs.graph_topology.adjList[interfering_node_idx] + list(map(lambda x: self.obs.nid_idx[x], node_prof.interferences))))
                 except:
                     print("Node idx map", self.obs.graph_topology.adjList[interfering_node_idx], node_prof.interferences, self.obs.nid_idx)
-                    raise
+                    return "error"
+                    # raise
                 self.obs.graph_topology.indegree[interfering_node_idx] = len(self.obs.graph_topology.adjList[interfering_node_idx])
                 
                 self.obs.spill_cost_list[interfering_node_idx] = node_prof.spillWeight

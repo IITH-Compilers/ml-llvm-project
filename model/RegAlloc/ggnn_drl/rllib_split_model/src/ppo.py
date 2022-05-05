@@ -110,7 +110,7 @@ DEFAULT_CONFIG = with_common_config({
     },
 
     "env_config": {
-        "target": "AArch64",
+        "target": "X86",
         "state_size": 100,
         "max_number_nodes": 300,
         "max_usepoint_count": 200,
@@ -120,28 +120,29 @@ DEFAULT_CONFIG = with_common_config({
         "dump_type": 'One',
         "dump_color_graph": True,
         "intermediate_data": './temp',
-        #"build_path": "/home/cs20mtech12003/ML-Register-Allocation/X86Build",
-        "build_path": "/home/cs20mtech12003/ML-Register-Allocation/AArch64Build",
+        "build_path": "/home/cs20mtech12003/ML-Register-Allocation/X86Build_UPMM",
+        # "build_path": "/home/cs20mtech12003/ML-Register-Allocation/AArch64Build",
         "Register_config": "/home/cs20mtech12003/ML-Register-Allocation/llvm/lib/CodeGen/MLRegAlloc/config_json",
         "log_path": "/home/cs20mtech12003/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src/log",
         #"dataset": "/raid/cs17m20P100001/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_new_data/",
-        #"dataset": "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_new_data/",
-        "dataset": "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_aarch64_new_data/",
+        "dataset": "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_new_data_100d/",
+        # "dataset": "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_aarch64_new_data/",
         "graphs_num": 10000,
-        "action_space_size": RegisterActionSpace("AArch64").ac_sp_normlize_size,
+        "action_space_size": RegisterActionSpace("X86").ac_sp_normlize_size,
         "check_point": None,
         "episode_number": 49999,
         "GPU_ID": '0',
         "X86_CFLAGS": "-mllvm -regalloc=greedy  -march=core2",
         "AArch64_CFLAGS": "-mllvm -regalloc=greedy  -mcpu=cortex-a72",
         "dataset_bucket": "set_70-120",
-        "current_batch": 200,
-        "Workers_starting_port": "50045",
+        "current_batch": 100,
+        "Workers_starting_port": "50001",
+        "use_local_reward": False,
         "use_mca_reward": True,
         "mca_reward_clip": 10,
         "mca_timeout": 30,
-        "greedy_mca_throughput_file_path": "/home/cs20mtech12003/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src/aarch64-greedy-throughput_set_70-120.json",
-        "mca_cycles_file_path": "/home/cs20mtech12003/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src/aarch64-greedy-cycles_set_70-120.json"
+        "greedy_mca_throughput_file_path": "/home/cs20mtech12003/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src/greedy-throughput_set_70-120.json",
+        "mca_cycles_file_path": "/home/cs20mtech12003/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src/greedy-cycles_set_70-120.json"
 
     },
 
@@ -152,9 +153,9 @@ DEFAULT_CONFIG = with_common_config({
     # Number of workers for collecting samples with. This only makes sense
     # to increase if your environment is particularly slow to sample, or if
     # you"re using the Async or Ape-X optimizers.
-    "num_workers": 5,
+    "num_workers": 10,
 
-    "num_gpus": 0,
+    "num_gpus": 1,
 })
 
 # __sphinx_doc_end__
