@@ -94,6 +94,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.mca_timeout = env_config["mca_timeout"]
         self.greedy_mca_throughput_file_path = env_config["greedy_mca_throughput_file_path"]
         self.mca_cycles_file_path = env_config["mca_cycles_file_path"]
+        self.use_mca_self_play_reward= env_config["use_mca_self_play_reward"]
+        self.best_throughput_map = {}
 
         print("env_config.worker_index", env_config.worker_index)
         
@@ -1043,12 +1045,25 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                             #     greedy_throughput_map = json.load(f)
                             key = os.path.basename(self.fileName) + "_" + self.functionName
                             print("searching for key = " + key)
-                            if key in greedy_throughput_map.keys():
-                                greedy_throughput = greedy_throughput_map[key]
-                                throughput_diff = (greedy_throughput - mlra_throughput)
-                                reward = (throughput_diff/greedy_throughput)*self.env_config["mca_reward_clip"]
-                                print("Throughput:", mlra_throughput, greedy_throughput)
-                                print("Reward from throughput:", reward)
+                            if self.use_mca_self_play_reward:
+                                if key not in self.best_throughput_map.keys():
+                                    self.best_throughput_map[key] = 0
+                                best_throughput = self.best_throughput_map[key]
+                                throughput_diff = (mlra_throughput - best_throughput)
+                                print("Throughput:", mlra_throughput, best_throughput)                                
+                                if best_throughput < mlra_throughput:
+                                    self.best_throughput_map[key] = mlra_throughput
+                                    best_throughput = mlra_throughput
+                                reward = (throughput_diff/best_throughput)*self.env_config["mca_reward_clip"]
+                                print("Reward from self play throughput:", reward)
+                                                                                                    
+                            else:
+                                if key in greedy_throughput_map.keys():
+                                    greedy_throughput = greedy_throughput_map[key]
+                                    throughput_diff = (mlra_throughput - greedy_throughput)
+                                    reward = (throughput_diff/greedy_throughput)*self.env_config["mca_reward_clip"]
+                                    print("Throughput:", mlra_throughput, greedy_throughput)
+                                    print("Reward in compaire to greedy throughput:", reward)
                             # else:
                             #     print("Path:", self.path)
                             #     print("Greedy map keys", greedy_throughput_map.keys())
