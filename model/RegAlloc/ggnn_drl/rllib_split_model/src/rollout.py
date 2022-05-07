@@ -392,6 +392,9 @@ class RollOutInference:
         box_obs_select_node = Box(
                 -10000000000000.0, 10000000000000.0, shape=(config["env_config"]["max_number_nodes"], config["env_config"]["state_size"]), dtype=np.float32)
 
+        max_edge_count = config["env_config"]["max_edge_count"]
+        edges_unroll_box = Box(0.0, config["env_config"]["max_number_nodes"], shape=(2*max_edge_count,))
+        node_edge_count = Tuple((Discrete(config["env_config"]["max_number_nodes"]), Discrete(max_edge_count)))
         # obs_colour_node = Dict({
         #     "action_mask": Box(0, 1, shape=(config["env_config"]["action_space_size"],)),
         #     "node_properties": Box(-10000000000000.0, 10000000000000.0, shape=(3,)), 
@@ -400,7 +403,10 @@ class RollOutInference:
         obs_select_node = Dict({
             "spill_weights": Box(-10000000000000.0, 10000000000000.0, shape=(config["env_config"]["max_number_nodes"],)), 
             "action_mask": Box(0, 1, shape=(config["env_config"]["max_number_nodes"],)),
-            "state": box_obs_select_node
+            "state": box_obs_select_node,
+            "annotations": Box(-10000000000000.0, 10000000000000.0, shape=(config["env_config"]["max_number_nodes"], config["env_config"]["annotations"])),
+            "adjacency_lists": edges_unroll_box,
+            "node_edge_count": node_edge_count
             }) 
         obs_select_task = Dict({
             "node_properties": Box(-10000000000000.0, 10000000000000.0, shape=(4,)),
