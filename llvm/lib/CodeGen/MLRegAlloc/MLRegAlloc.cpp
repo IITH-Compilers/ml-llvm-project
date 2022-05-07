@@ -1986,4 +1986,9 @@ void MLRA::MLRegAlloc(MachineFunction &MF, SlotIndexes &Indexes,
           << std::to_string(numUnsupportedRegs) << ","
           << std::to_string(unsupportedClsFreq.size()) << std::endl;
   outfile.close();
+
+  std::ofstream outfile2;
+  outfile2.open(statsFPMLRA + "/mlra_benchmark_function_name.csv", std::ios::app);
+  outfile2 << "-r " << MF.getName().str() << " ";
+  outfile2.close();
 }
