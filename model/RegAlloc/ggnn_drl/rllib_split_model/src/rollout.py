@@ -23,7 +23,7 @@ from ray.tune.utils import merge_dicts
 from ray.tune.registry import get_trainable_cls, _global_registry, ENV_CREATOR
 
 import sys
-sys.path.append('/home/venkat/IF-DV/Rohit/regAlloc/iith-compilers/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src')
+sys.path.append('/home/vk/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src')
 from multiagentEnv import HierarchicalGraphColorEnv
 import utils_1
 from register_action_space import RegisterActionSpace
@@ -32,7 +32,7 @@ from model import SelectTaskNetwork, SelectNodeNetwork, SplitNodeNetwork
 import logging
 from ray.rllib.agents.dqn.simple_q_torch_policy import SimpleQTorchPolicy
 
-from gym.spaces import Discrete, Box, Dict
+from gym.spaces import Discrete, Box, Dict, Tuple
 import numpy as np
 from ray.tune import function
 
@@ -366,7 +366,7 @@ class RollOutInference:
         # config["env_config"]["dump_color_graph"] = True
         # config["env_config"]["intermediate_data"] = './temp'
 
-        config["env_config"] = {
+        '''config["env_config"] = {
             "target": args.arch,
             "state_size": config_other['state_size'],
             "max_number_nodes": 1000,
@@ -378,9 +378,46 @@ class RollOutInference:
             "dataset": "/lfs/usrhome/staff/nvk1tb/scratch/mlra_data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/",
             "graphs_num": 50000,
             "action_space_size": RegisterActionSpace(args.arch).ac_sp_normlize_size
-        }
+        
+         }'''
 
-       
+        config["env_config"] = {
+            "target": "X86",
+            "state_size": 100,
+            "max_number_nodes": 300,
+            "max_usepoint_count": 200,
+            "annotations": 3,
+            "max_edge_count": 90000,
+            "mode": 'inference',
+            "dump_type": 'One',
+            "dump_color_graph": True,
+            "intermediate_data": './temp',
+            "build_path": "/home/cs20mtech12003/ML-Register-Allocation/X86Build_UPMM",
+            # "build_path": "/home/cs20mtech12003/ML-Register-Allocation/AArch64Build",
+            "Register_config": "/home/cs20mtech12003/ML-Register-Allocation/llvm/lib/CodeGen/MLRegAlloc/config_json",
+            "log_path": "/home/cs20mtech12003/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src/log",
+            #"dataset": "/raid/cs17m20P100001/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_new_data/",
+            "dataset": "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_generated_at_05-05-22/",
+            # "dataset": "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_aarch64_new_data/",
+            "graphs_num": 10000,
+            "action_space_size": RegisterActionSpace("X86").ac_sp_normlize_size,
+            "check_point": None,
+            "episode_number": 49999,
+            "GPU_ID": '0',
+            "X86_CFLAGS": "-mllvm -regalloc=greedy  -march=core2",
+            "AArch64_CFLAGS": "-mllvm -regalloc=greedy  -mcpu=cortex-a72",
+            "dataset_bucket": "set_70-120",
+            "current_batch": 100,
+            "Workers_starting_port": "50001",
+            "use_local_reward": True,
+            "use_mca_reward": False,
+            "use_mca_self_play_reward": False,
+            "mca_reward_clip": 10,
+            "mca_timeout": 30,
+            "greedy_mca_throughput_file_path": "/home/cs20mtech12003/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src/greedy-throughput_set_70-120.json",
+            "mca_cycles_file_path": "/home/cs20mtech12003/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src/greedy-cycles_set_70-120.json"
+    
+        }       
         config["num_gpus"]=0
         ModelCatalog.register_custom_model("select_node_model", SelectNodeNetwork)
         ModelCatalog.register_custom_model("select_task_model", SelectTaskNetwork)
@@ -440,7 +477,9 @@ class RollOutInference:
                                             "custom_model_config": {
                                                 "state_size": config["env_config"]["state_size"],
                                                 "fc1_units": 64,
-                                                "fc2_units": 64
+                                                "fc2_units": 64,
+                                                "max_number_nodes": config["env_config"]["max_number_nodes"],
+                                                "annotations_size": config["env_config"]["annotations"]
                                             },
                                         },
                                     }),
@@ -712,12 +751,13 @@ class RollOutInference:
                         #         if math.isnan(v):
                         #             print('******NAN**** ', v, i)
                             # print('\n')
-                        a_action = self.agent.compute_action(
+                        a_action, extra_info = self.agent.compute_action(
                         # a_action = self.agent.compute_single_action(
                             a_obs,
                             prev_action=prev_actions[agent_id],
                             prev_reward=prev_rewards[agent_id],
                             policy_id=policy_id, explore = False)
+                    # print("Actions", type(extra_info))
                     a_action = flatten_to_single_ndarray(a_action)
                     action_dict[agent_id] = a_action
                     prev_actions[agent_id] = a_action
@@ -725,7 +765,7 @@ class RollOutInference:
    
             # print('compute_action ', action)
             action = action if self.multiagent else action[_DUMMY_AGENT_ID]
-            next_obs, reward, done, info = self.env.step(action)
+            next_obs, reward, done, info = self.env.step(action, extra_info)
             if self.multiagent:
                 for agent_id, r in reward.items():
                     prev_rewards[agent_id] = r

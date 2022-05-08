@@ -276,10 +276,20 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         return obs
 
     def step(self, action_dict, extra_info=None):
-        if extra_info and 'select_node_policy' in extra_info.keys():
-            self.node_representation_mat = extra_info['select_node_policy'][0, :, :]
-            # print("N1 representation", self.node_representation_mat[0, :])
-            # print("Extra info dict", type(self.node_representation_mat), self.node_representation_mat.shape, type(self.obs.initial_node_representation), self.obs.initial_node_representation.shape)
+        if self.mode != 'inference':
+            if extra_info and 'select_node_policy' in extra_info.keys():
+                self.node_representation_mat = extra_info['select_node_policy'][0, :, :]
+                # print("N1 representation", self.node_representation_mat[0, :])
+                # print("Extra info dict", type(self.node_representation_mat), self.node_representation_mat.shape, type(self.obs.initial_node_representation), self.obs.initial_node_representation.shape)
+        else:
+            if extra_info is not None:
+                # print("extra_info", extra_info.shape)
+                if len(extra_info.shape) == 3:
+                    self.node_representation_mat = extra_info[0, :, :]
+                # elif len(extra_info.shape) == 2:
+                #     print("node_representation_mat shape", extra_info)
+                #     raise
+                #     self.node_representation_mat = extra_info
         # self.select_task_agent_id = "select_task_agent_{}".format(self.agent_count)
         if self.select_node_agent_id in action_dict:
             return self._select_node_step(action_dict[self.select_node_agent_id])
@@ -458,7 +468,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
     def _select_task_step(self, action):
         logging.debug("Enter _select_task_step")
         done = {"__all__": False}
-        logging.info("Select Task action", action)
+        print("Select Task action", action)
         splitpoints = self.obs.split_points[self.cur_node]
         # self.select_task_agent_id = "select_task_agent_{}".format(self.agent_count)
         self.task_selected = action
