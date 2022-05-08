@@ -372,8 +372,8 @@ SplitEditor::SplitEditor(SplitAnalysis &sa, AliasAnalysis &aa,
       TII(*vrm.getMachineFunction().getSubtarget().getInstrInfo()),
       TRI(*vrm.getMachineFunction().getSubtarget().getRegisterInfo()),
       MBFI(mbfi), RegAssign(Allocator) {
-        NumFinishedMF = 0;
-      }
+  NumFinishedMF = 0;
+}
 
 void SplitEditor::reset(LiveRangeEdit &LRE, ComplementSpillMode SM) {
   Edit = &LRE;
@@ -1491,8 +1491,8 @@ void SplitEditor::finish(SmallVectorImpl<unsigned> *LRMap) {
 
     // Force rematted values to be recomputed everywhere.
     // The new live ranges may be truncated.
-    if (Edit->didRematerialize(ParentVNI))
-      forceRecomputeVNI(*ParentVNI);
+    // if (Edit->didRematerialize(ParentVNI))
+    forceRecomputeVNI(*ParentVNI);
   }
 
   // Hoist back-copies to the complement interval when in spill mode.

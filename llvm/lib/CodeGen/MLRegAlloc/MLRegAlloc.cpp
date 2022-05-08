@@ -134,6 +134,10 @@ cl::opt<bool> MLRA::enable_mlra_checks("enable-mlra-checks", cl::Hidden,
                                        cl::desc("turn on mlra checks"),
                                        cl::init(false));
 
+cl::opt<std::string>
+    MLRA::debug_only_func("mlra-debug-func", cl::Hidden,
+                          cl::desc("Run MLRA only on this func"), cl::init(""));
+
 cl::opt<std::string> MLRA::mlra_server_address(
     "mlra-server-address", cl::Hidden,
     cl::desc("Starts the server in the given address; format <ip>:<port>"),
@@ -173,8 +177,8 @@ inline bool MLRA::isSafeVReg(unsigned VReg) {
 
 void MLRA::verifyRegisterProfile() {
   auto rpm1 = regProfMap;
-
   captureRegisterProfile();
+
   auto rpm2 = regProfMap;
 
   assert(rpm1.size() == rpm2.size() && "Size of regprof maps should be same");
@@ -279,8 +283,8 @@ void MLRA::serializeRegProfData(
       vector->mutable_vec()->Swap(&vecs);
     }
     // Copying the interferences
-    google::protobuf::RepeatedField<unsigned> interf(
-        rp.frwdInterferences.begin(), rp.frwdInterferences.end());
+    google::protobuf::RepeatedField<unsigned> interf(rp.interferences.begin(),
+                                                     rp.interferences.end());
     regprofResponse->mutable_interferences()->Swap(&interf);
 
     // // Copying the splitslots
@@ -337,8 +341,8 @@ void MLRA::sendRegProfData(T *response,
     regprofResponse->set_regid(reg);
 
     // Copying the interferences
-    google::protobuf::RepeatedField<unsigned> interf(
-        rp.frwdInterferences.begin(), rp.frwdInterferences.end());
+    google::protobuf::RepeatedField<unsigned> interf(rp.interferences.begin(),
+                                                     rp.interferences.end());
     regprofResponse->mutable_interferences()->Swap(&interf);
 
     // Copying the splitslots
@@ -377,6 +381,7 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
   errs() << "Virtreg to split = " << printReg(splitReg, TRI) << "\n";
 
   LiveInterval *VirtReg = &LIS->getInterval(splitReg);
+
   assert(!VRM->hasPhys(VirtReg->reg) && "Register already assigned");
 
   if (MRI->reg_nodbg_empty(VirtReg->reg)) {
@@ -387,11 +392,9 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
     return false;
   }
 
-  /*if (std::find(mlSpilledRegs.begin(), mlSpilledRegs.end(), VirtReg) ==
-      mlSpilledRegs.end()) {
-    LLVM_DEBUG(errs() <<  "Returning false, from find() \n");
-	  return false;
-  }*/
+  if (std::find(mlSpilledRegs.begin(), mlSpilledRegs.end(), VirtReg) !=
+      mlSpilledRegs.end())
+    return false;
 
   SA->analyze(VirtReg);
   LiveRangeEdit LREdit(VirtReg, NewVRegs, *MF, *LIS, VRM);
@@ -580,11 +583,8 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
     }
     SE->openIntv();
     SegStart = SE->enterIntvAfter(i.first);
-    if (!endBI.LiveOut) {
+    if (!endBI.LiveOut)
       SlotIndex SegStop = SE->leaveIntvAfter(i.second);
-      errs() << "Segstop present\n";
-      SegStop.dump();
-    }
     auto thisMBBLastIdx = LIS->getMBBEndIdx(LIS->getMBBFromIndex(i.second));
     SE->useIntv(SegStart, thisMBBLastIdx);
   }
@@ -607,11 +607,30 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
   LLVM_DEBUG(dbgs() << "After splitting -- " << printReg(splitReg, TRI) << "--"
                     << Register::virtReg2Index(splitReg) + TRI->getNumRegs() + 1
                     << "\n");
+  mlSplitRegs.insert(mlSplitRegs.end(), NewVRegs.begin(), NewVRegs.end());
+  LLVM_DEBUG(for (auto i
+                  : mlSplitRegs) {
+    dbgs() << "\tmlSplitRegs: " << printReg(i, TRI) << "--"
+           << Register::virtReg2Index(i) + TRI->getNumRegs() + 1 << "\n";
+  });
 
   LLVM_DEBUG(for (auto i
                   : NewVRegs) {
     dbgs() << "\tNew Regs: " << printReg(i, TRI) << "--"
-           << Register::virtReg2Index(i) + TRI->getNumRegs() + 1;
+           << Register::virtReg2Index(i) + TRI->getNumRegs() + 1 << "\n";
+    LIS->getInterval(i).dump();
+    dbgs() << "This LI has subranges?" << LIS->getInterval(i).hasSubRanges()
+           << "\n";
+    // auto LI = &LIS->getInterval(i);
+    // LI->removeEmptySubRanges();
+    // LI->RenumberValues();
+
+    for (LiveInterval::SubRange &S : LIS->getInterval(i).subranges()) {
+      S.dump();
+      if (S.empty()) {
+        dbgs() << "empty!\n";
+      }
+    }
     LIS->getInterval(i).dump();
   } dbgs() << "------------------------------------------\n");
   // captureRegisterProfile();
@@ -1306,7 +1325,12 @@ void MLRA::printRegisterProfile() const {
     auto rp = rpi.second;
     errs() << "cls =" << rp.cls << "\n";
     errs() << "[" << MF->getName() << "]Interferences: ";
-    for (auto interference : rp.interferences)
+
+    SmallVector<unsigned, 8> interferencesVector(rp.interferences.begin(),
+                                                 rp.interferences.end());
+    std::sort(interferencesVector.begin(), interferencesVector.end());
+
+    for (auto interference : interferencesVector)
       errs() << interference << ", ";
     errs() << "Use distances: ";
     for (auto ud : rp.useDistances) {
@@ -1361,7 +1385,8 @@ void MLRA::updateRegisterProfileAfterSplit(
       LLVM_DEBUG(errs() << "empty newvirtreg detected.. continue\n");
       continue;
     }
-    rp.cls = oldRP.cls;
+    // rp.cls = oldRP.cls;
+    rp.cls = TRI->getRegClassName(MRI->getRegClass(NewVirtReg->reg));
     rp.spillWeight = NewVirtReg->weight;
 
     SmallVector<int, 8> useDistances;
@@ -1416,113 +1441,119 @@ void MLRA::updateRegisterProfileAfterSplit(
       }
     }
 
-    // for (unsigned k = 0, e = MRI->getNumVirtRegs(); k < e; ++k) {
-    //   unsigned Reg = Register::index2VirtReg(k);
-    //   if (!isSafeVReg(Reg))
-    //     continue;
+    for (unsigned k = 0, e = MRI->getNumVirtRegs(); k < e; ++k) {
+      unsigned Reg = Register::index2VirtReg(k);
+      if (!isSafeVReg(Reg))
+        continue;
 
-    //   if (MRI->reg_nodbg_empty(Reg))
-    //     continue;
+      if (MRI->reg_nodbg_empty(Reg))
+        continue;
 
-    //   LiveInterval *OtherVReg = &LIS->getInterval(Reg);
+      LiveInterval *OtherVReg = &LIS->getInterval(Reg);
 
-    //   auto Reg1 =
-    //       NewVirtReg->begin() < OtherVReg->begin() ? NewVirtReg : OtherVReg;
-    //   auto Reg2 = Reg1 == OtherVReg ? NewVirtReg : OtherVReg;
-    //   LLVM_DEBUG(errs() << printReg(i, TRI) << printReg(NewVRegs[i], TRI)
-    //                     << " under consideration\n");
+      if (NewVirtReg == OtherVReg)
+        continue;
 
-    //   // Support for interference for supportedRegister Only
-    //   std::string regClass_i =
-    //       TRI->getRegClassName(MRI->getRegClass(OtherVReg->reg));
-    //   if (this->regClassSupported4_MLRA.find(regClass_i) ==
-    //       regClassSupported4_MLRA.end()) {
-    //     continue;
-    //   }
-    //   if (Reg1->overlaps(*Reg2)) {
-    //     LLVM_DEBUG(errs() << "\n\t It overlaps\n");
-    //     rp.interferences.insert(k + step);
-    //     rp.frwdInterferences.insert(k + step);
+      auto Reg1 =
+          NewVirtReg->begin() < OtherVReg->begin() ? NewVirtReg : OtherVReg;
+      auto Reg2 = Reg1 == OtherVReg ? NewVirtReg : OtherVReg;
+      LLVM_DEBUG(errs() << printReg(i, TRI) << printReg(NewVRegs[i], TRI)
+                        << " under consideration\n");
 
-    //     regProfMap[k + step].interferences.insert(NewVRegIdx + step);
-    //     regProfMap[k + step].frwdInterferences.insert(NewVRegIdx + step);
+      // Support for interference for supportedRegister Only
+      std::string regClass_i =
+          TRI->getRegClassName(MRI->getRegClass(OtherVReg->reg));
+      if (this->regClassSupported4_MLRA.find(regClass_i) ==
+          regClassSupported4_MLRA.end()) {
+        continue;
+      }
+      if (Reg1->overlaps(*Reg2)) {
+        LLVM_DEBUG(errs() << "\n\t It overlaps\n");
+        rp.interferences.insert(k + step);
+        rp.frwdInterferences.insert(k + step);
 
-    //     updatedRegs.insert(k + step);
-    //   }
-    // }
+        regProfMap[k + step].interferences.insert(NewVRegIdx + step);
+        regProfMap[k + step].frwdInterferences.insert(NewVRegIdx + step);
+
+        updatedRegs.insert(k + step);
+      }
+    }
 
     for (auto interference : oldRP.interferences) {
       LLVM_DEBUG(errs() << "Processing interference --3 " << interference
                         << "\n");
-      if (regProfMap[interference].cls.equals("Phy")) {
-        // if (Matrix->checkInterference(*NewVirtReg, interference)) {
-        //   rp.interferences.insert(interference);
-        //   rp.frwdInterferences.insert(interference);
+      // if (regProfMap[interference].cls.equals("Phy")) {
+      //   // if (Matrix->checkInterference(*NewVirtReg, interference)) {
+      //   //   rp.interferences.insert(interference);
+      //   //   rp.frwdInterferences.insert(interference);
 
-        //   regProfMap[interference].interferences.insert(NewVRegIdx + step);
-        //   regProfMap[interference].frwdInterferences.insert(NewVRegIdx +
-        //   step);
+      //   //   regProfMap[interference].interferences.insert(NewVRegIdx +
+      //   step);
+      //   //   regProfMap[interference].frwdInterferences.insert(NewVRegIdx +
+      //   //   step);
 
-        //   // regProfMap[interference].overlapsStart.erase(OldVRegIdx);
-        //   // regProfMap[interference].overlapsEnd.erase(OldVRegIdx);
-        //   updatedRegs.insert(interference);
-        // }
-        // continue;
-      } else {
-        unsigned Reg = Register::index2VirtReg(interference - step);
-        errs() << "Interference -- " << interference << "\n";
-        LLVM_DEBUG(errs() << "\t In virtual register: " << printReg(Reg, TRI)
-                          << "--" << interference << "\n");
-        LiveInterval *InterVReg = &LIS->getInterval(Reg);
-        LLVM_DEBUG(errs() << "\tWhose Live Interval is: ";
-                   InterVReg->print(errs());
-                   errs() << "\n\tAnd, the Live Interval of NewVirtReg is: ";
-                   NewVirtReg->print(errs()));
+      //   //   // regProfMap[interference].overlapsStart.erase(OldVRegIdx);
+      //   //   // regProfMap[interference].overlapsEnd.erase(OldVRegIdx);
+      //   //   updatedRegs.insert(interference);
+      //   // }
+      //   // continue;
+      // } else {
+      //   unsigned Reg = Register::index2VirtReg(interference - step);
+      //   errs() << "Interference -- " << interference << "\n";
+      //   LLVM_DEBUG(errs() << "\t In virtual register: " << printReg(Reg, TRI)
+      //                     << "--" << interference << "\n");
+      //   LiveInterval *InterVReg = &LIS->getInterval(Reg);
+      //   LLVM_DEBUG(errs() << "\tWhose Live Interval is: ";
+      //              InterVReg->print(errs());
+      //              errs() << "\n\tAnd, the Live Interval of NewVirtReg is: ";
+      //              NewVirtReg->print(errs()));
 
-        auto Reg1 =
-            NewVirtReg->begin() < InterVReg->begin() ? NewVirtReg : InterVReg;
-        auto Reg2 = Reg1 == InterVReg ? NewVirtReg : InterVReg;
+      //   auto Reg1 =
+      //       NewVirtReg->begin() < InterVReg->begin() ? NewVirtReg :
+      //       InterVReg;
+      //   auto Reg2 = Reg1 == InterVReg ? NewVirtReg : InterVReg;
 
-        if (Reg1->overlaps(*Reg2)) {
-          LLVM_DEBUG(errs() << "\n\t It overlaps\n");
-          rp.interferences.insert(interference);
-          rp.frwdInterferences.insert(interference);
+      //   if (Reg1->overlaps(*Reg2)) {
+      //     LLVM_DEBUG(errs() << "\n\t It overlaps\n");
+      //     rp.interferences.insert(interference);
+      //     rp.frwdInterferences.insert(interference);
 
-          regProfMap[interference].interferences.insert(NewVRegIdx + step);
-          regProfMap[interference].frwdInterferences.insert(NewVRegIdx + step);
+      //     regProfMap[interference].interferences.insert(NewVRegIdx + step);
+      //     regProfMap[interference].frwdInterferences.insert(NewVRegIdx +
+      //     step);
 
-          updatedRegs.insert(interference);
-        }
-      }
+      //     updatedRegs.insert(interference);
+      //   }
+      // }
       regProfMap[interference].interferences.remove(OldVRegIdx);
       regProfMap[interference].frwdInterferences.remove(OldVRegIdx);
     }
 
     // There is a possibility that the new regs themselves interfere
-    LLVM_DEBUG(
-        errs() << "\nchecking for interference among the new split regs\n");
-    for (auto ii : NewVRegs) {
-      LiveInterval *otherNewVirtReg = &LIS->getInterval(ii);
-      if (NewVirtReg == otherNewVirtReg)
-        continue;
-      if (otherNewVirtReg->empty()) {
-        LLVM_DEBUG(errs() << "empty newvirtreg detected.. continue\n");
-        continue;
-      }
-      auto Reg1 = NewVirtReg->begin() < otherNewVirtReg->begin()
-                      ? NewVirtReg
-                      : otherNewVirtReg;
-      auto Reg2 = Reg1 == otherNewVirtReg ? NewVirtReg : otherNewVirtReg;
+    // LLVM_DEBUG(
+    //     errs() << "\nchecking for interference among the new split regs\n");
+    // for (auto ii : NewVRegs) {
+    //   LiveInterval *otherNewVirtReg = &LIS->getInterval(ii);
+    //   if (NewVirtReg == otherNewVirtReg)
+    //     continue;
+    //   if (otherNewVirtReg->empty()) {
+    //     LLVM_DEBUG(errs() << "empty newvirtreg detected.. continue\n");
+    //     continue;
+    //   }
+    //   auto Reg1 = NewVirtReg->begin() < otherNewVirtReg->begin()
+    //                   ? NewVirtReg
+    //                   : otherNewVirtReg;
+    //   auto Reg2 = Reg1 == otherNewVirtReg ? NewVirtReg : otherNewVirtReg;
 
-      if (Reg1->overlaps(*Reg2)) {
-        Reg1->dump();
-        Reg2->dump();
-        LLVM_DEBUG(errs() << "\n\t It overlaps\n");
-        unsigned otherNewVRegIdx = Register::virtReg2Index(ii);
-        rp.interferences.insert(otherNewVRegIdx + step);
-        rp.frwdInterferences.insert(otherNewVRegIdx + step);
-      }
-    }
+    //   if (Reg1->overlaps(*Reg2)) {
+    //     Reg1->dump();
+    //     Reg2->dump();
+    //     LLVM_DEBUG(errs() << "\n\t It overlaps\n");
+    //     unsigned otherNewVRegIdx = Register::virtReg2Index(ii);
+    //     rp.interferences.insert(otherNewVRegIdx + step);
+    //     rp.frwdInterferences.insert(otherNewVRegIdx + step);
+    //   }
+    // }
 
     errs() << "Adding reg here3: " << NewVRegIdx + step << "\n";
     regProfMap[NewVRegIdx + step] = rp;
@@ -1897,17 +1928,18 @@ void MLRA::MLRegAlloc(MachineFunction &MF, SlotIndexes &Indexes,
 
   mlAllocatedRegs.clear();
   mlSpilledRegs.clear();
+  mlSplitRegs.clear();
   if (enable_mlra_training) {
     assert(funcID != 0 && "Function ID is expected in training flow");
     if (FunctionCounter != funcID)
       return;
   }
   // remove this later
-  // if (!MF.getName().equals("main")) {
-  //   errs() << MF.getName() << " - not allocating with mlra\n";
-  //   // errs() << mlAllocatedRegs.size();
-  //   return;
-  // }
+  if (debug_only_func != "" && !MF.getName().equals(debug_only_func)) {
+    errs() << MF.getName() << " - not allocating with mlra\n";
+    // errs() << mlAllocatedRegs.size();
+    return;
+  }
 
   if (enable_dump_ig_dot) {
     if (funcID != 0 && FunctionCounter != funcID)

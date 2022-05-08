@@ -130,6 +130,7 @@ protected:
   static cl::opt<bool> enable_mlra_inference;
   static cl::opt<bool> enable_mlra_training;
   static cl::opt<bool> enable_mlra_checks;
+  static cl::opt<std::string> debug_only_func;
   static cl::opt<unsigned> funcID;
   static cl::opt<std::string> mlra_server_address;
   void MLRegAlloc(MachineFunction &MF, SlotIndexes &Indexes,

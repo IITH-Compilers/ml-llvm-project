@@ -89,11 +89,18 @@ void RegAllocBase::allocatePhysRegs() {
 
   // Continue assigning vregs one at a time to available physical registers.
   while (LiveInterval *VirtReg = dequeue()) {
+    // errs() << "Dequeing VirtReg: ";
+    // VirtReg->dump();
+    // errs() << "Size of mlAllocatedRegs: " << mlAllocatedRegs.size() << "\n";
+    auto it =
+        std::find(mlAllocatedRegs.begin(), mlAllocatedRegs.end(), VirtReg->reg);
+    if (it != mlAllocatedRegs.end()) {
+      LLVM_DEBUG(errs() << "Already allocated by mlra -- continuing\n");
+      continue;
+    }
+
     assert(!VRM->hasPhys(VirtReg->reg) && "Register already assigned");
-    auto it = std::find(mlAllocatedRegs.begin(), mlAllocatedRegs.end(), VirtReg->reg);
-    if (it != mlAllocatedRegs.end())
-    continue;
-    
+
     // Unused registers can appear when the spiller coalesces snippets.
     if (MRI->reg_nodbg_empty(VirtReg->reg)) {
       LLVM_DEBUG(dbgs() << "Dropping unused " << *VirtReg << '\n');

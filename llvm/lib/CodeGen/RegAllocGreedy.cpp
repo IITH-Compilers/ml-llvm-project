@@ -448,6 +448,7 @@ private:
 
   bool LRE_CanEraseVirtReg(unsigned) override;
   void LRE_WillShrinkVirtReg(unsigned) override;
+  void LRE_ShrunkVirtReg(unsigned) override;
   void LRE_DidCloneVirtReg(unsigned, unsigned) override;
   void enqueue(PQueue &CurQueue, LiveInterval *LI);
   LiveInterval *dequeue(PQueue &CurQueue);
@@ -645,10 +646,24 @@ void RAGreedy::LRE_WillShrinkVirtReg(unsigned VirtReg) {
   if (!VRM->hasPhys(VirtReg))
     return;
 
+  if (std::find(mlAllocatedRegs.begin(), mlAllocatedRegs.end(), VirtReg) !=
+      mlAllocatedRegs.end())
+    mlAssignedRegMap[VirtReg] = VRM->getPhys(VirtReg);
+
   // Register is assigned, put it back on the queue for reassignment.
   LiveInterval &LI = LIS->getInterval(VirtReg);
   Matrix->unassign(LI);
   enqueue(&LI);
+}
+
+void RAGreedy::LRE_ShrunkVirtReg(unsigned VirtReg) {
+  if (mlAssignedRegMap.find(VirtReg) == mlAssignedRegMap.end())
+    return;
+  auto LI = &LIS->getInterval(VirtReg);
+  LLVM_DEBUG(errs() << "Assigning "; LI->dump();
+             errs() << "with -- " << printReg(mlAssignedRegMap[VirtReg], TRI)
+                    << "\n");
+  Matrix->assign(*LI, mlAssignedRegMap[VirtReg]);
 }
 
 void RAGreedy::LRE_DidCloneVirtReg(unsigned New, unsigned Old) {
@@ -3260,7 +3275,8 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
   if (enable_dump_ig_dot || enable_mlra_inference || enable_mlra_training) {
     MLRegAlloc(*MF, *Indexes, *MBFI, *DomTree, *Loops, *AA, *DebugVars,
                *SpillPlacer, *ORE);
-
+    ExtraRegInfo.resize(MRI->getNumVirtRegs());
+    IntfCache.init(MF, Matrix->getLiveUnions(), Indexes, LIS, TRI);
     LLVM_DEBUG(dbgs() << "======2\n";); // LIS->dump());
     // for (auto i : mlSpilledRegs) {
     //   if (i->isSpillable()) {
@@ -3269,9 +3285,14 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
     //     spiller().spill(LRE);
     //   }
     // }
+    for (auto i : mlSplitRegs) {
+      // errs() << "mlSplitRegs " << printReg(i, TRI) << "\n";
+      setStage(LIS->getInterval(i), RS_Spill);
+    }
     for (auto i : mlAllocatedRegs) {
       setStage(LIS->getInterval(i), RS_Done);
     }
+
     LLVM_DEBUG(errs() << "Starting greedy flow here\n");
   }
   LLVM_DEBUG(dbgs() << "======3\n";); // LIS->dump());
