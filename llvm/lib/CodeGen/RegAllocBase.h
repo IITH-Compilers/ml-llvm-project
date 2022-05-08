@@ -36,6 +36,7 @@
 #ifndef LLVM_LIB_CODEGEN_REGALLOCBASE_H
 #define LLVM_LIB_CODEGEN_REGALLOCBASE_H
 
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 
@@ -68,6 +69,10 @@ protected:
   LiveRegMatrix *Matrix = nullptr;
   RegisterClassInfo RegClassInfo;
   SmallVector<unsigned, 10> mlAllocatedRegs;
+  SmallVector<unsigned, 10> mlSplitRegs;
+  SmallMapVector<unsigned, unsigned, 8>
+      mlAssignedRegMap; // Reg will be present only if it is unassigned in spill
+                        // flow
   SmallVector<LiveInterval *, 10> mlSpilledRegs;
 
   /// Inst which is a def of an original reg and whose defs are already
