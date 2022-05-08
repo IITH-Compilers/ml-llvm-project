@@ -299,7 +299,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             if x in eligibleNodes:
                 mask[x] = 1
         if all(v == 0 for v in mask):
-            print("eligibleNodes", eligibleNodes)
+            logging.info("eligibleNodes", eligibleNodes)
             return None
             # assert False, "No node elegible to select"
             
@@ -423,7 +423,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             print("UpdateVisitList failed for {} graph at {} node".format(self.path, self.cur_node))
             assert False, 'discovered node visited.'
         self.virtRegId = self.obs.idx_nid[self.cur_node]
-        print("Node selected = {}, corresponding register id = {}".format(action, self.virtRegId))
+        # print("Node selected = {}, corresponding register id = {}".format(action, self.virtRegId))
         logging.info("Node selected = {}, corresponding register id = {}".format(action, self.virtRegId))
         state = self.obs
         # hidden_state =  self.ggnn(initial_node_representation=state.initial_node_representation, annotations=state.annotations, adjacency_lists=state.adjacency_lists)
@@ -451,7 +451,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
     def _select_task_step(self, action):
         logging.debug("Enter _select_task_step")
         done = {"__all__": False}
-        print("Select Task action", action)
+        logging.info("Select Task action", action)
         splitpoints = self.obs.split_points[self.cur_node]
         # self.select_task_agent_id = "select_task_agent_{}".format(self.agent_count)
         self.task_selected = action
@@ -504,7 +504,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                     split_node_mask.append(0)
             if all(v == 0 for v in split_node_mask):
                 split_node_mask[len(use_distance_list) - 1] = 1
-                print("Curr Nodes split points", splitpoints, use_distance_list)
+                logging.info("Curr Nodes split points", splitpoints, use_distance_list)
 
             # if usepoint_prop_value.shape[0] <= 1:
                 # action_mask[0] = 1
@@ -559,7 +559,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         # Handling mask all zero issue
         select_node_mask = self.createNodeSelectMask()
         if select_node_mask is None and not done_all:
-            print("setting done_all")
+            # print("setting done_all")
             done_all = True
 
         select_task_mask = self.creatTaskSelectMask()
@@ -719,7 +719,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             # discount_factor = 0 if self.split_steps < 11 else (1.001*self.split_steps)
             discount_factor = 0
             
-            print("Split rewards and its components", split_reward, userDistanceDiff, self.spliting_reward_scaling_factor*self.interference_difference)
+            logging.info("Split rewards and its components", split_reward, userDistanceDiff, self.spliting_reward_scaling_factor*self.interference_difference)
             # print("Discount factor split", discount_factor)
 
             # if userDistanceDiff > 1000:        
@@ -735,7 +735,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             discount_factor = 0
             nodeChoosen = self.cur_node
             self.obs.graph_topology.markNodeAsNotVisited(nodeChoosen)
-            print("Skipping split step")
+            logging.info("Skipping split step")
         
         select_task_mask = self.creatTaskSelectMask()
 
@@ -751,7 +751,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         # Handling mask all zero issue
         if select_node_mask is None:
            split_done = True
-           print("Select node mask is all zero")
+           logging.info("Select node mask is all zero")
 
         spill_weight_list = self.getSpillWeightListExpanded()
         state = self.obs
@@ -878,7 +878,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         response = None 
         # TODO updat eh graph sue to the split
         logging.info('try Split register {} on point {}'.format(node_id, split_point))
-        print('try Split register {} on point {}'.format(node_id, split_point))
+        # print('try Split register {} on point {}'.format(node_id, split_point))
         
         if self.mode != 'inference':
             updated_graphs = self.stable_grpc('Split', int(node_id), int(split_point))
@@ -902,7 +902,19 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         # add the node to the visited list
         nodeChoosen = self.cur_node
         self.obs.graph_topology.UpdateColorVisitedNode(nodeChoosen, reg_allocated)
-        
+        # #print("Interferences for colour node", self.obs.graph_topology.adjList[self.obs.nid_idx[nodeChoosen]])
+        # print("Interferences for colour node", self.obs.graph_topology.adjList[nodeChoosen])
+        # if self.obs.idx_nid[nodeChoosen] == 25 or self.obs.idx_nid[nodeChoosen] == 528:
+        #     for i in range(len(self.obs.graph_topology.adjList)):
+        #         print(i)
+        #         print("ID = ", self.obs.idx_nid[i])
+        #         tmp_arr = []
+        #         for j in self.obs.graph_topology.adjList[i]:
+        #             tmp_arr.append(self.obs.idx_nid[j])
+                
+        #         tmp_arr.sort()
+        #         print("Interferences = ", tmp_arr)
+            #tmp = input("test")
         node_id =  self.obs.idx_nid[nodeChoosen]
         if self.mode != 'inference':
             # self.color_assignment_map[node_id] = int(reg_allocated)
@@ -1044,7 +1056,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             # path = "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/graphs/IG/json_new/523.xalancbmk_r_682.ll_F12.json"
             path ="/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/graphs/IG/set_70-120/526.blender_r_120.ll_F28.json"
             logging.debug('Graphs selected : {}'.format(path))
-            print('Graphs selected : {}'.format(path))
+            # print('Graphs selected : {}'.format(path))
             self.reset_count+=1
             if self.reset_count % 1 == 0:
                 self.graph_counter+=1
@@ -1108,6 +1120,9 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             self.fun_id = graph.funid    
             self.num_nodes = len(graph.regProf)
             self.obs = get_observationsInf(self.graph)
+            #torch.set_printoptions(profile="full")
+            #print("Graph is:", self.obs.adjacency_lists[0].data)
+            #input("press enter")
             # print(self.obs)
             # print("*********************************************************")
             self.color_assignment_map = []
@@ -1198,8 +1213,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                     if splited_node_idx in self.obs.graph_topology.adjList[adj]:
                         self.obs.graph_topology.adjList[adj].remove(splited_node_idx)
                         self.obs.graph_topology.indegree[adj] = self.obs.graph_topology.indegree[adj] - 1
-                    else:
-                        print("Adjency list for {} is {} for register {}".format(adj, self.obs.graph_topology.adjList[adj], register_id))        
+                    # else:
+                    #     print("Adjency list for {} is {} for register {}".format(adj, self.obs.graph_topology.adjList[adj], register_id))        
             except:
                 # print("Adjency list for {} is {} for register {}".format(cur_adj, self.obs.graph_topology.adjList[cur_adj], register_id))
                 raise
@@ -1211,7 +1226,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             split_mtrix = self.obs.raw_graph_mat[splited_node_idx]
             CPY_INST_VEC=[0.001]*self.emb_size
             splitpoints = self.obs.split_points[self.cur_node]
-            print("Split points and use distances", self.obs.split_points[self.cur_node], self.obs.use_distances[self.cur_node])
+            # print("Split points and use distances", self.obs.split_points[self.cur_node], self.obs.use_distances[self.cur_node])
             # split_point = splitpoints[split_point]
             new_nodes_matrix = split_mtrix[:split_point+1] + [CPY_INST_VEC], [CPY_INST_VEC] + split_mtrix[split_point+1:]
             # logging.info('length of the matrix : {} '.format(len(split_mtrix)))
@@ -1235,7 +1250,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                     logging.info('{}th New node {} '.format(new_nodes, nodeId))
                     # assert new_nodes < 3, "Splitting having more than 2 intervals"
                     self.obs.nid_idx[nodeId] = self.obs.graph_topology.num_nodes
-                    print("NodeId and index", nodeId, self.obs.graph_topology.num_nodes, register_id)
+                    # print("NodeId and index", nodeId, self.obs.graph_topology.num_nodes, register_id)
                     self.obs.idx_nid[self.obs.graph_topology.num_nodes] = nodeId
                     self.obs.graph_topology.num_nodes = self.obs.graph_topology.num_nodes + 1
                     self.obs.graph_topology.discovered.append(False)
@@ -1350,10 +1365,10 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                     new_node_interferences_list.append(len(self.obs.graph_topology.adjList[self.obs.nid_idx[nodeId]]))
                 new_node_interferences = max(new_node_interferences_list) - min(new_node_interferences_list)
                 self.interference_difference = new_node_interferences
-                print("old max new_node_interferences", old_node_interferences)
-                print("max new_node_interferences", max(new_node_interferences_list))
-                print("min new_node_interferences", min(new_node_interferences_list))
-                print("diff new_node_interferences", self.interference_difference)
+                logging.info("old max new_node_interferences", old_node_interferences)
+                logging.info("max new_node_interferences", max(new_node_interferences_list))
+                logging.info("min new_node_interferences", min(new_node_interferences_list))
+                logging.info("diff new_node_interferences", self.interference_difference)
 
             else:
                 self.spill_weight_diff = 0
