@@ -453,6 +453,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         prop_value_list = list(prop.values())
         select_task_mask = self.creatTaskSelectMask()
         # select_task_mask = [0, 1]
+        # print("select_task_mask", select_task_mask)
+        # print("Node Embding", self.cur_obs)
         reward = {
             self.select_task_agent_id: 0
         }
@@ -656,41 +658,49 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         #     print("Split node obs size", sys.getsizeof(split_node_obs))
             # self.first_time = False
         self.total_reward += colour_reward
-        if self.use_local_reward:
-            reward = {
-                # self.colour_node_agent_id: colour_reward,
-                self.select_node_agent_id: colour_reward,
-                self.select_task_agent_id: colour_reward - (self.task_selected * discount_factor),
-                self.split_node_agent_id: 0
+        if self.mode != 'inference':
+            if self.use_local_reward:
+                reward = {
+                    # self.colour_node_agent_id: colour_reward,
+                    self.select_node_agent_id: colour_reward,
+                    self.select_task_agent_id: colour_reward - (self.task_selected * discount_factor),
+                    self.split_node_agent_id: 0
+                }
+            else:
+                reward = {
+                    # self.colour_node_agent_id: colour_reward,
+                    self.select_node_agent_id: 0,
+                    self.select_task_agent_id: 0,
+                    self.split_node_agent_id: 0
+                }
+            obs = {
+                # self.colour_node_agent_id: colour_node_obs,
+                self.select_node_agent_id: select_node_obs,
+                self.select_task_agent_id: select_task_obs,
+                self.split_node_agent_id: split_node_obs,
+            }
+            done = {
+                # self.colour_node_agent_id: True,
+                self.select_node_agent_id: True,
+                self.select_task_agent_id: True,
+                self.split_node_agent_id: True,
+                "__all__": False
             }
         else:
-            reward = {
-                # self.colour_node_agent_id: colour_reward,
-                self.select_node_agent_id: 0,
-                self.select_task_agent_id: 0,
-                self.split_node_agent_id: 0
-            }
-        obs = {
-            # self.colour_node_agent_id: colour_node_obs,
-            self.select_node_agent_id: select_node_obs,
-            self.select_task_agent_id: select_task_obs,
-            self.split_node_agent_id: split_node_obs,
-        }
-        done = {
-            # self.colour_node_agent_id: True,
-            self.select_node_agent_id: True,
-            self.select_task_agent_id: True,
-            self.split_node_agent_id: True,
-            "__all__": False
-        }
+            reward = {}
+            obs = {}
+            done = {
+                "__all__": False
+            } 
 
         if done_all:
-            reward = {
-                #self.colour_node_agent_id: colour_reward,
-                self.select_node_agent_id: colour_reward,
-                self.select_task_agent_id: colour_reward,
-                self.split_node_agent_id: colour_reward
-            }
+            if self.mode != 'inference':
+                reward = {
+                    #self.colour_node_agent_id: colour_reward,
+                    self.select_node_agent_id: colour_reward,
+                    self.select_task_agent_id: colour_reward,
+                    self.split_node_agent_id: colour_reward
+                }
             done['__all__'] = True
             from csv import writer
             with open('traning_stats_'+str(self.worker_index)+'.csv', 'a') as f_object:
@@ -753,7 +763,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             # discount_factor = 0 if self.split_steps < 11 else (1.001*self.split_steps)
             discount_factor = 0
             
-            logging.info("Split rewards and its components", split_reward, userDistanceDiff, self.spliting_reward_scaling_factor*self.interference_difference)
+            # logging.info("Split rewards and its components", split_reward, userDistanceDiff, self.spliting_reward_scaling_factor*self.interference_difference)
             # print("Discount factor split", discount_factor)
 
             # if userDistanceDiff > 1000:        
@@ -838,37 +848,47 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         prop_value_list_colouring = list(node_properties.values())
 
         done = {"__all__": False}
-        if self.use_local_reward:
-            reward = {
-                # self.colour_node_agent_id: 0,
-                self.select_node_agent_id: 0,
-                self.select_task_agent_id: 0,
-                self.split_node_agent_id: split_reward
+        if self.mode != 'inference':
+            if self.use_local_reward:
+                reward = {
+                    # self.colour_node_agent_id: 0,
+                    self.select_node_agent_id: 0,
+                    self.select_task_agent_id: 0,
+                    self.split_node_agent_id: split_reward
+                }
+            else:
+                reward = {
+                    # self.colour_node_agent_id: 0,
+                    self.select_node_agent_id: 0,
+                    self.select_task_agent_id: 0,
+                    self.split_node_agent_id: 0
+                }
+            obs = {
+                # self.colour_node_agent_id: { 'action_mask': np.array(colour_node_mask),'node_properties': np.array(prop_value_list_colouring), 'state' : self.cur_obs},
+                # self.select_node_agent_id: { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(select_node_mask), 'state' : cur_obs},
+                self.select_node_agent_id: { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(select_node_mask), 'state' : cur_obs, 'annotations': np.array(annotations) ,'adjacency_lists': edges_unroll, 'node_edge_count': node_edge_count},
+                self.select_task_agent_id: { 'action_mask': np.array(select_task_mask), 'node_properties': np.array(prop_value_list, dtype=np.float), 'state' : self.cur_obs},
+                self.split_node_agent_id: { 'action_mask': np.array(split_node_mask), 'state' : self.cur_obs, "usepoint_properties": usepoint_prop_mat},
+            }
+            done = {
+                # self.colour_node_agent_id: True,
+                self.select_node_agent_id: True,
+                self.select_task_agent_id: True,
+                self.split_node_agent_id: True,
+                "__all__": False
             }
         else:
-            reward = {
-                # self.colour_node_agent_id: 0,
-                self.select_node_agent_id: 0,
-                self.select_task_agent_id: 0,
-                self.split_node_agent_id: 0
+            reward = {}
+            obs = {}
+            done = {
+                "__all__": False
             }
-        obs = {
-            # self.colour_node_agent_id: { 'action_mask': np.array(colour_node_mask),'node_properties': np.array(prop_value_list_colouring), 'state' : self.cur_obs},
-            # self.select_node_agent_id: { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(select_node_mask), 'state' : cur_obs},
-            self.select_node_agent_id: { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(select_node_mask), 'state' : cur_obs, 'annotations': np.array(annotations) ,'adjacency_lists': edges_unroll, 'node_edge_count': node_edge_count},
-            self.select_task_agent_id: { 'action_mask': np.array(select_task_mask), 'node_properties': np.array(prop_value_list, dtype=np.float), 'state' : self.cur_obs},
-            self.split_node_agent_id: { 'action_mask': np.array(split_node_mask), 'state' : self.cur_obs, "usepoint_properties": usepoint_prop_mat},
-        }
-        done = {
-            # self.colour_node_agent_id: True,
-            self.select_node_agent_id: True,
-            self.select_task_agent_id: True,
-            self.split_node_agent_id: True,
-            "__all__": False
-        }
-        
         if self.mode == 'inference':
             done = {"__all__": split_done }
+            # self.agent_count += 1
+            self.split_node_agent_id = "split_node_agent_{}".format(self.agent_count)
+            obs[self.select_node_agent_id] = { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(select_node_mask), 'state' : cur_obs, 'annotations': np.array(annotations) ,'adjacency_lists': edges_unroll, 'node_edge_count': node_edge_count}
+            reward[self.select_node_agent_id] = 0
         elif not split_done:
             self.agent_count += 1
             self.select_node_agent_id = "select_node_agent_{}".format(self.agent_count)
