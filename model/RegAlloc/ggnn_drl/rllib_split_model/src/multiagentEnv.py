@@ -754,13 +754,13 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         use_distance_list = self.obs.use_distances[self.cur_node]
         if action != len(use_distance_list) - 1:
             split_reward, split_done = self.step_splitTask(split_point)
-            userDistanceDiff = use_distances[split_index + 1] - use_distances[split_index]
+            '''userDistanceDiff = use_distances[split_index + 1] - use_distances[split_index]
             if userDistanceDiff > self.useDistancesThreshold:        
                 userDistanceDiff = self.useDistancesThreshold
             if self.interference_difference > self.interference_difference_threshold:
                 self.interference_difference = self.interference_difference_threshold
-            # discount_factor = (1.001*self.split_steps)/10
-            # split_reward = userDistanceDiff + self.spliting_reward_scaling_factor*self.interference_difference
+            discount_factor = (1.001*self.split_steps)/10
+            split_reward = userDistanceDiff + self.spliting_reward_scaling_factor*self.interference_difference'''
             split_reward = self.spill_weight_diff/self.reward_max_value
             # discount_factor = 0 if self.split_steps < 11 else (1.001*self.split_steps)
             discount_factor = 0
