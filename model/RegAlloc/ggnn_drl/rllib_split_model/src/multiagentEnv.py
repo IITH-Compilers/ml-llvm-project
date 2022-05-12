@@ -65,6 +65,7 @@ def set_config(path):
 
 class HierarchicalGraphColorEnv(MultiAgentEnv):
     def __init__(self, env_config):
+        print("Env config", env_config)
         self.env_config = env_config
         self.colormap = None
         self.split_point = None
@@ -96,6 +97,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.mca_cycles_file_path = env_config["mca_cycles_file_path"]
         self.use_mca_self_play_reward= env_config["use_mca_self_play_reward"]
         self.best_throughput_map = {}
+        self.iteration_number = 1
 
         print("env_config.worker_index", env_config.worker_index)
         
@@ -1089,20 +1091,20 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                             print("searching for key = " + key)
                             if self.use_mca_self_play_reward:
                                 if key not in self.best_throughput_map.keys():
-                                    self.best_throughput_map[key] = 0
+                                    self.best_throughput_map[key] = mlra_throughput
                                 best_throughput = self.best_throughput_map[key]
-                                throughput_diff = (mlra_throughput - best_throughput)
-                                print("Throughput:", mlra_throughput, best_throughput)                                
-                                if best_throughput < mlra_throughput:
+                                throughput_diff = (best_throughput - mlra_throughput)
+                                if best_throughput > mlra_throughput:
                                     self.best_throughput_map[key] = mlra_throughput
                                     best_throughput = mlra_throughput
                                 reward = (throughput_diff/best_throughput)*self.env_config["mca_reward_clip"]
+                                print("Throughput:", mlra_throughput, best_throughput)
                                 print("Reward from self play throughput:", reward)
                                                                                                     
                             else:
                                 if key in greedy_throughput_map.keys():
                                     greedy_throughput = greedy_throughput_map[key]
-                                    throughput_diff = (mlra_throughput - greedy_throughput)
+                                    throughput_diff = (greedy_throughput - mlra_throughput)
                                     reward = (throughput_diff/greedy_throughput)*self.env_config["mca_reward_clip"]
                                     print("Throughput:", mlra_throughput, greedy_throughput)
                                     print("Reward in compaire to greedy throughput:", reward)
@@ -1127,10 +1129,14 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                     
                     with open(mlra_mca_throughput_file_path, 'w') as f:
                         fileName = os.path.basename(self.fileName)
+                        if str(self.iteration_number) not in mlra_throughput_map.keys():
+                            mlra_throughput_map[str(self.iteration_number)] = {}
+                            # print("Adding iteration key to map", self.iteration_number, mlra_throughput_map.keys())
                         key = fileName + "_" + self.functionName
-                        if key not in mlra_throughput_map.keys():
-                            mlra_throughput_map[key] = []
-                        mlra_throughput_map[key].append(mlra_throughput)
+                        # if key not in mlra_throughput_map.keys():
+                        #     mlra_throughput_map[key] = []
+                        mlra_throughput_map[str(self.iteration_number)][key] = mlra_throughput
+                        # print("Adding function to iteration map", key, self.iteration_number)
                         json.dump(mlra_throughput_map, f)
                         f.close()
                 else:
@@ -1167,6 +1173,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             if self.reset_count % 1 == 0:
                 self.graph_counter+=1
                 self.graph_counter = self.graph_counter % self.env_config['current_batch']
+                if self.graph_counter == 0:
+                    self.iteration_number += 1
             try:
                 with open(path) as f:
                    graph = json.load(f)
