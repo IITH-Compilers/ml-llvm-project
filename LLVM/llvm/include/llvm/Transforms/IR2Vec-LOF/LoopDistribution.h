@@ -44,7 +44,6 @@ private:
   std::string fname;
   unsigned int lid;
   std::string partition;
-  std::string vecfactor;
   bool distributed;
 
   void createContainer(DataDependenceGraph &ddg);
@@ -53,6 +52,7 @@ private:
   Container container;
   DataDependenceGraph *findSCCGraph(Loop *il, DependenceInfo &DI);
   Loop *findLoop(unsigned int lid);
+  // void addTimer(Loop *, Loop *);
 
 public:
   OptimizationRemarkEmitter *ORE;
@@ -64,12 +64,10 @@ public:
   std::function<const LoopAccessInfo &(Loop &)> GetLAA;
 
   LoopDistribution() { distributed = false; }
-  LoopDistribution(std::string fname, unsigned int lid, std::string partition,
-                   std::string vecfactor) {
+  LoopDistribution(std::string fname, unsigned int lid, std::string partition) {
     this->fname = fname;
     this->lid = lid;
     this->partition = partition;
-    this->vecfactor = vecfactor;
     distributed = false;
   }
   void computeDistribution(SmallVector<DataDependenceGraph *, 5> &SCCGraphs,
@@ -89,13 +87,11 @@ public:
                         DependenceInfo &DI);
 
   bool computeDistributionOnLoop(DataDependenceGraph *SCCGraph, Loop *il,
-                                 std::string partitionp,
-                                 std::string vecfactor = "");
+                                 std::string partitionp);
 
   bool runwithAnalysis(SmallVector<DataDependenceGraph *, 5> &SCCGraphs,
                        SmallVector<Loop *, 5> &loops,
                        SmallVector<std::string, 5> &dis_seqs,
-                       SmallVector<std::string, 5> &vecfactor,
                        ScalarEvolution *SE_, LoopInfo *LI_, DominatorTree *DT_,
                        AAResults *AA_, OptimizationRemarkEmitter *ORE_,
                        std::function<const LoopAccessInfo &(Loop &)> GetLAA_,

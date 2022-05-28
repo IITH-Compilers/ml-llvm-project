@@ -115,15 +115,15 @@ def call_distributionPass(filename, distributeSeq, method_name, loop_id, hfun_id
         if not os.path.exists(dist_ll_dir):
             os.makedirs(dist_ll_dir)
         dist_llfile = os.path.join(dist_ll_dir, dist_llfile)
-        print("dist_llfile: {}".format(dist_llfile))
+        # print("dist_llfile: {}".format(dist_llfile))
         # logging.info(dist_llfile) 
         logging.info("{} --------------------------> {}".format(parts[1],distributeSeq))
         
-        print(opt)
+        # print(opt)
         cmd = opt + " -LoopDistribution -lID=" + loop_id + " -function " + method_name + ' --partition=\"' + distributeSeq + '\" ' + "-S " + filename + " -o " + dist_llfile
         # ".format(opt=os.environ['OPT'], LLVM=os.environ['LLVM'], dseq=distributeSeq ,input_file=filename, dist_llfile=dist_llfile, method_name=method_name, loop_id=loop_id, vecfactorflag=vecfactorflag)
 ## Use for replicate the O3
-        print("cmd: {}".format(cmd))
+        # print("cmd: {}".format(cmd))
         
         logging.info('Call to LoopDistribute pass thru command line {} \n: '.format(cmd))
 
@@ -202,9 +202,9 @@ def log_subprocess_output(pipe):
 def getLoopCost(filepath, loopId, fname):
     this_function_name = sys._getframe().f_code.co_name
     loopCost = 0 # []
-    # print("filepath: {}".format(filepath))
-    # print("loopId: {}".format(loopId))
-    # print("fname: {}".format(fname))
+    print("filepath: {}".format(filepath))
+    print("loopId: {}".format(loopId))
+    print("fname: {}".format(fname))
     try:
         # TODO 
         # cmd = "{opt} -S -load {llvm}/lib/LoopCost.so {post_distribution_passes} -LoopCost -lc-lID {loopId} -lc-function {fname}  {input_file} -o /dev/null ".format(opt=os.environ['OPT'], llvm=os.environ['LLVM'], input_file=filepath, loopId=loopId,fname=fname, post_distribution_passes=POST_DIS_PASSES_MAP[config.post_pass_key])

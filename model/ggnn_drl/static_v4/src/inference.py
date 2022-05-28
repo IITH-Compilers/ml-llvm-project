@@ -3,11 +3,15 @@ import argparse
 from argparse import Namespace
 from atexit import register
 from distutils.command.config import config
-from email import parser
+from itertools import count
+# from email import parser
 from tqdm import tqdm
 import os
-# import json
+import json 
 import glob
+
+# import sys
+# sys.path.append('/home/shalini/LOF_test/LD_VF/IR2Vec-LoopOptimizationFramework/model/ggnn_drl/static_v4/src')
 
 import ray
 from ray import tune
@@ -43,10 +47,10 @@ import pydot
 from networkx.readwrite import json_graph
 from ray.rllib.agents.dqn.simple_q_torch_policy import SimpleQTorchPolicy
 
-parser = argparse.ArgumentParser()
+# parser = argparse.ArgumentParser()
 
 class DistributionInference:
-    def __init__(self, args, model_path, test_dir):
+    def __init__(self, model_path):
         logdir='/tmp'
         logger = logging.getLogger(__file__)
         logging.basicConfig(filename='running.log', format='%(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
@@ -66,12 +70,12 @@ class DistributionInference:
 
         from ray.tune.registry import register_env
         
-        config["env"] = DistributeLoopEnv
+        # config["env"] = DistributeLoopEnv
         config["env_config"]["target"] = "X86"
         # config["env_config"]["registerAS"] = RegisterActionSpace(config["env_config"]["target"])
         # config["env_config"]["action_space_size"] = config["env_config"]["registerAS"].ac_sp_normlize_size
         config["env_config"]["state_size"] = 300
-        config["env_config"]["test_dir"] = test_dir
+        # config["env_config"]["test_dir"] = test_dir
     
         config["env_config"]["mode"] = 'inference'
         config["env_config"]["dump_type"] = 'One'
@@ -139,11 +143,11 @@ class DistributionInference:
             "policy_mapping_fn": function(policy_mapping_fn)
         }
 
-        def env_creator(env_config):
-            return DistributeLoopEnv(env_config)
-        register_env("Environment", env_creator)
+        # def env_creator(env_config):
+        #     return DistributeLoopEnv(env_config)
+        # register_env("Environment", env_creator)
 
-        self.trained_agent = SimpleQTrainer(env='Environment', config=config)
+        self.trained_agent = SimpleQTrainer(env=DistributeLoopEnv, config=config)
         # self.train_agent = DistributionInference(model_path, test_dir)
         # logging.info("{} {}".format(self.trained_agent, type(self.trained_agent)))
         # train_agent = DQNTrainer(config=config)
@@ -156,11 +160,23 @@ class DistributionInference:
         # config =  config["env_config"]
         # self.env = DistributeLoopEnv(env_config)
 
+    def dot_to_json(self, dot_):
+        py_dot_graph = pydot.graph_from_dot_data(dot_)[0]
+        graph_netx = networkx.drawing.nx_pydot.from_pydot(py_dot_graph)
+        graph_json = json_graph.adjacency_data(graph_netx)
+        return graph_json 
+
     def run_predict(self, test_file):
         env = DistributeLoopEnv(self.config["env_config"])
 
-        print("test_file {}".format(test_file))
-        obs = env.reset(test_file)
+        # Use for running with custom_loop_distribution
+        graph = self.dot_to_json(test_file)
+        print("test_file {}".format(graph))
+        obs = env.reset(graph)
+
+        # Use for running directly inference.py
+        # obs = env.reset(test_file)
+
         score = 0
         while(True):
             logging.debug('-^_^-^_^-^_^-^_^-^_^-^_^-^_^-^_^-^_^-^_^-^_^-^_^-^_^-')
@@ -192,30 +208,80 @@ class DistributionInference:
                     actionfile.write(str(test_file) + "\n")
                 assert response is not None, 'Allocation is not preset.'
                 break
+        print("response: {}".format(response))
     
         return reward, response
 
+    def run_predict_multiple_loops(self, rdgs):
+        #Load the envroinment
+        # env = DistributeLoopEnv(config)    
+        # seqs = []
+        dist_seq = []
+        # vf_seq = []
+        for rdg in rdgs:
+            # reward, seqs = self.run_predict(rdg)
+            reward, seqs = self.run_predict(rdg)
+            print("seqs: {}".format(seqs))
+            dist_seq.append(seqs)
+            # vf_seq.append(seqs[1])
+        
+        count = 0
+        
+        select_node_agent = "select_node_agent_{}".format(count)
+        distribution_agent = "distribution_agent_{}".format(count)
+
+        return [dist_seq]
+
+def predict_loop_distribution(rdgs : list, trained_dist_model : str):
+    print("trained_dist_model: {}".format(trained_dist_model))
+    # sys.argv.append("")
+    # sys.path.insert(0, "/home/shalini/LOF_test/LD_VF/IR2Vec-LoopOptimizationFramework/model/ggnn_drl/static_v4/src")
+    ray.init()
+
+    inference_obj = DistributionInference(trained_dist_model)
+    # agent.distribution_task.net_local.load_state_dict(torch.load(trained_dist_model, map_location=torch.device("cuda" if torch.cuda.is_available() else "cpu")))
+    # agent.vectorization_task.net_local.load_state_dict(torch.load(trained_vec_model, map_location=torch.device("cuda" if torch.cuda.is_available() else "cpu")))
+    
+    logging.info('Start the inference....')
+    seqs = inference_obj.run_predict_multiple_loops(rdgs)
+    logging.info('Distrubuted seqs : {}'.format(seqs))
+    # print("seqs: " << seqs)
+    ray.shutdown()
+    
+    return seqs
+
 if __name__ == "__main__":
-    args = parser.parse_args()
+    # args = 
+    # .parse_args()
     # parser.add_argument("--test_dir", help = "Path to test directory")
     logging.info('Start the inference....')
 
     # model_path = "/home/shalini/ray_results/experiment_2022-02-14_23-08-28/experiment_DistributeLoopEnv_eb75c_00000_0_2022-02-14_23-08-28/checkpoint_000001/checkpoint-1"
-    model_path = "/home/shalini/ray_results/experiment_2022-03-10_16-18-56/experiment_DistributeLoopEnv_af38a_00000_0_2022-03-10_16-18-56/checkpoint_000400/checkpoint-400"
+    model_path = "/home/shalini/ray_results/experiment_2022-03-22_11-06-19/experiment_DistributeLoopEnv_003b1_00000_0_2022-03-22_11-06-19/checkpoint_008568/checkpoint-8568"
     test_dir = "/home/shalini/LOF_test/LD_VF/IR2Vec-LoopOptimizationFramework/data/Opt_cld_O3_individualfile/mutation/tsvc_train/GIF_train_v4/graphs/loops/json/"
     args = {'no_render' : True, 'checkpoint' : model_path, 'run' : 'SimpleQ' , 'env' : '' , 'config' : {}, 'video_dir' : '', 'steps' : 0, 'episodes' : 0, 'arch' : 'X86'}
     args = Namespace(**args)   
 
-    ray.init()
+    # ray.init()
 
-    inference_obj = DistributionInference(args, model_path, test_dir)
+    # inference_obj = DistributionInference(args, model_path)
 
-    for file in os.listdir(test_dir):
-        reward, count = inference_obj.run_predict(file)
-        # action, count = inference_obj.compute_action(file)
+    rdgs = []
+    for path in glob.glob(os.path.join(test_dir, '*.json')):
+        print(path)
+        with open(path) as f:
+            # print(json.dumps(json.load(f)))
+            rdgs.append(json.load(f))
+            # rdgs.append(json.dumps(json.load(f)))
 
-        select_node_agent = "select_node_agent_{}".format(count)
-        distribution_agent = "distribution_agent_{}".format(count)
+    predict_loop_distribution(rdgs, model_path)
+
+    # for file in os.listdir(test_dir):
+    #     reward, count = inference_obj.run_predict(file)
+    #     # action, count = inference_obj.compute_action(file)
+
+    select_node_agent = "select_node_agent_{}".format(count)
+    distribution_agent = "distribution_agent_{}".format(count)
         
 
 

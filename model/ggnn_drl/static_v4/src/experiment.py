@@ -76,9 +76,6 @@ if __name__ == "__main__":
     logger = logging.getLogger(__file__)
     log_level=logging.DEBUG
 
-    x = 10
-    print("value of x: {}".format(x))
-
     if os.path.exists('running.log'):
         os.remove('running.log')
 
@@ -92,7 +89,7 @@ if __name__ == "__main__":
     # utils.get_parse_args()
     config["train-iterations"] = args.train_iterations
 
-    utils.get_parse_args()
+    # utils.get_parse_args()
 
     config["env"] = DistributeLoopEnv
     config["env_config"]["mode"] = "train"

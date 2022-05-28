@@ -1,14 +1,17 @@
 #include "llvm/Transforms/IR2Vec-LOF/LoopDistribution.h"
 
-#include "llvm/Analysis/LoopAccessAnalysis.h"
-#include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/IR/Function.h"
-#include "llvm/InitializePasses.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/Pass.h"
-#include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
+// #include <llvm/IR/LegacyPassManager.h>
+// #include "llvm/IR/PassManager.h"
+#include "llvm/Analysis/LoopAccessAnalysis.h"
+#include "llvm/Analysis/LoopAnalysisManager.h"
+#include "llvm/InitializePasses.h"
+#include "llvm/Passes/PassBuilder.h"
 
 #define LDIST_NAME "ir2vec-loop-distribution"
 #define DEBUG_TYPE LDIST_NAME
@@ -25,16 +28,9 @@ static cl::opt<std::string>
     partitionPattern("partition", cl::Hidden, cl::Optional,
                      cl::desc("partition for loop distribution"));
 
-static cl::opt<std::string>
-    vecfactor("vecfactor", cl::Hidden, cl::Optional, cl::init(""),
-              cl::desc("partition for loop distribution"));
-static cl::opt<bool>
-    EnableCustomVectorization("enable-custom-vf", cl::Hidden, cl::Optional, cl::init(true),
-               cl::desc("Enable or disable custom vector factors suggestions."));
-
 LoopDistributionWrapperPass::LoopDistributionWrapperPass() : FunctionPass(ID) {
   initializeLoopDistributionWrapperPassPass(*PassRegistry::getPassRegistry());
-  dist_helper = LoopDistribution(funcName, loopID, partitionPattern, vecfactor);
+  dist_helper = LoopDistribution(funcName, loopID, partitionPattern);
 }
 
 // For max distribution
@@ -94,8 +90,8 @@ void LoopDistribution::changeLoopIDMetaData(Loop *L) {
   SmallVector<BasicBlock *, 4> LoopLatches;
   L->getLoopLatches(LoopLatches);
   for (BasicBlock *BB : LoopLatches) {
-    if (loopID == 0) {
-      LoopID = BB->getTerminator()->getMetadata("IR2Vec-SCC-LoopID");
+    if (loopID == 0 ){
+    LoopID = BB->getTerminator()->getMetadata("IR2Vec-SCC-LoopID");
     }
     BB->getTerminator()->setMetadata("IR2Vec-Distributed-LoopID", LoopID);
     BB->getTerminator()->setMetadata("IR2Vec-SCC-LoopID", NULL);
@@ -146,41 +142,6 @@ void LoopDistribution::mergePartitionsOfContainer(std::string srcID,
   auto destPartition = container[destID];
   container[srcID].insert(destPartition.begin(), destPartition.end());
   container.erase(destID);
-}
-
-void static populateVFandIF(std::string VF_IF, SmallVector<int, 5> &_VF,
-                            SmallVector<int, 5> &_IF) {
-  std::string s = VF_IF;
-  std::string delimiter = "|";
-  size_t pos = 0;
-  SmallVector<std::string, 5> tokens;
-  while ((pos = s.find(delimiter)) != std::string::npos) {
-    tokens.push_back(s.substr(0, pos));
-    s.erase(0, pos + delimiter.length());
-  }
-  tokens.push_back(s);
-
-  delimiter = ",";
-  for (auto token : tokens) {
-    std::string s = token;
-    size_t pos = 0;
-    SmallVector<std::string, 5> subtokens;
-    while ((pos = s.find(delimiter)) != std::string::npos) {
-      auto str = s.substr(0, pos);
-      if (str.length() != 0) {
-        subtokens.push_back(str);
-      }
-      s.erase(0, pos + delimiter.length());
-    }
-    subtokens.push_back(s);
-    int VF = stoi(subtokens[0]);
-    int IF = stoi(subtokens[1]);
-
-    _VF.push_back(VF);
-    _IF.push_back(IF);
-
-    // errs() << "VF : " << VF << " IF: " << IF << "\n";
-  }
 }
 
 // This method parses the distribution order from the user and merges the
@@ -436,14 +397,11 @@ bool LoopDistribution::fail(StringRef RemarkName, StringRef Message, Loop *L) {
 
 bool LoopDistribution::computeDistributionOnLoop(DataDependenceGraph *SCCGraph,
                                                  Loop *il,
-                                                 std::string partitionp,
-                                                 std::string vecfactor) {
+                                                 std::string partitionp) {
 
   LLVM_DEBUG(errs() << "Partition pattern : " << partitionp << "\n");
-  // errs() << "Partition pattern : " << partitionp << "\n";
   createContainer(*SCCGraph);
   Ordering order = populatePartitions(*SCCGraph, il, partitionp);
-  // errs() << "container size: " << container.size() << "\n";
 
   LLVM_DEBUG(errs() << "#nodes - container = " << container.size() << "\n");
 
@@ -481,60 +439,7 @@ bool LoopDistribution::computeDistributionOnLoop(DataDependenceGraph *SCCGraph,
   removeUnwantedSlices(clonedLoops, loopInstVMap, workingLoopID, order);
   // LLVM_DEBUG(F.viewCFG());
 
-  if (vecfactor != "" && EnableCustomVectorization) {
-    SmallVector<int, 5> _VF;
-    SmallVector<int, 5> _IF;
-
-    populateVFandIF(vecfactor, _VF, _IF);
-    int counter = 0;
-
-    for (auto iilp : workingLoopID) {
-      auto iil = iilp.second;
-      LLVMContext &Ctx = iil->getHeader()->getContext();
-      SmallVector<Metadata *, 4> Args;
-      TempMDTuple TempNode = MDNode::getTemporary(Ctx, None);
-      Args.push_back(TempNode.get());
-
-      // Setting vectorize.width
-      int VF = _VF[counter];
-      int IF = _IF[counter];
-
-      assert(VF > 0 && IF > 0 && "IF and VF should be greater than 0.\n");
-      // errs() << "VF : " << VF << " IF: " << IF << "\n";
-      Metadata *Vals1[] = {MDString::get(Ctx, "llvm.loop.vectorize.width"),
-                           ConstantAsMetadata::get(ConstantInt::get(
-                               llvm::Type::getInt32Ty(Ctx), VF))};
-      Args.push_back(MDNode::get(Ctx, Vals1));
-
-      // Setting interleave.count
-      Metadata *Vals2[] = {MDString::get(Ctx, "llvm.loop.interleave.count"),
-                           ConstantAsMetadata::get(ConstantInt::get(
-                               llvm::Type::getInt32Ty(Ctx), IF))};
-      
-      Args.push_back(MDNode::get(Ctx, Vals2));
-      if (VF > 1) {
-      Metadata *Vals3[] = {MDString::get(Ctx, "llvm.loop.vectorize.enable"),
-                          ConstantAsMetadata::get(ConstantInt::get(
-                              llvm::Type::getInt1Ty(Ctx), true))};
-      
-      Args.push_back(MDNode::get(Ctx, Vals3));
-      }
-
-      
-      
-      MDNode *LoopID = MDNode::get(Ctx, Args);
-      LoopID->replaceOperandWith(0, LoopID);
-
-      iil->getLoopLatch()->getTerminator()->setMetadata(llvm::LLVMContext::MD_loop, LoopID);
-      counter++;
-      ORE->emit([&]() {
-        return OptimizationRemark(LDIST_NAME, "Vectorization", iil->getStartLoc(),
-                              iil->getHeader())
-           << iil->getHeader()->getParent()->getName()
-           << " --> vector factor suggested :: " << "(VF,IF)=(" << std::to_string(VF) <<"," << std::to_string(IF) <<")";
-        });
-    }
- }
+  // addTimer(workingLoopID[0], workingLoopID[container.size() - 1]);
 
   // Report the success.
   ORE->emit([&]() {
@@ -581,6 +486,75 @@ void LoopDistribution::computeDistribution(
     computeDistributionOnLoop(SCCGraphs[i], loops[i], dis_seqs[i]);
   }
 }
+
+// void LoopDistribution::addTimer(Loop *first, Loop *last) {
+//   Loop *outerLoop = nullptr;
+//   Loop *tmpLoop = first;
+//   while (outerLoop == nullptr) {
+//     if (tmpLoop->getLoopDepth() == 1)
+//       outerLoop = tmpLoop;
+//     else
+//       tmpLoop = tmpLoop->getParentLoop();
+//   }
+//   assert(outerLoop);
+
+//   auto PH = outerLoop->getLoopPreheader();
+//   auto module = PH->getModule();
+//   auto context = &module->getContext();
+//   IRBuilder<> builder(*context);
+
+//   // Declare clock Function
+//   std::vector<Type *> clock_func_args;
+//   FunctionType *clock_func_type =
+//       FunctionType::get(IntegerType::get(*context, 64), clock_func_args, false);
+//   Function *clock_func = Function::Create(
+//       clock_func_type, GlobalValue::ExternalLinkage, "clock", module);
+//   clock_func->setCallingConv(CallingConv::C);
+
+//   // Declare printf Function
+//   PointerType *PointerTy_6 = PointerType::get(IntegerType::get(*context, 8), 0);
+//   std::vector<Type *> printf_func_args;
+//   printf_func_args.push_back(PointerTy_6);
+//   FunctionType *printf_func_type =
+//       FunctionType::get(IntegerType::get(*context, 32), printf_func_args, true);
+//   Function *printf_func = Function::Create(
+//       printf_func_type, GlobalValue::ExternalLinkage, "printf", module);
+//   printf_func->setCallingConv(CallingConv::C);
+
+//   CallInst *call_clock_t1 = CallInst::Create(
+//       PH->getModule()->getFunction("clock"), "", PH->getTerminator());
+//   call_clock_t1->setCallingConv(CallingConv::C);
+//   call_clock_t1->setTailCall(false);
+
+//   SmallVector<BasicBlock *, 4> exitBlks;
+//   if (last->getLoopDepth() == 1) {
+//     exitBlks.push_back(last->getExitBlock());
+//   } else {
+//     outerLoop->getExitBlocks(exitBlks);
+//   }
+
+//   for (auto blk : exitBlks) {
+
+//     auto firstInst = &blk->front();
+//     CallInst *call_clock_t2 =
+//         CallInst::Create(module->getFunction("clock"), "", firstInst);
+//     call_clock_t2->setCallingConv(CallingConv::C);
+//     call_clock_t2->setTailCall(false);
+//     BinaryOperator *sub = BinaryOperator::Create(
+//         Instruction::Sub, call_clock_t2, call_clock_t1, "", firstInst);
+
+//     builder.SetInsertPoint(sub->getNextNode());
+//     std::vector<Value *> printArgs;
+//     Value *formatStr = builder.CreateGlobalStringPtr(
+//         "Function - %s, Loop - %d, Time - %lld\n");
+//     Value *fnName = builder.CreateGlobalString(funcName);
+//     printArgs.push_back(formatStr);
+//     printArgs.push_back(fnName);
+//     printArgs.push_back(ConstantInt::get(*context, APInt(32, loopID)));
+//     printArgs.push_back(sub);
+//     builder.CreateCall(module->getFunction("printf"), printArgs);
+//   }
+// }
 
 Loop *LoopDistribution::findLoop(unsigned int lid) {
 
@@ -672,8 +646,7 @@ bool LoopDistribution::findLoopAndDistribute(
     return fail("EmptySCCGraph", "SCC Graph not generated", il);
   }
 
-  bool isdis =
-      computeDistributionOnLoop(SCCGraph, il, this->partition, this->vecfactor);
+  bool isdis = computeDistributionOnLoop(SCCGraph, il, this->partition);
 
   return isdis;
 }
@@ -681,8 +654,8 @@ bool LoopDistribution::findLoopAndDistribute(
 bool LoopDistribution::runwithAnalysis(
     SmallVector<DataDependenceGraph *, 5> &SCCGraphs,
     SmallVector<Loop *, 5> &loops, SmallVector<std::string, 5> &dis_seqs,
-    SmallVector<std::string, 5> &vf_seqs, ScalarEvolution *SE_, LoopInfo *LI_,
-    DominatorTree *DT_, AAResults *AA_, OptimizationRemarkEmitter *ORE_,
+    ScalarEvolution *SE_, LoopInfo *LI_, DominatorTree *DT_, AAResults *AA_,
+    OptimizationRemarkEmitter *ORE_,
     std::function<const LoopAccessInfo &(Loop &)> GetLAA_, DependenceInfo &DI) {
   bool isdis = false;
   int size = loops.size();
@@ -696,30 +669,15 @@ bool LoopDistribution::runwithAnalysis(
     distributed = false;
     LLVM_DEBUG(errs() << i + 1 << " iteration\n");
     container.clear();
-    LLVM_DEBUG(
-        std::string s1 =
-            loops[i]->getHeader()->getParent()->getParent()->getName().str();
-        std::string filename(s1.substr(s1.rfind('/') + 1));
-        errs() << "\nLoopDistribution Details-> " + filename + "\t" +
-                      loops[i]->getHeader()->getParent()->getName() + "\t" +
-                      std::to_string(
-                          dyn_cast<ConstantInt>(
-                              dyn_cast<ConstantAsMetadata>(
-                                  loops[i]
-                                      ->getLoopLatch()
-                                      ->getTerminator()
-                                      ->getMetadata("IR2Vec-SCC-LoopID")
-                                      ->getOperand(0))
-                                  ->getValue())
-                              ->getZExtValue()) +
-                      "\t" + dis_seqs[i] + "\n");
+    LLVM_DEBUG( std::string s1 = loops[i]->getHeader()->getParent()->getParent()->getName().str();
+    std::string filename(s1.substr(s1.rfind('/') + 1));
+    errs() <<"\nLoopDistribution Details-> " + filename + "\t" + loops[i]->getHeader()->getParent()->getName() + "\t" + std::to_string(dyn_cast<ConstantInt>(dyn_cast<ConstantAsMetadata>(loops[i]->getLoopLatch()->getTerminator()->getMetadata("IR2Vec-SCC-LoopID")->getOperand(0))->getValue())->getZExtValue()) + "\t" + dis_seqs[i] + "\n");
     LLVM_DEBUG(errs() << "Function: "
                       << loops[i]->getHeader()->getParent()->getName()
                       << " Loop : " << loops[i] << "\n";
                loops[i]->dump());
     changeLoopIDMetaData(loops[i]);
-    isdis |= computeDistributionOnLoop(SCCGraphs[i], loops[i], dis_seqs[i],
-                                       vf_seqs[i]);
+    isdis |= computeDistributionOnLoop(SCCGraphs[i], loops[i], dis_seqs[i]);
   }
 
   return isdis;

@@ -26,6 +26,7 @@
 #include "llvm/PassSupport.h"
 #include <algorithm>
 #include <string>
+// #include <ray/api.h>
 
 #define DEBUG_TYPE "custom_loop_distribution"
 
@@ -74,8 +75,15 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
 
   PyObject *pName, *pModule, *pFunc, *presult;
 
+  // PySys_SetArgv(argc, argv);
+
   PyRun_SimpleString("import sys");
   PyRun_SimpleString("import os");
+
+  // Initialize Ray
+  // ray::Init()
+
+  errs() << "sys.path: " << MODEL_SRC << "\n";
 
   PyRun_SimpleString(std::string("sys.path.append(\"")
                          .append(MODEL_SRC)
@@ -90,7 +98,7 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
   // Load the module object
   pModule = PyImport_Import(pName);
 
-  // PyErr_Print();
+  PyErr_Print();
 
   if (pModule == NULL) {
     printf("ERROR importing module\n");
@@ -120,10 +128,11 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
         }
 
         PyObject *distModelPath = PyUnicode_FromString(DIST_INFERENCE_MODEL);
-        PyObject *vfModelPath = PyUnicode_FromString(VF_INFERENCE_MODEL);
+        // PyObject *vfModelPath = PyUnicode_FromString(VF_INFERENCE_MODEL);
 
         PyObject *arglist =
-            PyTuple_Pack(3, my_list, distModelPath, vfModelPath);
+            PyTuple_Pack(2, my_list, distModelPath);
+            // PyTuple_Pack(3, my_list, distModelPath, vfModelPath);
 
         if (!arglist) {
           errs() << "no arglist\n";
@@ -146,8 +155,8 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
         }
 
         int size = PyList_Size(presult);
-        assert(size == 2);
-        LLVM_DEBUG(errs() << size << " is the size of result list.\n");
+        // assert(size == 2);
+        // LLVM_DEBUG(errs() << size << " is the size of result list.\n");
 
         for (int j = 0; j < size; j++) {
           PyObject *plobj = PyList_GetItem(presult, j);
@@ -161,10 +170,13 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
             PyObject *seq = PyList_GetItem(plobj, k);
             const char *char_seq = PyUnicode_AsUTF8(seq);
             LLVM_DEBUG(errs() << char_seq << "\n");
+            // errs() << j << "\n";
             if (j == 0)
               distributed_seqs.push_back(char_seq);
-            else if (j == 1)
-              vf_seqs.push_back(char_seq);
+
+            // errs() << char_seq << "\n";
+            // else if (j == 1)
+            //   vf_seqs.push_back(char_seq);
           }
         }
         Py_DECREF(presult);
@@ -179,6 +191,7 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
       Py_DECREF(pName);
     }
   }
+  
   LLVM_DEBUG(errs() << "Call to runwihAnalysis...\n");
   auto AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
   auto SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
@@ -192,8 +205,12 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
   DependenceInfo DI = DependenceInfo(&F, AA, SE, LI);
   LLVM_DEBUG(errs() << "Function name=" << F.getName() << "\n");
   bool isdis =
-      dist_helper.runwithAnalysis(SCCGraphs, loops, distributed_seqs, vf_seqs,
+      dist_helper.runwithAnalysis(SCCGraphs, loops, distributed_seqs,
                                   SE, LI, DT, AA, ORE, GetLAA, DI);
+
+  // bool isdis =
+  //     dist_helper.runwithAnalysis(SCCGraphs, loops, distributed_seqs, vf_seqs,
+  //                                 SE, LI, DT, AA, ORE, GetLAA, DI);
 
   LLVM_DEBUG(if (isdis) { errs() << "Code is distributed..\n"; });
   return isdis;

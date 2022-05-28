@@ -77,9 +77,6 @@ class DistributeLoopEnv(MultiAgentEnv):
         self.max_number_nodes = env_config["max_number_nodes"]
         self.emb_size = env_config["state_size"]
 
-        y = 10
-        print("value of y: {}".format(y))
-
         if self.mode != 'inference':
             dataset = env_config["dataset"]
             self.graphs_num = env_config["graphs_num"]
@@ -173,7 +170,7 @@ class DistributeLoopEnv(MultiAgentEnv):
             #     vectorfactor = action
             # distributed_llfile = utils.call_distributionPass( input_file_path, self.distribution, method_name, loop_id, fun_id, loop_id, self.distributed_data, vecfactor=vectorfactor)
             distributed_llfile = utils.call_distributionPass( input_file_path, self.distribution, method_name, loop_id, fun_id, loop_id, self.distributed_data)
-            # print("distribution pattern: {}".format(self.distribution))
+            print("distribution pattern: {}".format(self.distribution))
             
             # self.speedup=0
             if distributed_llfile is None:
@@ -207,14 +204,14 @@ class DistributeLoopEnv(MultiAgentEnv):
                 # costly operation
                 # self.loopcost_cache.loc[key,['Distributed cost', 'Undsitributed Cost']] = [ distributedLoopCost, OriginalLoopCost]      
 
-        # print("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa: {}".format(reward))
+        print("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa: {}".format(reward))
         return reward
 
     def getReward(self):
         return self.getReward_Static()
 
     def _select_distribution_step(self, action):
-        # print("444444444444444444444444444 {}".format(action))
+        print("444444444444444444444444444 {}".format(self.functionName))
         dist_flag = [1] * 1
         if(action == 0):
             print("DO NOT DISTRIBUTE (MERGE)")
@@ -318,8 +315,12 @@ class DistributeLoopEnv(MultiAgentEnv):
         #     }
         #     reward[self.select_node_agent_id] = 0
         #     done[self.select_node_agent_id] = done_all
+        print("self.distribution: {}".format(self.distribution))
         
-        return obs, reward, done, {}
+        if self.mode != 'inference':
+            return obs, reward, done, {}
+        else:
+            return obs, reward, done, self.distribution
     
     # def step_via_vectorization(self, action):
     #     next_state =None
@@ -444,10 +445,11 @@ class DistributeLoopEnv(MultiAgentEnv):
         else:
             # self.GraphList = graph
             # index = np.random.random_integers(0, len(self.GraphList) - 1)
-            path = self.config["test_dir"] + graph
-            with open(path) as f:
-                graph = json.load(f)
-            self.reset_env(graph, path)
+            # path = self.config["test_dir"] + graph
+            # with open(path) as f:
+            #     graph = json.load(f)
+            # self.reset_env(graph, path)
+            self.reset_env(graph)
 
         self.agent_count = 0
         self.select_node_agent_id = "select_node_agent_{}".format(self.agent_count)
@@ -504,12 +506,14 @@ class DistributeLoopEnv(MultiAgentEnv):
         self.graph = graph
 
         # if self.mode != 'inference':
-        fileinfo = utils.getllFileAttributes_old(path)
-        self.home_dir = fileinfo['HOME_DIR']
-        self.loop_id = fileinfo['LOOP_ID']
-        self.fun_id = fileinfo['FUN_ID']
-        self.path = path
-    
+        if(self.mode != 'inference'):
+            fileinfo = utils.getllFileAttributes_old(path)
+            self.home_dir = fileinfo['HOME_DIR']
+            self.loop_id = fileinfo['LOOP_ID']
+            self.fun_id = fileinfo['FUN_ID']
+            self.path = path
+        # print("type(graph): {}".format(type(graph)))
+        
         self.fileName = graph['graph'][1][1]['FileName'].strip('\"') 
         self.functionName = graph['graph'][1][1]['Function'].strip('\"')
         self.loopId = graph['graph'][1][1]['LoopID'].strip('\"')
