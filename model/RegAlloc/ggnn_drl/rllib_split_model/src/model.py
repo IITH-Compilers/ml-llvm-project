@@ -56,15 +56,17 @@ class SelectTaskNetwork(TorchModelV2, nn.Module):
 
         self._features = x.clone().detach()
 
-        for i in range(input_dict["obs"]["action_mask"].shape[0]):
-            action_mask = input_dict["obs"]["action_mask"][i, :]
+        mask = input_dict["obs"]["action_mask"] > 0
+        x = torch.where(mask, x, torch.tensor(FLOAT_MIN).to(x.device))
+        # for i in range(input_dict["obs"]["action_mask"].shape[0]):
+        #     action_mask = input_dict["obs"]["action_mask"][i, :]
             
-            # if all(v == 0 for v in action_mask):
-            #     print("Mask is all zero task select")
+        #     # if all(v == 0 for v in action_mask):
+        #     #     print("Mask is all zero task select")
 
-            for j in range(action_mask.shape[0]):
-                if action_mask[j] == 0:                    
-                    x[i, j] = FLOAT_MIN
+        #     for j in range(action_mask.shape[0]):
+        #         if action_mask[j] == 0:                    
+        #             x[i, j] = FLOAT_MIN
         return x, state, self._features
 
     def value_function(self):
@@ -160,15 +162,18 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
         x = torch.add(input_dict["obs"]["spill_weights"], self._features)
         x = F.relu(x)
         
-        for i in range(input_dict["obs"]["action_mask"].shape[0]):
-            action_mask = input_dict["obs"]["action_mask"][i, :]
+        mask = input_dict["obs"]["action_mask"] > 0
+        x = torch.where(mask, x, torch.tensor(FLOAT_MIN).to(x.device))
+        
+        # for i in range(input_dict["obs"]["action_mask"].shape[0]):
+        #     action_mask = input_dict["obs"]["action_mask"][i, :]
 
-            # if all(v == 0 for v in action_mask):
-            #     print("Mask is all zero node select")
+        #     # if all(v == 0 for v in action_mask):
+        #     #     print("Mask is all zero node select")
 
-            for j in range(action_mask.shape[0]):
-                if action_mask[j] == 0:                    
-                    x[i, j] = FLOAT_MIN
+        #     for j in range(action_mask.shape[0]):
+        #         if action_mask[j] == 0:                    
+        #             x[i, j] = FLOAT_MIN
 
         # print("Select node forward Input", input_dict["obs"]["action_mask"][:, 0], x, input_dict["obs"]["spill_weights"].shape)
         return x, state, input_state_list
@@ -286,18 +291,20 @@ class SplitNodeNetwork(TorchModelV2, nn.Module):
         x = F.relu(self.fc3(input_dict["obs"]["usepoint_properties"]))
         x = torch.squeeze(x, 2)
         
-        for i in range(input_dict["obs"]["action_mask"].shape[0]):
-            action_mask = input_dict["obs"]["action_mask"][i, :]
+        mask = input_dict["obs"]["action_mask"] > 0
+        x = torch.where(mask, x, torch.tensor(FLOAT_MIN).to(x.device))
+        # for i in range(input_dict["obs"]["action_mask"].shape[0]):
+        #     action_mask = input_dict["obs"]["action_mask"][i, :]
 
-            # if all(v == 0 for v in action_mask):
-                # action_mask[len(action_mask) - 1] = 1
-                # x[i, len(action_mask) - 1] = 1
-                # print("Mask is all zero node spliting")
-                # print("Input state", input_dict["obs"]["state"].shape)
+        #     # if all(v == 0 for v in action_mask):
+        #         # action_mask[len(action_mask) - 1] = 1
+        #         # x[i, len(action_mask) - 1] = 1
+        #         # print("Mask is all zero node spliting")
+        #         # print("Input state", input_dict["obs"]["state"].shape)
 
-            for j in range(action_mask.shape[0]):
-                if action_mask[j] == 0:                    
-                    x[i, j] = FLOAT_MIN
+        #     for j in range(action_mask.shape[0]):
+        #         if action_mask[j] == 0:                    
+        #             x[i, j] = FLOAT_MIN
         
         # print("X shape", x.shape, x[0, :])
         # assert False, "Hehe"
