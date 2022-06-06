@@ -34,7 +34,7 @@ from ray.rllib.models import ModelCatalog
 from model import SelectTaskNetwork, SelectNodeNetwork, ColorNetwork, SplitNodeNetwork
 import logging
 from ray.rllib.utils.torch_ops import FLOAT_MIN, FLOAT_MAX
-# from ray.rllib.utils.spaces.repeated import Repeated
+from ray.rllib.utils.spaces.repeated import Repeated
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--train-iterations", type=int, default=100000)
@@ -184,8 +184,11 @@ if __name__ == "__main__":
     # repeat_tuple_edges = Repeated(tuple_edge, max_len=max_edge_count)
     # tuple_adjacency_lists = Tuple((Discrete(config["env_config"]["max_number_nodes"]), repeat_tuple_edges))
     max_edge_count = config["env_config"]["max_edge_count"]
-    edges_unroll_box = Box(0.0, config["env_config"]["max_number_nodes"], shape=(2*max_edge_count,))
-    node_edge_count = Tuple((Discrete(config["env_config"]["max_number_nodes"]), Discrete(max_edge_count)))
+    adjacency_lists = Dict({
+        "node_num": Discrete(config["env_config"]["max_number_nodes"]),
+        "edge_num": Discrete(max_edge_count),
+        "data": Repeated(Box(0.0, config["env_config"]["max_number_nodes"], shape=(2,)), max_len = max_edge_count)
+    })
     # obs_colour_node = Dict({
     #     "action_mask": Box(0, 1, shape=(config["env_config"]["action_space_size"],)),
     #     "node_properties": Box(-10000000000000.0, 10000000000000.0, shape=(3,)), 
@@ -196,8 +199,7 @@ if __name__ == "__main__":
         "action_mask": Box(0, 1, shape=(config["env_config"]["max_number_nodes"],)),
         "state": box_obs_select_node,
         "annotations": Box(-10000000000000.0, 10000000000000.0, shape=(config["env_config"]["max_number_nodes"], config["env_config"]["annotations"])),
-        "adjacency_lists": edges_unroll_box,
-        "node_edge_count": node_edge_count
+        "adjacency_lists": adjacency_lists,
         }) 
     obs_select_task = Dict({
         "node_properties": Box(-10000000000000.0, 10000000000000.0, shape=(4,)),

@@ -91,14 +91,14 @@ class GatedGraphNeuralNetwork(nn.Module):
 
     def forward(self,
             initial_node_representation: Variable, annotations: Variable, 
-                adjacency_lists: List[AdjacencyList],
+                adjacency_lists,
                 return_all_states=False) -> Variable:
         return self.compute_node_representations(initial_node_representation, annotations ,adjacency_lists,
                                                  return_all_states=return_all_states)
 
     def compute_node_representations(self,
             initial_node_representation: Variable, annotations:Variable,
-                                      adjacency_lists: List[AdjacencyList],
+                                      adjacency_lists,
                                      return_all_states=False) -> Variable:
         # If the dimension of initial node embedding is smaller, then perform padding first
         # one entry per layer (final state of that layer), shape: number of nodes in batch v x D
@@ -144,30 +144,36 @@ class GatedGraphNeuralNetwork(nn.Module):
 
 
             init_node_repr_size = initial_node_representation.size(2)
-            ndevice = adjacency_lists[0].data.device
+            ndevice = initial_node_representation.device
             if init_node_repr_size < self.hidden_size:
                 pad_size = self.hidden_size - init_node_repr_size
                 zero_pads = torch.zeros(initial_node_representation.size(0), initial_node_representation.size(1), pad_size, dtype=torch.float, device=ndevice)
                 initial_node_representation = torch.cat([initial_node_representation, zero_pads], dim=-1)
 
-        node_states_per_layer = [initial_node_representation]
+        # print("initial_node_representation shape", initial_node_representation.shape )
+        node_states_per_layer = [initial_node_representation]                
+        node_num = initial_node_representation.size(1)                
 
-        node_num = initial_node_representation.size(0)
+        # message_targets = []  # list of tensors of message targets of shape [E]
+        # for edge_type_idx, adjacency_list_for_edge_type in enumerate(adjacency_lists):
+        #     if adjacency_list_for_edge_type.edge_num > 0:
+        #         edge_targets = adjacency_list_for_edge_type[:, 1]
+        #         message_targets.append(edge_targets)
+                
+        # print("adjacency_lists data shape", (adjacency_lists["data"].values).shape, adjacency_lists["data"].lengths)
+        max_edge_count = int(torch.max(adjacency_lists["data"].lengths))
+        message_targets = (adjacency_lists["data"].values)[:, :max_edge_count, 1]
+        message_targets = message_targets.long()
+        # message_targets = torch.unique(message_targets, dim=1)
+        # print("message_targets shape", message_targets.shape)
+        
+        # if len(message_targets) == 0:
+        #     if self.nodelevel:
+        #         return initial_node_representation
+        #     else:
+        #         return torch.sum(initial_node_representation ,dim=0)
 
-        message_targets = []  # list of tensors of message targets of shape [E]
-        for edge_type_idx, adjacency_list_for_edge_type in enumerate(adjacency_lists):
-            if adjacency_list_for_edge_type.edge_num > 0:
-                edge_targets = adjacency_list_for_edge_type[:, 1]
-                message_targets.append(edge_targets)
-
-
-        if len(message_targets) == 0:
-            if self.nodelevel:
-                return initial_node_representation
-            else:
-                return torch.sum(initial_node_representation ,dim=0)
-
-        message_targets = torch.cat(message_targets, dim=0)  # Shape [M]
+        # message_targets = torch.cat(message_targets, dim=0)  # Shape [M]
 
         # sparse matrix of shape [V, M]
         # incoming_msg_sparse_matrix = self.get_incoming_message_sparse_matrix(adjacency_lists).to(device)
@@ -194,40 +200,84 @@ class GatedGraphNeuralNetwork(nn.Module):
                 # message_source_states: List[torch.FloatTensor] = []  # list of tensors of edge source states of shape [E, D]
 
                 # Collect incoming messages per edge type
-                for edge_type_idx, adjacency_list_for_edge_type in enumerate(adjacency_lists):
-                    if adjacency_list_for_edge_type.edge_num > 0:
-                        # shape [E]
-                        edge_sources = adjacency_list_for_edge_type[:, 0]
-                        # print(edge_sources)
-                        assert not torch.isnan(edge_sources).any(), "NAN is presertnt"
-                        # print('edge source : {}'.format(len(edge_sources)))
-                        # shape [E, D]
-                        edge_source_states = node_states_for_this_layer[edge_sources]
-                        # [print("edge_source_states", vec, vec.shape, edge_source_states.shape, i) for i, vec in enumerate(edge_source_states)]
-                        assert not torch.isnan(edge_source_states).any(), "NAN is presertnt"
+                # for edge_type_idx, adjacency_list_for_edge_type in enumerate(adjacency_lists):
+                #     if adjacency_list_for_edge_type.edge_num > 0:
+                #         # shape [E]
+                #         edge_sources = adjacency_list_for_edge_type[:, 0]
+                #         # print(edge_sources)
+                #         assert not torch.isnan(edge_sources).any(), "NAN is presertnt"
+                #         # print('edge source : {}'.format(len(edge_sources)))
+                #         # shape [E, D]
+                #         edge_source_states = node_states_for_this_layer[edge_sources]
+                #         # [print("edge_source_states", vec, vec.shape, edge_source_states.shape, i) for i, vec in enumerate(edge_source_states)]
+                #         assert not torch.isnan(edge_source_states).any(), "NAN is presertnt"
 
-                        f_state_to_message = self.state_to_message_linears[layer_idx][edge_type_idx]
-                        # print("", f_state_to_message, f_state_to_message.weight, layer_idx, edge_type_idx)
-                        assert not torch.isnan(f_state_to_message.weight).any(), "NAN is presertnt"
-                        # Shape [E, D]
-                        fvec = f_state_to_message(edge_source_states)
-                        # [print("fvec",vec, vec.shape, fvec.shape, i) for i, vec in enumerate(fvec)]
-                        assert not torch.isnan(fvec).any(), "NAN is presertnt"
-                        all_messages_for_edge_type = self.state_to_message_dropout_layer(fvec)
-                        # [print(vec, vec.shape, all_messages_for_edge_type.shape, i) for i, vec in enumerate(all_messages_for_edge_type)]
-                        assert not torch.isnan(all_messages_for_edge_type).any(), "NAN is presertnt"
+                #         f_state_to_message = self.state_to_message_linears[layer_idx][edge_type_idx]
+                #         # print("", f_state_to_message, f_state_to_message.weight, layer_idx, edge_type_idx)
+                #         assert not torch.isnan(f_state_to_message.weight).any(), "NAN is presertnt"
+                #         # Shape [E, D]
+                #         fvec = f_state_to_message(edge_source_states)
+                #         # [print("fvec",vec, vec.shape, fvec.shape, i) for i, vec in enumerate(fvec)]
+                #         assert not torch.isnan(fvec).any(), "NAN is presertnt"
+                #         all_messages_for_edge_type = self.state_to_message_dropout_layer(fvec)
+                #         # [print(vec, vec.shape, all_messages_for_edge_type.shape, i) for i, vec in enumerate(all_messages_for_edge_type)]
+                #         assert not torch.isnan(all_messages_for_edge_type).any(), "NAN is presertnt"
                       
-                        messages.append(all_messages_for_edge_type)
-                        # message_source_states.append(edge_source_states)
+                #         messages.append(all_messages_for_edge_type)
+                #         # message_source_states.append(edge_source_states)
+                        
+                # print("Length venctor of edges", adjacency_lists["data"].lengths)
+                
+                edge_sources = (adjacency_lists["data"].values)[:, :max_edge_count, 0]
+                # print(edge_sources)
+                assert not torch.isnan(edge_sources).any(), "NAN is presertnt"
+                # print('edge source : {}'.format(len(edge_sources)))
+                # shape [E, D]
+                # print("node_states_for_this_layer shape", node_states_for_this_layer.shape)
+                edge_sources = edge_sources.long()
+                # edge_sources = torch.unique(edge_sources, dim=1)
+                edge_source_states = torch.zeros((edge_sources.shape[0], edge_sources.shape[1], node_states_for_this_layer.shape[2]), device=ndevice)
+                # print("edge_source shape", edge_sources.shape)
+                # for binx in range(edge_sources.shape[0]):
+                #     for ninx in range(edge_sources.shape[1]):                        
+                #         edge_source_states[binx, ninx, :] = node_states_for_this_layer[binx, edge_sources[binx, ninx], :]
+                
+                edge_sources = edge_sources.unsqueeze(-1).expand(edge_sources.shape[0], edge_sources.shape[1], node_states_for_this_layer.shape[2])
+                edge_source_states = torch.gather(node_states_for_this_layer, 1, edge_sources)
+                # print("edge_source_states_new", edge_source_states.shape, edge_source_states_new.shape, torch.eq(edge_source_states, edge_source_states_new))
+                                           
+                # edge_source_states = node_states_for_this_layer[edge_sources, :]
+                # edge_source_states = edge_sources.choose(node_states_for_this_layer)
+                # edge_source_states = torch.torch.take_along_dim(node_states_for_this_layer, edge_sources)
+                # print("edge_source_states shape", edge_source_states.shape, edge_sources.shape)
+                # [print("edge_source_states", vec, vec.shape, edge_source_states.shape, i) for i, vec in enumerate(edge_source_states)]
+                assert not torch.isnan(edge_source_states).any(), "NAN is presertnt"
+                edge_type_idx = 0
+                f_state_to_message = self.state_to_message_linears[layer_idx][edge_type_idx]
+                # print("", f_state_to_message, f_state_to_message.weight, layer_idx, edge_type_idx)
+                assert not torch.isnan(f_state_to_message.weight).any(), "NAN is presertnt"
+                # Shape [E, D]
+                fvec = f_state_to_message(edge_source_states)
+                # [print("fvec",vec, vec.shape, fvec.shape, i) for i, vec in enumerate(fvec)]
+                # print("fvec shape", fvec.shape)
+                assert not torch.isnan(fvec).any(), "NAN is presertnt"
+                all_messages_for_edge_type = self.state_to_message_dropout_layer(fvec)
+                # [print(vec, vec.shape, all_messages_for_edge_type.shape, i) for i, vec in enumerate(all_messages_for_edge_type)]
+                assert not torch.isnan(all_messages_for_edge_type).any(), "NAN is presertnt"
+                
+                messages.append(all_messages_for_edge_type)
+                # message_source_states.append(edge_source_states)
 
                 # shape [M, D]
                 messages: torch.FloatTensor = torch.cat(messages, dim=0)
-                 
+                # print("messages shape", messages.shape, (message_targets.unsqueeze(-1).expand_as(messages)).shape) 
                 assert not torch.isnan(messages).any(), "NAN is presertnt"
                 # Sum up messages that go to the same target node
                 # shape [V, D]
-                incoming_messages = torch.zeros(node_num, messages.size(1), device=ndevice)
-                incoming_messages = incoming_messages.scatter_add_(0,
+                # incoming_messages = torch.zeros(node_num, messages.size(1), device=ndevice)
+                incoming_messages = torch.zeros(messages.size(0), node_num, messages.size(2), device=ndevice)
+                # print("incoming_messages shape", incoming_messages.shape)
+                incoming_messages = incoming_messages.scatter_add_(1,
                                                                    message_targets.unsqueeze(-1).expand_as(messages),
                                                                    messages)
                 assert not torch.isnan(incoming_messages).any(), "NAN is presertnt"
@@ -241,11 +291,14 @@ class GatedGraphNeuralNetwork(nn.Module):
                 # pass updated vertex features into RNN cell
                 # Shape [V, D]
                 # updated_node_states = self.rnn_cells[layer_idx](incoming_information, node_states_for_this_layer)
-                updated_node_states = self.rnn_cells[layer_idx](incoming_messages, node_states_for_this_layer)
+                # print("incoming_messages shape", incoming_messages.shape, node_states_for_this_layer.shape)
+                incoming_messages = incoming_messages.reshape(-1, incoming_messages.shape[2])
+                node_states_for_this_layer_flat = node_states_for_this_layer.reshape(-1, node_states_for_this_layer.shape[2])
+                updated_node_states = self.rnn_cells[layer_idx](incoming_messages, node_states_for_this_layer_flat)
                 assert not torch.isnan(updated_node_states).any(), "NAN is presertnt"
                 updated_node_states = self.rnn_dropout_layer(updated_node_states)
                 assert not torch.isnan(updated_node_states).any(), "NAN is presertnt"
-                node_states_for_this_layer = updated_node_states
+                node_states_for_this_layer = updated_node_states.reshape(node_states_for_this_layer.shape)
                 # for i, vec in enumerate(node_states_for_this_layer):
                 #    for v in vec:
                 #        if math.isnan(v):
@@ -270,7 +323,6 @@ class GatedGraphNeuralNetwork(nn.Module):
         #         if math.isnan(v):
         #             print('ggnn_1 computeGraph last ****NAN****', v, i)
         #             break
-       
         return node_states_for_this_layer
 
     def updateAnnotation(self, nodeChoosen, action):

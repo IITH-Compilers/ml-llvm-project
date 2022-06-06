@@ -58,15 +58,6 @@ class SelectTaskNetwork(TorchModelV2, nn.Module):
 
         mask = input_dict["obs"]["action_mask"] > 0
         x = torch.where(mask, x, torch.tensor(FLOAT_MIN).to(x.device))
-        # for i in range(input_dict["obs"]["action_mask"].shape[0]):
-        #     action_mask = input_dict["obs"]["action_mask"][i, :]
-            
-        #     # if all(v == 0 for v in action_mask):
-        #     #     print("Mask is all zero task select")
-
-        #     for j in range(action_mask.shape[0]):
-        #         if action_mask[j] == 0:                    
-        #             x[i, j] = FLOAT_MIN
         return x, state, self._features
 
     def value_function(self):
@@ -109,73 +100,22 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
     def forward(self, input_dict, state, seq_lens):
         """Build a network that maps state -> action values."""
         # print("Obs keys are:", input_dict['obs'].keys())
-        node_count = (input_dict["obs"]["node_edge_count"][0]).argmax(1)
-        edge_count = (input_dict["obs"]["node_edge_count"][1]).argmax(1)
-        # print("Types of node and edge count:", node_count, edge_count)
-        input_state_list = torch.zeros(input_dict["obs"]["adjacency_lists"].shape[0], self.max_number_nodes, self.emb_size)
-        
-        for t in range(input_dict["obs"]["adjacency_lists"].shape[0]):
-            curr_edge_count = edge_count[t]
-            temp_edge = []
-            for i in range(curr_edge_count):
-                temp_edge.append((input_dict["obs"]["adjacency_lists"][t][2*i], input_dict["obs"]["adjacency_lists"][t][2*i+1]))
-            temp_edge = list(set(temp_edge))
-            adjacency_lists = [ AdjacencyList(node_num=node_count[t], adj_list=temp_edge, device=input_dict["obs"]["state"].device)]
-            initial_node_representation = (input_dict["obs"]["state"])[t, 0:node_count[t], :]
-            annotations = (input_dict["obs"]["annotations"])[t, 0:node_count[t], :]
-            node_mat = self.ggnn(initial_node_representation=initial_node_representation, annotations=annotations, adjacency_lists=adjacency_lists)
-            input_state_list[t, 0:node_mat.shape[0], :] = node_mat
-            # print("Node mat type", type(node_mat))
-            # cur_obs = torch.zeros((self.max_number_nodes, self.emb_size))
-            # cur_obs[0:node_mat.shape[0], :] = node_mat            
-            
-        # if len((input_dict["obs"]["state"]).shape) == 3:
-        #     initial_node_representation = (input_dict["obs"]["state"])[:, 0:node_count, :]
-        #     annotations = (input_dict["obs"]["annotations"])[:, 0:node_count, :]
-        # elif len((input_dict["obs"]["state"]).shape) == 2:
-        #     initial_node_representation = (input_dict["obs"]["state"])[0:node_count, :]
-        #     annotations = (input_dict["obs"]["annotations"])[0:node_count, :]
-        # print("Types of node and edge count:", annotations.shape, initial_node_representation.shape)
-        
-        
-        # if 'infos' in input_dict.keys():
-        #     print("Info value", input_dict['infos'])
-        # x = self.ggnn(input_dict["obs"]["state"], input_dict["obs"]["annotations"], input_dict["obs"]["adjacency_lists"])
-        # print("GGNN output size", x.size())        
+        # print("State shape:", input_dict["obs"]["state"].shape)
+        input_state_list = torch.zeros(input_dict["obs"]["state"].shape[0], self.max_number_nodes, self.emb_size)
+        node_mat = self.ggnn(initial_node_representation=input_dict["obs"]["state"], annotations=input_dict["obs"]["annotations"], adjacency_lists=input_dict["obs"]["adjacency_lists"])
+        input_state_list = node_mat
         input_state_list = input_state_list.to(input_dict["obs"]["state"].device)
         x = F.relu(self.fc1(input_state_list))
         # x = F.relu(self.fc1(input_dict["obs"]["state"]))
         x = F.relu(self.fc2(x))
         x = self.fc3(x)
-
-
-        # print(seq_lens)
-        # print(type(input_dict["obs"]))
-
-        # if not isinstance(input_dict["obs"], list):
-
-        #     inp = input_dict["obs"]# [0]["select_node_agent"]
-        #     print("list")
-        # else:
-        #     inp = in
         self._features = torch.squeeze(x, 2)        
         x = torch.add(input_dict["obs"]["spill_weights"], self._features)
         x = F.relu(x)
         
         mask = input_dict["obs"]["action_mask"] > 0
-        x = torch.where(mask, x, torch.tensor(FLOAT_MIN).to(x.device))
+        x = torch.where(mask, x, torch.tensor(FLOAT_MIN).to(x.device))        
         
-        # for i in range(input_dict["obs"]["action_mask"].shape[0]):
-        #     action_mask = input_dict["obs"]["action_mask"][i, :]
-
-        #     # if all(v == 0 for v in action_mask):
-        #     #     print("Mask is all zero node select")
-
-        #     for j in range(action_mask.shape[0]):
-        #         if action_mask[j] == 0:                    
-        #             x[i, j] = FLOAT_MIN
-
-        # print("Select node forward Input", input_dict["obs"]["action_mask"][:, 0], x, input_dict["obs"]["spill_weights"].shape)
         return x, state, input_state_list
 
     def value_function(self):
@@ -212,18 +152,7 @@ class ColorNetwork(TorchModelV2, nn.Module):
         
     def forward(self, input_dict, state, seq_lens):
         """Build a network that maps state -> action values."""
-        # print("On GPU", next(self.parameters()).is_cuda, input_dict["obs"]["state"].is_cuda)
         
-        # if next(self.parameters()).is_cuda and not input_dict["obs"]["state"].is_cuda:
-        #     input_dict["obs"]["state"] = input_dict["obs"]["state"].to("cuda:0")
-        #     input_dict["obs"]["node_properties"] = input_dict["obs"]["node_properties"].to("cuda:0")
-        #     input_dict["obs"]["action_mask"] = input_dict["obs"]["action_mask"].to("cuda:0")
-        #     device = "cuda:0"
-        # elif not next(self.parameters()).is_cuda and input_dict["obs"]["state"].is_cuda:
-        #     input_dict["obs"]["state"] = input_dict["obs"]["state"].to("cpu")
-        #     input_dict["obs"]["node_properties"] = input_dict["obs"]["node_properties"].to("cpu")
-        #     input_dict["obs"]["action_mask"] = input_dict["obs"]["action_mask"].to("cpu")
-
         x = F.relu(self.fc1(input_dict["obs"]["state"]))
         self._features = F.relu(self.fc2(x))
         x = torch.cat((self._features, input_dict["obs"]["node_properties"]), 1)
@@ -293,21 +222,6 @@ class SplitNodeNetwork(TorchModelV2, nn.Module):
         
         mask = input_dict["obs"]["action_mask"] > 0
         x = torch.where(mask, x, torch.tensor(FLOAT_MIN).to(x.device))
-        # for i in range(input_dict["obs"]["action_mask"].shape[0]):
-        #     action_mask = input_dict["obs"]["action_mask"][i, :]
-
-        #     # if all(v == 0 for v in action_mask):
-        #         # action_mask[len(action_mask) - 1] = 1
-        #         # x[i, len(action_mask) - 1] = 1
-        #         # print("Mask is all zero node spliting")
-        #         # print("Input state", input_dict["obs"]["state"].shape)
-
-        #     for j in range(action_mask.shape[0]):
-        #         if action_mask[j] == 0:                    
-        #             x[i, j] = FLOAT_MIN
-        
-        # print("X shape", x.shape, x[0, :])
-        # assert False, "Hehe"
         return x, state, self._features
     
     def value_function(self):
