@@ -156,14 +156,18 @@ public:
     InstructionListType newInputList;
     bool alreadyExist = 0;
     for (auto *i : Input) {
+      alreadyExist = 0;
+      // errs() << "Check Instruction: " << *i << "\n";
       for (auto *I : InstList) {
+        // errs() << "I Instruction: " << *I << "\n";
         if (I == i) {
           alreadyExist = 1;
           break;
         }
       }
-      if (alreadyExist == 0)
+      if (alreadyExist == 0) {
         newInputList.push_back(i);
+      }
     }
 
     // for (auto *I : InstList) {
