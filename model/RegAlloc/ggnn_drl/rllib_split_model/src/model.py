@@ -212,11 +212,9 @@ class SplitNodeNetwork(TorchModelV2, nn.Module):
         x = F.relu(self.fc1(input_dict["obs"]["state"]))
         self._features = F.relu(self.fc2(x))
         input_dict["obs"]["usepoint_properties"] = F.pad(input_dict["obs"]["usepoint_properties"], (0, 64))
-        for i in range(self._features.shape[0]):
-            vec = self._features[i, :]
-            
-            for j in range(input_dict["obs"]["usepoint_properties"].shape[1]):
-                input_dict["obs"]["usepoint_properties"][i][j][2:] = vec 
+        features_new = F.pad(self._features, (2, 0))        
+        features_new = features_new.repeat(1, input_dict["obs"]["usepoint_properties"].shape[1]).reshape(input_dict["obs"]["usepoint_properties"].shape)
+        input_dict["obs"]["usepoint_properties"] = torch.add(input_dict["obs"]["usepoint_properties"], features_new)
         x = F.relu(self.fc3(input_dict["obs"]["usepoint_properties"]))
         x = torch.squeeze(x, 2)
         
