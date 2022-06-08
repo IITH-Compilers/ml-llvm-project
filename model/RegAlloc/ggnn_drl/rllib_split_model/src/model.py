@@ -82,8 +82,9 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
         # super(SelectNodeNetwork, self).__init__()
         # self.seed = torch.manual_seed(0)
         self.fc1 = nn.Linear(custom_config["state_size"], custom_config["fc1_units"])
-        self.fc2 = nn.Linear(custom_config["fc1_units"], custom_config["fc2_units"])
-        self.fc3 = nn.Linear( custom_config["fc2_units"], 1)
+        self.fc2 = nn.Linear(custom_config["fc1_units"] + 1, custom_config["fc2_units"])
+        self.attention = nn.Linear(custom_config["max_number_nodes"], 1)
+        self.fc3 = nn.Linear( custom_config["fc2_units"], custom_config["max_number_nodes"])
         self._value_branch = SlimFC(
             in_size=custom_config["max_number_nodes"],
             out_size=1,
@@ -106,12 +107,15 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
         input_state_list = node_mat
         input_state_list = input_state_list.to(input_dict["obs"]["state"].device)
         x = F.relu(self.fc1(input_state_list))
-        # x = F.relu(self.fc1(input_dict["obs"]["state"]))
+        spill_weights = input_dict["obs"]["spill_weights"]
+        spill_weights = (spill_weights).reshape(spill_weights.shape[0], spill_weights.shape[1], 1)
+        x = torch.cat((spill_weights, x), 2)
         x = F.relu(self.fc2(x))
+        x = torch.transpose(x, 1, 2)
+        x = self.attention(x)        
+        x = torch.squeeze(x, 2)
         x = self.fc3(x)
-        self._features = torch.squeeze(x, 2)        
-        x = torch.add(input_dict["obs"]["spill_weights"], self._features)
-        x = F.relu(x)
+        self._features = x.detach().clone()
         
         mask = input_dict["obs"]["action_mask"] > 0
         x = torch.where(mask, x, torch.tensor(FLOAT_MIN).to(x.device))        
@@ -197,10 +201,11 @@ class SplitNodeNetwork(TorchModelV2, nn.Module):
         # super(SplitNodeNetwork, self).__init__()
         # self.seed = torch.manual_seed(0)
         self.fc1 = nn.Linear(custom_config["state_size"], custom_config["fc1_units"])
-        self.fc2 = nn.Linear(custom_config["fc1_units"], custom_config["fc2_units"])
-        self.fc3 = nn.Linear( custom_config["fc2_units"] + 2, 1)
+        self.fc2 = nn.Linear(custom_config["fc1_units"] + 2, custom_config["fc2_units"])
+        self.attention = nn.Linear(custom_config["max_usepoint_count"], 1)
+        self.fc3 = nn.Linear( custom_config["fc2_units"], custom_config["max_usepoint_count"])
         self._value_branch = SlimFC(
-            in_size=custom_config["fc2_units"],
+            in_size=custom_config["max_usepoint_count"],
             out_size=1,
             initializer=normc_initializer(0.01),
             activation_fn=None)
@@ -209,15 +214,16 @@ class SplitNodeNetwork(TorchModelV2, nn.Module):
     def forward(self, input_dict, state, seq_lens):
         """Build a network that maps state -> action values."""
         # print("Split node GPU", next(self.parameters()).is_cuda)
+        usepoint_properties = input_dict["obs"]["usepoint_properties"]
         x = F.relu(self.fc1(input_dict["obs"]["state"]))
-        self._features = F.relu(self.fc2(x))
-        input_dict["obs"]["usepoint_properties"] = F.pad(input_dict["obs"]["usepoint_properties"], (0, 64))
-        features_new = F.pad(self._features, (2, 0))        
-        features_new = features_new.repeat(1, input_dict["obs"]["usepoint_properties"].shape[1]).reshape(input_dict["obs"]["usepoint_properties"].shape)
-        input_dict["obs"]["usepoint_properties"] = torch.add(input_dict["obs"]["usepoint_properties"], features_new)
-        x = F.relu(self.fc3(input_dict["obs"]["usepoint_properties"]))
+        x = x.repeat(1, usepoint_properties.shape[1]).reshape(usepoint_properties.shape[0], usepoint_properties.shape[1], -1)        
+        x = torch.cat((usepoint_properties, x), 2)
+        x = F.relu(self.fc2(x))
+        x = torch.transpose(x, 1, 2)
+        x = self.attention(x)
         x = torch.squeeze(x, 2)
-        
+        x = self.fc3(x)                
+        self._features = x.detach().clone()
         mask = input_dict["obs"]["action_mask"] > 0
         x = torch.where(mask, x, torch.tensor(FLOAT_MIN).to(x.device))
         return x, state, self._features

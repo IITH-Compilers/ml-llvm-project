@@ -271,7 +271,8 @@ if __name__ == "__main__":
                                         "custom_model_config": {
                                             "state_size": config["env_config"]["state_size"],
                                             "fc1_units": 64,
-                                            "fc2_units": 64
+                                            "fc2_units": 64,
+                                            "max_usepoint_count": config["env_config"]["max_usepoint_count"]
                                         },
                                     },
                                 }),

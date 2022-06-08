@@ -1283,7 +1283,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             except grpc.RpcError as e:
                 
                 if e.code() == grpc.StatusCode.UNAVAILABLE:
-                    print("Error in grpc")
+                    # print("Error in grpc")
                     #if op == 'Exit' and self.last_task_done == 0:
                         #raise
                     attempt += 1
