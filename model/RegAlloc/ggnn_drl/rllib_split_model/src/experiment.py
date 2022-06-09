@@ -176,9 +176,9 @@ if __name__ == "__main__":
     ModelCatalog.register_custom_model("split_node_model", SplitNodeNetwork)
 
     box_obs = Box(
-            -10000000000000.0, 10000000000000.0, shape=(config["env_config"]["state_size"], ), dtype=np.float32)
+            FLOAT_MIN, FLOAT_MAX, shape=(config["env_config"]["state_size"], ), dtype=np.float32)
     box_obs_select_node = Box(
-            -10000000000000.0, 10000000000000.0, shape=(config["env_config"]["max_number_nodes"], config["env_config"]["state_size"]), dtype=np.float32)
+            FLOAT_MIN, FLOAT_MAX, shape=(config["env_config"]["max_number_nodes"], config["env_config"]["state_size"]), dtype=np.float32)
     
     # tuple_edge = Tuple((Discrete(config["env_config"]["max_number_nodes"]), Discrete(config["env_config"]["max_number_nodes"])))
     # repeat_tuple_edges = Repeated(tuple_edge, max_len=max_edge_count)
@@ -195,20 +195,20 @@ if __name__ == "__main__":
     #     "state": box_obs
     #     })
     obs_select_node = Dict({
-        "spill_weights": Box(-10000000000000.0, 10000000000000.0, shape=(config["env_config"]["max_number_nodes"],)), 
+        "spill_weights": Box(FLOAT_MIN, FLOAT_MAX, shape=(config["env_config"]["max_number_nodes"],), dtype=np.float32), 
         "action_mask": Box(0, 1, shape=(config["env_config"]["max_number_nodes"],)),
         "state": box_obs_select_node,
-        "annotations": Box(-10000000000000.0, 10000000000000.0, shape=(config["env_config"]["max_number_nodes"], config["env_config"]["annotations"])),
+        "annotations": Box(FLOAT_MIN, FLOAT_MAX, shape=(config["env_config"]["max_number_nodes"], config["env_config"]["annotations"]), dtype=np.float32),
         "adjacency_lists": adjacency_lists,
         }) 
     obs_select_task = Dict({
-        "node_properties": Box(-10000000000000.0, 10000000000000.0, shape=(4,)),
+        "node_properties": Box(FLOAT_MIN, FLOAT_MAX, shape=(4,), dtype=np.float32),
         "action_mask": Box(0, 1, shape=(2,)),
         "state": box_obs
         })
     
     obs_node_spliting = Dict({
-        "usepoint_properties": Box(-10000000000000.0, 10000000000000.0, shape=(config["env_config"]["max_usepoint_count"], 2)), 
+        "usepoint_properties": Box(FLOAT_MIN, FLOAT_MAX, shape=(config["env_config"]["max_usepoint_count"], 2), dtype=np.float32), 
         "action_mask": Box(0, 1, shape=(config["env_config"]["max_usepoint_count"],)),
         "state": box_obs
         }) 
