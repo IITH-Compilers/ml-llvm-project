@@ -45,6 +45,8 @@ from argparse import Namespace
 import pydot
 from networkx.readwrite import json_graph
 from ray.rllib.agents.dqn.simple_q_torch_policy import SimpleQTorchPolicy
+from ray.rllib.utils.torch_ops import FLOAT_MIN, FLOAT_MAX
+from ray.rllib.utils.spaces.repeated import Repeated
 
 EXAMPLE_USAGE = """
 Example usage via RLlib CLI:
@@ -384,10 +386,10 @@ class RollOutInference:
         config["env_config"] = {
             "target": "X86",
             "state_size": 100,
-            "max_number_nodes": 300,
+            "max_number_nodes": 150,
             "max_usepoint_count": 200,
             "annotations": 3,
-            "max_edge_count": 90000,
+            "max_edge_count": 9000,
             "mode": 'inference',
             "dump_type": 'One',
             "dump_color_graph": True,
@@ -410,7 +412,7 @@ class RollOutInference:
             "current_batch": 100,
             "Workers_starting_port": "50001",
             "use_local_reward": True,
-            "use_mca_reward": False,
+            "use_mca_reward": True,
             "use_mca_self_play_reward": False,
             "mca_reward_clip": 10,
             "mca_timeout": 30,
@@ -425,34 +427,39 @@ class RollOutInference:
         ModelCatalog.register_custom_model("split_node_model", SplitNodeNetwork)
 
         box_obs = Box(
-                -10000000000000.0, 10000000000000.0, shape=(config["env_config"]["state_size"], ), dtype=np.float32)
+                FLOAT_MIN, FLOAT_MAX, shape=(config["env_config"]["state_size"], ), dtype=np.float32)
         box_obs_select_node = Box(
-                -10000000000000.0, 10000000000000.0, shape=(config["env_config"]["max_number_nodes"], config["env_config"]["state_size"]), dtype=np.float32)
-
+                FLOAT_MIN, FLOAT_MAX, shape=(config["env_config"]["max_number_nodes"], config["env_config"]["state_size"]), dtype=np.float32)
+        
+        # tuple_edge = Tuple((Discrete(config["env_config"]["max_number_nodes"]), Discrete(config["env_config"]["max_number_nodes"])))
+        # repeat_tuple_edges = Repeated(tuple_edge, max_len=max_edge_count)
+        # tuple_adjacency_lists = Tuple((Discrete(config["env_config"]["max_number_nodes"]), repeat_tuple_edges))
         max_edge_count = config["env_config"]["max_edge_count"]
-        edges_unroll_box = Box(0.0, config["env_config"]["max_number_nodes"], shape=(2*max_edge_count,))
-        node_edge_count = Tuple((Discrete(config["env_config"]["max_number_nodes"]), Discrete(max_edge_count)))
+        adjacency_lists = Dict({
+            "node_num": Discrete(config["env_config"]["max_number_nodes"]),
+            "edge_num": Discrete(max_edge_count),
+            "data": Repeated(Box(0.0, config["env_config"]["max_number_nodes"], shape=(2,)), max_len = max_edge_count)
+        })
         # obs_colour_node = Dict({
         #     "action_mask": Box(0, 1, shape=(config["env_config"]["action_space_size"],)),
         #     "node_properties": Box(-10000000000000.0, 10000000000000.0, shape=(3,)), 
         #     "state": box_obs
         #     })
         obs_select_node = Dict({
-            "spill_weights": Box(-10000000000000.0, 10000000000000.0, shape=(config["env_config"]["max_number_nodes"],)), 
+            "spill_weights": Box(FLOAT_MIN, FLOAT_MAX, shape=(config["env_config"]["max_number_nodes"],), dtype=np.float32), 
             "action_mask": Box(0, 1, shape=(config["env_config"]["max_number_nodes"],)),
             "state": box_obs_select_node,
-            "annotations": Box(-10000000000000.0, 10000000000000.0, shape=(config["env_config"]["max_number_nodes"], config["env_config"]["annotations"])),
-            "adjacency_lists": edges_unroll_box,
-            "node_edge_count": node_edge_count
+            "annotations": Box(FLOAT_MIN, FLOAT_MAX, shape=(config["env_config"]["max_number_nodes"], config["env_config"]["annotations"]), dtype=np.float32),
+            "adjacency_lists": adjacency_lists,
             }) 
         obs_select_task = Dict({
-            "node_properties": Box(-10000000000000.0, 10000000000000.0, shape=(4,)),
+            "node_properties": Box(FLOAT_MIN, FLOAT_MAX, shape=(4,), dtype=np.float32),
             "action_mask": Box(0, 1, shape=(2,)),
             "state": box_obs
             })
         
         obs_node_spliting = Dict({
-            "usepoint_properties": Box(-10000000000000.0, 10000000000000.0, shape=(config["env_config"]["max_usepoint_count"], 2)), 
+            "usepoint_properties": Box(FLOAT_MIN, FLOAT_MAX, shape=(config["env_config"]["max_usepoint_count"], 2), dtype=np.float32), 
             "action_mask": Box(0, 1, shape=(config["env_config"]["max_usepoint_count"],)),
             "state": box_obs
             }) 
@@ -515,7 +522,8 @@ class RollOutInference:
                                             "custom_model_config": {
                                                 "state_size": config["env_config"]["state_size"],
                                                 "fc1_units": 64,
-                                                "fc2_units": 64
+                                                "fc2_units": 64,
+                                                "max_usepoint_count": config["env_config"]["max_usepoint_count"]
                                             },
                                         },
                                     }),
