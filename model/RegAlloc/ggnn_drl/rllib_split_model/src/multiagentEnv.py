@@ -243,7 +243,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         node_mat = state.initial_node_representation
         cur_obs = np.zeros((self.max_number_nodes, self.emb_size))
         cur_obs[0:node_mat.shape[0], :] = node_mat
-        cur_obs = np.zeros((self.max_number_nodes, self.emb_size))
+        # cur_obs = np.zeros((self.max_number_nodes, self.emb_size))
         annotations = np.zeros((self.max_number_nodes, self.annotation_size))
         annotations[0:state.annotations.shape[0], :] = state.annotations
         # print("Annotations shape", annotations.shape)
