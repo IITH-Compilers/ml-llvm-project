@@ -51,3 +51,4 @@ endif(LLVM_BUILD_EXAMPLES)
     
 set(IR2VEC_INSTALL_DIR "" CACHE PATH "IR2Vec installation directory")
 target_link_libraries(opt PUBLIC ${IR2VEC_INSTALL_DIR}/lib/libIR2Vec.a)
+target_include_directories(opt PUBLIC ${IR2VEC_INSTALL_DIR}/include)

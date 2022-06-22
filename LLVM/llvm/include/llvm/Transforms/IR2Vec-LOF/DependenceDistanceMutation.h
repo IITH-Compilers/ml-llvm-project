@@ -16,8 +16,11 @@ private:
   BasicBlockListType BBList;
 
   using InstructionListType = SmallVector<Instruction *, 2>;
+  
+  SmallVector<std::string, 5> NameList;
 
   // List of source and destination instructions
+  InstructionListType MergedInstList;
   InstructionListType StoreInstList;
   InstructionListType WAWInstList;
 

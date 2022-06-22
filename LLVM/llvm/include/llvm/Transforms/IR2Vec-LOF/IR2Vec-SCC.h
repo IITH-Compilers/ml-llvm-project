@@ -9,6 +9,7 @@
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
+// #include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 
 #define DIM 300
@@ -47,11 +48,15 @@ private:
   void addMCACalls(Loop *L, int loopID) const;
 
   RDGData computeRDGForFunction(Function &F);
+  void canonicalizeLoopsWithLoads(SmallVector<SmallVector<Value *, 3>, 6> &loadWorkList);
   RDGData rdgInfo;
 
   using IR2VecInstMap =
       llvm::SmallMapVector<const llvm::Instruction *, IR2Vec::Vector, 128>;
   IR2VecInstMap instVecMap;
+
+  LoopInfo* LI;
+  DominatorTree *DT;
 
 public:
   static char ID;
@@ -60,11 +65,13 @@ public:
   bool runOnFunction(Function &F) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
-
+  bool computeRDG(Function &F);
   RDGData getRDGInfo() { return rdgInfo; }
   void Print_IR2Vec_File(DataDependenceGraph &G, std::string Filename,
                          std::string ll_name, int loopid);
 };
+  
+// RDGWrapperPass *createRDGWrapperPass();
 
 } // namespace llvm
 

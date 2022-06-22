@@ -8,6 +8,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/DDG.h"
 #include "llvm/Analysis/DependenceAnalysis.h"
 #include "llvm/Analysis/DependenceGraphBuilder.h"
@@ -29,6 +30,8 @@
 #include <fstream>
 #include <string>
 
+
+
 #define DEBUG_TYPE "RDG"
 
 using namespace llvm;
@@ -43,6 +46,8 @@ RDGWrapperPass::RDGWrapperPass() : FunctionPass(ID) {
 }
 
 char RDGWrapperPass::ID = 0;
+// RDGWrapperPass *llvm::createRDGWrapperPass() { return new RDGWrapperPass(); }
+
 // static RegisterPass<RDGWrapperPass> X("RDG", "Build ReducedDependenceGraph",
 // true, true);
 
@@ -75,14 +80,17 @@ void RDGWrapperPass::Print_IR2Vec_File(DataDependenceGraph &G,
       if (N->NodeLabel != "") {
         for (Instruction *II : IList) {
           tmp++;
-          LLVM_DEBUG(
-              errs() << " tmp = " << tmp << " " << instVecMap.find(II) << "\n";
-              if (instVecMap.find(II) != instVecMap.end()) instVecMap.find(II)
-                  ->first->dump();
-              else {
-                errs() << "Not in Map\n";
-                II->dump();
-              });
+          LLVM_DEBUG(errs() << " tmp = " << tmp << " " << instVecMap.find(II)
+                            << "\n";
+                     II->dump();
+
+                      if (instVecMap.find(II) != instVecMap.end())
+                                     instVecMap.find(II)
+                                         ->first->dump();
+                     else {
+                       errs() << "Not in Map\n";
+                       II->dump();
+                     });
 
           if (instVecMap.find(II) == instVecMap.end()) {
             continue;
@@ -192,10 +200,101 @@ void RDGWrapperPass::addMCACalls(Loop *L, int loopID) const {
 }
 
 bool RDGWrapperPass::runOnFunction(Function &F) {
-  rdgInfo = computeRDGForFunction(F);
-  return true;
+  return computeRDG(F);
 }
 
+bool RDGWrapperPass::computeRDG(Function &F) {
+  // errs()<<"Inside RDGWrapperPass:\n";
+  // F.dump();
+
+  DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+  LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+
+  // SmallVector<SmallVector<Value *, 3>, 6> loadWorkList;
+  // for (LoopInfo::iterator i = LI->begin(), e = LI->end(); i != e; ++i) {
+  //   Loop *L = *i;
+  //   errs() << "L->isInvalid(): " << L->isInvalid() << "\n";
+  //   assert(!L->isInvalid());
+  //   for (auto il = df_begin(L), el = df_end(L); il != el; ++il) {
+  //     if (il->getSubLoops().size() > 0) {
+  //       continue;
+  //     }
+  //     auto bbs = il->getBlocks();
+  //     for (auto BB : bbs) {
+  //       for (auto &I : *BB) {
+  //         if (auto st = dyn_cast<StoreInst>(&I)) {
+  //           // errs() << "Starting from ";
+  //           // st->dump();
+  //           auto src = st->getOperand(0);
+  //           // errs() << "src = ";
+  //           // src->dump();
+  //           if (auto src_inst = dyn_cast<Instruction>(src)) {
+  //             auto dest = st->getOperand(1);
+  //             // errs() << "dest = ";
+  //             // dest->dump();
+  //             for (auto use : src->users()) {
+  //               // errs() << "Processing use:";
+  //               // use->dump();
+  //               auto inst = dyn_cast<Instruction>(use);
+  //               if (inst && inst->getOpcode()!=Instruction::Store && inst->getOpcode() != Instruction::PHI && DT->dominates(st, inst))                     
+  // //               // (isPotentiallyReachable(st, inst) && isPotentiallyReachable(inst, st) && !isPotentiallyReachable(inst, src_inst)) // => cyclic cases to add load
+  // //               // (isPotentiallyReachable(st, inst) && isPotentiallyReachable(inst, st))
+  //               // if (inst && inst->getOpcode()!=Instruction::Store && isPotentiallyReachable(src_inst, inst)) 
+  //               {
+  //                 SmallVector<Value *, 3> tuples;
+  //                 tuples.push_back(src);
+  //                 tuples.push_back(dest);
+  //                 tuples.push_back(inst);
+  //                 loadWorkList.push_back(tuples);
+  //               }
+  //             }
+  //           }
+  //         }
+  //       }
+  //     }
+  //   }
+  // }
+
+  // canonicalizeLoopsWithLoads(loadWorkList);
+
+  auto ir2vec = IR2Vec::Embeddings(*F.getParent(),
+                                     IR2Vec::IR2VecMode::FlowAware, VOCAB_FILE);
+  instVecMap = ir2vec.getInstVecMap();
+  // for (auto II : instVecMap) { II.first->dump(); }
+  LLVM_DEBUG(for (auto II
+                  : instVecMap) {
+    errs() << "\n";
+    II.first->dump();
+    for (auto i : II.second)
+      errs() << i << " ";
+  });
+
+  rdgInfo = computeRDGForFunction(F);
+  return false;
+}
+
+void RDGWrapperPass::canonicalizeLoopsWithLoads(SmallVector<SmallVector<Value *, 3>, 6> &loadWorkList){ 
+  for (auto tuples : loadWorkList){
+    auto src = tuples[0];
+    auto dest = tuples[1];
+    auto insv = tuples[2];
+    auto inst = dyn_cast<Instruction>(insv);
+    // errs() << "inst: ";
+    // inst->dump();
+    auto ldInst = new LoadInst(dest, "");
+    ldInst->insertBefore(inst);
+    for (unsigned i = 0; i < inst->getNumOperands(); i++) {
+      if(inst->getOperand(i) == src){
+        inst->setOperand(i, ldInst);
+        // errs() << "Operand set successfully - ";
+        // inst->dump();
+        // errs() << "===\n";
+        // inst->getParent()->dump();
+        break;
+      }
+    }
+  }
+}
 // SmallVector<std::string, 2> RDG_StringList(RDGWrapperPass &R, Function &F)
 // {
 //   SmallVector<std::string, 2> s = R.computeRDGForFunction(F);
@@ -206,17 +305,13 @@ RDGData RDGWrapperPass::computeRDGForFunction(Function &F) {
   raw_ostream &operator<<(raw_ostream &OS, const DataDependenceGraph &G);
 
   RDGData data;
-  static bool collectVectors = true;
+  // static bool collectVectors = true;
 
-  if (collectVectors) {
-    // Collect IR2Vec encoding vector for each instruction in instVecMap
-    auto ir2vec = IR2Vec::Embeddings(*F.getParent(),
-                                     IR2Vec::IR2VecMode::FlowAware, VOCAB_FILE);
-    instVecMap = ir2vec.getInstVecMap();
-
-    LLVM_DEBUG(for (auto II : instVecMap) { II.first->dump(); });
-    collectVectors = false;
-  }
+  // // if (collectVectors) {
+  //   // Collect IR2Vec encoding vector for each instruction in instVecMap
+    
+  //   collectVectors = false;
+  // // }
 
   // Compute necessary parameters for DataDependenceGraph
   AAResults *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
@@ -321,6 +416,7 @@ RDGData RDGWrapperPass::computeRDGForFunction(Function &F) {
 
 INITIALIZE_PASS_BEGIN(RDGWrapperPass, "rdg", "IR2vec SCC for RDG", true, true)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopAccessLegacyAnalysis)
@@ -329,6 +425,7 @@ INITIALIZE_PASS_END(RDGWrapperPass, "rdg", "IR2vec SCC for RDG", true, true)
 
 void RDGWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<LoopInfoWrapperPass>();
+  AU.addRequired<DominatorTreeWrapperPass>();
   AU.addRequired<ScalarEvolutionWrapperPass>();
   AU.addRequired<AAResultsWrapperPass>();
   AU.addRequired<LoopAccessLegacyAnalysis>();

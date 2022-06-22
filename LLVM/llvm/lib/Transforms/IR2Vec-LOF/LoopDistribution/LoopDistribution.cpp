@@ -8,6 +8,7 @@
 #include "llvm/Transforms/Utils/Cloning.h"
 // #include <llvm/IR/LegacyPassManager.h>
 // #include "llvm/IR/PassManager.h"
+// #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/InitializePasses.h"
@@ -238,10 +239,12 @@ Loop *LoopDistribution::cloneLoop(Loop *L, LoopInfo *LI, DominatorTree *DT,
   // it was empty.
   assert(&*oldPreheader->begin() == oldPreheader->getTerminator() &&
          "preheader not empty");
-
+  // errs() << "here1- before cloning\n";
   Loop *newLoop =
       cloneLoopWithPreheader(L->getLoopPreheader(), L->getLoopPreheader(), L,
                              VMap, Twine("new-"), LI, DT, newLoopBlocks);
+  // errs() << "here2- after cloning\n";
+
 
   // VMap can contain mappings at instruction level or BB level
   // The code below obtains VMap at instruction level from BB level
@@ -347,8 +350,11 @@ void LoopDistribution::removeUnwantedSlices(
     // having to update as many def-use and use-def chains.
     // for (auto I : reverse(newInstToRemove)) {
     for (auto I : reverse(instToRemove)) {
-      if (!I->use_empty())
+      if (!I->use_empty()){
+        if(I->getMetadata("IR2Vec-Canonicalize-Load"))
+          continue;
         I->replaceAllUsesWith(UndefValue::get(I->getType()));
+      }
       I->eraseFromParent();
     }
     id++;
@@ -412,6 +418,70 @@ bool LoopDistribution::computeDistributionOnLoop(DataDependenceGraph *SCCGraph,
     return fail("OneNodeIncontainer",
                 "Nothing to distribute - Only one node in container", il);
   }
+
+  // auto Context = &il->getBlocks()[0]->getContext();
+  // SmallVector<SmallVector<Value *, 3>, 6> workList;
+  // auto bbs = il->getBlocks();
+  // int flag = 0;
+  // for (auto BB : bbs) {
+  //   for (auto &I : *BB) {
+  //     if (auto st = dyn_cast<StoreInst>(&I)) {
+  //       errs() << "\nStarting from ";
+  //       st->dump();
+  //       auto src = st->getOperand(0);
+  //       errs() << "src = ";
+  //       src->dump();
+  //       if (auto src_inst = dyn_cast<Instruction>(src)) {
+  //         auto dest = st->getOperand(1);
+  //         errs() << "dest = ";
+  //         dest->dump();
+  //         for (auto use : src->users()) {
+  //           errs() << "Processing use:";
+  //           use->dump();
+  //           auto inst = dyn_cast<Instruction>(use);
+  //           if(flag < 5)
+  //             if (inst && inst->getOpcode()!=Instruction::Store && inst->getOpcode() != Instruction::PHI && DT->dominates(st, inst)                     
+  //               // (isPotentiallyReachable(st, inst) && isPotentiallyReachable(inst, st) && !isPotentiallyReachable(inst, src_inst)) // => cyclic cases to add load
+  //               // (isPotentiallyReachable(st, inst) && isPotentiallyReachable(inst, st))
+  //               ) {
+  //               flag++;
+  //               errs() << "Pushing in for adding load\n";
+  //               SmallVector<Value *, 3> tuples;
+  //               tuples.push_back(src);
+  //               tuples.push_back(dest);
+  //               tuples.push_back(inst);
+  //               workList.push_back(tuples);
+  //             }
+  //         }
+  //       }
+  //     }
+  //   }
+  // }
+
+  // for (auto tuples : workList){
+  //   auto src = tuples[0];
+  //   auto dest = tuples[1];
+  //   auto insv = tuples[2];
+  //   auto inst = dyn_cast<Instruction>(insv);
+  //   errs() << "inst: ";
+  //   inst->dump();
+  //   auto ldInst = new LoadInst(dest, "");
+  //   ldInst->insertBefore(inst);
+  //   MDNode* N = MDNode::get(*Context, MDString::get(*Context, "added due to canonicalization"));
+  //   ldInst->setMetadata("IR2Vec-Canonicalize-Load", N);
+  //   for (unsigned i = 0; i < inst->getNumOperands(); i++) {
+  //     if(inst->getOperand(i) == src){
+  //       errs() << "Before setting: \n";
+  //       inst->getParent()->dump();
+  //       inst->setOperand(i, ldInst);
+  //       errs() << "Operand set successfully - ";
+  //       inst->dump();
+  //       errs() << "===\n";
+  //       inst->getParent()->dump();
+  //       break;
+  //     }
+  //   }
+  // }
 
   auto L = il;
   SmallVector<Loop *, 5> clonedLoops;
@@ -659,7 +729,7 @@ bool LoopDistribution::runwithAnalysis(
     std::function<const LoopAccessInfo &(Loop &)> GetLAA_, DependenceInfo &DI) {
   bool isdis = false;
   int size = loops.size();
-  SE = SE_;
+  SE = SE_; 
   LI = LI_;
   DT = DT_;
   AA = AA_;

@@ -30,6 +30,8 @@ public:
   bool runOnFunction(Function &F) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
+private:
+  void canonicalizeLoopsWithLoads();
 };
 
 FunctionPass *createcustom_loop_distributionPass();

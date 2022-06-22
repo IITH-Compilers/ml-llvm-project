@@ -20,6 +20,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -37,8 +38,82 @@ custom_loop_distribution::custom_loop_distribution() : FunctionPass(ID) {
 }
 
 custom_loop_distribution::~custom_loop_distribution() { Py_Finalize(); }
-bool custom_loop_distribution::runOnFunction(Function &F) {
 
+void custom_loop_distribution::canonicalizeLoopsWithLoads(){ 
+  auto LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+  auto DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+
+  SmallVector<SmallVector<Value *, 3>, 6> loadWorkList;
+  for (LoopInfo::iterator i = LI->begin(), e = LI->end(); i != e; ++i) {
+    Loop *L = *i;
+    // errs() << "L->isInvalid(): " << L->isInvalid() << "\n";
+    assert(!L->isInvalid());
+    for (auto il = df_begin(L), el = df_end(L); il != el; ++il) {
+      if (il->getSubLoops().size() > 0) {
+        continue;
+      }
+      auto bbs = il->getBlocks();
+      for (auto BB : bbs) {
+        for (auto &I : *BB) {
+          if (auto st = dyn_cast<StoreInst>(&I)) {
+            // errs() << "Starting from ";
+            // st->dump();
+            auto src = st->getOperand(0);
+            // errs() << "src = ";
+            // src->dump();
+            if (auto src_inst = dyn_cast<Instruction>(src)) {
+              auto dest = st->getOperand(1);
+              // errs() << "dest = ";
+              // dest->dump();
+              for (auto use : src->users()) {
+                // errs() << "Processing use:";
+                // use->dump();
+                auto inst = dyn_cast<Instruction>(use);
+                if (inst && inst->getOpcode()!=Instruction::Store && inst->getOpcode() != Instruction::PHI && DT->dominates(st, inst))                     
+  //               // (isPotentiallyReachable(st, inst) && isPotentiallyReachable(inst, st) && !isPotentiallyReachable(inst, src_inst)) // => cyclic cases to add load
+  //               // (isPotentiallyReachable(st, inst) && isPotentiallyReachable(inst, st))
+                // if (inst && inst->getOpcode()!=Instruction::Store && isPotentiallyReachable(src_inst, inst)) 
+                {
+                  SmallVector<Value *, 3> tuples;
+                  tuples.push_back(src);
+                  tuples.push_back(dest);
+                  tuples.push_back(inst);
+                  loadWorkList.push_back(tuples);
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  for (auto tuples : loadWorkList){
+    auto src = tuples[0];
+    auto dest = tuples[1];
+    auto insv = tuples[2];
+    auto inst = dyn_cast<Instruction>(insv);
+    // errs() << "inst: ";
+    // inst->dump();
+    auto ldInst = new LoadInst(dest, "");
+    ldInst->insertBefore(inst);
+    for (unsigned i = 0; i < inst->getNumOperands(); i++) {
+      if(inst->getOperand(i) == src){
+        inst->setOperand(i, ldInst);
+        // errs() << "Operand set successfully - ";
+        // inst->dump();
+        // errs() << "===\n";
+        // inst->getParent()->dump();
+        break;
+      }
+    }
+  }
+}
+
+bool custom_loop_distribution::runOnFunction(Function &F) {
+  // F.dump();
+  canonicalizeLoopsWithLoads();
+  // errs()<<"After canonicolization: \n";
+  // F.dump();
   // RDG_List: Contains list of all the string wrt to RDG
   SmallVector<std::string, 5> RDG_List;
 
@@ -46,6 +121,11 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
   SmallVector<Loop *, 5> loops;
 
   RDGWrapperPass &R = getAnalysis<RDGWrapperPass>();
+  // RDGWrapperPass *R = createRDGWrapperPass();
+  // legacy::FunctionPassManager FPM(F.getParent());
+  // FPM.add(R);
+  // FPM.run(F);
+  R.computeRDG(F);
   RDGData data = R.getRDGInfo();
 
   RDG_List.insert(RDG_List.end(), data.input_rdgs.begin(),
@@ -80,10 +160,7 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
   PyRun_SimpleString("import sys");
   PyRun_SimpleString("import os");
 
-  // Initialize Ray
-  // ray::Init()
-
-  errs() << "sys.path: " << MODEL_SRC << "\n";
+  // errs() << "sys.path: " << MODEL_SRC << "\n";
 
   PyRun_SimpleString(std::string("sys.path.append(\"")
                          .append(MODEL_SRC)
