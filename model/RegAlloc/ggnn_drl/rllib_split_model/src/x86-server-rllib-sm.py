@@ -1,5 +1,5 @@
 import sys
-sys.path.append('/home/cs20mtech12003/ML-Register-Allocation/llvm-grpc/Python-Utilities')
+sys.path.append('/home/venkat/IF-DV/Rohit/regAlloc/iith-compilers/benchmarking/ML-Register-Allocation/llvm-grpc/Python-Utilities')
 import RegisterAllocationInference_pb2_grpc, RegisterAllocationInference_pb2
 
 from concurrent import futures
@@ -10,7 +10,7 @@ import json
 import ray
 import os
 # sys.path.append(os.path.realpath('../../model/RegAlloc/ggnn_drl/rllib_split_model/src'))
-sys.path.append('/home/cs20mtech12003/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src')
+sys.path.append('/home/venkat/IF-DV/Rohit/regAlloc/iith-compilers/benchmarking/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src')
 # import inference
 import rollout as inference
 # import register_action_space
@@ -31,7 +31,7 @@ class service_server(RegisterAllocationInference_pb2_grpc.RegisterAllocationInfe
         # model_path = '/home/venkat/ray_results/split_model/X86models/checkpoint_001156/checkpoint-1156'
         #model_path = '/home/venkat/ray_results/split_model/X86models/checkpoint_001274/checkpoint-1274'
         #model_path = '/home/venkat/ray_results/experiment_2022-03-12_13-28-43/experiment_HierarchicalGraphColorEnv_3c7aa_00000_0_2022-03-12_13-28-43/checkpoint_004010/checkpoint-4010'
-        model_path = '/home/venkat/ray_results/home/cs20mtech12003/ray_results/experiment_2022-04-12_12-51-19/experiment_HierarchicalGraphColorEnv_25d71_00000_0_2022-04-12_12-51-19/checkpoint_001721/checkpoint-1721'
+        model_path = '/home/venkat/ray_results/X86_C5_200kEps_16_06_22/checkpoint-10219'
         #model_path = '/home/venkat/ray_results/split_model/home/cs17m20p100001/ray_results/experiment_2022-01-04_21-47-31/experiment_HierarchicalGraphColorEnv_d1a8f_00000_0_2022-01-04_21-47-32/checkpoint_001500/checkpoint-1500'
         args = {'no_render' : True, 'checkpoint' : model_path, 'run' : 'PPO' , 'env' : '' , 'config' : {}, 'video_dir' : '', 'steps' : 0, 'episodes' : 0, 'arch' : 'X86'}
         args = Namespace(**args)
@@ -131,7 +131,7 @@ class service_server(RegisterAllocationInference_pb2_grpc.RegisterAllocationInfe
                 # if stop == 0:
                 #     exit()
             else:
-                print("LLVM responce", inter_graphs)
+                # print("LLVM responce", inter_graphs)
                 self.inference_model.setCurrentNodeAsNotVisited()
                 self.inference_model.updateSelectNodeObs()
                 print("Inside else; doing nothing here")

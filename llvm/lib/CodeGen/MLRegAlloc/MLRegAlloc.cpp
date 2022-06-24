@@ -207,7 +207,7 @@ grpc::Status MLRA::codeGen(grpc::ServerContext *context,
   errs() << request->message();
   // std::string str = "LLVM\n";
   // response->set_payload(str);
-  if (request->message() == "Exit"){
+  if (request->message() == "Exit") {
     std::map<std::string, int64_t> colorMap;
     unsigned numSpills = 0;
     for (auto i : request->color()) {
@@ -218,7 +218,7 @@ grpc::Status MLRA::codeGen(grpc::ServerContext *context,
     this->FunctionVirtRegToColorMap[MF->getName()] = colorMap;
     exit_requested->set_value();
   }
-    
+
   if (request->message() == "Split" ||
       request->message() == "SplitAndCapture") {
     unsigned splitRegIdx = request->regidx();
@@ -405,10 +405,30 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
   bool found = false;
   SplitAnalysis::BlockInfo BI;
   auto useSlots = SA->getUseSlots();
+  auto seg = VirtReg->segments;
+  auto tmp = seg.begin();
+
+  auto getSubRange = [](const LiveInterval &I,
+                        LaneBitmask M) -> const LiveRange & {
+    if (M.none()) {
+      errs() << "Returning zero lanemask\n";
+      return I;
+    }
+
+    for (const LiveInterval::SubRange &SR : I.subranges()) {
+      if ((SR.LaneMask & M).any()) {
+        assert(SR.LaneMask == M && "Expecting lane masks to match exactly");
+        return SR;
+      }
+    }
+    llvm_unreachable("Subrange for mask not found");
+  };
+
   for (auto use : useSlots) {
     if (pos == splitPoint + 1) {
       idx = use;
       idxPos = pos - 1;
+      errs() << "UseSlot size: " << useSlots.size() << "\n";
       if (use.getBoundaryIndex() >= useSlots.back().getBoundaryIndex()) {
         LLVM_DEBUG(errs() << "No use of splitting at/after the last use "
                              "slot -- exiting\n");
@@ -444,7 +464,7 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
   // No use of splitting at a point whose next inst itself has a use
   auto nextInst = MI->getNextNode();
   if (nextInst &&
-      LIS->getInstructionFromIndex(useSlots[idxPos + 1]) == nextInst){
+      LIS->getInstructionFromIndex(useSlots[idxPos + 1]) == nextInst) {
     return false;
   }
 
@@ -455,6 +475,69 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
 
   auto MBB = MI->getParent();
   assert(MBB && "MI should be part of a MBB");
+  errs() << "Before spliting BB: " << MBB->getSymbol() << "\n";
+  for (const MachineBasicBlock *Pred : MBB->predecessors()) {
+    SlotIndex Stop = Indexes->getMBBEndIdx(Pred);
+    errs() << "Predecesor BB Name: " << Pred->getSymbol() << "\n";
+    if (VirtReg->getVNInfoBefore(Stop))
+      errs() << "Predecesor BB VNI: " << VirtReg->getVNInfoBefore(Stop) << "\n";
+    else {
+      errs() << "Null VNI for predecesor: " << VirtReg->getVNInfoBefore(Stop)
+             << "\n";
+    }
+  }
+
+  
+  SmallVector<MachineBasicBlock *, 5> WorkList;
+  SmallVector<MachineBasicBlock *, 5> MBBlist;
+  auto slotIndexes = LIS->getSlotIndexes();
+
+  const LiveRange &LR = getSubRange(*VirtReg, LaneBitmask::getNone());
+  WorkList.push_back(MBB);
+  while (!WorkList.empty()) {
+    auto tempMBB = WorkList.back();
+    WorkList.pop_back();
+    for (auto pred : tempMBB->predecessors()) {
+      auto Idx = slotIndexes->getMBBEndIdx(pred);
+      if (LR.getVNInfoBefore(Idx)) {
+        if(!std::count(MBBlist.begin(), MBBlist.end(), pred)){
+          errs() << "Adding pred to MBBlist: ";
+          pred->getSymbol()->dump();
+          errs() << "\n";
+          MBBlist.push_back(pred);
+          WorkList.push_back(pred);
+        }        
+      }
+    }
+  }
+  WorkList.push_back(MBB);
+  while (!WorkList.empty()) {
+    auto tempMBB = WorkList.back();
+    WorkList.pop_back();
+    for (auto succ : tempMBB->successors()) {
+      auto Idx = slotIndexes->getMBBStartIdx(succ);
+      if (LR.getVNInfoBefore(Idx)) {
+        if(!std::count(MBBlist.begin(), MBBlist.end(), succ)){
+          MBBlist.push_back(succ);
+          WorkList.push_back(succ);
+          errs() << "Adding success to MBBlist: ";
+          succ->getSymbol()->dump();
+          errs() << "\n";
+        }        
+      }
+    }
+  }
+
+  for(auto mBB : MBBlist) {
+    for (auto mIR = mBB->begin(); mIR != mBB->end(); mIR++) {
+      if(mIR->isEHLabel()){
+        errs() << "Exiting splitting\n";
+        mBB->dump();
+        return false;
+      }
+        
+    }      
+  }
 
   // if (MI == &MBB->back()) {
   //   errs() << "Cannot split last instruction of a basic block\n";
@@ -581,12 +664,14 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
       errs() << "Skipping here -- continuing\n";
       continue;
     }
+    errs() << "split begin\n";
     SE->openIntv();
     SegStart = SE->enterIntvAfter(i.first);
     if (!endBI.LiveOut)
       SlotIndex SegStop = SE->leaveIntvAfter(i.second);
     auto thisMBBLastIdx = LIS->getMBBEndIdx(LIS->getMBBFromIndex(i.second));
     SE->useIntv(SegStart, thisMBBLastIdx);
+    errs() << "split end\n";
   }
 
   if (LREdit.empty()) {
@@ -595,7 +680,9 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
   }
 
   SmallVector<unsigned, 8> IntvMap;
+  errs() << "Calling split finish\n";
   SE->finish(&IntvMap);
+  errs() << "After split finish\n";
 
   DebugVars->splitRegister(VirtReg->reg, LREdit.regs(), *LIS);
   splitInvalidRegs.push_back(splitReg);
@@ -632,6 +719,35 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
       }
     }
     LIS->getInterval(i).dump();
+
+    // auto LI = &LIS->getInterval(i);
+    errs() << "After Spliting VNI: \n";
+    SA->analyze(&LIS->getInterval(i));
+    auto useSlots = SA->getUseSlots();
+    for (auto use : useSlots) {
+
+      auto MI = LIS->getInstructionFromIndex(use);
+      auto MBB = MI->getParent();
+      assert(MBB && "MI should be part of a MBB");
+      errs() << "Usepoint MBB: ";
+      MBB->getSymbol()->dump();
+      errs() << "\n";
+      MBB->dump();
+      for (const MachineBasicBlock *Pred : MBB->predecessors()) {
+        SlotIndex Stop = Indexes->getMBBEndIdx(Pred);
+        errs() << "Predecesor MBB: ";
+        Pred->getSymbol()->dump();
+        errs() << "\n";
+        Pred->dump();
+        if (VirtReg->getVNInfoBefore(Stop))
+          errs() << "Predecesor BB VNI: " << VirtReg->getVNInfoBefore(Stop)
+                 << "\n";
+        else {
+          errs() << "Null VNI for predecesor: "
+                 << VirtReg->getVNInfoBefore(Stop) << "\n";
+        }
+      }
+    }
   } dbgs() << "------------------------------------------\n");
   // captureRegisterProfile();
   return true;
@@ -1474,9 +1590,38 @@ void MLRA::updateRegisterProfileAfterSplit(
 
         regProfMap[k + step].interferences.insert(NewVRegIdx + step);
         regProfMap[k + step].frwdInterferences.insert(NewVRegIdx + step);
-
-        updatedRegs.insert(k + step);
       }
+      updatedRegs.insert(k + step);
+
+      SmallVector<int, 8> useDistances;
+      SmallVector<unsigned, 8> splitPoints;
+      SA->analyze(OtherVReg);
+
+      auto uses = SA->getUseSlots();
+      if (uses.empty()) {
+        LLVM_DEBUG(
+            errs() << "There are no uses.. skipping this new virt reg\n");
+        continue;
+      }
+
+      auto firstUse = uses.front();
+      unsigned useIdx = 0;
+      for (auto use : uses) {
+        auto MI = LIS->getInstructionFromIndex(use);
+        assert(MI && "Empty instruction found at use idx");
+
+        if (!MI->isCopy() && !MI->registerDefIsDead(NewVRegs[i]) &&
+            !MRI->reg_nodbg_empty(NewVirtReg->reg)) {
+          splitPoints.push_back(useIdx);
+        }
+        useDistances.push_back(firstUse.getInstrDistance(use));
+        useIdx++;
+      }
+      SmallVector<float, 8> positionalSpillWeights;
+      calculatePositionalSpillWeights(OtherVReg, positionalSpillWeights);
+      regProfMap[k + step].spillWeights = positionalSpillWeights;
+      regProfMap[k + step].splitSlots = splitPoints;
+      regProfMap[k + step].useDistances = useDistances;
     }
 
     for (auto interference : oldRP.interferences) {
@@ -1698,7 +1843,11 @@ void MLRA::allocatePhysRegsViaRL() {
       LLVM_DEBUG(errs() << "Post alloc VirtRegMap:\n"
                         << *VRM << "\n";
                  errs() << "Insertion done\n");
+      errs() << "Post alloc VirtRegMap:\n" << *VRM << "\n";
+      errs() << "Insertion done\n";
     } else {
+      errs() << "pushing vreg to mlSpilledRegs list: "
+             << printReg(VirtReg->reg, TRI) << "\n";
       mlSpilledRegs.push_back(VirtReg);
     }
   }
@@ -1738,7 +1887,7 @@ void MLRA::inference() {
       serializeRegProfData(request);
       errs() << "Call model first time\n";
       if (request->mutable_regprof()->size() <= 70 ||
-          request->mutable_regprof()->size() > 150) {
+          request->mutable_regprof()->size() > 120) {
         ORE->emit([&]() {
           return MachineOptimizationRemark(
                      DEBUG_TYPE, "MLRA skipped Function ",
@@ -1927,6 +2076,7 @@ void MLRA::MLRegAlloc(MachineFunction &MF, SlotIndexes &Indexes,
   SplitCounter = 0;
 
   mlAllocatedRegs.clear();
+  mlAssignedRegMap.clear();
   mlSpilledRegs.clear();
   mlSplitRegs.clear();
   if (enable_mlra_training) {

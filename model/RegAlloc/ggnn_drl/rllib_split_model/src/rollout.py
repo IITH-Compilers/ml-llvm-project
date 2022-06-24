@@ -436,7 +436,7 @@ class RollOutInference:
         # tuple_adjacency_lists = Tuple((Discrete(config["env_config"]["max_number_nodes"]), repeat_tuple_edges))
         max_edge_count = config["env_config"]["max_edge_count"]
         adjacency_lists = Dict({
-            "node_num": Discrete(config["env_config"]["max_number_nodes"]),
+            "node_num": Discrete(config["env_config"]["max_number_nodes"] + 1),
             "edge_num": Discrete(max_edge_count),
             "data": Repeated(Box(0.0, config["env_config"]["max_number_nodes"], shape=(2,)), max_len = max_edge_count)
         })

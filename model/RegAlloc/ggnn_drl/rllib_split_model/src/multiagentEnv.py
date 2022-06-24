@@ -143,6 +143,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.colour_successful = 0
         self.path = None
         self.annotation_size = env_config["annotations"]
+        random.seed(123)
 
     def reward_formula(self, value, action):
         if value == float("inf"):
@@ -494,7 +495,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
             masked_action_space = self.registerAS.maskActionSpace(regclass, adj_colors)
             if len(masked_action_space) > 0:
-                idx = random.randint(1, len(masked_action_space))
+                # idx = random.randint(1, len(masked_action_space))
+                idx = 1    
                 reg_selected = masked_action_space[idx-1]
                 obs, reward, done, _ = self._colour_node_step(reg_selected)
             else:
@@ -760,7 +762,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         userDistanceDiff = 0
         split_index = action
         split_point = split_index
-        # print("****Split index****** {} {}".format( self.obs.split_points[self.cur_node], split_point))
+        print("****Split index****** {} {}".format( self.obs.split_points[self.cur_node], split_point))
+        print("Use distance length:", len(use_distances))
         use_distance_list = self.obs.use_distances[self.cur_node]
         if action != len(use_distance_list) - 1:
             split_reward, split_done = self.step_splitTask(split_point)
@@ -1467,6 +1470,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 self.obs.spill_cost_list[interfering_node_idx] = node_prof.spillWeight
                 self.obs.use_distances[interfering_node_idx] = np.array(sorted(node_prof.useDistances))
                 self.obs.positionalSpillWeights[interfering_node_idx] = node_prof.positionalSpillWeights
+                self.obs.split_points[interfering_node_idx] = np.array(node_prof.splitSlots)
+
                 # print('{} updated slots : {}'.format(nodeId, sorted(node_prof.useDistances)))
                 logging.info('{} updated slots : {}'.format(nodeId, sorted(node_prof.useDistances)))
                 
