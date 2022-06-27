@@ -1491,8 +1491,8 @@ void SplitEditor::finish(SmallVectorImpl<unsigned> *LRMap) {
 
     // Force rematted values to be recomputed everywhere.
     // The new live ranges may be truncated.
-    // if (Edit->didRematerialize(ParentVNI))
-    forceRecomputeVNI(*ParentVNI);
+    if (Edit->didRematerialize(ParentVNI))
+      forceRecomputeVNI(*ParentVNI);
   }
 
   // Hoist back-copies to the complement interval when in spill mode.
@@ -1509,7 +1509,7 @@ void SplitEditor::finish(SmallVectorImpl<unsigned> *LRMap) {
   // Transfer the simply mapped values, check if any are skipped.
   bool Skipped = transferValues();
 
-  // Rewrite virtual registers, possibly extending ranges.
+  // Rewrite virtual registers, possibly extending ranges.  
   rewriteAssigned(Skipped);
 
   if (Skipped)

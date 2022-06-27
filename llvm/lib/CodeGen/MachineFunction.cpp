@@ -306,8 +306,8 @@ void MachineFunction::RenumberBlocks(MachineBasicBlock *MBB) {
   if (MBB == nullptr)
     MBBI = begin();
   else
-    MBBI = MBB->getIterator();
-
+    MBBI = MBB->getIterator();  
+  
   // Figure out the block number this should have.
   unsigned BlockNo = 0;
   if (MBBI != begin())

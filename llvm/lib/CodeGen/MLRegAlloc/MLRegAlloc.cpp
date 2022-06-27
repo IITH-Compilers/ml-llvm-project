@@ -475,69 +475,69 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
 
   auto MBB = MI->getParent();
   assert(MBB && "MI should be part of a MBB");
-  errs() << "Before spliting BB: " << MBB->getSymbol() << "\n";
-  for (const MachineBasicBlock *Pred : MBB->predecessors()) {
-    SlotIndex Stop = Indexes->getMBBEndIdx(Pred);
-    errs() << "Predecesor BB Name: " << Pred->getSymbol() << "\n";
-    if (VirtReg->getVNInfoBefore(Stop))
-      errs() << "Predecesor BB VNI: " << VirtReg->getVNInfoBefore(Stop) << "\n";
-    else {
-      errs() << "Null VNI for predecesor: " << VirtReg->getVNInfoBefore(Stop)
-             << "\n";
-    }
-  }
+  // errs() << "Before spliting BB: " << MBB->getSymbol() << "\n";
+  // for (const MachineBasicBlock *Pred : MBB->predecessors()) {
+  //   SlotIndex Stop = Indexes->getMBBEndIdx(Pred);
+  //   errs() << "Predecesor BB Name: " << Pred->getSymbol() << "\n";
+  //   if (VirtReg->getVNInfoBefore(Stop))
+  //     errs() << "Predecesor BB VNI: " << VirtReg->getVNInfoBefore(Stop) <<
+  //     "\n";
+  //   else {
+  //     errs() << "Null VNI for predecesor: " << VirtReg->getVNInfoBefore(Stop)
+  //            << "\n";
+  //   }
+  // }
 
-  
-  SmallVector<MachineBasicBlock *, 5> WorkList;
-  SmallVector<MachineBasicBlock *, 5> MBBlist;
-  auto slotIndexes = LIS->getSlotIndexes();
+  // SmallVector<MachineBasicBlock *, 5> WorkList;
+  // SmallVector<MachineBasicBlock *, 5> MBBlist;
+  // auto slotIndexes = LIS->getSlotIndexes();
 
-  const LiveRange &LR = getSubRange(*VirtReg, LaneBitmask::getNone());
-  WorkList.push_back(MBB);
-  while (!WorkList.empty()) {
-    auto tempMBB = WorkList.back();
-    WorkList.pop_back();
-    for (auto pred : tempMBB->predecessors()) {
-      auto Idx = slotIndexes->getMBBEndIdx(pred);
-      if (LR.getVNInfoBefore(Idx)) {
-        if(!std::count(MBBlist.begin(), MBBlist.end(), pred)){
-          errs() << "Adding pred to MBBlist: ";
-          pred->getSymbol()->dump();
-          errs() << "\n";
-          MBBlist.push_back(pred);
-          WorkList.push_back(pred);
-        }        
-      }
-    }
-  }
-  WorkList.push_back(MBB);
-  while (!WorkList.empty()) {
-    auto tempMBB = WorkList.back();
-    WorkList.pop_back();
-    for (auto succ : tempMBB->successors()) {
-      auto Idx = slotIndexes->getMBBStartIdx(succ);
-      if (LR.getVNInfoBefore(Idx)) {
-        if(!std::count(MBBlist.begin(), MBBlist.end(), succ)){
-          MBBlist.push_back(succ);
-          WorkList.push_back(succ);
-          errs() << "Adding success to MBBlist: ";
-          succ->getSymbol()->dump();
-          errs() << "\n";
-        }        
-      }
-    }
-  }
+  // const LiveRange &LR = getSubRange(*VirtReg, LaneBitmask::getNone());
+  // WorkList.push_back(MBB);
+  // while (!WorkList.empty()) {
+  //   auto tempMBB = WorkList.back();
+  //   WorkList.pop_back();
+  //   for (auto pred : tempMBB->predecessors()) {
+  //     auto Idx = slotIndexes->getMBBEndIdx(pred);
+  //     if (LR.getVNInfoBefore(Idx)) {
+  //       if(!std::count(MBBlist.begin(), MBBlist.end(), pred)){
+  //         errs() << "Adding pred to MBBlist: ";
+  //         pred->getSymbol()->dump();
+  //         errs() << "\n";
+  //         MBBlist.push_back(pred);
+  //         WorkList.push_back(pred);
+  //       }
+  //     }
+  //   }
+  // }
+  // WorkList.push_back(MBB);
+  // while (!WorkList.empty()) {
+  //   auto tempMBB = WorkList.back();
+  //   WorkList.pop_back();
+  //   for (auto succ : tempMBB->successors()) {
+  //     auto Idx = slotIndexes->getMBBStartIdx(succ);
+  //     if (LR.getVNInfoBefore(Idx)) {
+  //       if(!std::count(MBBlist.begin(), MBBlist.end(), succ)){
+  //         MBBlist.push_back(succ);
+  //         WorkList.push_back(succ);
+  //         errs() << "Adding success to MBBlist: ";
+  //         succ->getSymbol()->dump();
+  //         errs() << "\n";
+  //       }
+  //     }
+  //   }
+  // }
 
-  for(auto mBB : MBBlist) {
-    for (auto mIR = mBB->begin(); mIR != mBB->end(); mIR++) {
-      if(mIR->isEHLabel()){
-        errs() << "Exiting splitting\n";
-        mBB->dump();
-        return false;
-      }
-        
-    }      
-  }
+  // for(auto mBB : MBBlist) {
+  //   for (auto mIR = mBB->begin(); mIR != mBB->end(); mIR++) {
+  //     if(mIR->isEHLabel()){
+  //       errs() << "Exiting splitting\n";
+  //       mBB->dump();
+  //       return false;
+  //     }
+
+  //   }
+  // }
 
   // if (MI == &MBB->back()) {
   //   errs() << "Cannot split last instruction of a basic block\n";
@@ -701,54 +701,54 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
            << Register::virtReg2Index(i) + TRI->getNumRegs() + 1 << "\n";
   });
 
-  LLVM_DEBUG(for (auto i
-                  : NewVRegs) {
-    dbgs() << "\tNew Regs: " << printReg(i, TRI) << "--"
-           << Register::virtReg2Index(i) + TRI->getNumRegs() + 1 << "\n";
-    LIS->getInterval(i).dump();
-    dbgs() << "This LI has subranges?" << LIS->getInterval(i).hasSubRanges()
-           << "\n";
-    // auto LI = &LIS->getInterval(i);
-    // LI->removeEmptySubRanges();
-    // LI->RenumberValues();
+  // LLVM_DEBUG(for (auto i
+  //                 : NewVRegs) {
+  //   dbgs() << "\tNew Regs: " << printReg(i, TRI) << "--"
+  //          << Register::virtReg2Index(i) + TRI->getNumRegs() + 1 << "\n";
+  //   LIS->getInterval(i).dump();
+  //   dbgs() << "This LI has subranges?" << LIS->getInterval(i).hasSubRanges()
+  //          << "\n";
+  //   // auto LI = &LIS->getInterval(i);
+  //   // LI->removeEmptySubRanges();
+  //   // LI->RenumberValues();
 
-    for (LiveInterval::SubRange &S : LIS->getInterval(i).subranges()) {
-      S.dump();
-      if (S.empty()) {
-        dbgs() << "empty!\n";
-      }
-    }
-    LIS->getInterval(i).dump();
+  //   for (LiveInterval::SubRange &S : LIS->getInterval(i).subranges()) {
+  //     S.dump();
+  //     if (S.empty()) {
+  //       dbgs() << "empty!\n";
+  //     }
+  //   }
+  //   LIS->getInterval(i).dump();
 
-    // auto LI = &LIS->getInterval(i);
-    errs() << "After Spliting VNI: \n";
-    SA->analyze(&LIS->getInterval(i));
-    auto useSlots = SA->getUseSlots();
-    for (auto use : useSlots) {
+  //   // auto LI = &LIS->getInterval(i);
+  //   errs() << "After Spliting VNI: \n";
+  //   SA->analyze(&LIS->getInterval(i));
+  //   auto useSlots = SA->getUseSlots();
+  //   for (auto use : useSlots) {
 
-      auto MI = LIS->getInstructionFromIndex(use);
-      auto MBB = MI->getParent();
-      assert(MBB && "MI should be part of a MBB");
-      errs() << "Usepoint MBB: ";
-      MBB->getSymbol()->dump();
-      errs() << "\n";
-      MBB->dump();
-      for (const MachineBasicBlock *Pred : MBB->predecessors()) {
-        SlotIndex Stop = Indexes->getMBBEndIdx(Pred);
-        errs() << "Predecesor MBB: ";
-        Pred->getSymbol()->dump();
-        errs() << "\n";
-        Pred->dump();
-        if (VirtReg->getVNInfoBefore(Stop))
-          errs() << "Predecesor BB VNI: " << VirtReg->getVNInfoBefore(Stop)
-                 << "\n";
-        else {
-          errs() << "Null VNI for predecesor: "
-                 << VirtReg->getVNInfoBefore(Stop) << "\n";
-        }
-      }
-    }
-  } dbgs() << "------------------------------------------\n");
+  //     auto MI = LIS->getInstructionFromIndex(use);
+  //     auto MBB = MI->getParent();
+  //     assert(MBB && "MI should be part of a MBB");
+  //     errs() << "Usepoint MBB: ";
+  //     MBB->getSymbol()->dump();
+  //     errs() << "\n";
+  //     MBB->dump();
+  //     for (const MachineBasicBlock *Pred : MBB->predecessors()) {
+  //       SlotIndex Stop = Indexes->getMBBEndIdx(Pred);
+  //       errs() << "Predecesor MBB: ";
+  //       Pred->getSymbol()->dump();
+  //       errs() << "\n";
+  //       Pred->dump();
+  //       if (VirtReg->getVNInfoBefore(Stop))
+  //         errs() << "Predecesor BB VNI: " << VirtReg->getVNInfoBefore(Stop)
+  //                << "\n";
+  //       else {
+  //         errs() << "Null VNI for predecesor: "
+  //                << VirtReg->getVNInfoBefore(Stop) << "\n";
+  //       }
+  //     }
+  //   }
+  // } dbgs() << "------------------------------------------\n");
   // captureRegisterProfile();
   return true;
 }
@@ -1898,6 +1898,18 @@ void MLRA::inference() {
                  << "--> skipped by MLRA (nodes not in serviceable range)";
         });
         return;
+      }
+
+      for (auto it = MF->begin(); it != MF->end(); it++) {
+        if(it->isEHFuncletEntry() || it->isEHPad() || it->isEHScopeEntry() || it-> isEHScopeReturnBlock()){
+          return;
+        }
+        for(auto ist = it->begin(); ist != it->end(); ist++) {
+          if(ist->isEHLabel() || ist->isEHScopeReturn()) {
+            return;
+          }
+        }
+
       }
 
       ORE->emit([&]() {
