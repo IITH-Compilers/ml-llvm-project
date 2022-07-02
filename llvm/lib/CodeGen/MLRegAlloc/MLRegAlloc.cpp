@@ -381,7 +381,7 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
   errs() << "Virtreg to split = " << printReg(splitReg, TRI) << "\n";
 
   LiveInterval *VirtReg = &LIS->getInterval(splitReg);
-
+  VirtReg->dump();
   assert(!VRM->hasPhys(VirtReg->reg) && "Register already assigned");
 
   if (MRI->reg_nodbg_empty(VirtReg->reg)) {
@@ -408,21 +408,21 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
   auto seg = VirtReg->segments;
   auto tmp = seg.begin();
 
-  auto getSubRange = [](const LiveInterval &I,
-                        LaneBitmask M) -> const LiveRange & {
-    if (M.none()) {
-      errs() << "Returning zero lanemask\n";
-      return I;
-    }
+  // auto getSubRange = [](const LiveInterval &I,
+  //                       LaneBitmask M) -> const LiveRange & {
+  //   if (M.none()) {
+  //     errs() << "Returning zero lanemask\n";
+  //     return I;
+  //   }
 
-    for (const LiveInterval::SubRange &SR : I.subranges()) {
-      if ((SR.LaneMask & M).any()) {
-        assert(SR.LaneMask == M && "Expecting lane masks to match exactly");
-        return SR;
-      }
-    }
-    llvm_unreachable("Subrange for mask not found");
-  };
+  //   for (const LiveInterval::SubRange &SR : I.subranges()) {
+  //     if ((SR.LaneMask & M).any()) {
+  //       assert(SR.LaneMask == M && "Expecting lane masks to match exactly");
+  //       return SR;
+  //     }
+  //   }
+  //   llvm_unreachable("Subrange for mask not found");
+  // };
 
   for (auto use : useSlots) {
     if (pos == splitPoint + 1) {
@@ -670,7 +670,10 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
     if (!endBI.LiveOut)
       SlotIndex SegStop = SE->leaveIntvAfter(i.second);
     auto thisMBBLastIdx = LIS->getMBBEndIdx(LIS->getMBBFromIndex(i.second));
-    SE->useIntv(SegStart, thisMBBLastIdx);
+    if (itr >= (newLRIntervals.size() - 1)) {
+      SE->useIntv(SegStart, VirtReg->endIndex());
+    } else
+      SE->useIntv(SegStart, thisMBBLastIdx);
     errs() << "split end\n";
   }
 
@@ -694,6 +697,8 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
   LLVM_DEBUG(dbgs() << "After splitting -- " << printReg(splitReg, TRI) << "--"
                     << Register::virtReg2Index(splitReg) + TRI->getNumRegs() + 1
                     << "\n");
+  // errs() << "After splitting -- " << printReg(splitReg, TRI) << "--"
+  //        << Register::virtReg2Index(splitReg) + TRI->getNumRegs() + 1 << "\n";
   mlSplitRegs.insert(mlSplitRegs.end(), NewVRegs.begin(), NewVRegs.end());
   LLVM_DEBUG(for (auto i
                   : mlSplitRegs) {
@@ -1008,44 +1013,44 @@ void MLRA::dumpInterferenceGraph(std::string ID) {
   LLVM_DEBUG(errs() << "Dump done : " << graph << "\n");
 }
 
-void MLRA::findOverlapingInterval(LiveInterval *VirtReg1,
-                                  LiveInterval *VirtReg2,
-                                  SmallVector<SlotIndex, 8> &startpts,
-                                  SmallVector<SlotIndex, 8> &endpts) {
-  for (auto first : VirtReg1->segments) {
-    LLVM_DEBUG(errs() << "First: "; first.dump());
-    for (auto sec : VirtReg2->segments) {
-      LLVM_DEBUG(errs() << "Sec: "; sec.dump());
-      if (first.containsInterval(sec.start, sec.end)) {
-        LLVM_DEBUG(errs() << "1 Overlap -- first contains second: ";
-                   sec.start.print(errs());
-                   // sec.end.print(errs());
-                   errs() << "\nPushing it to startpts\n");
-        // startpts.push_back(first.start);
-        startpts.push_back(sec.start);
-        // endpts.push_back(sec.end);
-      } else if (sec.containsInterval(first.start, first.end)) {
-        LLVM_DEBUG(errs() << "2 Overlap -- second contains first: ";
-                   //  sec.start.print(errs());
-                   first.start.print(errs());
-                   errs() << "\nPushing it to endpts\n");
-        endpts.push_back(first.start);
-        // startpts.push_back(first.start);
-        // endpts.push_back(first.end);
-      } else if (sec.start < first.end && sec.end > first.end) {
-        LLVM_DEBUG(errs() << "3 Overlap: "; sec.start.print(errs());
-                   first.end.print(errs()); errs() << "\n");
-        startpts.push_back(sec.start);
-        endpts.push_back(first.end);
-      } else if (first.start < sec.end && sec.start < first.start) {
-        LLVM_DEBUG(errs() << "4 Overlap: "; first.start.print(errs());
-                   sec.end.print(errs()); errs() << "\n");
-        endpts.push_back(first.start);
-        startpts.push_back(sec.end);
-      }
-    }
-  }
-}
+// void MLRA::findOverlapingInterval(LiveInterval *VirtReg1,
+//                                   LiveInterval *VirtReg2,
+//                                   SmallVector<SlotIndex, 8> &startpts,
+//                                   SmallVector<SlotIndex, 8> &endpts) {
+//   for (auto first : VirtReg1->segments) {
+//     LLVM_DEBUG(errs() << "First: "; first.dump());
+//     for (auto sec : VirtReg2->segments) {
+//       LLVM_DEBUG(errs() << "Sec: "; sec.dump());
+//       if (first.containsInterval(sec.start, sec.end)) {
+//         LLVM_DEBUG(errs() << "1 Overlap -- first contains second: ";
+//                    sec.start.print(errs());
+//                    // sec.end.print(errs());
+//                    errs() << "\nPushing it to startpts\n");
+//         // startpts.push_back(first.start);
+//         startpts.push_back(sec.start);
+//         // endpts.push_back(sec.end);
+//       } else if (sec.containsInterval(first.start, first.end)) {
+//         LLVM_DEBUG(errs() << "2 Overlap -- second contains first: ";
+//                    //  sec.start.print(errs());
+//                    first.start.print(errs());
+//                    errs() << "\nPushing it to endpts\n");
+//         endpts.push_back(first.start);
+//         // startpts.push_back(first.start);
+//         // endpts.push_back(first.end);
+//       } else if (sec.start < first.end && sec.end > first.end) {
+//         LLVM_DEBUG(errs() << "3 Overlap: "; sec.start.print(errs());
+//                    first.end.print(errs()); errs() << "\n");
+//         startpts.push_back(sec.start);
+//         endpts.push_back(first.end);
+//       } else if (first.start < sec.end && sec.start < first.start) {
+//         LLVM_DEBUG(errs() << "4 Overlap: "; first.start.print(errs());
+//                    sec.end.print(errs()); errs() << "\n");
+//         endpts.push_back(first.start);
+//         startpts.push_back(sec.end);
+//       }
+//     }
+//   }
+// }
 
 SmallVector<SlotIndex, 8> MLRA::vecUnion(SmallVectorImpl<SlotIndex> const &A,
                                          SmallVectorImpl<SlotIndex> const &B) {
@@ -1078,31 +1083,32 @@ unsigned MLRA::mapUseToPosition(LiveInterval *VirtReg, const SlotIndex &usept) {
   llvm_unreachable("Unable to find the usept");
 }
 
-void MLRA::findSplitSlots(LiveInterval *VirtReg,
-                          const SmallVector<SlotIndex, 8> &overlapSlots,
-                          SmallVector<unsigned, 8> &splitSlots) {
-  SA->analyze(VirtReg);
-  ArrayRef<SlotIndex> Uses = SA->getUseSlots();
-  LLVM_DEBUG(errs() << "Uses of the virt reg: "; VirtReg->dump());
+// void MLRA::findSplitSlots(LiveInterval *VirtReg,
+//                           const SmallVector<SlotIndex, 8> &overlapSlots,
+//                           SmallVector<unsigned, 8> &splitSlots) {
+//   SA->analyze(VirtReg);
+//   ArrayRef<SlotIndex> Uses = SA->getUseSlots();
+//   LLVM_DEBUG(errs() << "Uses of the virt reg: "; VirtReg->dump());
 
-  SmallSet<SlotIndex, 8> lastUseIdx;
-  findLastUseBefore(overlapSlots, Uses, lastUseIdx);
-  LLVM_DEBUG(
-      errs() << "==================findSplitSlots begin===================\n";
-      errs() << "Last usepositions of "; VirtReg->dump(); errs() << "\n");
+//   SmallSet<SlotIndex, 8> lastUseIdx;
+//   findLastUseBefore(overlapSlots, Uses, lastUseIdx);
+//   LLVM_DEBUG(
+//       errs() << "==================findSplitSlots
+//       begin===================\n"; errs() << "Last usepositions of ";
+//       VirtReg->dump(); errs() << "\n");
 
-  for (auto i : lastUseIdx) {
-    LLVM_DEBUG(i.dump(); if (LIS->getInstructionFromIndex(i)) {
-      errs() << "This corresponds to : ";
-      LIS->getInstructionFromIndex(i)->dump();
-    } else errs() << "No inst corresponding to lastuse\n";);
-    auto pos = mapUseToPosition(VirtReg, i);
-    LLVM_DEBUG(errs() << "pos -->" << pos << "\n");
-    splitSlots.push_back(pos);
-  }
-  LLVM_DEBUG(
-      errs() << "==================findSplitSlots end===================\n");
-}
+//   for (auto i : lastUseIdx) {
+//     LLVM_DEBUG(i.dump(); if (LIS->getInstructionFromIndex(i)) {
+//       errs() << "This corresponds to : ";
+//       LIS->getInstructionFromIndex(i)->dump();
+//     } else errs() << "No inst corresponding to lastuse\n";);
+//     auto pos = mapUseToPosition(VirtReg, i);
+//     LLVM_DEBUG(errs() << "pos -->" << pos << "\n");
+//     splitSlots.push_back(pos);
+//   }
+//   LLVM_DEBUG(
+//       errs() << "==================findSplitSlots end===================\n");
+// }
 
 void MLRA::findLastUseBefore(const SmallVector<SlotIndex, 8> &startpts,
                              const ArrayRef<SlotIndex> useSlots,
@@ -1236,6 +1242,39 @@ void MLRA::computeVectors(LiveInterval *VirtReg,
   }
 }
 
+void MLRA::computeSplitPoints(LiveInterval *VirtReg,
+                              SmallVector<int, 8> &useDistances,
+                              SmallVector<unsigned, 8> &splitPoints) {
+  assert(VirtReg && "Should have a valid Live Interval");
+
+  auto uses = SA->getUseSlots();
+  auto loops = &SA->Loops;
+  auto firstUse = uses.front();
+  // errs() << "Collecting splitpoints for vreg: " << printReg(VirtReg->reg,
+  // TRI) << "\n"; errs() << "Loops details are: \n"; for(auto lp: *loops) {
+  //   lp->dump();
+  // }
+
+  int useIdx = 0;
+  for (auto use : uses) {
+    auto MI = LIS->getInstructionFromIndex(use);
+    assert(MI && "Empty instruction found at use idx");
+
+    auto MBB = MI->getParent();
+    assert(MBB && "Empty MBB for MI");
+
+    if (!MI->isCopy() && !MI->registerDefIsDead(VirtReg->reg) &&
+        !MRI->reg_nodbg_empty(VirtReg->reg) && !loops->getLoopFor(MBB)) {
+      splitPoints.push_back(useIdx);
+      // errs() << "Pushing splitpoint: ";
+      // MI->dump();
+    }
+
+    useDistances.push_back(firstUse.getInstrDistance(use));
+    useIdx++;
+  }
+}
+
 bool MLRA::captureRegisterProfile() {
   LLVM_DEBUG(errs() << "captureRegProf Processing function ID: "
                     << FunctionCounter << "\n");
@@ -1273,14 +1312,14 @@ bool MLRA::captureRegisterProfile() {
       if (!isSafeVReg(Reg))
         continue;
       LiveInterval *VirtReg = &LIS->getInterval(Reg);
-      LLVM_DEBUG(errs() << "%" << j << " under consideration\n");
+      // LLVM_DEBUG(errs() << "%" << j << " under consideration\n");
       std::string regClass_vr =
           TRI->getRegClassName(MRI->getRegClass(VirtReg->reg));
 
       if (this->regClassSupported4_MLRA.find(regClass_vr) ==
           regClassSupported4_MLRA.end()) {
-        LLVM_DEBUG(errs() << "%" << j << " Register class(" << regClass_vr
-                          << ") is not supported.\n");
+        // LLVM_DEBUG(errs() << "%" << j << " Register class(" << regClass_vr
+        //                   << ") is not supported.\n");
         continue;
       }
 
@@ -1341,23 +1380,7 @@ bool MLRA::captureRegisterProfile() {
 
     SmallVector<int, 8> useDistances;
     SmallVector<unsigned, 8> splitPoints;
-
-    // SA->analyze(VirtReg);
-    auto uses = SA->getUseSlots();
-    auto firstUse = uses.front();
-    int useIdx = 0;
-    for (auto use : uses) {
-      auto MI = LIS->getInstructionFromIndex(use);
-      assert(MI && "Empty instruction found at use idx");
-
-      if (!MI->isCopy() && !MI->registerDefIsDead(Reg) &&
-          !MRI->reg_nodbg_empty(VirtReg->reg)) {
-        splitPoints.push_back(useIdx);
-      }
-
-      useDistances.push_back(firstUse.getInstrDistance(use));
-      useIdx++;
-    }
+    computeSplitPoints(VirtReg, useDistances, splitPoints);
     if (useDistances.size() > 200) {
       validProf = false;
     }
@@ -1508,26 +1531,27 @@ void MLRA::updateRegisterProfileAfterSplit(
     SmallVector<int, 8> useDistances;
     SmallVector<unsigned, 8> splitPoints;
     SA->analyze(NewVirtReg);
-
     auto uses = SA->getUseSlots();
     if (uses.empty()) {
       LLVM_DEBUG(errs() << "There are no uses.. skipping this new virt reg\n");
       continue;
     }
+    computeSplitPoints(NewVirtReg, useDistances, splitPoints);
 
-    auto firstUse = uses.front();
-    unsigned useIdx = 0;
-    for (auto use : uses) {
-      auto MI = LIS->getInstructionFromIndex(use);
-      assert(MI && "Empty instruction found at use idx");
+    // auto firstUse = uses.front();
+    // unsigned useIdx = 0;
+    // for (auto use : uses) {
+    //   auto MI = LIS->getInstructionFromIndex(use);
+    //   assert(MI && "Empty instruction found at use idx");
 
-      if (!MI->isCopy() && !MI->registerDefIsDead(NewVRegs[i]) &&
-          !MRI->reg_nodbg_empty(NewVirtReg->reg)) {
-        splitPoints.push_back(useIdx);
-      }
-      useDistances.push_back(firstUse.getInstrDistance(use));
-      useIdx++;
-    }
+    //   if (!MI->isCopy() && !MI->registerDefIsDead(NewVRegs[i]) &&
+    //       !MRI->reg_nodbg_empty(NewVirtReg->reg)) {
+    //     splitPoints.push_back(useIdx);
+    //   }
+    //   useDistances.push_back(firstUse.getInstrDistance(use));
+    //   useIdx++;
+    // }
+
     rp.splitSlots = splitPoints;
     rp.useDistances = useDistances;
 
@@ -1603,20 +1627,21 @@ void MLRA::updateRegisterProfileAfterSplit(
             errs() << "There are no uses.. skipping this new virt reg\n");
         continue;
       }
+      computeSplitPoints(OtherVReg, useDistances, splitPoints);
 
-      auto firstUse = uses.front();
-      unsigned useIdx = 0;
-      for (auto use : uses) {
-        auto MI = LIS->getInstructionFromIndex(use);
-        assert(MI && "Empty instruction found at use idx");
+      // auto firstUse = uses.front();
+      // unsigned useIdx = 0;
+      // for (auto use : uses) {
+      //   auto MI = LIS->getInstructionFromIndex(use);
+      //   assert(MI && "Empty instruction found at use idx");
 
-        if (!MI->isCopy() && !MI->registerDefIsDead(NewVRegs[i]) &&
-            !MRI->reg_nodbg_empty(NewVirtReg->reg)) {
-          splitPoints.push_back(useIdx);
-        }
-        useDistances.push_back(firstUse.getInstrDistance(use));
-        useIdx++;
-      }
+      //   if (!MI->isCopy() && !MI->registerDefIsDead(NewVRegs[i]) &&
+      //       !MRI->reg_nodbg_empty(NewVirtReg->reg)) {
+      //     splitPoints.push_back(useIdx);
+      //   }
+      //   useDistances.push_back(firstUse.getInstrDistance(use));
+      //   useIdx++;
+      // }
       SmallVector<float, 8> positionalSpillWeights;
       calculatePositionalSpillWeights(OtherVReg, positionalSpillWeights);
       regProfMap[k + step].spillWeights = positionalSpillWeights;
@@ -1840,6 +1865,8 @@ void MLRA::allocatePhysRegsViaRL() {
              "Reg interfere with existing allocation");
       Matrix->assign(*VirtReg, AvailablePhysReg);
       mlAllocatedRegs.push_back(VirtReg->reg);
+      errs() << "Dumping LR: ";
+      VirtReg->dump();
       LLVM_DEBUG(errs() << "Post alloc VirtRegMap:\n"
                         << *VRM << "\n";
                  errs() << "Insertion done\n");
@@ -1901,15 +1928,15 @@ void MLRA::inference() {
       }
 
       for (auto it = MF->begin(); it != MF->end(); it++) {
-        if(it->isEHFuncletEntry() || it->isEHPad() || it->isEHScopeEntry() || it-> isEHScopeReturnBlock()){
+        if (it->isEHFuncletEntry() || it->isEHPad() || it->isEHScopeEntry() ||
+            it->isEHScopeReturnBlock()) {
           return;
         }
-        for(auto ist = it->begin(); ist != it->end(); ist++) {
-          if(ist->isEHLabel() || ist->isEHScopeReturn()) {
+        for (auto ist = it->begin(); ist != it->end(); ist++) {
+          if (ist->isEHLabel() || ist->isEHScopeReturn()) {
             return;
           }
         }
-
       }
 
       ORE->emit([&]() {

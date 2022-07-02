@@ -171,12 +171,15 @@ private:
   SmallVector<SlotIndex, 8> vecUnion(SmallVectorImpl<SlotIndex> const &,
                                      SmallVectorImpl<SlotIndex> const &);
   unsigned mapUseToPosition(LiveInterval *VirtReg, const SlotIndex &usepts);
-  void findSplitSlots(LiveInterval *VirtReg,
-                      const SmallVector<SlotIndex, 8> &overlapSlots,
-                      SmallVector<unsigned, 8> &splitSlots);
-  void findOverlapingInterval(LiveInterval *VirtReg1, LiveInterval *VirtReg2,
-                              SmallVector<SlotIndex, 8> &startpts,
-                              SmallVector<SlotIndex, 8> &endpts);
+  // void findSplitSlots(LiveInterval *VirtReg,
+  //                     const SmallVector<SlotIndex, 8> &overlapSlots,
+  //                     SmallVector<unsigned, 8> &splitSlots);
+  // void findOverlapingInterval(LiveInterval *VirtReg1, LiveInterval *VirtReg2,
+  //                             SmallVector<SlotIndex, 8> &startpts,
+  //                             SmallVector<SlotIndex, 8> &endpts);
+  void computeSplitPoints(LiveInterval *VirtReg,
+                          SmallVector<int, 8> &useDistances,
+                          SmallVector<unsigned, 8> &splitPoints);
   void findLastUseBefore(const SmallVector<SlotIndex, 8> &startpts,
                          const ArrayRef<SlotIndex> useSlots,
                          SmallSet<SlotIndex, 8> &lastUseSlots);
