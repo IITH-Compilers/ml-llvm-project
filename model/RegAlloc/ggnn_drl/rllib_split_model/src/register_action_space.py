@@ -125,7 +125,8 @@ class RegisterActionSpace:
                 
                 # print('ext_adj_colors ', extend_adj)
                 # tmp_mask_sidi = [32, 57, 61, 59, 16, 53, 26, 18]
-                # extend_adj.extend(tmp_mask_sidi)
+                tmp_mask_sidi = [33, 43, 45, 44, 17, 40, 27, 19]
+                extend_adj.extend(tmp_mask_sidi)
                 extend_adj = list(set(extend_adj))
                 action_space = list(filter(lambda x: x not in extend_adj, action_space)) # np.delete(action_space, adj_colors)
                 logging.debug('extend_adj -  {}  '.format(extend_adj))

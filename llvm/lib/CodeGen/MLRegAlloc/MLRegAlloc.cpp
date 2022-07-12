@@ -449,10 +449,10 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
   auto MI = LIS->getInstructionFromIndex(idx);
   assert(MI && "Empty instruction found for splitting");
 
-  // if (MI->isCompare()) {
-  //   errs() << "Compare inst so bailing out of the optimization\n";
-  //   return false;
-  // }
+  if (MI->isCompare()) {
+    errs() << "Compare inst so bailing out of the optimization\n";
+    return false;
+  }
 
   if (MI->isCopy() || MI->isInlineAsm()) {
     LLVM_DEBUG(
@@ -551,6 +551,14 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
 
   LLVM_DEBUG(errs() << " Splitting at: "; idx.dump();
              LIS->getInstructionFromIndex(idx)->dump());
+  // SlotIndex LSP = SA->getLastSplitPoint(MBB->getNumber());
+  // errs() << "Slot index for valid splitpoint: ";
+  // LSP.dump();
+  // auto LSPMI = LIS->getInstructionFromIndex(LSP);
+  // if(LSPMI)
+  //   LSPMI->dump();
+  // else
+  //   errs() << "Empty split slot";
 
   assert(useSlots[idxPos] == idx);
   // Check if we can split at idx
@@ -644,6 +652,8 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
       lastNoDom = true;
     } else {
       UB.MBB->dump();
+      UB.FirstInstr.dump();
+      UB.LastInstr.dump();
       errs() << "Inside else now\n";
     }
   }
@@ -654,6 +664,19 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
     endBIs.push_back(prevBI);
   }
 
+  auto loops = &SA->Loops;
+  for (auto i : newLRIntervals) {
+    auto tempMI = LIS->getInstructionFromIndex(i.first);
+    auto tempMBB = tempMI->getParent();
+    SlotIndex tempLSP = SA->getLastSplitPoint(tempMBB->getNumber());
+    if(i.first > tempLSP || loops->getLoopFor(tempMBB)) {
+      // errs() << "Slot index for last vaild splitpoint: ";
+      // tempLSP.dump();
+      // errs() << "Slot index for current valid splitpoint: ";
+      // i.first.dump();
+      return false;
+    }
+  }
   int itr = -1;
   for (auto i : newLRIntervals) {
     auto endBI = endBIs[++itr];
@@ -664,16 +687,30 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
       errs() << "Skipping here -- continuing\n";
       continue;
     }
+    // assert(i.first < LSP && "Expecting the slot index to be lesser than LSP");
     errs() << "split begin\n";
     SE->openIntv();
-    SegStart = SE->enterIntvAfter(i.first);
-    if (!endBI.LiveOut)
-      SlotIndex SegStop = SE->leaveIntvAfter(i.second);
+    SegStart = SE->enterIntvAfter(i.first);    
+    // if (!endBI.LiveOut)
+    //   SlotIndex SegStop = SE->leaveIntvAfter(i.second);
     auto thisMBBLastIdx = LIS->getMBBEndIdx(LIS->getMBBFromIndex(i.second));
-    if (itr >= (newLRIntervals.size() - 1)) {
+    auto tempUses = SA->getUseSlots();
+    errs() << "Dumping last use index: ";
+    tempUses.back().dump();
+    errs() << "New interval added is: \n";
+    if (itr >= (newLRIntervals.size() - 1) && (tempUses.back() < thisMBBLastIdx)) {
+      // SlotIndex SegStop = SE->leaveIntvAfter(VirtReg->endIndex());
+      // SE->useIntv(SegStart, SegStop);
       SE->useIntv(SegStart, VirtReg->endIndex());
-    } else
-      SE->useIntv(SegStart, thisMBBLastIdx);
+      SegStart.dump();
+      VirtReg->endIndex().dump();
+    } else {
+      SlotIndex SegStop = SE->leaveIntvAfter(i.second);
+      SE->useIntv(SegStart, SegStop);
+      SegStart.dump();
+      i.second.dump();
+    }
+
     errs() << "split end\n";
   }
 
