@@ -59,7 +59,7 @@ def experiment(config):
     for i in range(iterations):
         train_results = train_agent.train()
         # auto_garbage_collect()
-        if i == iterations - 1 or (train_results['episodes_total'] - last_checkpoint) > 99:
+        if i == iterations - 1 or (train_results['episodes_total'] - last_checkpoint) > 499:
             last_checkpoint = train_results['episodes_total']
             checkpoint = train_agent.save(tune.get_trial_dir())
             # print("***************Checkpoint****************", checkpoint)
@@ -235,7 +235,8 @@ if __name__ == "__main__":
                                             "fc1_units": 64,
                                             "fc2_units": 64,
                                             "max_number_nodes": config["env_config"]["max_number_nodes"],
-                                            "annotations_size": config["env_config"]["annotations"]
+                                            "annotations_size": config["env_config"]["annotations"],
+                                            "max_edge_count": max_edge_count
                                         },
                                     },
                                 }),

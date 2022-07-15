@@ -6,6 +6,7 @@ import torch.nn.utils
 from torch.autograd import Variable
 import torch.nn.functional as F
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
+from torch.nn.functional import normalize
 
 from typing import List, Tuple, Dict, Sequence, Any
 from topologicalSort_1 import Graph
@@ -42,7 +43,7 @@ class GatedGraphNeuralNetwork(nn.Module):
                  residual_connections,
                  state_to_message_dropout=0.3,
                  rnn_dropout=0.3,
-                 use_bias_for_message_linear=True, nodelevel=False,seed=0):
+                 use_bias_for_message_linear=True, nodelevel=False,seed=0, batch_norm_param=None, max_edge_count=None):
         
         super(GatedGraphNeuralNetwork, self).__init__()
         # self.seed = torch.manual_seed(seed)
@@ -84,6 +85,14 @@ class GatedGraphNeuralNetwork(nn.Module):
 
         self.state_to_message_dropout_layer = nn.Dropout(self.state_to_message_dropout)
         self.rnn_dropout_layer = nn.Dropout(self.rnn_dropout)
+        if batch_norm_param:
+            self.batchNorm_layer = nn.BatchNorm1d(batch_norm_param)
+            self.emb_batchNorm_layer = nn.BatchNorm1d(batch_norm_param)
+            self.fvec_batchNorm_layer = nn.BatchNorm1d(batch_norm_param)
+        else:
+            self.batchNorm_layer = None
+            self.emb_batchNorm_layer = None
+            self.fvec_batchNorm_layer =None
 
     @property
     def device(self):
@@ -132,10 +141,27 @@ class GatedGraphNeuralNetwork(nn.Module):
                 zero_pads = torch.zeros(initial_node_representation.size(0), pad_size, dtype=torch.float, device=ndevice)
                 initial_node_representation = torch.cat([initial_node_representation, zero_pads], dim=-1)
         elif len(initial_node_representation.shape) == 3:
+            if torch.isnan(initial_node_representation).any():
+                print("initial_node_representation is nan", initial_node_representation)
+                raise
+            elif torch.isnan(annotations).any():
+                print("annotations are nan", annotations)
+                raise
+
             initial_node_representation = torch.cat([initial_node_representation, annotations], dim=2)
             # logging.debug('DLOOP H+A {}'.format(initial_node_representation.shape))
             
             initial_node_representation = self.hidden_layer(initial_node_representation) #.to(device)
+            if self.batchNorm_layer:
+                initial_node_representation = self.batchNorm_layer(initial_node_representation)
+            if torch.isnan(initial_node_representation).any():
+                torch.set_printoptions(profile="full")
+                print("initial_node_representation becoming nan after passing through hidden layer")
+                print("Weights of hidden layer is:", torch.isnan(self.hidden_layer.state_dict()['weight']).any())
+                print("Bias of hidden layer is:", torch.isnan(self.hidden_layer.state_dict()['bias']).any())
+                # print("Input to hidden layer is:", torch.isnan(temp_mat).any())
+                print("Output from hidden layer is:", torch.isnan(initial_node_representation).any())
+                raise
             # for i, vec in enumerate(initial_node_representation):
             #     print('23232', vec)
             #     for v in vec:
@@ -164,6 +190,9 @@ class GatedGraphNeuralNetwork(nn.Module):
         max_edge_count = int(torch.max(adjacency_lists["data"].lengths))
         message_targets = (adjacency_lists["data"].values)[:, :max_edge_count, 1]
         message_targets = message_targets.long()
+        if torch.isnan(message_targets).any():
+            print("message_targets are nan: ", message_targets)
+            raise
         # message_targets = torch.unique(message_targets, dim=1)
         # print("message_targets shape", message_targets.shape)
         
@@ -193,6 +222,10 @@ class GatedGraphNeuralNetwork(nn.Module):
 
             # Record new states for this layer. Initialised to last state, but will be updated below:
             node_states_for_this_layer = node_states_per_layer[-1]
+            node_states_for_this_layer = self.emb_batchNorm_layer(node_states_for_this_layer)
+            if torch.isnan(node_states_for_this_layer).any():
+                 print("node_states_for_this_layer are nan: ", node_states_for_this_layer)
+                 raise
             # For each message propagation step
             for t in range(num_timesteps):
                 # print('t : {}'.format(t+1))
@@ -230,6 +263,8 @@ class GatedGraphNeuralNetwork(nn.Module):
                 
                 edge_sources = (adjacency_lists["data"].values)[:, :max_edge_count, 0]
                 # print(edge_sources)
+                if torch.isnan(edge_sources).any():
+                    print("edge_sources are nan: ", edge_sources)
                 assert not torch.isnan(edge_sources).any(), "NAN is presertnt"
                 # print('edge source : {}'.format(len(edge_sources)))
                 # shape [E, D]
@@ -257,12 +292,19 @@ class GatedGraphNeuralNetwork(nn.Module):
                 # print("", f_state_to_message, f_state_to_message.weight, layer_idx, edge_type_idx)
                 assert not torch.isnan(f_state_to_message.weight).any(), "NAN is presertnt"
                 # Shape [E, D]
-                fvec = f_state_to_message(edge_source_states)
+                fvec = f_state_to_message(edge_source_states)                
                 # [print("fvec",vec, vec.shape, fvec.shape, i) for i, vec in enumerate(fvec)]
                 # print("fvec shape", fvec.shape)
+                if torch.isnan(fvec).any():
+                    print("f_state_to_message layers weights", torch.isnan(f_state_to_message.state_dict()['weight']).any())
+                    print("f_state_to_message layers bias", torch.isnan(f_state_to_message.state_dict()['bias']).any())
+                    print("f_state_to_message value:", fvec)
                 assert not torch.isnan(fvec).any(), "NAN is presertnt"
                 all_messages_for_edge_type = self.state_to_message_dropout_layer(fvec)
                 # [print(vec, vec.shape, all_messages_for_edge_type.shape, i) for i, vec in enumerate(all_messages_for_edge_type)]
+                if torch.isnan(all_messages_for_edge_type).any():
+                    print("all_messages_for_edge_type layers weights", torch.isnan(all_messages_for_edge_type.state_dict()['weight']).any())
+                    print("all_messages_for_edge_type layers bias", torch.isnan(all_messages_for_edge_type.state_dict()['bias']).any())
                 assert not torch.isnan(all_messages_for_edge_type).any(), "NAN is presertnt"
                 
                 messages.append(all_messages_for_edge_type)
@@ -292,12 +334,28 @@ class GatedGraphNeuralNetwork(nn.Module):
                 # Shape [V, D]
                 # updated_node_states = self.rnn_cells[layer_idx](incoming_information, node_states_for_this_layer)
                 # print("incoming_messages shape", incoming_messages.shape, node_states_for_this_layer.shape)
+                incoming_messages = self.fvec_batchNorm_layer(incoming_messages)
                 incoming_messages = incoming_messages.reshape(-1, incoming_messages.shape[2])
                 node_states_for_this_layer_flat = node_states_for_this_layer.reshape(-1, node_states_for_this_layer.shape[2])
                 updated_node_states = self.rnn_cells[layer_idx](incoming_messages, node_states_for_this_layer_flat)
+                if torch.isnan(updated_node_states).any():
+                    for key in self.rnn_cells[layer_idx].state_dict():
+                        torch.set_printoptions(profile="full")
+                        print("RNN layers ", key, torch.isnan(self.rnn_cells[layer_idx].state_dict()[key]).any())
+                        print("RNN layers value ", key, torch.max(self.rnn_cells[layer_idx].state_dict()[key]))                    
+                    torch.set_printoptions(profile="full")
+                    print("RNN output", torch.max(updated_node_states), updated_node_states.shape)
+                    print("incoming_messages", torch.max(incoming_messages), incoming_messages.shape)
+                    print("node_states_for_this_layer_flat", torch.max(node_states_for_this_layer_flat), node_states_for_this_layer_flat.shape)
                 assert not torch.isnan(updated_node_states).any(), "NAN is presertnt"
                 updated_node_states = self.rnn_dropout_layer(updated_node_states)
+                if torch.isnan(updated_node_states).any():
+                    for key in self.rnn_dropout_layer.state_dict():
+                        print("RNN dropout layers ", key, torch.isnan(self.rnn_dropout_layer.state_dict()[key]).any())
+                    print("RNN output", updated_node_states)
+                
                 assert not torch.isnan(updated_node_states).any(), "NAN is presertnt"
+                updated_node_states = normalize(updated_node_states, p=1.0, dim = updated_node_states.dim() - 1)
                 node_states_for_this_layer = updated_node_states.reshape(node_states_for_this_layer.shape)
                 # for i, vec in enumerate(node_states_for_this_layer):
                 #    for v in vec:
