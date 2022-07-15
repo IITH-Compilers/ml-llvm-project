@@ -150,7 +150,8 @@ class GatedGraphNeuralNetwork(nn.Module):
 
             initial_node_representation = torch.cat([initial_node_representation, annotations], dim=2)
             # logging.debug('DLOOP H+A {}'.format(initial_node_representation.shape))
-            
+
+            temp_mat = initial_node_representation.detach().clone()
             initial_node_representation = self.hidden_layer(initial_node_representation) #.to(device)
             if self.batchNorm_layer:
                 initial_node_representation = self.batchNorm_layer(initial_node_representation)
@@ -279,6 +280,9 @@ class GatedGraphNeuralNetwork(nn.Module):
                 
                 edge_sources = edge_sources.unsqueeze(-1).expand(edge_sources.shape[0], edge_sources.shape[1], node_states_for_this_layer.shape[2])
                 edge_source_states = torch.gather(node_states_for_this_layer, 1, edge_sources)
+
+                if torch.isnan(edge_source_states).any():
+                    print("Gather function retuns nan")
                 # print("edge_source_states_new", edge_source_states.shape, edge_source_states_new.shape, torch.eq(edge_source_states, edge_source_states_new))
                                            
                 # edge_source_states = node_states_for_this_layer[edge_sources, :]
@@ -347,6 +351,7 @@ class GatedGraphNeuralNetwork(nn.Module):
                     print("RNN output", torch.max(updated_node_states), updated_node_states.shape)
                     print("incoming_messages", torch.max(incoming_messages), incoming_messages.shape)
                     print("node_states_for_this_layer_flat", torch.max(node_states_for_this_layer_flat), node_states_for_this_layer_flat.shape)
+
                 assert not torch.isnan(updated_node_states).any(), "NAN is presertnt"
                 updated_node_states = self.rnn_dropout_layer(updated_node_states)
                 if torch.isnan(updated_node_states).any():
