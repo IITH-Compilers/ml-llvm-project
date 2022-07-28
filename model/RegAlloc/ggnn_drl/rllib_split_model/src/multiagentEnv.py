@@ -337,6 +337,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         usepoint_prop = self.getUsepointProperties()
         usepoint_prop_value = np.array(list(usepoint_prop.values())).transpose()
         usepoint_prop_mat = self.getUsepointPropertiesMatrix(usepoint_prop_value)            
+        if usepoint_prop_mat is None:
+            return [1, 0]
         split_node_mask = []
         use_distance_list = self.obs.use_distances[self.cur_node]
         for i in range(usepoint_prop_mat.shape[0]):
@@ -400,6 +402,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         return prop
 
     def getUsepointPropertiesMatrix(self, usepointProp):
+        if usepointProp.shape[0] > self.max_usepoint_count:
+            return None
         propMat = np.zeros((self.max_usepoint_count, 2), dtype=float)
         # print("num of usepointProp", usepointProp.shape)
         for i in range(usepointProp.shape[0]):
@@ -645,6 +649,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         usepoint_prop_value = np.array(list(usepoint_prop.values())).transpose()
         
         usepoint_prop_mat = self.getUsepointPropertiesMatrix(usepoint_prop_value)
+        if usepoint_prop_mat is None:
+            usepoint_prop_mat = np.zeros((self.max_usepoint_count, 2), dtype=float)
         splitpoints = self.obs.split_points[self.cur_node]
         split_node_mask = []
         use_distance_list = self.obs.use_distances[self.cur_node]
@@ -852,6 +858,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         usepoint_prop_value = np.array(list(usepoint_prop.values())).transpose()
         
         usepoint_prop_mat = self.getUsepointPropertiesMatrix(usepoint_prop_value)
+        if usepoint_prop_mat is None:
+            usepoint_prop_mat = np.zeros((self.max_usepoint_count, 2), dtype=float)
         splitpoints = self.obs.split_points[self.cur_node]
         split_node_mask = []
         use_distance_list = self.obs.use_distances[self.cur_node]

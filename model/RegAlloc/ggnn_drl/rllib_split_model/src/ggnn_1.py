@@ -150,6 +150,7 @@ class GatedGraphNeuralNetwork(nn.Module):
 
             initial_node_representation = torch.cat([initial_node_representation, annotations], dim=2)
             # logging.debug('DLOOP H+A {}'.format(initial_node_representation.shape))
+            initial_node_representation = normalize(initial_node_representation, p=1.0, dim = 2)
             
             initial_node_representation = self.hidden_layer(initial_node_representation) #.to(device)
             if self.batchNorm_layer:

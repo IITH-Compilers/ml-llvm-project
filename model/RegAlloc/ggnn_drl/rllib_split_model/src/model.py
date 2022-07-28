@@ -89,6 +89,7 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
         self.fc2 = nn.Linear(custom_config["fc1_units"] + 1, custom_config["fc2_units"])
         self.attention = nn.Linear(custom_config["max_number_nodes"], 1)
         self.fc3 = nn.Linear( custom_config["fc2_units"], custom_config["max_number_nodes"])
+        self.softmax = nn.Softmax(dim=1)
         self._value_branch = SlimFC(
             in_size=custom_config["max_number_nodes"],
             out_size=1,
@@ -118,9 +119,16 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
             print("FC1 layers bias", torch.isnan(self.fc1.state_dict()['bias']).any())
         assert not torch.isnan(x).any(), "Nan in select node model after fc1"
         spill_weights = input_dict["obs"]["spill_weights"]
+        assert not torch.isnan(spill_weights).any(), "Spill weight is nan for select node model"
         spill_weights = (spill_weights).reshape(spill_weights.shape[0], spill_weights.shape[1], 1)
         x = torch.cat((spill_weights, x), 2)
         x = F.relu(self.fc2(x))
+        if torch.isnan(x).any():
+            print("Task select model input max value: ", torch.max(input_state_list))
+            print("FC2 layers weights", torch.isnan(self.fc1.state_dict()['weight']).any())
+            print("FC2 layers bias", torch.isnan(self.fc1.state_dict()['bias']).any())
+        #print("FC2 layer weights max and min value", torch.max(self.fc2.state_dict()['weight']), torch.min(self.fc2.state_dict()['weight']))
+        #print("FC2 layer bias max and min value", torch.max(self.fc2.state_dict()['bias']), torch.min(self.fc2.state_dict()['bias']))
         assert not torch.isnan(x).any(), "Nan in select node model after fc2"
         x = torch.transpose(x, 1, 2)
         x = self.attention(x)        
@@ -128,9 +136,11 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
         x = self.fc3(x)
         assert not torch.isnan(x).any(), "Nan in select node model after fc3"
         self._features = x.detach().clone()
-        
+        x = self.softmax(x)
         mask = input_dict["obs"]["action_mask"] > 0
-        x = torch.where(mask, x, torch.tensor(FLOAT_MIN).to(x.device))        
+        masking_value = 0
+        x = torch.where(mask, x, torch.tensor(masking_value).to(x.device))        
+        #x = torch.where(mask, x, torch.tensor(FLOAT_MIN).to(x.device))        
         assert not torch.isnan(x).any(), "Nan in select node model output"
         return x, state, input_state_list
 
