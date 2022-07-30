@@ -80,7 +80,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.cur_node = None
         self.mode = env_config["mode"]
         self.total_reward = 0
-        self.registerAS = RegisterActionSpace(env_config["target"])
+        self.registerAS = RegisterActionSpace(env_config["target"], env_config["Register_config"])
         self.action_space_size = self.registerAS.ac_sp_normlize_size
         self.max_usepoint_count = env_config["max_usepoint_count"]
         self.worker_index = env_config.worker_index
@@ -96,6 +96,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.greedy_mca_throughput_file_path = env_config["greedy_mca_throughput_file_path"]
         self.mca_cycles_file_path = env_config["mca_cycles_file_path"]
         self.use_mca_self_play_reward= env_config["use_mca_self_play_reward"]
+        self.repeat_freq = env_config["file_repeat_frequency"]
         self.best_throughput_map = {}
         self.iteration_number = 1
 
@@ -1193,9 +1194,9 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             # path = "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/graphs/IG/json_new/523.xalancbmk_r_682.ll_F12.json"
             #path ="/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/graphs/IG/set_70-120/526.blender_r_120.ll_F28.json"
             logging.debug('Graphs selected : {}'.format(path))
-            # print('Graphs selected : {}'.format(path))
+            print('Graphs selected : {}'.format(path))
             self.reset_count+=1
-            if self.reset_count % 1 == 0:
+            if self.reset_count % self.repeat_freq == 0:
                 self.graph_counter+=1
                 self.graph_counter = self.graph_counter % self.env_config['current_batch']
                 if self.graph_counter == 0:

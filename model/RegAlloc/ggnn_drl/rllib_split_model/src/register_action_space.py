@@ -23,10 +23,10 @@ class RegisterActionSpace:
     # regMask['GR8'] = range(43,57)
 
 
-    def __init__(self, target):
+    def __init__(self, target, config_path):
         # :%s/\(.*"color":\).*\(,\n.*\n.*"phyReg":\)\(.*\)/\1\3\2\3/g
         self.spill = 0
-        self.supported_regclasses, self.suppcls_regs_map, self.reg_idname_map, self.overlaps = RegisterActionSpace.loadRegConfig(target)
+        self.supported_regclasses, self.suppcls_regs_map, self.reg_idname_map, self.overlaps = RegisterActionSpace.loadRegConfig(target, config_path)
         
         self.regs_supp = list(set(list(itertools.chain(*self.suppcls_regs_map.values()))))
         # print(self.regs_supp)
@@ -139,9 +139,10 @@ class RegisterActionSpace:
         return action_space
 
     @staticmethod
-    def loadRegConfig(target):
+    def loadRegConfig(target, baseDir):
         # baseDir = '/home/venkat/IF-DV/Rohit/regAlloc/iith-compilers/ML-Register-Allocation/llvm/lib/CodeGen/MLRegAlloc/config_json'
-        baseDir = '/home/venkat/IF-DV/Rohit/regAlloc/iith-compilers/benchmarking/ML-Register-Allocation/llvm/lib/CodeGen/MLRegAlloc/config_json'
+        #baseDir = '/home/venkat/IF-DV/Rohit/regAlloc/iith-compilers/benchmarking/ML-Register-Allocation/llvm/lib/CodeGen/MLRegAlloc/config_json'
+        #baseDir = '/raid/cs17m20P100001/ML-Register-Allocation/llvm/lib/CodeGen/MLRegAlloc/config_json'
         # baseDir = '/home/cs18mtech11030/project/grpc_llvm/ML-Register-Allocation/llvm/lib/CodeGen/MLRegAlloc/config_json'
         if target == "X86":
             fileName= os.path.join(baseDir, 'X86_supported_RegClasses.json')

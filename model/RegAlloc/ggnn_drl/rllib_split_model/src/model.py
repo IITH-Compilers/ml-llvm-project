@@ -135,11 +135,11 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
         x = torch.squeeze(x, 2)
         x = self.fc3(x)
         assert not torch.isnan(x).any(), "Nan in select node model after fc3"
-        self._features = x.detach().clone()
+        self._features = x.clone().detach()
         x = self.softmax(x)
         mask = input_dict["obs"]["action_mask"] > 0
-        masking_value = 0
-        x = torch.where(mask, x, torch.tensor(masking_value).to(x.device))        
+        masking_value = -1e6
+        x = torch.where(mask, x, torch.tensor(masking_value).to(x.device))
         #x = torch.where(mask, x, torch.tensor(FLOAT_MIN).to(x.device))        
         assert not torch.isnan(x).any(), "Nan in select node model output"
         return x, state, input_state_list
