@@ -669,7 +669,7 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
     auto tempMI = LIS->getInstructionFromIndex(i.first);
     auto tempMBB = tempMI->getParent();
     SlotIndex tempLSP = SA->getLastSplitPoint(tempMBB->getNumber());
-    if(i.first > tempLSP || loops->getLoopFor(tempMBB)) {
+    if (i.first > tempLSP || loops->getLoopFor(tempMBB)) {
       // errs() << "Slot index for last vaild splitpoint: ";
       // tempLSP.dump();
       // errs() << "Slot index for current valid splitpoint: ";
@@ -687,10 +687,11 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
       errs() << "Skipping here -- continuing\n";
       continue;
     }
-    // assert(i.first < LSP && "Expecting the slot index to be lesser than LSP");
+    // assert(i.first < LSP && "Expecting the slot index to be lesser than
+    // LSP");
     errs() << "split begin\n";
     SE->openIntv();
-    SegStart = SE->enterIntvAfter(i.first);    
+    SegStart = SE->enterIntvAfter(i.first);
     // if (!endBI.LiveOut)
     //   SlotIndex SegStop = SE->leaveIntvAfter(i.second);
     auto thisMBBLastIdx = LIS->getMBBEndIdx(LIS->getMBBFromIndex(i.second));
@@ -698,7 +699,8 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
     errs() << "Dumping last use index: ";
     tempUses.back().dump();
     errs() << "New interval added is: \n";
-    if (itr >= (newLRIntervals.size() - 1) && (tempUses.back() < thisMBBLastIdx)) {
+    if (itr >= (newLRIntervals.size() - 1) &&
+        (tempUses.back() < thisMBBLastIdx)) {
       // SlotIndex SegStop = SE->leaveIntvAfter(VirtReg->endIndex());
       // SE->useIntv(SegStart, SegStop);
       SE->useIntv(SegStart, VirtReg->endIndex());
@@ -735,7 +737,8 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
                     << Register::virtReg2Index(splitReg) + TRI->getNumRegs() + 1
                     << "\n");
   // errs() << "After splitting -- " << printReg(splitReg, TRI) << "--"
-  //        << Register::virtReg2Index(splitReg) + TRI->getNumRegs() + 1 << "\n";
+  //        << Register::virtReg2Index(splitReg) + TRI->getNumRegs() + 1 <<
+  //        "\n";
   mlSplitRegs.insert(mlSplitRegs.end(), NewVRegs.begin(), NewVRegs.end());
   LLVM_DEBUG(for (auto i
                   : mlSplitRegs) {
@@ -1950,8 +1953,9 @@ void MLRA::inference() {
       request = new registerallocationinference::RegisterProfileList();
       serializeRegProfData(request);
       errs() << "Call model first time\n";
-      if (request->mutable_regprof()->size() <= 70 ||
-          request->mutable_regprof()->size() > 120) {
+      // if (request->mutable_regprof()->size() <= 70 ||
+      if (request->mutable_regprof()->size() <= 120 ||
+        request->mutable_regprof()->size() > 500) {
         ORE->emit([&]() {
           return MachineOptimizationRemark(
                      DEBUG_TYPE, "MLRA skipped Function ",

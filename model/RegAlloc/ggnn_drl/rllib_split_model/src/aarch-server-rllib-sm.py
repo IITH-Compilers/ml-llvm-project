@@ -29,7 +29,7 @@ class service_server(RegisterAllocationInference_pb2_grpc.RegisterAllocationInfe
         # model_path = '/home/venkat/ray_results/split_model/experiment_2021-09-09_22-09-20/experiment_HierarchicalGraphColorEnv_7b793_00000_0_2021-09-09_22-09-21/checkpoint_001969/checkpoint-1969'
         # model_path = '/home/venkat/ray_results/split_model/experiment_2021-10-21_12-22-45/experiment_HierarchicalGraphColorEnv_7f0ef_00000_0_2021-10-21_12-22-45/checkpoint_001575/checkpoint-1575'
         # model_path = '/home/venkat/ray_results/split_model/X86models/checkpoint_001156/checkpoint-1156'
-        model_path = '/home/venkat/ray_results/split_model/home/cs20mtech12003/ray_results/experiment_2021-12-24_23-51-11/experiment_HierarchicalGraphColorEnv_45a5a_00000_0_2021-12-24_23-51-11/checkpoint_005399/checkpoint-5399'
+        model_path = '/home/venkat/ray_results/Aarch64_C7_200kEps_28-07-22/checkpoint-20000'
         args = {'no_render' : True, 'checkpoint' : model_path, 'run' : 'PPO' , 'env' : '' , 'config' : {}, 'video_dir' : '', 'steps' : 0, 'episodes' : 0, 'arch' : 'AArch64'}
         args = Namespace(**args)
         self.inference_model = inference.RollOutInference(args)
@@ -128,7 +128,7 @@ class service_server(RegisterAllocationInference_pb2_grpc.RegisterAllocationInfe
                 # if stop == 0:
                 #     exit()
             else:
-                print("LLVM responce", inter_graphs)
+                # print("LLVM responce", inter_graphs)
                 self.inference_model.setCurrentNodeAsNotVisited()
                 self.inference_model.updateSelectNodeObs()
                 print("Inside else; doing nothing here")
@@ -174,7 +174,7 @@ class Server:
 
         RegisterAllocationInference_pb2_grpc.add_RegisterAllocationInferenceServicer_to_server(service_server(),server)
 
-        server.add_insecure_port('localhost:60032')
+        server.add_insecure_port('localhost:' + str(sys.argv[1]))
 
         server.start()
         print("Server Running")
@@ -182,5 +182,5 @@ class Server:
         server.wait_for_termination()
 
 if __name__ == '__main__' :
-
+    assert(len(sys.argv) == 2)
     Server.run()

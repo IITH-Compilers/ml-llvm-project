@@ -1,6 +1,6 @@
 import json
 
-fileName='/home/cs18mtech11030/project/ML-Register-Allocation/llvm-project/llvm/lib/CodeGen/MLRegAlloc/DumpIGAndMapBack/config_json/X86_reg_pp.json'
+fileName='/home/venkat/IF-DV/Rohit/regAlloc/iith-compilers/benchmarking/ML-Register-Allocation/llvm/lib/CodeGen/MLRegAlloc/config_json/X86_RegClasses.json'
 
 target="X86"
 
@@ -9,7 +9,7 @@ with open(fileName) as f:
 supported_reg_test = {}
 registers = []
 for cls in regconfig.keys():
-    if cls in ['GR8', 'GR16', 'GR32', 'GR64']:
+    if cls in ['GR8', 'GR16', 'GR32', 'GR64', 'FR32', 'RFP32', 'RFP64', 'FR64X', 'FR64', 'RFP80', 'RFP80_7', 'VR128', 'VR256', 'VR512']:
         registers += list(map(lambda x: x["regName"], regconfig[cls]))
 
 supported_reg_test["register_names"] = registers
