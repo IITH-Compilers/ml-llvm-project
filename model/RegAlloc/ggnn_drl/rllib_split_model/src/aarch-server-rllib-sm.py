@@ -29,7 +29,7 @@ class service_server(RegisterAllocationInference_pb2_grpc.RegisterAllocationInfe
         # model_path = '/home/venkat/ray_results/split_model/experiment_2021-09-09_22-09-20/experiment_HierarchicalGraphColorEnv_7b793_00000_0_2021-09-09_22-09-21/checkpoint_001969/checkpoint-1969'
         # model_path = '/home/venkat/ray_results/split_model/experiment_2021-10-21_12-22-45/experiment_HierarchicalGraphColorEnv_7f0ef_00000_0_2021-10-21_12-22-45/checkpoint_001575/checkpoint-1575'
         # model_path = '/home/venkat/ray_results/split_model/X86models/checkpoint_001156/checkpoint-1156'
-        model_path = '/home/venkat/ray_results/Aarch64_C7_200kEps_28-07-22/checkpoint-20000'
+        model_path = '/home/venkat/ray_results/experiment_2022-08-08_16-12-11/experiment_HierarchicalGraphColorEnv_c2b47_00000_0_2022-08-08_16-12-12/checkpoint_000002/checkpoint-2'
         args = {'no_render' : True, 'checkpoint' : model_path, 'run' : 'PPO' , 'env' : '' , 'config' : {}, 'video_dir' : '', 'steps' : 0, 'episodes' : 0, 'arch' : 'AArch64'}
         args = Namespace(**args)
         self.inference_model = inference.RollOutInference(args)
@@ -118,7 +118,12 @@ class service_server(RegisterAllocationInference_pb2_grpc.RegisterAllocationInfe
             elif inter_graphs.result:
                 # exit()
                 # self.inference_model.update_obs(request, self.inference_model.env.virtRegId, self.inference_model.env.split_point)
-                if not self.inference_model.update_obs(request):
+                update_status = self.inference_model.update_obs(request)
+                if update_status == "error":
+                    reply = RegisterAllocationInference_pb2.Data(message="Color", color=[], funcName=request.funcName)
+                    return reply
+
+                if not update_status:
                     print("Current split failed")
                     self.inference_model.setCurrentNodeAsNotVisited()
                 # else:

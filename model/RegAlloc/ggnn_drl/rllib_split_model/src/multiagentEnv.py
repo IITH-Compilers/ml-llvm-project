@@ -145,6 +145,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.path = None
         self.annotation_size = env_config["annotations"]
         random.seed(123)
+        np.random.seed(123)
 
     def reward_formula(self, value, action):
         if value == float("inf"):
@@ -1543,7 +1544,9 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             #             adjs[fro].append(to)
 
             # logging.debug("register ids adjacney after update: {} ".format(adjs))
-
+            if self.obs.graph_topology.num_nodes > self.max_number_nodes or len(edges) > self.max_edge_count:
+                print("Max limit exceded for number of node or edges", self.obs.graph_topology.num_nodes, len(edges))
+                return "error"
 
             self.obs.adjacency_lists = [ AdjacencyList(node_num=self.obs.graph_topology.num_nodes, adj_list=edges, device=self.obs.adjacency_lists[0].device)]
         else:
