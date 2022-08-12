@@ -1267,7 +1267,12 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             # print(self.obs)
             # print("*********************************************************")
             self.color_assignment_map = []
-        
+
+        edge_count = 0
+        for adj_list in self.graph['adjacency']:
+            edge_count += len(adj_list)
+        if edge_count*2 > self.max_edge_count:
+            return self.reset_env(None)
         self.obs.stage = 'start'
         self.obs.next_stage = 'selectnode'
         self.split_steps =  0
@@ -1337,6 +1342,31 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         # logging.debug("register ids adjacent before update : {} ".format(adjs))
        
         if updated_graphs.result:
+            num_edges = 0
+            # node_id_list = []
+            new_node_count = 0
+            for node_prof in updated_graphs.regProf:            
+                # num_edges += len(node_prof.interferences)
+                # node_id_list.append(node_prof.regID)
+                if self.mode != 'inference':
+                    nodeId = str(node_prof.regID)
+                else:
+                    nodeId = node_prof.regID
+                if nodeId not in self.obs.nid_idx.keys():
+                        new_node_count += 1
+            for i, adj in enumerate(self.obs.graph_topology.adjList):
+                for node in adj:
+                    num_edges += 1
+
+            # print("Incomming node ids are", node_id_list)
+            num_edges = num_edges + new_node_count*len(updated_graphs.regProf)*2
+            num_nodes = len(self.obs.nid_idx.keys()) + new_node_count
+            if num_nodes > self.max_number_nodes or num_edges > self.max_edge_count:
+                print("Max limit exceded for number of node or edges", num_nodes, num_edges)
+                return "error"
+            # print("No. of nodes and edges before:", num_nodes, num_edges)
+            # print("Node id to index map before:", self.obs.nid_idx)
+
             logging.info(updated_graphs)            
             register_id = self.obs.idx_nid[self.cur_node]
             # print(self.obs.nid_idx)
