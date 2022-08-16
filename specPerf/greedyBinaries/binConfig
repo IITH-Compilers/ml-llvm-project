@@ -1,0 +1,14 @@
+526=blender_r_base.base-split-greedy-vecN-m64
+523=cpuxalan_r_base.base-split-greedy-vecN-m64
+531=deepsjeng_r_base.base-split-greedy-vecN-m64
+538=imagick_r_base.base-split-greedy-vecN-m64
+519=lbm_r_base.base-split-greedy-vecN-m64
+525=ldecod_r_base.base-split-greedy-vecN-m64
+541=leela_r_base.base-split-greedy-vecN-m64
+505=mcf_r_base.base-split-greedy-vecN-m64
+544=nab_r_base.base-split-greedy-vecN-m64
+508=namd_r_base.base-split-greedy-vecN-m64
+520=omnetpp_r_base.base-split-greedy-vecN-m64
+500=perlbench_r_base.base-split-greedy-vecN-m64
+511=povray_r_base.base-split-greedy-vecN-m64
+557=xz_r_base.base-split-greedy-vecN-m64

@@ -1,0 +1,14 @@
+500=500.perlbench_r
+505=505.mcf_r
+508=508.namd_r
+511=511.povray_r
+519=519.lbm_r
+520=520.omnetpp_r
+523=523.xalancbmk_r
+525=525.x264_r
+526=526.blender_r
+531=531.deepsjeng_r
+538=538.imagick_r
+541=541.leela_r
+544=544.nab_r
+557=557.xz_r
