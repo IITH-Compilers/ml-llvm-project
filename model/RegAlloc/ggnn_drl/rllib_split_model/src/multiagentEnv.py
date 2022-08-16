@@ -55,7 +55,8 @@ config_path=None
 logger = logging.getLogger(__file__)
 # logging.basicConfig(filename=os.path.join("/home/cs18mtech11030/project/grpc_llvm/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src", 'running.log'), format='%(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
 #logging.basicConfig(filename='running_spill.log', format='%(thread)d - %(threadName)s %(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
-
+random.seed(123)
+np.random.seed(123)
 
 def set_config(path):
     global config_path
@@ -152,6 +153,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             reward = self.reward_max_value
         elif value > self.reward_max_value:
             reward = self.reward_max_value
+        elif value < -1*self.reward_max_value:
+            reward = -1*self.reward_max_value
         else:
             reward = value
         # print("Reward value", reward, type(reward), value, type(value))
@@ -224,6 +227,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         # self.colour_node_agent_id = "colour_node_agent_{}".format(self.agent_count)
 
         select_node_mask = self.createNodeSelectMask()
+        # select_node_mask = self.createNodeSelectMaskSpillWeightBased()
         spill_weight_list = self.getSpillWeightListExpanded()
         state = self.obs
         # print("Some node in eligible nodes", self.obs.graph_topology.get_eligibleNodes())
@@ -325,6 +329,25 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         for inx, x in enumerate(eligibleNodes):            
             if x in eligibleNodes:
                 mask[x] = 1
+        if all(v == 0 for v in mask):
+            logging.info("eligibleNodes", eligibleNodes)
+            return None
+            # assert False, "No node elegible to select"
+            
+        return mask
+    
+    def createNodeSelectMaskSpillWeightBased(self):
+        mask = [0]*self.max_number_nodes
+        eligibleNodes = self.obs.graph_topology.get_eligibleNodes()
+        assert len(eligibleNodes) < self.max_number_nodes, "Graph has more then maximum nodes allowed"
+        if len(eligibleNodes) > 0:
+            eligible_spill_wight_list = []
+            for inx, x in enumerate(eligibleNodes):            
+                eligible_spill_wight_list.append(self.obs.spill_cost_list[x])
+            max_spill_idx = np.argmax(eligible_spill_wight_list)
+            eligible_node_idx = eligibleNodes[max_spill_idx]
+            mask[eligible_node_idx] = 1
+            # print("eligible_node_idx selected", eligible_node_idx)
         if all(v == 0 for v in mask):
             logging.info("eligibleNodes", eligibleNodes)
             return None
@@ -466,7 +489,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         prop = self.getNodeProperties()
         prop_value_list = list(prop.values())
         select_task_mask = self.creatTaskSelectMask()
-        # select_task_mask = [0, 1]
+        # select_task_mask = [1, 0]
         # print("select_task_mask", select_task_mask)
         # print("Node Embding", self.cur_obs)
         reward = {
@@ -600,6 +623,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         colour_node_mask[0] = 1
         # Handling mask all zero issue
         select_node_mask = self.createNodeSelectMask()
+        # select_node_mask = self.createNodeSelectMaskSpillWeightBased()
         if select_node_mask is None and not done_all:
             # print("setting done_all")
             done_all = True
@@ -815,6 +839,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         colour_node_mask[0] = 1
 
         select_node_mask = self.createNodeSelectMask()
+        # select_node_mask = self.createNodeSelectMaskSpillWeightBased()
         # Handling mask all zero issue
         if select_node_mask is None:
            split_done = True
@@ -1124,15 +1149,28 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                                 if best_throughput > mlra_throughput:
                                     self.best_throughput_map[key] = mlra_throughput
                                     best_throughput = mlra_throughput
-                                reward = (throughput_diff/best_throughput)*self.env_config["mca_reward_clip"]
-                                print("Throughput:", mlra_throughput, best_throughput)
-                                print("Reward from self play throughput:", reward)
+                                    reward = 5
+                                else:
+                                    reward = 0
+                                # reward = (throughput_diff/best_throughput)*self.env_config["mca_reward_clip"]
+                                # print("Throughput:", mlra_throughput, best_throughput)
+                                # print("Reward from self play throughput:", reward)
                                                                                                     
                             else:
                                 if key in greedy_throughput_map.keys():
                                     greedy_throughput = greedy_throughput_map[key]
-                                    throughput_diff = (greedy_throughput - mlra_throughput)
-                                    reward = (throughput_diff/greedy_throughput)*self.env_config["mca_reward_clip"]
+                                    # throughput_diff = (greedy_throughput - mlra_throughput)
+                                    # reward = (throughput_diff/greedy_throughput)*self.env_config["mca_reward_clip"]                                    
+                                    throughput_diff = (mlra_throughput - greedy_throughput)
+                                    # if throughput_diff <= 0.5:
+                                    #     reward = self.env_config["mca_reward_clip"]
+                                    # else:
+                                    #     reward = (greedy_throughput/throughput_diff)
+                                    
+                                    if throughput_diff < 0:
+                                        reward = 10
+                                    else:
+                                        reward = -10
                                     print("Throughput:", mlra_throughput, greedy_throughput)
                                     print("Reward in compaire to greedy throughput:", reward)
                             # else:
@@ -1162,9 +1200,36 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                         key = fileName + "_" + self.functionName
                         # if key not in mlra_throughput_map.keys():
                         #     mlra_throughput_map[key] = []
-                        mlra_throughput_map[str(self.iteration_number)][key] = mlra_throughput
+                        if key in mlra_throughput_map[str(self.iteration_number)]:
+                            (mlra_throughput_map[str(self.iteration_number)][key]).append(mlra_throughput)
+                        else:
+                            mlra_throughput_map[str(self.iteration_number)][key] = [mlra_throughput]
                         # print("Adding function to iteration map", key, self.iteration_number)
                         json.dump(mlra_throughput_map, f)
+                        f.close()
+
+                    mlra_mca_cycle_file_path = os.path.join(logdir, str(self.worker_index) + '_mlra_cycle.json')
+                    if os.path.exists(mlra_mca_cycle_file_path):
+                        with open(mlra_mca_cycle_file_path) as f:
+                            mlra_cycle_map = json.load(f)
+                            f.close()
+                    else:
+                        mlra_cycle_map = {}
+                    
+                    with open(mlra_mca_cycle_file_path, 'w') as f:
+                        fileName = os.path.basename(self.fileName)
+                        if str(self.iteration_number) not in mlra_cycle_map.keys():
+                            mlra_cycle_map[str(self.iteration_number)] = {}
+                            # print("Adding iteration key to map", self.iteration_number, mlra_cycle_map.keys())
+                        key = fileName + "_" + self.functionName
+                        # if key not in mlra_cycle_map.keys():
+                        #     mlra_cycle_map[key] = []
+                        if key in mlra_cycle_map[str(self.iteration_number)]:
+                            (mlra_cycle_map[str(self.iteration_number)][key]).append(mlra_cycles)
+                        else:
+                            mlra_cycle_map[str(self.iteration_number)][key] = [mlra_cycles]
+                        # print("Adding function to iteration map", key, self.iteration_number)
+                        json.dump(mlra_cycle_map, f)
                         f.close()
                 else:
                     # print("Killing Server pid", self.server_pid.pid)         
@@ -1193,7 +1258,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             # path="/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/graphs/IG/json/500.perlbench_r_51.ll_F2.json"
             # path = "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/graphs/IG/json_new/523.xalancbmk_r_392.ll_F21.json"
             # path = "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/graphs/IG/json_new/523.xalancbmk_r_682.ll_F12.json"
-            #path ="/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/graphs/IG/set_70-120/526.blender_r_120.ll_F28.json"
+            # path ="/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_training_data_06-08-22/graphs/IG/sample/502.gcc_r_332.ll_F3.json"
             logging.debug('Graphs selected : {}'.format(path))
             print('Graphs selected : {}'.format(path))
             self.reset_count+=1
