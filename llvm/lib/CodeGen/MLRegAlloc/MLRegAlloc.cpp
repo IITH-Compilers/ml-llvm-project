@@ -386,15 +386,17 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
 
   if (MRI->reg_nodbg_empty(VirtReg->reg)) {
     // assert(VirtReg->empty() && "Non-empty but used interval");
-    // LLVM_DEBUG(dbgs() << "not queueing unused  " << *VirtReg << '\n');
+    LLVM_DEBUG(dbgs() << "not queueing unused  " << '\n');
     // aboutToRemoveInterval(*VirtReg);
     // LIS->removeInterval(VirtReg->reg);
     return false;
   }
 
   if (std::find(mlSpilledRegs.begin(), mlSpilledRegs.end(), VirtReg) !=
-      mlSpilledRegs.end())
+      mlSpilledRegs.end()) {
+    LLVM_DEBUG(dbgs() << "Reg masked as spilled" << '\n');
     return false;
+  }
 
   SA->analyze(VirtReg);
   LiveRangeEdit LREdit(VirtReg, NewVRegs, *MF, *LIS, VRM);
@@ -443,30 +445,32 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
   assert(found && "Invalid split point");
   // if (idxPos == 0 || idxPos >= useSlots.size() - 1)
   if (idxPos >= useSlots.size() - 1) {
+    LLVM_DEBUG(dbgs() << "trying to split at last split point" << '\n');
     return false;
   }
 
   auto MI = LIS->getInstructionFromIndex(idx);
   assert(MI && "Empty instruction found for splitting");
 
-  if (MI->isCompare()) {
-    errs() << "Compare inst so bailing out of the optimization\n";
-    return false;
-  }
+  // if (MI->isCompare()) {
+  //   errs() << "Compare inst so bailing out of the optimization\n";
+  //   return false;
+  // }
 
-  if (MI->isCopy() || MI->isInlineAsm()) {
-    LLVM_DEBUG(
-        errs() << "No use of splitting at/before the copy instruction -- would "
-                  "create more redundant copies or at InlineAsm calls\n");
-    return false;
-  }
+  // if (MI->isCopy() || MI->isInlineAsm()) {
+  //   LLVM_DEBUG(
+  //       errs() << "No use of splitting at/before the copy instruction -- would "
+  //                 "create more redundant copies or at InlineAsm calls\n");
+  //   return false;
+  // }
 
-  // No use of splitting at a point whose next inst itself has a use
-  auto nextInst = MI->getNextNode();
-  if (nextInst &&
-      LIS->getInstructionFromIndex(useSlots[idxPos + 1]) == nextInst) {
-    return false;
-  }
+  // // No use of splitting at a point whose next inst itself has a use
+  // auto nextInst = MI->getNextNode();
+  // if (nextInst &&
+  //     LIS->getInstructionFromIndex(useSlots[idxPos + 1]) == nextInst) {
+  //   LLVM_DEBUG(dbgs() << "skipping splitting before use" << '\n');
+  //   return false;
+  // }
 
   // if (nextInst && nextInst->isCompare()) {
   //   errs() << "Compare inst so bailing out of the optimization\n";
@@ -674,6 +678,7 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
       // tempLSP.dump();
       // errs() << "Slot index for current valid splitpoint: ";
       // i.first.dump();
+      LLVM_DEBUG(dbgs() << "tring to split after last split point" << '\n');
       return false;
     }
   }
@@ -1303,7 +1308,7 @@ void MLRA::computeSplitPoints(LiveInterval *VirtReg,
     auto MBB = MI->getParent();
     assert(MBB && "Empty MBB for MI");
 
-    if (!MI->isCopy() && !MI->registerDefIsDead(VirtReg->reg) &&
+    if (!MI->isCopy() && !MI->isInlineAsm() && !MI->isCompare() && !MI->registerDefIsDead(VirtReg->reg) &&
         !MRI->reg_nodbg_empty(VirtReg->reg) && !loops->getLoopFor(MBB)) {
       splitPoints.push_back(useIdx);
       // errs() << "Pushing splitpoint: ";
