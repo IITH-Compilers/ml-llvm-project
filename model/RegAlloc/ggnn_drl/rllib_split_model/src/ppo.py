@@ -62,10 +62,10 @@ DEFAULT_CONFIG = with_common_config({
     # Stepsize of SGD.
     "lr": 5e-4,
     # Learning rate schedule.
-    "lr_schedule": [
-        [0, 5e-4],
-        [4000000, 5e-5]
-    ],
+    # "lr_schedule": [
+    #     [0, 5e-4],
+    #     [4000000, 5e-5]
+    # ],
     # Coefficient of the value function loss. IMPORTANT: you must tune this if
     # you set vf_share_layers=True inside your model's config.
     "vf_loss_coeff": 1.0,
@@ -84,7 +84,7 @@ DEFAULT_CONFIG = with_common_config({
     # scale of the rewards. If your expected V is large, increase this.
     "vf_clip_param": 10.0,
     # If specified, clip the global norm of gradients by this amount.
-    "grad_clip": 1,
+    "grad_clip": 10,
     # Target value for KL divergence.
     "kl_target": 0.01,
     # Whether to rollout "complete_episodes" or "truncate_episodes".
@@ -106,45 +106,46 @@ DEFAULT_CONFIG = with_common_config({
             "fc1_units": 64,
             "fc2_units": 64
         },
-        "vf_share_layers": False,
+        "vf_share_layers": False
     },
 
     "env_config": {
         "target": "X86",
         "state_size": 100,
-        "max_number_nodes": 300,
+        "max_number_nodes": 600,
         "max_usepoint_count": 200,
         "annotations": 3,
-        "max_edge_count": 45000,
+        "max_edge_count": 30000,
         "mode": 'training',
         "dump_type": 'One',
         "dump_color_graph": True,
         "intermediate_data": './temp',
-        "build_path": "/raid/cs17m20P100001/ML-Register-Allocation/X86Build_UPMM",
-        # "build_path": "/home/cs20mtech12003/ML-Register-Allocation/AArch64Build",
-        "Register_config": "/raid/cs17m20P100001/ML-Register-Allocation/llvm/lib/CodeGen/MLRegAlloc/config_json",
-        "log_path": "/raid/cs17m20P100001/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src/log",
+        # "build_path": "/home/cs20mtech12003/ML-Register-Allocation/AarchBuild_UPMM",
+        "build_path": "/home/cs20mtech12003/ML-Register-Allocation/build_x86",
+        "Register_config": "/home/cs20mtech12003/ML-Register-Allocation/llvm/lib/CodeGen/MLRegAlloc/config_json",
+        "log_path": "/home/cs20mtech12003/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src/log",
         #"dataset": "/raid/cs17m20P100001/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_new_data/",
-        "dataset": "/raid/cs17m20P100001/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_new_data/",
         # "dataset": "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_aarch64_new_data/",
+        "dataset": "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_training_data_06-08-22/",
         "graphs_num": 10000,
-        "action_space_size": RegisterActionSpace("X86", "/raid/cs17m20P100001/ML-Register-Allocation/llvm/lib/CodeGen/MLRegAlloc/config_json").ac_sp_normlize_size,
+        "action_space_size": RegisterActionSpace("X86", "/home/cs20mtech12003/ML-Register-Allocation/llvm/lib/CodeGen/MLRegAlloc/config_json").ac_sp_normlize_size,
         "check_point": None,
-        "episode_number": 199999,
-        "GPU_ID": '13',
+        "episode_number": 49999,
+        "GPU_ID": '0',
         "X86_CFLAGS": "-mllvm -regalloc=greedy  -march=core2",
         "AArch64_CFLAGS": "-mllvm -regalloc=greedy  -mcpu=cortex-a72",
-        "dataset_bucket": "set_70-120",
-        "file_repeat_frequency": 1,
-        "current_batch": 600,
-        "Workers_starting_port": "50001",
+        "dataset_bucket": "sample",
+        "enable_GGNN": True,
+        "file_repeat_frequency": 10,
+        "current_batch": 10,
+        "Workers_starting_port": "50034",
         "use_local_reward": True,
         "use_mca_reward": True,
         "use_mca_self_play_reward": False,
         "mca_reward_clip": 10,
         "mca_timeout": 30,
-        "greedy_mca_throughput_file_path": "/raid/cs17m20P100001/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src/greedy-throughput_set_70-120.json",
-        "mca_cycles_file_path": "/raid/cs17m20P100001/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src/greedy-cycles_set_70-120.json"
+        "greedy_mca_throughput_file_path": "/home/cs20mtech12003/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src/greedy-throughput_set_120-500.json",
+        "mca_cycles_file_path": "/home/cs20mtech12003/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src/greedy-cycles_set_120-500.json"
 
     },
 
@@ -158,7 +159,7 @@ DEFAULT_CONFIG = with_common_config({
     "num_workers": 10,
 
     "num_gpus": 1,
-
+    
     "seed": 123
 })
 

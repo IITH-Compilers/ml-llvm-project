@@ -8,8 +8,11 @@ from ray.rllib.utils.torch_ops import FLOAT_MIN
 from ray.rllib.models.torch.misc import SlimFC, normc_initializer
 import numpy as np
 from ggnn_1 import get_observations, get_observationsInf, GatedGraphNeuralNetwork, constructVectorFromMatrix, AdjacencyList
+import random
 
 logger = logging.getLogger(__file__) 
+random.seed(123)
+np.random.seed(123)
 
 
 class SelectTaskNetwork(TorchModelV2, nn.Module):
@@ -59,8 +62,11 @@ class SelectTaskNetwork(TorchModelV2, nn.Module):
         assert not torch.isnan(x).any(), "Nan in select task model after fc3"
         self._features = x.clone().detach()
 
-        mask = input_dict["obs"]["action_mask"] > 0
-        x = torch.where(mask, x, torch.tensor(FLOAT_MIN).to(x.device))
+        mask = input_dict["obs"]["action_mask"]
+        # x = torch.where(mask, x, torch.tensor(FLOAT_MIN).to(x.device))
+
+        inf_mask = torch.clamp(torch.log(mask), min=FLOAT_MIN)
+        x = x + inf_mask        
         assert not torch.isnan(x).any(), "Nan in select task model output"
         return x, state, self._features
 
@@ -85,11 +91,18 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
         """
         # super(SelectNodeNetwork, self).__init__()
         # self.seed = torch.manual_seed(0)
+
+        # self.fc1 = nn.Linear(custom_config["state_size"], custom_config["fc1_units"])
+        # self.fc2 = nn.Linear(custom_config["fc1_units"] + 1, custom_config["fc2_units"])
+        # self.attention = nn.Linear(custom_config["max_number_nodes"], 1)
+        # self.fc3 = nn.Linear( custom_config["fc2_units"], custom_config["max_number_nodes"])
+        self.enable_ggnn = custom_config["enable_GGNN"]
         self.fc1 = nn.Linear(custom_config["state_size"], custom_config["fc1_units"])
         self.fc2 = nn.Linear(custom_config["fc1_units"] + 1, custom_config["fc2_units"])
-        self.attention = nn.Linear(custom_config["max_number_nodes"], 1)
-        self.fc3 = nn.Linear( custom_config["fc2_units"], custom_config["max_number_nodes"])
-        self.softmax = nn.Softmax(dim=1)
+        # self.attention = nn.Linear(custom_config["max_number_nodes"], 1)
+        self.fc3 = nn.Linear( custom_config["fc2_units"], custom_config["fc3_units"])
+        self.fc4 = nn.Linear( custom_config["fc3_units"], 1)
+        # self.softmax = nn.Softmax(dim=1)
         self._value_branch = SlimFC(
             in_size=custom_config["max_number_nodes"],
             out_size=1,
@@ -100,7 +113,7 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
         annotations_size: int = custom_config["annotations_size"]
         self.max_number_nodes = custom_config["max_number_nodes"]
         self.emb_size = custom_config["state_size"]
-        self.ggnn = GatedGraphNeuralNetwork(hidden_size=state_size, annotation_size=annotations_size, num_edge_types=1, layer_timesteps=[1], residual_connections={}, nodelevel=True, batch_norm_param=self.max_number_nodes, max_edge_count=custom_config["max_edge_count"])
+        self.ggnn = GatedGraphNeuralNetwork(hidden_size=state_size, annotation_size=annotations_size, num_edge_types=1, layer_timesteps=[5], residual_connections={}, nodelevel=True, batch_norm_param=self.max_number_nodes, max_edge_count=custom_config["max_edge_count"])
 
         
     def forward(self, input_dict, state, seq_lens):
@@ -108,8 +121,11 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
         # print("Obs keys are:", input_dict['obs'].keys())
         # print("State shape:", input_dict["obs"]["state"].shape)
         input_state_list = torch.zeros(input_dict["obs"]["state"].shape[0], self.max_number_nodes, self.emb_size)
-        node_mat = self.ggnn(initial_node_representation=input_dict["obs"]["state"], annotations=input_dict["obs"]["annotations"], adjacency_lists=input_dict["obs"]["adjacency_lists"])
-        input_state_list = node_mat
+        if self.enable_ggnn:
+            node_mat = self.ggnn(initial_node_representation=input_dict["obs"]["state"], annotations=input_dict["obs"]["annotations"], adjacency_lists=input_dict["obs"]["adjacency_lists"])
+            input_state_list = node_mat
+        else:
+            input_state_list = initial_node_representation=input_dict["obs"]["state"]
         input_state_list = input_state_list.to(input_dict["obs"]["state"].device)
         assert not torch.isnan(input_state_list).any(), "Nan in select node model input"
         x = F.relu(self.fc1(input_state_list))
@@ -129,17 +145,22 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
             print("FC2 layers bias", torch.isnan(self.fc1.state_dict()['bias']).any())
         #print("FC2 layer weights max and min value", torch.max(self.fc2.state_dict()['weight']), torch.min(self.fc2.state_dict()['weight']))
         #print("FC2 layer bias max and min value", torch.max(self.fc2.state_dict()['bias']), torch.min(self.fc2.state_dict()['bias']))
-        assert not torch.isnan(x).any(), "Nan in select node model after fc2"
-        x = torch.transpose(x, 1, 2)
-        x = self.attention(x)        
+        # assert not torch.isnan(x).any(), "Nan in select node model after fc2"
+        # x = torch.transpose(x, 1, 2)
+        # x = self.attention(x)        
+        assert not torch.isnan(x).any(), "Nan in select node model after attension layer"
+        x = F.relu(self.fc3(x))
+        x = self.fc4(x)
         x = torch.squeeze(x, 2)
-        x = self.fc3(x)
         assert not torch.isnan(x).any(), "Nan in select node model after fc3"
         self._features = x.clone().detach()
-        x = self.softmax(x)
-        mask = input_dict["obs"]["action_mask"] > 0
-        masking_value = -1e6
-        x = torch.where(mask, x, torch.tensor(masking_value).to(x.device))
+        # x = self.softmax(x)
+        mask = input_dict["obs"]["action_mask"]
+        # masking_value = -1e6
+        # masking_value = FLOAT_MIN
+        inf_mask = torch.clamp(torch.log(mask), min=FLOAT_MIN)
+        x = x + inf_mask
+        # x = torch.where(mask, x, torch.tensor(masking_value).to(x.device))
         #x = torch.where(mask, x, torch.tensor(FLOAT_MIN).to(x.device))        
         assert not torch.isnan(x).any(), "Nan in select node model output"
         return x, state, input_state_list
@@ -170,7 +191,7 @@ class ColorNetwork(TorchModelV2, nn.Module):
         self.fc2 = nn.Linear(custom_config["fc1_units"], custom_config["fc2_units"])
         self.fc3 = nn.Linear( custom_config["fc2_units"] + 3, num_outputs)
         self._value_branch = SlimFC(
-            in_size=custom_config["fc2_units"],
+            in_size=num_outputs,
             out_size=1,
             initializer=normc_initializer(0.01),
             activation_fn=None)
@@ -180,25 +201,20 @@ class ColorNetwork(TorchModelV2, nn.Module):
         """Build a network that maps state -> action values."""
         
         x = F.relu(self.fc1(input_dict["obs"]["state"]))
-        self._features = F.relu(self.fc2(x))
-        x = torch.cat((self._features, input_dict["obs"]["node_properties"]), 1)
+        x = F.relu(self.fc2(x))
+        x = torch.cat((x, input_dict["obs"]["node_properties"]), 1)
         # print("Colouring forward", x.shape, input_dict["obs"]["node_properties"])
         # assert False, "Hoho"
         x = self.fc3(x)
-        
-        for i in range(input_dict["obs"]["action_mask"].shape[0]):
-            action_mask = input_dict["obs"]["action_mask"][i, :]            
-            
-            if all(v == 0 for v in action_mask):
-                x[i, :] =  torch.ones_like(action_mask)*FLOAT_MIN
-                x[i, 0] = 1.0
-                # print("Colour node all zero", input_dict["obs"]["state"].shape)
-                
-            else:
-                for j in range(action_mask.shape[0]):
-                    if action_mask[j] == 0:
-                        x[i, j] = FLOAT_MIN             
-        # print("OFF GPU", x.shape)
+        self._features = x.clone().detach()
+        # x = self.softmax(x)
+        mask = input_dict["obs"]["action_mask"]
+        # masking_value = -1e6
+        # masking_value = FLOAT_MIN
+        inf_mask = torch.clamp(torch.log(mask), min=FLOAT_MIN)
+        x = x + inf_mask
+        # x = torch.where(mask, x, torch.tensor(masking_value).to(x.device))
+        #x = torch.where(mask, x, torch.tensor(FLOAT_MIN).to(x.device))        
         return x, state, self._features
     
     def value_function(self):
@@ -249,9 +265,12 @@ class SplitNodeNetwork(TorchModelV2, nn.Module):
         x = torch.squeeze(x, 2)
         x = self.fc3(x)                
         assert not torch.isnan(x).any(), "Nan in split node model after fc3"
-        self._features = x.detach().clone()
-        mask = input_dict["obs"]["action_mask"] > 0
-        x = torch.where(mask, x, torch.tensor(FLOAT_MIN).to(x.device))
+        self._features = x.clone().detach()
+        mask = input_dict["obs"]["action_mask"]
+        # masking_value = -1e6
+        # masking_value = FLOAT_MIN
+        inf_mask = torch.clamp(torch.log(mask), min=FLOAT_MIN)
+        x = x + inf_mask
         assert not torch.isnan(x).any(), "Nan in split node model output"
         return x, state, self._features
     
