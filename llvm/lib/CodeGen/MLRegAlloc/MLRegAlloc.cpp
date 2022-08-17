@@ -81,6 +81,7 @@
 #include <map>
 #include <memory>
 #include <queue>
+#include <random>
 #include <set>
 #include <sstream>
 #include <tuple>
@@ -129,6 +130,11 @@ cl::opt<bool> MLRA::enable_mlra_training("mlra-training", cl::Hidden,
 cl::opt<bool> MLRA::enable_mlra_inference("mlra-inference", cl::Hidden,
                                           cl::desc("turn on mlra inference ."),
                                           cl::init(false));
+
+cl::opt<bool>
+    MLRA::enable_random_alloc("mlra-random", cl::Hidden,
+                              cl::desc("Allocate using random strategy"),
+                              cl::init(false));
 
 cl::opt<bool> MLRA::enable_mlra_checks("enable-mlra-checks", cl::Hidden,
                                        cl::desc("turn on mlra checks"),
@@ -479,7 +485,7 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
 
   auto MBB = MI->getParent();
   assert(MBB && "MI should be part of a MBB");
-  // errs() << "Before spliting BB: " << MBB->getSymbol() << "\n";
+  // errs() << "BEFORE SPLITTING BB: " << MBB->getSymbol() << "\n";
   // for (const MachineBasicBlock *Pred : MBB->predecessors()) {
   //   SlotIndex Stop = Indexes->getMBBEndIdx(Pred);
   //   errs() << "Predecesor BB Name: " << Pred->getSymbol() << "\n";
@@ -1508,6 +1514,10 @@ void MLRA::printRegisterProfile() const {
     errs() << "ID = " << rpi.first << "\n";
     auto rp = rpi.second;
     errs() << "cls =" << rp.cls << "\n";
+    if (!rp.cls.equals("Phy")) {
+      unsigned step = TRI->getNumRegs() + 1;
+      LIS->getInterval(Register::index2VirtReg(rpi.first - step)).dump();
+    }
     errs() << "[" << MF->getName() << "]Interferences: ";
 
     SmallVector<unsigned, 8> interferencesVector(rp.interferences.begin(),
@@ -1843,7 +1853,7 @@ void MLRA::allocatePhysRegsViaRL() {
     unsigned color =
         this->FunctionVirtRegToColorMap[MF->getName()][std::to_string(node_id)];
 
-    Matrix->invalidateVirtRegs(); // Don't know why it is used
+    Matrix->invalidateVirtRegs();
 
     using VirtRegVec = SmallVector<unsigned, 4>;
     VirtRegVec SplitVRegs;
@@ -1927,6 +1937,118 @@ void MLRA::allocatePhysRegsViaRL() {
                        "allocatePhysRegsViaRL() (END)**********************\n");
 }
 
+void MLRA::allocatePhysRegsViaRandom() {
+
+  auto rng = std::default_random_engine(5);
+  unsigned step = TRI->getNumRegs() + 1;
+  SmallVector<LiveInterval *, 256> regsToAllocate;
+  Matrix->invalidateVirtRegs();
+
+  for (unsigned i = 0, e = MRI->getNumVirtRegs(); i < e; ++i) {
+    unsigned Reg = Register::index2VirtReg(i);
+    if (!isSafeVReg(Reg))
+      continue;
+    LiveInterval *VirtReg = &LIS->getInterval(Reg);
+    if (MRI->reg_nodbg_empty(Reg)) {
+      continue;
+    }
+    // enqueue(&LIS->getInterval(Reg));
+    assert(!VRM->hasPhys(VirtReg->reg) && "Register already assigned");
+
+    // Check for the supported register class. if not supported class then
+    // call Greedy selectOrsplit
+    std::string regClass = TRI->getRegClassName(MRI->getRegClass(VirtReg->reg));
+    // unsigned AvailablePhysReg;
+    if (this->regClassSupported4_MLRA.find(regClass) ==
+        regClassSupported4_MLRA.end()) {
+      LLVM_DEBUG(
+          errs()
+          << "Register class(" << regClass
+          << ") is not supported by MLRA so calling will be processed Later "
+             "by Greedy\n");
+      continue;
+    } else {
+      regsToAllocate.push_back(VirtReg);
+    }
+  }
+  errs() << "Before shuffling:\n";
+  for (auto i : regsToAllocate)
+    i->dump();
+  std::shuffle(std::begin(regsToAllocate), std::end(regsToAllocate), rng);
+  errs() << "After shuffling:\n";
+  for (auto i : regsToAllocate)
+    i->dump();
+  for (auto LI : regsToAllocate) {
+    errs() << "Allocating LI:";
+    LI->dump();
+    errs() << printVRegOrUnit(LI->reg, TRI) << ""
+           << TRI->getRegClassName(MRI->getRegClass(LI->reg)) << "\n";
+
+    AllocationOrder Order(LI->reg, *VRM, RegClassInfo, Matrix);
+    SmallVector<unsigned, 16> randOrder;
+    for (auto i : Order.getOrder()) {
+      randOrder.push_back(i);
+    }
+    std::shuffle(std::begin(randOrder), std::end(randOrder), rng);
+
+    bool flag = false;
+    for (auto PhysReg : randOrder) {
+      switch (Matrix->checkInterference(*LI, PhysReg)) {
+      case LiveRegMatrix::IK_Free:
+        // PhysReg is available, allocate it.
+        errs() << "Assigning physreg:" << printReg(PhysReg, TRI) << "\n";
+        Matrix->assign(*LI, PhysReg);
+        mlAllocatedRegs.push_back(LI->reg);
+        flag = true;
+        break;
+      default:
+        // RegMask or RegUnit interference.
+        break;
+      }
+      if (flag)
+        break;
+    }
+
+    // while (unsigned PhysReg = Order.next()) {
+    //   errs() << "Trying to assign phy reg: " << PhysReg
+    //          << printReg(PhysReg, TRI) << "\n";
+    //   // Check for interference in PhysReg
+    //   switch (Matrix->checkInterference(*LI, PhysReg)) {
+    //   case LiveRegMatrix::IK_Free:
+    //     // PhysReg is available, allocate it.
+    //     errs() << "Assigning physreg:" << printReg(PhysReg, TRI) << "\n";
+    //     Matrix->assign(*LI, PhysReg);
+    //     mlAllocatedRegs.push_back(LI->reg);
+    //     flag = true;
+    //     break;
+    //   default:
+    //     // RegMask or RegUnit interference.
+    //     break;
+    //   }
+    //   if (flag)
+    //     break;
+
+    //   // errs() << "Virtual register: " << LI->reg
+    //   //        << "Mapped too: " << VRM->getPhys(LI->reg) << "\n";
+    // }
+    if (!flag) {
+      for (unsigned i = 1, e = TRI->getNumRegs(); i != e; ++i) {
+        if (Matrix->checkInterference(*LI, i) == LiveRegMatrix::IK_Free) {
+          errs() << "Virtual Register Class: "
+                 << TRI->getRegClassName(MRI->getRegClass(LI->reg)) << "\n";
+          errs() << "Physical register: " << printReg(i, TRI) << "\n";
+
+          // errs() << TRI->getRegClassName(TRI->getMinimalPhysRegClass(i))
+          //  << "\n";
+        }
+      }
+      errs() << "pushing vreg to mlSpilledRegs list: " << printReg(LI->reg, TRI)
+             << "\n";
+      mlSpilledRegs.push_back(LI);
+    }
+  }
+}
+
 void MLRA::training_flow() {
   if (this->FunctionVirtRegToColorMap.find(MF->getName()) !=
       this->FunctionVirtRegToColorMap.end()) {
@@ -1949,18 +2071,40 @@ void MLRA::inference() {
   registerallocationinference::RegisterProfileList *request; //= &requestObj;
   registerallocationinference::Data *reply;                  // = &replyObj;
 
+  if (enable_random_alloc) {
+    request = new registerallocationinference::RegisterProfileList();
+    serializeRegProfData(request);
+    errs() << "Call model first time\n";
+    if (request->mutable_regprof()->size() <= 0 ||
+        request->mutable_regprof()->size() > 500)
+      return;
+    for (auto it = MF->begin(); it != MF->end(); it++) {
+      if (it->isEHFuncletEntry() || it->isEHPad() || it->isEHScopeEntry() ||
+          it->isEHScopeReturnBlock()) {
+        return;
+      }
+      for (auto ist = it->begin(); ist != it->end(); ist++) {
+        if (ist->isEHLabel() || ist->isEHScopeReturn()) {
+          return;
+        }
+      }
+    }
+    allocatePhysRegsViaRandom();
+    return;
+  }
+
   bool isGraphSet = false;
   while (true) {
     reply = new registerallocationinference::Data();
     grpc::ClientContext context;
-    // LLVM_DEBUG(printRegisterProfile());
+    LLVM_DEBUG(errs() << "Printing register profile:\n";
+               printRegisterProfile());
     if (!isGraphSet) {
       request = new registerallocationinference::RegisterProfileList();
       serializeRegProfData(request);
       errs() << "Call model first time\n";
-      // if (request->mutable_regprof()->size() <= 70 ||
-      if (request->mutable_regprof()->size() <= 120 ||
-        request->mutable_regprof()->size() > 500) {
+      if (request->mutable_regprof()->size() <= 0 ||
+          request->mutable_regprof()->size() > 500) {
         ORE->emit([&]() {
           return MachineOptimizationRemark(
                      DEBUG_TYPE, "MLRA skipped Function ",
@@ -1995,14 +2139,14 @@ void MLRA::inference() {
       });
       /*errs() << "Before calling model \n";
       if (std::string s; google::protobuf::TextFormat::PrintToString(*request,
-      &s)) { std::cout << "Your message: " << s; } else { std::cerr << "Message
-      not valid (partial content: "
+      &s)) { std::cout << "Your message: " << s; } else { std::cerr <<
+      "Message not valid (partial content: "
                                                                                                 << request->ShortDebugString() << ")\n";
                                                           }
       errs() << "Before calling -- requetObj\n";
       if (std::string s; google::protobuf::TextFormat::PrintToString(*request,
-      &s)) { std::cout << "Your message: " << s; } else { std::cerr << "Message
-      not valid (partial content: "
+      &s)) { std::cout << "Your message: " << s; } else { std::cerr <<
+      "Message not valid (partial content: "
                                                                                                 << request->ShortDebugString() << ")\n";
                                                           }
      */
@@ -2018,9 +2162,10 @@ void MLRA::inference() {
     assert(request->mutable_regprof()->size() <= 1000 &&
            "Graph size is greater than the expected.\n");
     errs() << "Before calling model \n";
-    /*  if (std::string s; google::protobuf::TextFormat::PrintToString(*request,
-       &s)) { std::cout << "Your message: " << s; } else { std::cerr << "Message
-       not valid (partial content: "
+    /*  if (std::string s;
+       google::protobuf::TextFormat::PrintToString(*request, &s)) { std::cout
+       << "Your message: " << s; } else { std::cerr << "Message not valid
+       (partial content: "
                                                                                                 << request->ShortDebugString() << ")\n";
                                                           }
      */
@@ -2114,12 +2259,10 @@ void MLRA::inference() {
       unsigned splitRegIdx = reply->regidx();
       int splitPoint = reply->payload();
       SmallVector<unsigned, 2> NewVRegs;
-      LLVM_DEBUG(
-          errs() << "==========================BEFORE "
-                    "SPLITTING==================================\n";
-          MF->dump();
-          errs()
-          << "============================================================\n");
+      LLVM_DEBUG(errs() << "==========================BEFORE "
+                           "SPLITTING==================================\n";
+                 MF->dump(); errs() << "====================================="
+                                       "=======================\n");
       if (splitVirtReg(splitRegIdx, splitPoint, NewVRegs)) {
         SmallSetVector<unsigned, 8> updatedRegIdxs;
         updateRegisterProfileAfterSplit(splitRegIdx, NewVRegs, updatedRegIdxs);
@@ -2220,10 +2363,41 @@ void MLRA::MLRegAlloc(MachineFunction &MF, SlotIndexes &Indexes,
         errs() << "Profile is not valid so skipping the mlra workflow.\n";);
     return;
   }
+
+  unsigned maxLR = 0, totLR = 0, numLR = 0, maxInf = 0, totInf = 0, numInf = 0;
+  float avgLR = 0.0, avgInf = 0.0;
+  for (auto rp : regProfMap) {
+    auto regprof = rp.second;
+    auto LR = regprof.vecRep.size();
+    auto inf = regprof.interferences.size();
+    if (LR > maxLR)
+      maxLR = LR;
+    if (inf > maxInf)
+      maxInf = inf;
+    totLR += LR;
+    totInf += inf;
+  }
+  totInf = ((float)totInf / 2);
+  numLR = regProfMap.size();
+  avgLR = (float)totLR / numLR;
+  avgInf = totInf / numLR;
+
   if (enable_mlra_training) {
     errs() << "Here1\n";
     RunService(this, mlra_server_address);
     training_flow();
+  }
+
+  bool containsCall = false;
+  for (auto &MBB : MF) {
+    for (auto &MI : MBB) {
+      if (MI.isCall()) {
+        containsCall = true;
+        break;
+      }
+    }
+    if (containsCall)
+      break;
   }
 
   if (enable_dump_ig_dot) {
@@ -2251,6 +2425,10 @@ void MLRA::MLRegAlloc(MachineFunction &MF, SlotIndexes &Indexes,
           << MF.getName().str() << "," << std::to_string(SE->NumFinishedMF)
           << "," << std::to_string(mlAllocatedRegs.size()) << ","
           << std::to_string(numUnsupportedRegs) << ","
-          << std::to_string(unsupportedClsFreq.size()) << std::endl;
+          << std::to_string(unsupportedClsFreq.size()) << ","
+          << std::to_string(numLR) << "," << std::to_string(maxLR) << ","
+          << std::to_string(avgLR) << "," << std::to_string(maxInf) << ","
+          << std::to_string(avgInf) << "," << std::to_string(containsCall)
+          << std::endl;
   outfile.close();
 }
