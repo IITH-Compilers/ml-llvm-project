@@ -203,7 +203,8 @@ private:
                        SmallSetVector<unsigned, 8> *updatedRegs = nullptr);
   void dumpInterferenceGraph(std::string ID = "");
   void allocatePhysRegsViaRL();
-  void allocatePhysRegsViaRandom();
+  void allocatePhysRegsViaRandom(int,int);
+  void juggleAllocation(int,int,SmallVector<LiveInterval *, 256>&);
   void training_flow();
   void inference();
   void verifyRegisterProfile();

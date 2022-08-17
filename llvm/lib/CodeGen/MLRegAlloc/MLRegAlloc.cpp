@@ -1937,13 +1937,97 @@ void MLRA::allocatePhysRegsViaRL() {
                        "allocatePhysRegsViaRL() (END)**********************\n");
 }
 
-void MLRA::allocatePhysRegsViaRandom() {
-
-  auto rng = std::default_random_engine(5);
+void MLRA::juggleAllocation(int seed,int maxTries,SmallVector<LiveInterval *, 256>&regsToAllocate){
+  
+  auto rng = std::default_random_engine(seed);
   unsigned step = TRI->getNumRegs() + 1;
-  SmallVector<LiveInterval *, 256> regsToAllocate;
+  mlAllocatedRegs.clear();
+  mlSpilledRegs.clear();
   Matrix->invalidateVirtRegs();
+  
 
+  errs()<<"VECTOR SIZE: "<<mlAllocatedRegs.size()<<"\n";
+
+  // errs() << "Before shuffling:\n";
+  // for (auto i : regsToAllocate)
+  //   i->dump();
+  
+  std::shuffle(std::begin(regsToAllocate), std::end(regsToAllocate), rng);
+  
+  // errs() << "After shuffling:\n";
+  // for (auto i : regsToAllocate)
+  //   i->dump();
+
+  LiveInterval *nonAllocatedReg=nullptr;
+  bool flag = false;
+
+  for (auto LI : regsToAllocate) {
+    flag = false;
+    // errs() << printVRegOrUnit(LI->reg, TRI) << ""
+    //        << TRI->getRegClassName(MRI->getRegClass(LI->reg)) << "\n";
+
+    AllocationOrder Order(LI->reg, *VRM, RegClassInfo, Matrix);
+    
+    SmallVector<unsigned, 16> randOrder;
+    for (auto i : Order.getOrder()) {
+      randOrder.push_back(i);
+    }
+    
+    std::shuffle(std::begin(randOrder), std::end(randOrder), rng);
+
+    for (auto PhysReg : randOrder) {
+      switch (Matrix->checkInterference(*LI, PhysReg)) {
+          case LiveRegMatrix::IK_Free:
+          // PhysReg is available, allocate it.
+              errs() << "Assigning physreg:" << printReg(PhysReg, TRI) << "\n";
+              errs() << "Allocating LI:";
+              LI->dump();
+              Matrix->assign(*LI, PhysReg);
+              mlAllocatedRegs.push_back(LI->reg);
+              flag = true;
+              break;
+          default:
+              break;
+      }
+
+      if (flag)
+        break;
+    }
+
+    if (!flag) {
+        errs() << "pushing vreg to mlSpilledRegs list: " << printReg(LI->reg, TRI)
+            << "\n";
+        mlSpilledRegs.push_back(LI);
+        break;     
+    }
+    
+  }
+  if (!flag) {
+    //Ran out of registers. Invalidating Matrix
+    if(maxTries>0){
+        Matrix->invalidateVirtRegs();
+        for(auto reg : mlAllocatedRegs) {
+          LiveInterval *VirtReg = &LIS->getInterval(reg);
+          VirtReg->dump();
+          //if(VRM->hasPhysReg(VirtReg))
+          Matrix->unassign(*VirtReg);
+        }
+
+        int newSeed = seed+10;
+        //Trying using new seed
+        errs()<<"PREV SEED: "<<seed<<" NEW SEED: "<<newSeed<<" TRY NUMBER: "<<maxTries<<"\n";
+        juggleAllocation(newSeed,maxTries-1,regsToAllocate);  
+    }
+
+  }
+}
+
+void MLRA::allocatePhysRegsViaRandom(int seed,int maxTries) {
+  
+
+  SmallVector<LiveInterval *, 256> regsToAllocate;
+  
+  //Getting all virtual registers for allocation
   for (unsigned i = 0, e = MRI->getNumVirtRegs(); i < e; ++i) {
     unsigned Reg = Register::index2VirtReg(i);
     if (!isSafeVReg(Reg))
@@ -1971,82 +2055,10 @@ void MLRA::allocatePhysRegsViaRandom() {
       regsToAllocate.push_back(VirtReg);
     }
   }
-  errs() << "Before shuffling:\n";
-  for (auto i : regsToAllocate)
-    i->dump();
-  std::shuffle(std::begin(regsToAllocate), std::end(regsToAllocate), rng);
-  errs() << "After shuffling:\n";
-  for (auto i : regsToAllocate)
-    i->dump();
-  for (auto LI : regsToAllocate) {
-    errs() << "Allocating LI:";
-    LI->dump();
-    errs() << printVRegOrUnit(LI->reg, TRI) << ""
-           << TRI->getRegClassName(MRI->getRegClass(LI->reg)) << "\n";
+   
+  juggleAllocation(seed,maxTries,regsToAllocate);  
+  
 
-    AllocationOrder Order(LI->reg, *VRM, RegClassInfo, Matrix);
-    SmallVector<unsigned, 16> randOrder;
-    for (auto i : Order.getOrder()) {
-      randOrder.push_back(i);
-    }
-    std::shuffle(std::begin(randOrder), std::end(randOrder), rng);
-
-    bool flag = false;
-    for (auto PhysReg : randOrder) {
-      switch (Matrix->checkInterference(*LI, PhysReg)) {
-      case LiveRegMatrix::IK_Free:
-        // PhysReg is available, allocate it.
-        errs() << "Assigning physreg:" << printReg(PhysReg, TRI) << "\n";
-        Matrix->assign(*LI, PhysReg);
-        mlAllocatedRegs.push_back(LI->reg);
-        flag = true;
-        break;
-      default:
-        // RegMask or RegUnit interference.
-        break;
-      }
-      if (flag)
-        break;
-    }
-
-    // while (unsigned PhysReg = Order.next()) {
-    //   errs() << "Trying to assign phy reg: " << PhysReg
-    //          << printReg(PhysReg, TRI) << "\n";
-    //   // Check for interference in PhysReg
-    //   switch (Matrix->checkInterference(*LI, PhysReg)) {
-    //   case LiveRegMatrix::IK_Free:
-    //     // PhysReg is available, allocate it.
-    //     errs() << "Assigning physreg:" << printReg(PhysReg, TRI) << "\n";
-    //     Matrix->assign(*LI, PhysReg);
-    //     mlAllocatedRegs.push_back(LI->reg);
-    //     flag = true;
-    //     break;
-    //   default:
-    //     // RegMask or RegUnit interference.
-    //     break;
-    //   }
-    //   if (flag)
-    //     break;
-
-    //   // errs() << "Virtual register: " << LI->reg
-    //   //        << "Mapped too: " << VRM->getPhys(LI->reg) << "\n";
-    // }
-    if (!flag) {
-      for (unsigned i = 1, e = TRI->getNumRegs(); i != e; ++i) {
-        if (Matrix->checkInterference(*LI, i) == LiveRegMatrix::IK_Free) {
-          errs() << "Virtual Register Class: "
-                 << TRI->getRegClassName(MRI->getRegClass(LI->reg)) << "\n";
-          errs() << "Physical register: " << printReg(i, TRI) << "\n";
-
-          // errs() << TRI->getRegClassName(TRI->getMinimalPhysRegClass(i))
-          //  << "\n";
-        }
-      }
-      errs() << "pushing vreg to mlSpilledRegs list: " << printReg(LI->reg, TRI)
-             << "\n";
-      mlSpilledRegs.push_back(LI);
-    }
-  }
 }
 
 void MLRA::training_flow() {
@@ -2075,7 +2087,7 @@ void MLRA::inference() {
     request = new registerallocationinference::RegisterProfileList();
     serializeRegProfData(request);
     errs() << "Call model first time\n";
-    if (request->mutable_regprof()->size() <= 0 ||
+    if (request->mutable_regprof()->size() <= 120 ||
         request->mutable_regprof()->size() > 500)
       return;
     for (auto it = MF->begin(); it != MF->end(); it++) {
@@ -2089,7 +2101,8 @@ void MLRA::inference() {
         }
       }
     }
-    allocatePhysRegsViaRandom();
+    int seed=776,maxTries=10;
+    allocatePhysRegsViaRandom(seed,maxTries);
     return;
   }
 
