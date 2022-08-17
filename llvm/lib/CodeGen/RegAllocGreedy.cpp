@@ -3278,13 +3278,22 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
     ExtraRegInfo.resize(MRI->getNumVirtRegs());
     IntfCache.init(MF, Matrix->getLiveUnions(), Indexes, LIS, TRI);
     LLVM_DEBUG(dbgs() << "======2\n";); // LIS->dump());
-    for (auto i : mlSpilledRegs) {
-      if (i->isSpillable()) {
-        SmallVector<unsigned int, 4> NewVRegs;
-        LiveRangeEdit LRE(i, NewVRegs, *MF, *LIS, VRM, this, &DeadRemats);
-        spiller().spill(LRE);
-      }
-    }
+
+    // for (auto i : mlSpilledRegs) {
+    //   if (i->isSpillable()) {
+    //     errs() << "ML Spilling :";
+    //     i->dump();
+    //     SmallVector<unsigned int, 4> NewVRegs;
+    //     LiveRangeEdit LRE(i, NewVRegs, *MF, *LIS, VRM, this, &DeadRemats);
+    //     spiller().spill(LRE);
+    //     setStage(NewVRegs.begin(), NewVRegs.end(), RS_Done);
+    //     DebugVars->splitRegister(i->reg, LRE.regs(), *LIS);
+
+    //     if (VerifyEnabled)
+    //       MF->verify(this, "After spilling");
+    //   }
+    // }
+;
     for (auto i : mlSplitRegs) {
       // errs() << "mlSplitRegs " << printReg(i, TRI) << "\n";
       setStage(LIS->getInterval(i), RS_Spill);

@@ -141,9 +141,11 @@ void RegAllocBase::allocatePhysRegs() {
       } else if (MI) {
         LLVMContext &Context =
             MI->getParent()->getParent()->getMMI().getModule()->getContext();
-        Context.emitError("ran out of registers during register allocation");
+        Context.emitError(VRM->getMachineFunction().getName() +
+                          ": ran out of registers during register allocation");
       } else {
-        report_fatal_error("ran out of registers during register allocation");
+        report_fatal_error(VRM->getMachineFunction().getName() +
+                           ": ran out of registers during register allocation");
       }
       // Keep going after reporting the error.
       VRM->assignVirt2Phys(
@@ -161,7 +163,8 @@ void RegAllocBase::allocatePhysRegs() {
       LiveInterval *SplitVirtReg = &LIS->getInterval(Reg);
       assert(!VRM->hasPhys(SplitVirtReg->reg) && "Register already assigned");
       if (MRI->reg_nodbg_empty(SplitVirtReg->reg)) {
-        // errs() << "Checking in regallocbase - " << printReg(SplitVirtReg->reg)
+        // errs() << "Checking in regallocbase - " <<
+        // printReg(SplitVirtReg->reg)
         //        << "\n";
         // if (!SplitVirtReg->empty()) {
         //   errs() << "empty segments check: \n";
