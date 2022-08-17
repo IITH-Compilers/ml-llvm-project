@@ -224,7 +224,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.select_node_agent_id = "select_node_agent_{}".format(self.agent_count)
         self.select_task_agent_id = "select_task_agent_{}".format(self.agent_count)
         self.split_node_agent_id = "split_node_agent_{}".format(self.agent_count)
-        # self.colour_node_agent_id = "colour_node_agent_{}".format(self.agent_count)
+        self.colour_node_agent_id = "colour_node_agent_{}".format(self.agent_count)
 
         select_node_mask = self.createNodeSelectMask()
         # select_node_mask = self.createNodeSelectMaskSpillWeightBased()
@@ -309,8 +309,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             return self._select_node_step(action_dict[self.select_node_agent_id])
         if self.select_task_agent_id in action_dict:
             return self._select_task_step(action_dict[self.select_task_agent_id])
-        # if self.colour_node_agent_id in action_dict:
-        #     return self._colour_node_step(action_dict[self.colour_node_agent_id])
+        if self.colour_node_agent_id in action_dict:
+            return self._colour_node_step(action_dict[self.colour_node_agent_id])
         if self.split_node_agent_id in action_dict:
             return self._split_node_step(action_dict[self.split_node_agent_id])
 
@@ -523,35 +523,35 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             adj_colors = self.obs.graph_topology.getColorOfVisitedAdjNodes(self.cur_node)
 
             masked_action_space = self.registerAS.maskActionSpace(regclass, adj_colors)
-            if len(masked_action_space) > 0:
-                # idx = random.randint(1, len(masked_action_space))
-                idx = 1    
-                reg_selected = masked_action_space[idx-1]
-                obs, reward, done, _ = self._colour_node_step(reg_selected)
-            else:
-                reg_selected = 0
-                obs, reward, done, _ = self._colour_node_step(reg_selected)
+            # if len(masked_action_space) > 0:
+            #     # idx = random.randint(1, len(masked_action_space))
+            #     idx = 1    
+            #     reg_selected = masked_action_space[idx-1]
+            #     obs, reward, done, _ = self._colour_node_step(reg_selected)
+            # else:
+            #     reg_selected = 0
+            #     obs, reward, done, _ = self._colour_node_step(reg_selected)
 
-            # is_mask_empty = True
-            # colour_node_mask = []
-            # for i in range(self.action_space_size):
-            #     if i in masked_action_space:
-            #         colour_node_mask.append(1)
-            #         is_mask_empty = False
-            #     else:
-            #         colour_node_mask.append(0)
+            is_mask_empty = True
+            colour_node_mask = []
+            for i in range(self.action_space_size):
+                if i in masked_action_space:
+                    colour_node_mask.append(1)
+                    is_mask_empty = False
+                else:
+                    colour_node_mask.append(0)
             
-            # if is_mask_empty:
-            #     colour_node_mask[0] = 1
+            if is_mask_empty:
+                colour_node_mask[0] = 1
 
-            # node_properties = self.getNodePropertiesforColoring()
-            # prop_value_list_colouring = list(node_properties.values())
-            # reward = {
-            #     self.colour_node_agent_id : 0,
-            # }
-            # obs = {
-            #     self.colour_node_agent_id : { 'action_mask': np.array(colour_node_mask),'node_properties': np.array(prop_value_list_colouring), 'state' : self.cur_obs},
-            # }
+            node_properties = self.getNodePropertiesforColoring()
+            prop_value_list_colouring = list(node_properties.values())
+            reward = {
+                self.colour_node_agent_id : 0,
+            }
+            obs = {
+                self.colour_node_agent_id : { 'action_mask': np.array(colour_node_mask),'node_properties': np.array(prop_value_list_colouring), 'state' : self.cur_obs},
+            }
         else:
             self.last_task_done = 1
             self.split_steps += 1
@@ -707,26 +707,26 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         if self.mode != 'inference':
             if self.use_local_reward:
                 reward = {
-                    # self.colour_node_agent_id: colour_reward,
+                    self.colour_node_agent_id: colour_reward,
                     self.select_node_agent_id: colour_reward,
                     self.select_task_agent_id: colour_reward - (self.task_selected * discount_factor),
                     self.split_node_agent_id: 0
                 }
             else:
                 reward = {
-                    # self.colour_node_agent_id: colour_reward,
+                    self.colour_node_agent_id: colour_reward,
                     self.select_node_agent_id: 0,
                     self.select_task_agent_id: 0,
                     self.split_node_agent_id: 0
                 }
             obs = {
-                # self.colour_node_agent_id: colour_node_obs,
+                self.colour_node_agent_id: colour_node_obs,
                 self.select_node_agent_id: select_node_obs,
                 self.select_task_agent_id: select_task_obs,
                 self.split_node_agent_id: split_node_obs,
             }
             done = {
-                # self.colour_node_agent_id: True,
+                self.colour_node_agent_id: True,
                 self.select_node_agent_id: True,
                 self.select_task_agent_id: True,
                 self.split_node_agent_id: True,
@@ -742,7 +742,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         if done_all:
             if self.mode != 'inference':
                 reward = {
-                    #self.colour_node_agent_id: colour_reward,
+                    self.colour_node_agent_id: colour_reward,
                     self.select_node_agent_id: colour_reward,
                     self.select_task_agent_id: colour_reward,
                     self.split_node_agent_id: colour_reward
@@ -770,7 +770,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             self.select_node_agent_id = "select_node_agent_{}".format(self.agent_count)
             self.select_task_agent_id = "select_task_agent_{}".format(self.agent_count)
             self.split_node_agent_id = "split_node_agent_{}".format(self.agent_count)
-            # self.colour_node_agent_id = "colour_node_agent_{}".format(self.agent_count)
+            self.colour_node_agent_id = "colour_node_agent_{}".format(self.agent_count)
             
 
             # obs[self.select_node_agent_id] = { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(select_node_mask), 'state' : cur_obs}
@@ -905,27 +905,27 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         if self.mode != 'inference':
             if self.use_local_reward:
                 reward = {
-                    # self.colour_node_agent_id: 0,
+                    self.colour_node_agent_id: 0,
                     self.select_node_agent_id: 0,
                     self.select_task_agent_id: 0,
                     self.split_node_agent_id: split_reward
                 }
             else:
                 reward = {
-                    # self.colour_node_agent_id: 0,
+                    self.colour_node_agent_id: 0,
                     self.select_node_agent_id: 0,
                     self.select_task_agent_id: 0,
                     self.split_node_agent_id: 0
                 }
             obs = {
-                # self.colour_node_agent_id: { 'action_mask': np.array(colour_node_mask),'node_properties': np.array(prop_value_list_colouring), 'state' : self.cur_obs},
+                self.colour_node_agent_id: { 'action_mask': np.array(colour_node_mask),'node_properties': np.array(prop_value_list_colouring), 'state' : self.cur_obs},
                 # self.select_node_agent_id: { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(select_node_mask), 'state' : cur_obs},
                 self.select_node_agent_id: { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(select_node_mask), 'state' : cur_obs, 'annotations': np.array(annotations) ,'adjacency_lists': adjacency_lists},
                 self.select_task_agent_id: { 'action_mask': np.array(select_task_mask), 'node_properties': np.array(prop_value_list, dtype=np.float), 'state' : self.cur_obs},
                 self.split_node_agent_id: { 'action_mask': np.array(split_node_mask), 'state' : self.cur_obs, "usepoint_properties": usepoint_prop_mat},
             }
             done = {
-                # self.colour_node_agent_id: True,
+                self.colour_node_agent_id: True,
                 self.select_node_agent_id: True,
                 self.select_task_agent_id: True,
                 self.split_node_agent_id: True,
@@ -948,7 +948,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             self.select_node_agent_id = "select_node_agent_{}".format(self.agent_count)
             self.select_task_agent_id = "select_task_agent_{}".format(self.agent_count)
             self.split_node_agent_id = "split_node_agent_{}".format(self.agent_count)
-            # self.colour_node_agent_id = "colour_node_agent_{}".format(self.agent_count)
+            self.colour_node_agent_id = "colour_node_agent_{}".format(self.agent_count)
 
             
             # print("hidden_state", node_mat.shape, cur_obs[1, :10])
@@ -961,7 +961,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
         if split_done and self.mode != 'inference':
             done = {
-                # self.colour_node_agent_id: True,
+                self.colour_node_agent_id: True,
                 self.select_node_agent_id: True,
                 self.select_task_agent_id: True,
                 self.split_node_agent_id: True,
@@ -1097,6 +1097,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                         print("Clang failing")
                     outs, errs = self.server_pid.communicate()
                     mlra_throughput = 0
+                    mlra_cycles = 0
                     if process_completed:                    
                         print("Clang process finished")
                         # while 1:
