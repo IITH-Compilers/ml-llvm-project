@@ -1335,8 +1335,9 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             self.color_assignment_map = []
 
         edge_count = 0
-        for adj_list in self.graph['adjacency']:
-            edge_count += len(adj_list)
+        if self.mode != 'inference':
+            for adj_list in self.graph['adjacency']:
+                edge_count += len(adj_list)
         if edge_count*2 > self.max_edge_count:
             return self.reset_env(None)
         self.obs.stage = 'start'
