@@ -534,15 +534,21 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
             is_mask_empty = True
             colour_node_mask = []
+            count = 0
             for i in range(self.action_space_size):
                 if i in masked_action_space:
                     colour_node_mask.append(1)
                     is_mask_empty = False
+                    count += 1
                 else:
                     colour_node_mask.append(0)
             
-            if is_mask_empty:
+            if count == 1:
+                colour_node_mask = [0]*self.action_space_size
                 colour_node_mask[0] = 1
+            
+            if is_mask_empty:
+                colour_node_mask[0] = 1            
 
             node_properties = self.getNodePropertiesforColoring()
             prop_value_list_colouring = list(node_properties.values())
