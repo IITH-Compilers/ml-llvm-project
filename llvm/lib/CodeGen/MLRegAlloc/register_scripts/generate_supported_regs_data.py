@@ -29,7 +29,7 @@ with open(fileName) as f:
 supported_reg_test = {}
 registers = []
 for cls in regconfig.keys():
-    if cls in ['FPR8', 'FPR16', 'GPR32all', 'FPR32', 'GPR32', 'WSeqPairsClass', 'GPR64all', 'FPR64', 'GPR64', 'DD', 'XSeqPairsClass', 'FPR128', 'ZPR', 'DDD', 'DDDD', 'QQ', 'ZPR2', 'QQQ', 'ZPR3', 'QQQQ', 'ZPR4']:
+    if cls in ['FPR8', 'FPR16', 'GPR32all', 'FPR32', 'GPR32', 'GPR64all', 'FPR64', 'GPR64', 'FPR128']:
         registers += list(map(lambda x: x["regName"], regconfig[cls]))
 
 supported_reg_test["register_names"] = registers
