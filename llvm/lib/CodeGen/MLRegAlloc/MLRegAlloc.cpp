@@ -2297,6 +2297,8 @@ void MLRA::inference() {
         request->set_result(false);
       }
     }
+    if (reply->message() == "Exit")
+      return;
   }
 }
 

@@ -114,7 +114,9 @@ class service_server(RegisterAllocationInference_pb2_grpc.RegisterAllocationInfe
                 if type(inter_graphs) is not list:
                     inter_graph_list.append(inter_graphs)
                 # print(inter_graph_list)
-                self.inference_model.setGraphInEnv(inter_graph_list)
+                status = self.inference_model.setGraphInEnv(inter_graph_list)
+                if status is None:
+                    return RegisterAllocationInference_pb2.Data(message="Exit")
             elif inter_graphs.result:
                 # exit()
                 # self.inference_model.update_obs(request, self.inference_model.env.virtRegId, self.inference_model.env.split_point)

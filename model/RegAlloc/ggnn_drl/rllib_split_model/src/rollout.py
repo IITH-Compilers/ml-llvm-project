@@ -23,12 +23,12 @@ from ray.tune.utils import merge_dicts
 from ray.tune.registry import get_trainable_cls, _global_registry, ENV_CREATOR
 
 import sys
-sys.path.append('/home/vk/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src')
+sys.path.append('/home/VK/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src')
 from multiagentEnv import HierarchicalGraphColorEnv
 import utils_1
 from register_action_space import RegisterActionSpace
 from ray.rllib.models import ModelCatalog
-from model import SelectTaskNetwork, SelectNodeNetwork, SplitNodeNetwork
+from model import SelectTaskNetwork, SelectNodeNetwork, SplitNodeNetwork, ColorNetwork
 import logging
 from ray.rllib.agents.dqn.simple_q_torch_policy import SimpleQTorchPolicy
 
@@ -436,13 +436,13 @@ class RollOutInference:
                 "intermediate_data": './temp',
                 "build_path": "/home/cs20mtech12003/ML-Register-Allocation/X86Build_UPMM",
                 # "build_path": "/home/cs20mtech12003/ML-Register-Allocation/AArch64Build",
-                "Register_config": "/home/venkat/IF-DV/Rohit/regAlloc/iith-compilers/benchmarking/ML-Register-Allocation/llvm/lib/CodeGen/MLRegAlloc/config_json",
+                "Register_config": "/home/VK/ML-Register-Allocation/llvm/lib/CodeGen/MLRegAlloc/config_json",
                 "log_path": "/home/cs20mtech12003/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src/log",
                 #"dataset": "/raid/cs17m20P100001/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_new_data/",
                 "dataset": "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_generated_at_05-05-22/",
                 # "dataset": "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_aarch64_new_data/",
                 "graphs_num": 10000,
-                "action_space_size": RegisterActionSpace("X86", "/home/venkat/IF-DV/Rohit/regAlloc/iith-compilers/benchmarking/ML-Register-Allocation/llvm/lib/CodeGen/MLRegAlloc/config_json").ac_sp_normlize_size,
+                "action_space_size": RegisterActionSpace("X86", "/home/VK/ML-Register-Allocation/llvm/lib/CodeGen/MLRegAlloc/config_json").ac_sp_normlize_size,
                 "check_point": None,
                 "episode_number": 49999,
                 "GPU_ID": '0',
@@ -732,6 +732,8 @@ class RollOutInference:
         # graph = self.dot_to_json(inter_graph) 
         graph = inter_graph 
         self.obs = self.env.reset(graph)
+        if self.obs is None:
+            return None
 
     def update_obs(self, request):
         return self.env.update_obs(request, self.env.virtRegId, self.env.split_point)
