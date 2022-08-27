@@ -268,7 +268,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         max_edge_count = self.max_edge_count
         edges_unroll = np.zeros((2*max_edge_count,))
         if self.mode == 'inference':
-            if result.shape[0] > 2*max_edge_count:
+            if result is None or result.shape[0] > 2*max_edge_count:
                 return None
 
         if result is not None:

@@ -734,6 +734,8 @@ class RollOutInference:
         self.obs = self.env.reset(graph)
         if self.obs is None:
             return None
+        else:
+            return True
 
     def update_obs(self, request):
         return self.env.update_obs(request, self.env.virtRegId, self.env.split_point)
