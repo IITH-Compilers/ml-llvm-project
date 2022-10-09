@@ -1,4 +1,5 @@
 #!/bin/bash
+# Prints size, throughput and pass sequence statistics to a csv file
 # Add required paths
 v=${1##*/}
 echo "Filename, Oz .o size, Oz RThr, .o < Oz, Num for min size, Pass sequence, Model .o size, Model RThr, Complete .o, Complete RThr" > $v.csv

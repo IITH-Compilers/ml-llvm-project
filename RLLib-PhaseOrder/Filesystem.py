@@ -1,3 +1,5 @@
+# Defines filesystem utilities
+
 import os
 import shutil
 import random

@@ -1,3 +1,5 @@
+# Defines the RL model
+
 import torch
 import torch.nn as nn
 
