@@ -37,7 +37,6 @@ add_llvm_external_project(clang)
 add_llvm_external_project(llgo)
 add_llvm_external_project(lld)
 add_llvm_external_project(lldb)
-add_llvm_external_project(ir2vec)
 add_llvm_external_project(mlir)
 
 # Automatically add remaining sub-directories containing a 'CMakeLists.txt'
@@ -45,7 +44,6 @@ add_llvm_external_project(mlir)
 add_llvm_implicit_projects()
 
 add_llvm_external_project(polly)
-add_llvm_external_project(llvm-grpc)
 
 # Add subprojects specified using LLVM_EXTERNAL_PROJECTS
 foreach(p ${LLVM_EXTERNAL_PROJECTS})

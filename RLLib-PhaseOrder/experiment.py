@@ -1,3 +1,6 @@
+# Script to train model
+# Usage: python experiment.py --llvm_dir <Path to llvm build directory> --ir2vec_dir <Path to directory with IR2Vec binary and seed embedding>
+
 import argparse
 import gym
 import os
@@ -62,6 +65,7 @@ if __name__ == '__main__':
 
     ModelCatalog.register_custom_model("My_torch_model", CustomPhaseOrderModel)
     
+    # Hyperparameters
     config = dict(
         {
             "model": {

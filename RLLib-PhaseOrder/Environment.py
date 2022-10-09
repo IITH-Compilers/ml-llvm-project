@@ -1,3 +1,5 @@
+# Defines environment for the RL model
+
 import os
 import gym
 import subprocess
@@ -62,7 +64,7 @@ class PhaseOrder(gym.Env):
         if self.mode != 'inference':
             self.FileSys_Obj.createFolder("env")
             # Add path to directory containing train ll files
-            self.make("<path/to/train/data>")
+            self.make("<path to train data>")
         else:
             self.FileSys_Obj.createFolder("inference")
             self.FileSys_Obj.TrainingDataPath = os.path.join(self.FileSys_Obj.PhaseOrderDir, "inference")
@@ -172,7 +174,7 @@ class PhaseOrder(gym.Env):
             logging.info("base {}".format(baseBinarySize))
 
             ##### Compute Oz Binary size
-            ### Remove --mcpu=cortex-a72 if not aarch
+            ### Remove --mcpu=cortex-a72 if not targeting aarch architecture
             command = self.FileSys_Obj.OptPath + " --mcpu=cortex-a72 -S  -add-size-attr --enableMinSizeAttr --removeNoInlineAttr " + self.Curr_Dir + "/" + fileName + ".ll -o " + self.Curr_Dir + "/" + fileName + ".ll"
             command = self.FileSys_Obj.OptPath + " --mcpu=cortex-a72 -S -Oz " + self.Curr_Dir + "/" + fileName + ".ll -o " + self.Curr_Dir + "/" + fileName + "_Oz.ll"
             os.system(command)
@@ -186,6 +188,7 @@ class PhaseOrder(gym.Env):
             
             return baseBinarySize, minBinarySize
 
+    # Get next action, sub-sequence to be applied on the LLVM IR
     def step(self, action_index):
         prev_embedding = self.embedding
         Reward, NextStateIR = self.getLocalReward(action_index)
@@ -267,18 +270,22 @@ class PhaseOrder(gym.Env):
         new_IR = self.Curr_Dir + "/" + fileName + "_" + str(self.StateIndex) + ".ll"
         new_file = self.Curr_Dir + "/" + fileName + "_" + str(self.StateIndex)
 
-        ##### Applying the action and saving the IR file as <filename>_<StateIndex> 
+        ##### Applying the action and saving the IR file as <filename>_<StateIndex>
+        ### Remove --mcpu=cortex-a72 if not targeting aarch architecture
         command = self.FileSys_Obj.OptPath + " --mcpu=cortex-a72 -S -O34 -SubNum=" + str(action) + " " + self.CurrIR + " -o " + new_IR
         os.system(command)
 
         command = self.FileSys_Obj.ClangPath + " -mcpu=cortex-a72 -c " + new_IR + " -o " + new_file + ".o"
         os.system(command)
+
+        # Size reward
         currBinarySize = os.path.getsize(new_file + ".o")
 
         print("lastBinarySize {}".format(self.lastBinarySize))
         logging.info("lastBinarySize {}".format(self.lastBinarySize))
         print("currBinarySize {}".format(currBinarySize))
         logging.info("currBinarySize {}".format(currBinarySize))
+
 
         if((self.baseBinarySize - self.minBinarySize) > 0):
             reward_binarySize = (self.lastBinarySize - currBinarySize) / (self.baseBinarySize - self.minBinarySize)
@@ -287,6 +294,7 @@ class PhaseOrder(gym.Env):
 
         self.lastBinarySize = currBinarySize
 
+        # Throughput reward
         currMcaThroughtput = self.getMCACost(new_file)
         print("currMcaThroughtput: {}".format(currMcaThroughtput))
         logging.info("currMcaThroughtput: {}".format(currMcaThroughtput))
@@ -305,6 +313,7 @@ class PhaseOrder(gym.Env):
         logging.info("Thr-debug:{}".format(mca_cost))
         logging.info("Size-debug:{}".format(reward_binarySize))
 
+        # Reward thresholds
         if mca_cost > 0.2:
             mca_cost = 0.2
         elif mca_cost < -0.2:
@@ -315,6 +324,7 @@ class PhaseOrder(gym.Env):
         elif reward_binarySize < -0.2:
             reward_binarySize = -0.2
 
+        # Cumulative reward with alpha = 10, beta = 5
         reward = 10*reward_binarySize + 5*mca_cost
 
         return reward, new_IR

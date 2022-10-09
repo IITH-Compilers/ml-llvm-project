@@ -1,3 +1,7 @@
+# Script to perform inference on test LLVM IR files
+# Use run-inference.sh to call this script 
+# Usage: python inference.py --llvm_dir=<Path to llvm build directory> --ir2vec_dir=<Path to IR2Vec directory> --test_dir=<Path to directory withtest ll files> --model=<Path to saved RLLib model>
+
 import argparse
 import gym
 import numpy as np
