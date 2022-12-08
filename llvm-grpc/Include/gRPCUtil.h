@@ -1,12 +1,14 @@
 #include<memory>
+#include<future>
+#include <grpcpp/grpcpp.h>
 
 class gRPCUtil{
   public: 
     int  RunService(grpc::Service *s,std::string server_address); //server_address should be address:port
-    template <typename Client> int SetStub() {
+    template <typename Client> int SetStub(std::string server_address="0.0.0.0:50051") {
 
   		std::shared_ptr<grpc::Channel> channel =
-      grpc::CreateChannel("0.0.0.0:50051", grpc::InsecureChannelCredentials());
+        grpc::CreateChannel(server_address, grpc::InsecureChannelCredentials());
 
   		auto Stub_temp = Client::NewStub(channel);
 
@@ -15,6 +17,10 @@ class gRPCUtil{
   		return 0;
 		}
     void* getStub(){ return stub_; }
+  protected:
+    std::promise<void>* exit_requested;
   private:
     void* stub_;
+        
 };
+

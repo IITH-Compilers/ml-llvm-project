@@ -50,7 +50,7 @@ file(MAKE_DIRECTORY ${LLVM_INCLUDE_DIR}/grpc)
 
 #set(LLVM_GRPC_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/Include" CACHE PATH "llvm-gRPC include directories")
 
-#message(STATUS "include dirs:" ${LLVM_GRPC_INCLUDE_DIRS})
+# message(STATUS "include dirs:" ${LLVM_GRPC_INCLUDE_DIRS})
 
 
 foreach(proto ${proto_list})
@@ -125,5 +125,3 @@ target_include_directories(LLVMgRPC PRIVATE ${header_files})
 target_include_directories(LLVMgRPC PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_include_directories(LLVMgRPC PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/Include)
 target_include_directories(LLVMgRPC PUBLIC ${Protobuf_INCLUDE_DIRS})
-
-

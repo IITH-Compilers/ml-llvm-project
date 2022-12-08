@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "io.grpc.examples.demopass";
+option java_outer_classname = "DemoPassProto";
+option objc_class_prefix = "DP";
+
+package demopass;
+
+// demo pass Service 
+service demoPass{
+
+// RPC function to send Inference graph data and receive color data for codegen
+  rpc getLoopInfo(Command) returns (loopInfo) {}
+ 
+}
+
+message Command {
+  string command=1;
+}
+
+message loopInfo {
+  int32 numBasicBlock=1;
+}
