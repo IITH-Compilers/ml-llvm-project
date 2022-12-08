@@ -15,8 +15,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -fno-rtti")
 
 find_package(Protobuf CONFIG REQUIRED)
 message(STATUS "Using protobuf ${Protobuf_VERSION}")
-message(STATUS "Using include paths ${Protobuf_INCLUDE_DIRS}")
-
+message(STATUS "Using protobuf ${Protobuf_INCLUDE_DIRS}")
 
 set(_PROTOBUF_LIBPROTOBUF protobuf::libprotobuf)
 set(_REFLECTION gRPC::grpc++_reflection)
@@ -50,7 +49,7 @@ file(MAKE_DIRECTORY ${LLVM_INCLUDE_DIR}/grpc)
 
 #set(LLVM_GRPC_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/Include" CACHE PATH "llvm-gRPC include directories")
 
-# message(STATUS "include dirs:" ${LLVM_GRPC_INCLUDE_DIRS})
+# message(STATUS "include dirs:" ${LLVM_INCLUDE_DIR})
 
 
 foreach(proto ${proto_list})
@@ -75,6 +74,7 @@ foreach(proto ${proto_list})
       DEPENDS "${proto}"
   )
 endforeach()
+
 
 foreach(proto ${proto_list})
   get_filename_component(proto_name ${proto} NAME_WLE)
@@ -121,7 +121,10 @@ add_custom_command(
 
 
 
-target_include_directories(LLVMgRPC PRIVATE ${header_files})
-target_include_directories(LLVMgRPC PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-target_include_directories(LLVMgRPC PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/Include)
+target_include_directories(LLVMgRPC PRIVATE ${LLVM_INCLUDE_DIR}/Service)
+target_include_directories(LLVMgRPC PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(LLVMgRPC PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/Include)
+# target_include_directories(LLVMgRPC PUBLIC /home/cs18mtech11030/project/grpc_llvm/grpc_install/include)
+
+
 target_include_directories(LLVMgRPC PUBLIC ${Protobuf_INCLUDE_DIRS})
