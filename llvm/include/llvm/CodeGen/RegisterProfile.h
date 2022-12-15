@@ -4,6 +4,10 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MIR2Vec/utils.h"
 
+#define colour_node_actionspace_size 113
+
+using namespace llvm;
+
 struct RegisterProfile {
   StringRef cls;
   float spillWeight;
@@ -18,4 +22,4 @@ struct RegisterProfile {
   // SmallMapVector<unsigned, SmallVector<SlotIndex, 8>, 8> overlapsEnd;
 };
 
-typedef SmallMapVector<unsigned, RegisterProfile, 16> RegisterProfileMap;
+using RegisterProfileMap = SmallMapVector<unsigned, RegisterProfile, 16>;
