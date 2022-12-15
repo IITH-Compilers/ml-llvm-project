@@ -1,5 +1,6 @@
 #include <llvm/ADT/MapVector.h>
 #include <llvm/ADT/SmallVector.h>
+#include <map>
 
 class Graph {
 public:
@@ -19,6 +20,15 @@ private:
 };
 
 class RegisterActionSpace {
+
 public:
-  unsigned *maskActionSpace();
+  llvm::SmallVector<unsigned, 8>
+  maskActionSpace(llvm::StringRef regclass,
+                  llvm::SmallVector<unsigned, 8> adj_colors);
+  static std::vector<std::string> supported_regclasses;
+  static std::map<std::string, std::vector<int>> suppcls_regs_normalize_map;
+  static std::vector<int> ac_sp_normlize;
+  static std::map<int, int> normal_org_map;
+  static std::map<int, int> org_normal_map;
+  static std::map<std::string, std::vector<int>> overlaps;
 };

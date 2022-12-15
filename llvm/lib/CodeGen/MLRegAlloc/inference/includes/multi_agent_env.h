@@ -19,9 +19,9 @@ class MultiAgentEnv {
 
   RegisterProfileMap regProfMap;
 
-  Graph graph_topology;
+  Graph *graph_topology;
 
-  RegisterActionSpace registerAS;
+  RegisterActionSpace *registerAS;
 
   RegisterProfile *current_node;
 
@@ -30,6 +30,7 @@ class MultiAgentEnv {
   std::string next_agent;
 
   int *nid_idx = new int[max_node_number]();
+
   int *idx_nid = new int[max_node_number]();
 
   std::map<unsigned, unsigned> nid_colour;
@@ -56,7 +57,9 @@ class MultiAgentEnv {
 
   float *createAnnotations();
 
-  float *computeEdgesFromRP(unsigned *edge_count);
+  void computeEdgesFromRP();
+
+  float *computeEdgesFlatened(unsigned *edge_count);
 
   float *constructNodeVector(SmallVector<IR2Vec::Vector, 12> nodeMat);
 

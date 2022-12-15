@@ -55,3 +55,52 @@ void Graph::UpdateColorVisitedNode(unsigned node_idx, unsigned colour) {
     this->colored[node_idx] = colour;
   }
 }
+
+llvm::SmallVector<unsigned, 8> RegisterActionSpace::maskActionSpace(
+    llvm::StringRef regclass, llvm::SmallVector<unsigned, 8> adj_colors) {
+  llvm::SmallVector<unsigned, 8> action_space;
+  if (std::find(this->supported_regclasses.begin(),
+                this->supported_regclasses.end(),
+                regclass) != this->supported_regclasses.end()) {
+    std::vector<int> selectedInterval =
+        this->suppcls_regs_normalize_map.at(regclass);
+    for (auto reg : selectedInterval) {
+      action_space.insert(action_space.end(), this->ac_sp_normlize[reg]);
+    }
+    llvm::SmallVector<unsigned, 8> action_space_filtered;
+    if (adj_colors.size() > 0) {
+      std::vector<int> extend_adj;
+      extend_adj.insert(extend_adj.end(), adj_colors.begin(), adj_colors.end());
+      for (auto adj : adj_colors) {
+        if (this->normal_org_map.find(adj) != this->normal_org_map.end()) {
+          int reg = this->normal_org_map.at(adj);
+          if (this->overlaps.find(std::to_string(reg)) !=
+              this->overlaps.end()) {
+            std::vector<int> overlaps_value =
+                this->overlaps.at(std::to_string(reg));
+            for (auto val : overlaps_value) {
+              if (this->org_normal_map.find(val) !=
+                  this->org_normal_map.end()) {
+                extend_adj.insert(extend_adj.end(),
+                                  this->org_normal_map.at(val));
+              }
+            }
+          }
+        }
+      }
+      std::vector<int> tmp_mask_sidi = {33, 43, 45, 44, 17, 40, 27, 19};
+      extend_adj.insert(extend_adj.end(), tmp_mask_sidi.begin(),
+                        tmp_mask_sidi.end());
+      extend_adj.erase(unique(extend_adj.begin(), extend_adj.end()),
+                       extend_adj.end());
+      for (auto reg : action_space) {
+        if (find(extend_adj.begin(), extend_adj.end(), reg) ==
+            extend_adj.end()) {
+          action_space_filtered.insert(action_space_filtered.end(), reg);
+        }
+      }
+    }
+    return action_space_filtered;
+  }
+  return action_space;
+}
