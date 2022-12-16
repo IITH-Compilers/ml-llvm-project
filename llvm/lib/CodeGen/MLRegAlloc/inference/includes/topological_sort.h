@@ -1,6 +1,9 @@
 #include <llvm/ADT/MapVector.h>
 #include <llvm/ADT/SmallVector.h>
 #include <map>
+#include <stdio.h>
+
+#define max_edge_count 30000
 
 class Graph {
 public:
@@ -8,6 +11,7 @@ public:
   llvm::SmallVector<unsigned, 8> getAdjNodes(unsigned node_idx);
   llvm::SmallVector<unsigned, 8> get_eligibleNodes();
   void UpdateColorVisitedNode(unsigned node_idx, unsigned colour);
+  Graph(float edges[][2], int node_number);
 
 private:
   llvm::SmallMapVector<unsigned, llvm::SmallVector<unsigned, 8>, 16>
@@ -16,7 +20,6 @@ private:
   llvm::SmallVector<unsigned, 8> indegree;
   llvm::SmallVector<bool, 8> discovered;
   llvm::SmallVector<int, 8> colored;
-  Graph(float edges[][2], int node_number);
 };
 
 class RegisterActionSpace {

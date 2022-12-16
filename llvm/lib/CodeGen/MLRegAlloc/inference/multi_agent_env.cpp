@@ -1,21 +1,29 @@
 #include "includes/multi_agent_env.h"
 
-Observation MultiAgentEnv::reset(RegisterProfileMap &regProfMap) {
+Observation MultiAgentEnv::reset(RegisterProfileMap *regProfMap) {
   this->regProfMap = regProfMap;
   int idx = 0;
-  for (auto rpi : this->regProfMap) {
+  for (auto rpi : *(this->regProfMap)) {
     RegisterProfile rp = rpi.second;
-    float *nodeVec = constructNodeVector(rp.vecRep);
+    errs() << "Node mat size: " << rp.vecRep.size() << " " << rp.cls << "\n";
+    float *nodeVec = this->constructNodeVector(rp.vecRep);
     this->nodeRepersentaion[idx] = nodeVec;
     this->nid_idx[rpi.first] = idx;
     this->idx_nid[idx] = rpi.first;
     idx++;
   }
   this->computeEdgesFromRP();
-  this->graph_topology = new Graph(this->edges, regProfMap.size());
+  this->graph_topology = new Graph(this->edges, regProfMap->size());
   this->registerAS = new RegisterActionSpace();
-  Observation nodeSelectionObs = selectNodeObsConstructor();
+  Observation nodeSelectionObs = this->selectNodeObsConstructor();
   this->next_agent = "node_selection_agent";
+  // for (unsigned i = 0; i < selectNodeObsSize; i++) {
+  //   errs() << nodeSelectionObs[i] << " ";
+  //   //   std::cout << temp[i] << " ";
+  // }
+  errs() << "Node select obs size(): "
+         << sizeof(nodeSelectionObs) / sizeof(float) << "\n";
+  exit(0);
   return nodeSelectionObs;
 }
 
@@ -33,18 +41,18 @@ Observation MultiAgentEnv::step(unsigned action) {
 
 Observation MultiAgentEnv::select_node_step(unsigned action) {
   this->current_node_id = this->nid_idx[action];
-  this->current_node = &this->regProfMap[action];
+  this->current_node = &((*this->regProfMap)[action]);
   this->next_agent = "task_selection_agent";
-  return taskSelectionObsConstructor();
+  return this->taskSelectionObsConstructor();
 }
 
 Observation MultiAgentEnv::select_task_step(unsigned action) {
   if (action == 0) {
     this->next_agent = "colour_node_agent";
-    return colourNodeObsConstructor();
+    return this->colourNodeObsConstructor();
   } else {
     this->next_agent = "split_node_agent";
-    return splitNodeObsConstructor();
+    return this->splitNodeObsConstructor();
   }
 }
 
@@ -54,24 +62,28 @@ Observation MultiAgentEnv::colour_node_step(unsigned action) {
   this->nid_colour[this->current_node_id] = action;
   this->current_node->color = action;
   this->next_agent = "node_selection_agent";
-  return selectNodeObsConstructor();
+  return this->selectNodeObsConstructor();
 }
+
+Observation MultiAgentEnv::split_node_step(unsigned action) { ; }
+
+Observation MultiAgentEnv::splitNodeObsConstructor() { ; }
 
 Observation MultiAgentEnv::selectNodeObsConstructor() {
   Observation temp_obs = new float[selectNodeObsSize]();
   int current_index = 0;
-  float *action_mask = createNodeSelectMask();
+  float *action_mask = this->createNodeSelectMask();
   // Setting action mask
   for (int i = 0; i < max_node_number; i++) {
     temp_obs[current_index++] = action_mask[i];
   }
   // Setting anotations
-  float *annotations = createAnnotations();
+  float *annotations = this->createAnnotations();
   for (int i = 0; i < max_node_number * 3; i++) {
     temp_obs[current_index++] = annotations[i];
   }
   unsigned edge_count = 0;
-  float *edges_flatened = computeEdgesFlatened(&edge_count);
+  float *edges_flatened = this->computeEdgesFlatened(&edge_count);
   for (int i = 0; i < max_node_number * 3; i++) {
     temp_obs[current_index++] = edges_flatened[i];
   }
@@ -79,17 +91,17 @@ Observation MultiAgentEnv::selectNodeObsConstructor() {
   temp_obs[current_index + edge_count] = 1;
   current_index += max_edge_count;
   // Set number of node in graph
-  unsigned node_count = this->regProfMap.size();
+  unsigned node_count = this->regProfMap->size();
   temp_obs[current_index + node_count] = 1;
   current_index += max_node_number;
   // Set Spill waights
-  for (auto rpi : this->regProfMap) {
+  for (auto rpi : *(this->regProfMap)) {
     RegisterProfile rp = rpi.second;
     temp_obs[current_index++] = rp.spillWeight;
   }
   current_index += max_node_number - node_count;
   // Set node embeddings
-  for (auto rpi : this->regProfMap) {
+  for (auto rpi : *(this->regProfMap)) {
     RegisterProfile rp = rpi.second;
     int node_idx = this->nid_idx[rpi.first];
     float *nodeVec = this->nodeRepersentaion[node_idx];
@@ -101,10 +113,20 @@ Observation MultiAgentEnv::selectNodeObsConstructor() {
   return temp_obs;
 }
 
+float *MultiAgentEnv::createNodeSelectMask() {
+  float *mask = new float[max_node_number]();
+  auto eligibleNodes = this->graph_topology->get_eligibleNodes();
+  errs() << "Eligible nodes list size: " << eligibleNodes.size() << "\n";
+  for (int i = 0; i < eligibleNodes.size(); i++) {
+    mask[i] = 1;
+  }
+  return mask;
+}
+
 float *MultiAgentEnv::createAnnotations() {
   float *temp_annotations = new float[max_node_number * 3]();
   int current_idx = 0;
-  for (auto rpi : this->regProfMap) {
+  for (auto rpi : *(this->regProfMap)) {
     unsigned id = rpi.first;
     RegisterProfile rp = rpi.second;
     temp_annotations[current_idx++] = rp.spillWeight;
@@ -115,7 +137,7 @@ float *MultiAgentEnv::createAnnotations() {
 
 void MultiAgentEnv::computeEdgesFromRP() {
   unsigned edge_count = 0;
-  for (auto rpi : this->regProfMap) {
+  for (auto rpi : *(this->regProfMap)) {
     unsigned src_id = rpi.first;
     RegisterProfile rp = rpi.second;
     for (auto des_id : rp.interferences) {
@@ -124,6 +146,7 @@ void MultiAgentEnv::computeEdgesFromRP() {
       this->edges[edge_count][0] = src;
       this->edges[edge_count][1] = des;
       edge_count += 1;
+      // errs() << "Adding edges " << src << " -- " << des << "\n";
     }
   }
 }
@@ -143,15 +166,19 @@ float *MultiAgentEnv::computeEdgesFlatened(unsigned *edge_count) {
 
 float *
 MultiAgentEnv::constructNodeVector(SmallVector<IR2Vec::Vector, 12> nodeMat) {
-  float *nodeVec = new float[nodeMat[0].size()]();
-  for (int i = 0; i < nodeMat[0].size(); i++) {
-    double value_sum = 0;
-    for (int j = 0; j < nodeMat.size(); j++) {
-      value_sum += nodeMat[j][i];
+  if (nodeMat.size() > 0) {
+    float *nodeVec = new float[nodeMat[0].size()]();
+    for (int i = 0; i < nodeMat[0].size(); i++) {
+      double value_sum = 0;
+      for (int j = 0; j < nodeMat.size(); j++) {
+        value_sum += nodeMat[j][i];
+      }
+      nodeVec[i] = value_sum / nodeMat.size();
     }
-    nodeVec[i] = value_sum / nodeMat.size();
+    return nodeVec;
+  } else {
+    return new float[IR2Vec_size]();
   }
-  return nodeVec;
 }
 
 Observation MultiAgentEnv::taskSelectionObsConstructor() {

@@ -6,6 +6,7 @@ add_llvm_component_library(LLVMMLRegAllocInference
 multi_agent_env.cpp
 topological_sort.cpp
 X86_register_config_objects.cpp
+driver.cpp
 
 ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/lib/CodeGen/MLRegAlloc/inference
@@ -13,4 +14,4 @@ ADDITIONAL_HEADER_DIRS
   ${CMAKE_CURRENT_SOURCE_DIR}/includes
 )
 
-target_link_libraries(LLVMMLRegAllocInference LLVMMLRegAlloc LLVMSymbolic LLVMgRPC LLVM-rl-inference)
+# target_link_libraries(LLVMMLRegAllocInference LLVMMLRegAlloc LLVMSymbolic LLVMgRPC)

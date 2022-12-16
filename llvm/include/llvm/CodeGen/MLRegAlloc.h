@@ -8,6 +8,7 @@
 #include "SpillPlacement.h"
 #include "Spiller.h"
 #include "SplitKit.h"
+#include "driver.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
@@ -142,20 +143,21 @@ protected:
                   MachineOptimizationRemarkEmitter &ORE);
 
 private:
-  struct RegisterProfile {
-    StringRef cls;
-    float spillWeight;
-    unsigned color;
-    SmallVector<float, 8> spillWeights;
-    SmallVector<int, 8> useDistances;
-    SmallSetVector<unsigned, 8> interferences;
-    SmallSetVector<unsigned, 8> frwdInterferences;
-    SmallVector<IR2Vec::Vector, 12> vecRep;
-    SmallVector<unsigned, 8> splitSlots;
-    // SmallMapVector<unsigned, SmallVector<SlotIndex, 8>, 8> overlapsStart;
-    // SmallMapVector<unsigned, SmallVector<SlotIndex, 8>, 8> overlapsEnd;
-  };
-  SmallMapVector<unsigned, RegisterProfile, 16> regProfMap;
+  // struct RegisterProfile {
+  //   StringRef cls;
+  //   float spillWeight;
+  //   unsigned color;
+  //   SmallVector<float, 8> spillWeights;
+  //   SmallVector<int, 8> useDistances;
+  //   SmallSetVector<unsigned, 8> interferences;
+  //   SmallSetVector<unsigned, 8> frwdInterferences;
+  //   SmallVector<IR2Vec::Vector, 12> vecRep;
+  //   SmallVector<unsigned, 8> splitSlots;
+  //   // SmallMapVector<unsigned, SmallVector<SlotIndex, 8>, 8> overlapsStart;
+  //   // SmallMapVector<unsigned, SmallVector<SlotIndex, 8>, 8> overlapsEnd;
+  // };
+  // SmallMapVector<unsigned, RegisterProfile, 16> regProfMap;
+  RegisterProfileMap regProfMap;
 
   unsigned numUnsupportedRegs = 0;
   unsigned numSplits = 0;
@@ -203,8 +205,8 @@ private:
                        SmallSetVector<unsigned, 8> *updatedRegs = nullptr);
   void dumpInterferenceGraph(std::string ID = "");
   void allocatePhysRegsViaRL();
-  void allocatePhysRegsViaRandom(int,int);
-  void juggleAllocation(int,int,SmallVector<LiveInterval *, 256>&);
+  void allocatePhysRegsViaRandom(int, int);
+  void juggleAllocation(int, int, SmallVector<LiveInterval *, 256> &);
   void training_flow();
   void inference();
   void verifyRegisterProfile();

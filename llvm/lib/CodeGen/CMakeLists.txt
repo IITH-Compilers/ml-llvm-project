@@ -1,3 +1,5 @@
+include_directories( ${CMAKE_CURRENT_SOURCE_DIR}/MLRegAlloc/inference/includes)
+
 # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -I/home/venkat/.local/include/")
 add_llvm_component_library(LLVMCodeGen
   AggressiveAntiDepBreaker.cpp
@@ -180,6 +182,7 @@ add_llvm_component_library(LLVMCodeGen
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/CodeGen
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/CodeGen/PBQP
+  ${CMAKE_CURRENT_SOURCE_DIR}/MLRegAlloc/inference/includes
 
   LINK_LIBS ${LLVM_PTHREAD_LIB} LLVMMLRegAlloc
   LINK_LIBS ${LLVM_PTHREAD_LIB} LLVMConfigGen

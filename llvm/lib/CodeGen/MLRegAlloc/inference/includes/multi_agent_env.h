@@ -7,7 +7,6 @@
 typedef float *Observation;
 
 #define max_node_number 600
-#define max_edge_count 30000
 #define IR2Vec_size 100
 
 #define selectNodeObsSize 153601
@@ -17,7 +16,7 @@ typedef float *Observation;
 // class MultiAgentEnv : public Environment {
 class MultiAgentEnv {
 
-  RegisterProfileMap regProfMap;
+  RegisterProfileMap *regProfMap;
 
   Graph *graph_topology;
 
@@ -38,10 +37,6 @@ class MultiAgentEnv {
   float edges[max_edge_count][2];
 
   float *nodeRepersentaion[max_node_number];
-
-  Observation reset(RegisterProfileMap &regProfMap);
-
-  Observation step(unsigned action);
 
   Observation select_node_step(unsigned action);
 
@@ -68,4 +63,9 @@ class MultiAgentEnv {
   Observation colourNodeObsConstructor();
 
   Observation splitNodeObsConstructor();
+
+public:
+  Observation reset(RegisterProfileMap *regProfMap);
+
+  Observation step(unsigned action);
 };

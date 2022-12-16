@@ -1,15 +1,19 @@
 #include "includes/topological_sort.h"
 #include <llvm/ADT/SmallVector.h>
+#include <llvm/Support/raw_ostream.h>
 
+using namespace llvm;
 Graph::Graph(float edges[][2], int node_number) {
   this->node_number = node_number;
+  //   errs() << "Number of nodes in graph is: " << node_number << "\n";
   for (int i = 0; i < node_number; i++) {
     this->indegree.insert(this->indegree.end(), 0);
     this->discovered.insert(this->discovered.end(), false);
     this->colored.insert(this->colored.end(), -1);
   }
-  int edge_count = sizeof(edges) / sizeof(edges[0]);
-  for (int i = 0; i < edge_count; i++) {
+  for (int i = 0; i < max_edge_count; i++) {
+    if (edges[i][0] == edges[i][1])
+      break;
     if (this->adjacencyList.count(edges[i][0]) == 0) {
       llvm::SmallVector<unsigned, 8> temp_vec;
       temp_vec.insert(temp_vec.begin(), edges[i][1]);
@@ -42,9 +46,10 @@ llvm::SmallVector<unsigned, 8> Graph::getAdjNodes(unsigned node_idx) {
 
 llvm::SmallVector<unsigned, 8> Graph::get_eligibleNodes() {
   llvm::SmallVector<unsigned, 8> eligible_nodes;
-  for (int i = 0; this->discovered.size(); i++) {
+  for (int i = 0; i < this->discovered.size(); i++) {
     if (!this->discovered[i]) {
       eligible_nodes.insert(eligible_nodes.end(), i);
+      //   errs() << "Adding node to eligible list: " << i << "\n";
     }
   }
   return eligible_nodes;
