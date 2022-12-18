@@ -3,14 +3,15 @@
 #include <llvm/Support/raw_ostream.h>
 
 using namespace llvm;
-Graph::Graph(float edges[][2], int node_number) {
-  this->node_number = node_number;
+Graph::Graph(float edges[][2], RegisterProfileMap *regProfMap) {
+  this->node_number = regProfMap->size();
   //   errs() << "Number of nodes in graph is: " << node_number << "\n";
   for (int i = 0; i < node_number; i++) {
     this->indegree.insert(this->indegree.end(), 0);
     this->discovered.insert(this->discovered.end(), false);
     this->colored.insert(this->colored.end(), -1);
   }
+
   for (int i = 0; i < max_edge_count; i++) {
     if (edges[i][0] == edges[i][1])
       break;
@@ -22,8 +23,22 @@ Graph::Graph(float edges[][2], int node_number) {
       llvm::SmallVector<unsigned, 8> temp_vec =
           this->adjacencyList[edges[i][0]];
       temp_vec.insert(temp_vec.end(), edges[i][1]);
+      this->adjacencyList[edges[i][0]] = temp_vec;
     }
     this->indegree[edges[i][1]] += 1;
+  }
+  int node_idx = 0;
+  for (auto rpi : *(regProfMap)) {
+    RegisterProfile rp = rpi.second;
+    if (rp.cls == "Phy") {
+      int colour = rp.color;
+      this->UpdateVisitList(node_idx);
+      this->UpdateColorVisitedNode(node_idx, colour);
+      errs() << "Phy reg colour is: " << rp.cls << " " << colour << "\n";
+    } else {
+      errs() << "Virtual reg colour is: " << rp.cls << "\n";
+    }
+    node_idx++;
   }
 }
 
@@ -32,10 +47,12 @@ Graph::getColorOfVisitedAdjNodes(unsigned node_idx) {
   llvm::SmallVector<unsigned, 8> colour_vec;
   llvm::SmallVector<unsigned, 8> interfering_nodes =
       this->adjacencyList[node_idx];
+  errs() << "Node " << node_idx << " interferes with ";
   for (auto node : interfering_nodes) {
     if (this->discovered[node]) {
       colour_vec.insert(colour_vec.end(), this->colored[node]);
     }
+    errs() << node << " and colour " << this->colored[node] << "\n";
   }
   return colour_vec;
 }
@@ -49,7 +66,7 @@ llvm::SmallVector<unsigned, 8> Graph::get_eligibleNodes() {
   for (int i = 0; i < this->discovered.size(); i++) {
     if (!this->discovered[i]) {
       eligible_nodes.insert(eligible_nodes.end(), i);
-      //   errs() << "Adding node to eligible list: " << i << "\n";
+      errs() << "Adding node to eligible list: " << i << "\n";
     }
   }
   return eligible_nodes;
@@ -58,6 +75,16 @@ llvm::SmallVector<unsigned, 8> Graph::get_eligibleNodes() {
 void Graph::UpdateColorVisitedNode(unsigned node_idx, unsigned colour) {
   if (this->discovered[node_idx] && this->colored[node_idx] == -1) {
     this->colored[node_idx] = colour;
+  }
+}
+
+void Graph::UpdateVisitList(unsigned node_idx) {
+  if (!this->discovered[node_idx]) {
+    this->discovered[node_idx] = true;
+    errs() << "Setting discoved to true from node idx: " << node_idx << "\n";
+    for (auto adj_node : this->adjacencyList[node_idx]) {
+      this->indegree[adj_node] -= 1;
+    }
   }
 }
 
@@ -72,7 +99,6 @@ llvm::SmallVector<unsigned, 8> RegisterActionSpace::maskActionSpace(
     for (auto reg : selectedInterval) {
       action_space.insert(action_space.end(), this->ac_sp_normlize[reg]);
     }
-    llvm::SmallVector<unsigned, 8> action_space_filtered;
     if (adj_colors.size() > 0) {
       std::vector<int> extend_adj;
       extend_adj.insert(extend_adj.end(), adj_colors.begin(), adj_colors.end());
@@ -98,14 +124,15 @@ llvm::SmallVector<unsigned, 8> RegisterActionSpace::maskActionSpace(
                         tmp_mask_sidi.end());
       extend_adj.erase(unique(extend_adj.begin(), extend_adj.end()),
                        extend_adj.end());
+      llvm::SmallVector<unsigned, 8> action_space_filtered;
       for (auto reg : action_space) {
         if (find(extend_adj.begin(), extend_adj.end(), reg) ==
             extend_adj.end()) {
           action_space_filtered.insert(action_space_filtered.end(), reg);
         }
       }
+      return action_space_filtered;
     }
-    return action_space_filtered;
   }
   return action_space;
 }

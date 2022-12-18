@@ -1,3 +1,4 @@
+#include "llvm/CodeGen/RegisterProfile.h"
 #include <llvm/ADT/MapVector.h>
 #include <llvm/ADT/SmallVector.h>
 #include <map>
@@ -11,7 +12,7 @@ public:
   llvm::SmallVector<unsigned, 8> getAdjNodes(unsigned node_idx);
   llvm::SmallVector<unsigned, 8> get_eligibleNodes();
   void UpdateColorVisitedNode(unsigned node_idx, unsigned colour);
-  Graph(float edges[][2], int node_number);
+  Graph(float edges[][2], RegisterProfileMap *regProfMap);
 
 private:
   llvm::SmallMapVector<unsigned, llvm::SmallVector<unsigned, 8>, 16>
@@ -20,6 +21,7 @@ private:
   llvm::SmallVector<unsigned, 8> indegree;
   llvm::SmallVector<bool, 8> discovered;
   llvm::SmallVector<int, 8> colored;
+  void UpdateVisitList(unsigned node_idx);
 };
 
 class RegisterActionSpace {

@@ -1,13 +1,14 @@
 // #include "ml-llvm-tools/llvm-inference-engine/agent.h"
 // #include "ml-llvm-tools/llvm-inference-engine/environment.h"
 #include "topological_sort.h"
-#include "llvm/CodeGen/RegisterProfile.h"
+// #include "llvm/CodeGen/RegisterProfile.h"
 #include <stdio.h>
 
 typedef float *Observation;
 
 #define max_node_number 600
 #define IR2Vec_size 100
+#define X86_action_space_size 113
 
 #define selectNodeObsSize 153601
 #define selectTaskObsSize 106
@@ -27,6 +28,8 @@ class MultiAgentEnv {
   unsigned current_node_id;
 
   std::string next_agent;
+
+  unsigned edge_count;
 
   int *nid_idx = new int[max_node_number]();
 
@@ -52,9 +55,9 @@ class MultiAgentEnv {
 
   float *createAnnotations();
 
-  void computeEdgesFromRP();
+  unsigned computeEdgesFromRP();
 
-  float *computeEdgesFlatened(unsigned *edge_count);
+  float *computeEdgesFlatened();
 
   float *constructNodeVector(SmallVector<IR2Vec::Vector, 12> nodeMat);
 
