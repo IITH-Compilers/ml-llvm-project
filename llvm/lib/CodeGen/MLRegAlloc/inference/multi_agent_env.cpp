@@ -151,15 +151,17 @@ unsigned MultiAgentEnv::computeEdgesFromRP() {
     RegisterProfile rp = rpi.second;
     // int src = this->nid_idx[rpi.first];
     int src = node_idx;
+    errs() << "Interferences for nodeId " << node_idx << " :";
     for (auto des_id : rp.interferences) {
       int des = this->nid_idx[des_id];
       if (src != des) {
         this->edges[edge_count][0] = src;
         this->edges[edge_count][1] = des;
         edge_count += 1;
-        // errs() << "Adding edges " << src << " -- " << edge_count << "\n";
       }
+      errs() << des << " ";
     }
+    errs() << "\n";
     node_idx++;
   }
   return edge_count;

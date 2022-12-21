@@ -7,6 +7,7 @@ multi_agent_env.cpp
 topological_sort.cpp
 X86_register_config_objects.cpp
 driver.cpp
+agent.cpp
 
 ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/lib/CodeGen/MLRegAlloc/inference

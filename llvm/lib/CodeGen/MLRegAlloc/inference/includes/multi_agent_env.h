@@ -19,23 +19,17 @@ class MultiAgentEnv {
 
   RegisterProfileMap *regProfMap;
 
-  Graph *graph_topology;
-
   RegisterActionSpace *registerAS;
 
   RegisterProfile *current_node;
 
   unsigned current_node_id;
 
-  std::string next_agent;
-
   unsigned edge_count;
 
   int *nid_idx = new int[max_node_number]();
 
   int *idx_nid = new int[max_node_number]();
-
-  std::map<unsigned, unsigned> nid_colour;
 
   float edges[max_edge_count][2];
 
@@ -68,6 +62,12 @@ class MultiAgentEnv {
   Observation splitNodeObsConstructor();
 
 public:
+  std::string next_agent;
+
+  Graph *graph_topology;
+
+  std::map<unsigned, unsigned> nid_colour;
+
   Observation reset(RegisterProfileMap *regProfMap);
 
   Observation step(unsigned action);

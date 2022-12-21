@@ -88,6 +88,15 @@ void Graph::UpdateVisitList(unsigned node_idx) {
   }
 }
 
+bool Graph::all_discovered() {
+  for (int i = 0; i < this->discovered.size(); i++) {
+    if (!this->discovered[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+
 llvm::SmallVector<unsigned, 8> RegisterActionSpace::maskActionSpace(
     llvm::StringRef regclass, llvm::SmallVector<unsigned, 8> adj_colors) {
   llvm::SmallVector<unsigned, 8> action_space;
