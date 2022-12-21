@@ -12,4 +12,5 @@ add_subdirectory(inference)
 
 configure_file (./Config.h.cmake Config.h @ONLY)
 
-target_link_libraries(LLVMMLRegAlloc LLVMSymbolic LLVMgRPC LLVMMLRegAllocInference)
+target_link_libraries(LLVMMLRegAlloc LLVMSymbolic LLVMgRPC LLVMMLRegAllocInference LLVMInferenceEngine)
+

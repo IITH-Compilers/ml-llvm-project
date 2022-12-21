@@ -65,6 +65,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 
+#include "MLInferenceEngine/onnx.h"
 // gRPC includes
 #include "grpc/RegisterAllocation/RegisterAllocation.grpc.pb.h"
 #include "grpc/RegisterAllocationInference/RegisterAllocationInference.grpc.pb.h"
@@ -141,6 +142,60 @@ protected:
                   AAResults &AA, LiveDebugVariables &DebugVars,
                   SpillPlacement &SpillPlacer,
                   MachineOptimizationRemarkEmitter &ORE);
+
+  void read_input(std::vector<float> &input) {
+    // float* newInput = new float[153601]();
+    // memset(newInput, 10, first_input->bytes / 4);
+
+    std::ifstream data("/Pramana/RL4Real/temp/node_select_input.csv");
+    std::string line;
+    // int count = 0;
+    // std::cout <<
+    // "----------------------------------------------------------------"
+    //           "--\n";
+    while (std::getline(data, line)) {
+      std::stringstream lineStream(line);
+      std::string cell;
+      // std::vector<std::string> parsedRow;
+      while (std::getline(lineStream, cell, ',')) {
+        // std::cout << std::stof(cell) << ",";
+        // input.push_back(std::stof(cell));
+        //   parsedRow.push_back(cell);
+        // input[count] = std::stof(cell);
+        // std::cout << cell << "\n";
+        // std::cout << std::stof(cell) << "\n";
+        input.push_back(std::stof(cell));
+        // std::cout << input[count] << "; " << count << "\n";
+        // count++;
+      }
+    }
+    // std::cout <<
+    // "============================================================ =
+    // "
+    //        << count << "\n";
+
+    // for (unsigned i = 0; i < 153601; i++) std::cout << input[i] << ",";
+    // std::cout << "\n";
+  }
+
+  void testONNX() {
+    ONNXModel model("/Pramana/RL4Real/temp/node_select_model.onnx");
+    std::vector<float> input;
+    read_input(input);
+    // model.setInput(input);
+
+    std::vector<int64_t> output_dims;
+    auto floatarr = model.run(input, output_dims);
+
+    std::cout << "output_tensor_info_dims = " << output_dims.size() << '\n';
+    for (size_t j = 0; j < output_dims.size(); j++) {
+      std::cout << " : dim[" << j << "] =" << output_dims[j] << '\n';
+    }
+
+    for (unsigned i = 0; i < output_dims[1]; i++)
+      std::cout << floatarr[i] << ",";
+    std::cout << "\n";
+  }
 
 private:
   // struct RegisterProfile {
