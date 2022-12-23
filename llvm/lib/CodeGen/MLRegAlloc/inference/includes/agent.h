@@ -1,3 +1,4 @@
+#include "MLInferenceEngine/onnx.h"
 #include <llvm/ADT/SmallVector.h>
 #include <stdio.h>
 #include <string>
@@ -6,8 +7,9 @@ typedef float *Observation;
 
 class Agent {
 public:
-  llvm::SmallVector<float, 8> model_output;
-  Agent(std::string model_path);
+  ONNXModel *model;
+  int input_size;
+  Agent(std::string model_path, int input_size);
   unsigned computeAction(Observation obs);
 };
 

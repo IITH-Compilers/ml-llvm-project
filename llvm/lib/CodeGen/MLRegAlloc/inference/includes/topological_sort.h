@@ -13,16 +13,16 @@ public:
   llvm::SmallVector<unsigned, 8> get_eligibleNodes();
   void UpdateColorVisitedNode(unsigned node_idx, unsigned colour);
   bool all_discovered();
-  Graph(float edges[][2], RegisterProfileMap *regProfMap);
+  Graph(float edges[][2], RegisterProfileMap regProfMap);
+  llvm::SmallVector<bool, 8> discovered;
+  void UpdateVisitList(unsigned node_idx);
 
 private:
   llvm::SmallMapVector<unsigned, llvm::SmallVector<unsigned, 8>, 16>
       adjacencyList;
   unsigned node_number;
   llvm::SmallVector<unsigned, 8> indegree;
-  llvm::SmallVector<bool, 8> discovered;
   llvm::SmallVector<int, 8> colored;
-  void UpdateVisitList(unsigned node_idx);
 };
 
 class RegisterActionSpace {

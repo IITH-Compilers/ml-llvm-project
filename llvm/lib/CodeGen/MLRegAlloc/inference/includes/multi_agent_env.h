@@ -13,15 +13,16 @@ typedef float *Observation;
 #define selectNodeObsSize 153601
 #define selectTaskObsSize 106
 #define colourNodeObsSize 216
+#define splitNodeObsSize 700
 
 // class MultiAgentEnv : public Environment {
 class MultiAgentEnv {
 
-  RegisterProfileMap *regProfMap;
+  RegisterProfileMap regProfMap;
 
   RegisterActionSpace *registerAS;
 
-  RegisterProfile *current_node;
+  RegisterProfile current_node;
 
   unsigned current_node_id;
 
@@ -33,7 +34,11 @@ class MultiAgentEnv {
 
   float edges[max_edge_count][2];
 
-  float *nodeRepersentaion[max_node_number];
+  float annotations[max_node_number][3];
+
+  // float *nodeRepersentaion[max_node_number];
+
+  llvm::SmallVector<float *, 8> nodeRepersentaion;
 
   Observation select_node_step(unsigned action);
 
@@ -60,6 +65,8 @@ class MultiAgentEnv {
   Observation colourNodeObsConstructor();
 
   Observation splitNodeObsConstructor();
+
+  void computeAnnotations();
 
 public:
   std::string next_agent;
