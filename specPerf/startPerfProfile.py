@@ -43,8 +43,6 @@ def build_all(bin_type):
                         os.system(command)
                 
 
-            #cleanup binary after run
-            os.system("rm "+destination)
 
 def build_one(dirs,bin_type):
 
@@ -76,8 +74,6 @@ def build_one(dirs,bin_type):
                     os.system(command)
                 
 
-       #cleanup binary after run
-       os.system("rm "+destination)
  
     else:
        print("Wrong Combination!") 

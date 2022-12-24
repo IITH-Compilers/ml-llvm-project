@@ -16,10 +16,10 @@ greedyBinData={}
 dirData={}
 
 #RUNS
-run=3
+run=1
 
 #perf events
-events="instructions:u,cycles:u"
+events="cycles:u"
 
 with open(GREEDYBINCONFIG) as greedyConfig:
     for line in greedyConfig:

@@ -24,13 +24,13 @@ dataCyclesDict={}
 for perfData in pathlib.Path('.').glob('**/perf.data'):
     
 
-    os.system("sudo perf report -i "+str(perfData)+" > test.txt")
+    os.system("sudo perf report --no-demangle -i "+str(perfData)+" > test.txt")
 
     os.system("csplit -z test.txt /Samples:/ \'{*}\' > /dev/null")
 
     #opening file for instructions report
     
-    reportLines=[]
+    '''reportLines=[]
     
     with open("xx02","r") as instructReport:
          
@@ -52,7 +52,7 @@ for perfData in pathlib.Path('.').glob('**/perf.data'):
 
         if("%" in lines[0]):
             percentage=float(lines[0].strip("%"))
-            inst=int(percentage*totalInstructions)
+            inst=percentage
 
             #print(inst,lines[-1])
 
@@ -60,14 +60,14 @@ for perfData in pathlib.Path('.').glob('**/perf.data'):
                 dataInstDict[lines[-1].strip("\n")].append(inst)
             else:
                 dataInstDict[lines[-1].strip("\n")]=[]
-                dataInstDict[lines[-1].strip("\n")].append(inst)
+                dataInstDict[lines[-1].strip("\n")].append(inst)'''
 
 
     #opening file for cycles report
 
     reportLines=[]
     
-    with open("xx03","r") as instructReport:
+    with open("xx02","r") as instructReport:
          
         for line in instructReport:
              result=toEvent.search(line)
@@ -87,7 +87,7 @@ for perfData in pathlib.Path('.').glob('**/perf.data'):
 
         if("%" in lines[0]):
             percentage=float(lines[0].strip("%"))
-            inst=int(percentage*totalCycles)
+            inst=percentage
 
             #print(inst,lines[-1])
 
@@ -99,14 +99,14 @@ for perfData in pathlib.Path('.').glob('**/perf.data'):
 
 
 
-for keys in dataInstDict:
-    dataInstDict[keys]=int(mean(dataInstDict[keys]))
+#for keys in dataInstDict:
+ #   dataInstDict[keys]=float(mean(dataInstDict[keys]))
 
 for keys in dataCyclesDict:
-    dataCyclesDict[keys]=int(mean(dataCyclesDict[keys]))
+    dataCyclesDict[keys]=float(mean(dataCyclesDict[keys]))
 
 
-#Saving for instructions
+'''#Saving for instructions
 
 with open(csvFileInsts, 'w') as csv_file:
     writer = csv.writer(csv_file)
@@ -115,7 +115,7 @@ with open(csvFileInsts, 'w') as csv_file:
         #print(key,value)
         writer.writerow([key,value])
 csv_file.close()        
-print ('Inst csv saving is complete') 
+print ('Inst csv saving is complete') '''
 
 #Saving for cycles
 

@@ -12,3 +12,11 @@
 500=perlbench_r_base.base-split-greedy-vecN-m64
 511=povray_r_base.base-split-greedy-vecN-m64
 557=xz_r_base.base-split-greedy-vecN-m64
+429=mcf_base.base-split-greedy-vecN
+445=gobmk_base.base-split-greedy-vecN
+456=hmmer_base.base-split-greedy-vecN
+470=lbm_base.base-split-greedy-vecN
+462=libquantum_base.base-split-greedy-vecN
+433=milc_base.base-split-greedy-vecN
+471=omnetpp_base.base-split-greedy-vecN
+482=sphinx_livepretend_base.base-split-greedy-vecN
