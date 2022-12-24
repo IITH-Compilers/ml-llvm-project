@@ -1649,6 +1649,10 @@ void MLRA::updateRegisterProfileAfterSplit(
 
       LiveInterval *OtherVReg = &LIS->getInterval(Reg);
 
+      SA->analyze(OtherVReg);
+      if (SA->getUseSlots().empty() || MRI->reg_nodbg_empty(Reg))
+	continue;
+      
       if (NewVirtReg == OtherVReg)
         continue;
 
