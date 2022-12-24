@@ -9,6 +9,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 
 #include "Config.h"
+#include "llvm/CodeGen/MLConfig.h"
 
 #include <fstream>
 
@@ -49,7 +50,7 @@ void IR2Vec::scaleVector(Vector &vec, float factor) {
 std::map<int, std::string>
 IR2Vec::createOpcodeMap(llvm::Triple::ArchType archType) {
   std::map<int, std::string> opcDescMap;
-  std::string extFile = OPCODE_DESC_PATH;
+  std::string extFile = MLConfig::mlconfig;
   switch (archType) {
   case Triple::ArchType::aarch64: {
     extFile += "/extracted_aarch64.csv";

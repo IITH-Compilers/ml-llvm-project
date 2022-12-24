@@ -39,6 +39,7 @@
 #include "llvm/CodeGen/LiveRegMatrix.h"
 #include "llvm/CodeGen/LiveStacks.h"
 #include "llvm/CodeGen/MIR2Vec/Symbolic.h"
+#include "llvm/CodeGen/MLConfig.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
@@ -159,9 +160,9 @@ MLRA::MLRA() {
   // if (pred_file != "") {
   //   setPredictionFromFile(pred_file);
   // }
-
-  loadTargetRegisterConfig(std::string(COLORMAP_PATH));
-  symbolic = new MIR2Vec_Symbolic(VOCAB_PATH);
+  loadTargetRegisterConfig(MLConfig::mlconfig + "/RegColorMap_Both.json");
+  symbolic = new MIR2Vec_Symbolic(MLConfig::mlconfig +
+                                  "/seedEmbedding_5500E_100D.txt");
 
   SetStub<registerallocationinference::RegisterAllocationInference>(
       mlra_server_address);
@@ -465,7 +466,8 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
 
   // if (MI->isCopy() || MI->isInlineAsm()) {
   //   LLVM_DEBUG(
-  //       errs() << "No use of splitting at/before the copy instruction -- would "
+  //       errs() << "No use of splitting at/before the copy instruction --
+  //       would "
   //                 "create more redundant copies or at InlineAsm calls\n");
   //   return false;
   // }
@@ -1314,7 +1316,8 @@ void MLRA::computeSplitPoints(LiveInterval *VirtReg,
     auto MBB = MI->getParent();
     assert(MBB && "Empty MBB for MI");
 
-    if (!MI->isCopy() && !MI->isInlineAsm() && !MI->isCompare() && !MI->registerDefIsDead(VirtReg->reg) &&
+    if (!MI->isCopy() && !MI->isInlineAsm() && !MI->isCompare() &&
+        !MI->registerDefIsDead(VirtReg->reg) &&
         !MRI->reg_nodbg_empty(VirtReg->reg) && !loops->getLoopFor(MBB)) {
       splitPoints.push_back(useIdx);
       // errs() << "Pushing splitpoint: ";
@@ -1937,28 +1940,28 @@ void MLRA::allocatePhysRegsViaRL() {
                        "allocatePhysRegsViaRL() (END)**********************\n");
 }
 
-void MLRA::juggleAllocation(int seed,int maxTries,SmallVector<LiveInterval *, 256>&regsToAllocate){
-  
+void MLRA::juggleAllocation(int seed, int maxTries,
+                            SmallVector<LiveInterval *, 256> &regsToAllocate) {
+
   auto rng = std::default_random_engine(seed);
   unsigned step = TRI->getNumRegs() + 1;
   mlAllocatedRegs.clear();
   mlSpilledRegs.clear();
   Matrix->invalidateVirtRegs();
-  
 
-  errs()<<"VECTOR SIZE: "<<mlAllocatedRegs.size()<<"\n";
+  errs() << "VECTOR SIZE: " << mlAllocatedRegs.size() << "\n";
 
   // errs() << "Before shuffling:\n";
   // for (auto i : regsToAllocate)
   //   i->dump();
-  
+
   std::shuffle(std::begin(regsToAllocate), std::end(regsToAllocate), rng);
-  
+
   // errs() << "After shuffling:\n";
   // for (auto i : regsToAllocate)
   //   i->dump();
 
-  LiveInterval *nonAllocatedReg=nullptr;
+  LiveInterval *nonAllocatedReg = nullptr;
   bool flag = false;
 
   for (auto LI : regsToAllocate) {
@@ -1967,27 +1970,27 @@ void MLRA::juggleAllocation(int seed,int maxTries,SmallVector<LiveInterval *, 25
     //        << TRI->getRegClassName(MRI->getRegClass(LI->reg)) << "\n";
 
     AllocationOrder Order(LI->reg, *VRM, RegClassInfo, Matrix);
-    
+
     SmallVector<unsigned, 16> randOrder;
     for (auto i : Order.getOrder()) {
       randOrder.push_back(i);
     }
-    
+
     std::shuffle(std::begin(randOrder), std::end(randOrder), rng);
 
     for (auto PhysReg : randOrder) {
       switch (Matrix->checkInterference(*LI, PhysReg)) {
-          case LiveRegMatrix::IK_Free:
-          // PhysReg is available, allocate it.
-              errs() << "Assigning physreg:" << printReg(PhysReg, TRI) << "\n";
-              errs() << "Allocating LI:";
-              LI->dump();
-              Matrix->assign(*LI, PhysReg);
-              mlAllocatedRegs.push_back(LI->reg);
-              flag = true;
-              break;
-          default:
-              break;
+      case LiveRegMatrix::IK_Free:
+        // PhysReg is available, allocate it.
+        errs() << "Assigning physreg:" << printReg(PhysReg, TRI) << "\n";
+        errs() << "Allocating LI:";
+        LI->dump();
+        Matrix->assign(*LI, PhysReg);
+        mlAllocatedRegs.push_back(LI->reg);
+        flag = true;
+        break;
+      default:
+        break;
       }
 
       if (flag)
@@ -1995,39 +1998,37 @@ void MLRA::juggleAllocation(int seed,int maxTries,SmallVector<LiveInterval *, 25
     }
 
     if (!flag) {
-        errs() << "pushing vreg to mlSpilledRegs list: " << printReg(LI->reg, TRI)
-            << "\n";
-        mlSpilledRegs.push_back(LI);
-        break;     
+      errs() << "pushing vreg to mlSpilledRegs list: " << printReg(LI->reg, TRI)
+             << "\n";
+      mlSpilledRegs.push_back(LI);
+      break;
     }
-    
   }
   if (!flag) {
-    //Ran out of registers. Invalidating Matrix
-    if(maxTries>0){
-        Matrix->invalidateVirtRegs();
-        for(auto reg : mlAllocatedRegs) {
-          LiveInterval *VirtReg = &LIS->getInterval(reg);
-          VirtReg->dump();
-          //if(VRM->hasPhysReg(VirtReg))
-          Matrix->unassign(*VirtReg);
-        }
+    // Ran out of registers. Invalidating Matrix
+    if (maxTries > 0) {
+      Matrix->invalidateVirtRegs();
+      for (auto reg : mlAllocatedRegs) {
+        LiveInterval *VirtReg = &LIS->getInterval(reg);
+        VirtReg->dump();
+        // if(VRM->hasPhysReg(VirtReg))
+        Matrix->unassign(*VirtReg);
+      }
 
-        int newSeed = seed+10;
-        //Trying using new seed
-        errs()<<"PREV SEED: "<<seed<<" NEW SEED: "<<newSeed<<" TRY NUMBER: "<<maxTries<<"\n";
-        juggleAllocation(newSeed,maxTries-1,regsToAllocate);  
+      int newSeed = seed + 10;
+      // Trying using new seed
+      errs() << "PREV SEED: " << seed << " NEW SEED: " << newSeed
+             << " TRY NUMBER: " << maxTries << "\n";
+      juggleAllocation(newSeed, maxTries - 1, regsToAllocate);
     }
-
   }
 }
 
-void MLRA::allocatePhysRegsViaRandom(int seed,int maxTries) {
-  
+void MLRA::allocatePhysRegsViaRandom(int seed, int maxTries) {
 
   SmallVector<LiveInterval *, 256> regsToAllocate;
-  
-  //Getting all virtual registers for allocation
+
+  // Getting all virtual registers for allocation
   for (unsigned i = 0, e = MRI->getNumVirtRegs(); i < e; ++i) {
     unsigned Reg = Register::index2VirtReg(i);
     if (!isSafeVReg(Reg))
@@ -2055,10 +2056,8 @@ void MLRA::allocatePhysRegsViaRandom(int seed,int maxTries) {
       regsToAllocate.push_back(VirtReg);
     }
   }
-   
-  juggleAllocation(seed,maxTries,regsToAllocate);  
-  
 
+  juggleAllocation(seed, maxTries, regsToAllocate);
 }
 
 void MLRA::training_flow() {
@@ -2101,8 +2100,8 @@ void MLRA::inference() {
         }
       }
     }
-    int seed=776,maxTries=10;
-    allocatePhysRegsViaRandom(seed,maxTries);
+    int seed = 776, maxTries = 10;
+    allocatePhysRegsViaRandom(seed, maxTries);
     return;
   }
 

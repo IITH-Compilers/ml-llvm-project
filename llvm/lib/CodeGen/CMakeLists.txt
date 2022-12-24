@@ -176,6 +176,7 @@ add_llvm_component_library(LLVMCodeGen
   WasmEHPrepare.cpp
   WinEHPrepare.cpp
   XRayInstrumentation.cpp
+  MLConfig.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/CodeGen
@@ -183,6 +184,7 @@ add_llvm_component_library(LLVMCodeGen
 
   LINK_LIBS ${LLVM_PTHREAD_LIB} LLVMMLRegAlloc
   LINK_LIBS ${LLVM_PTHREAD_LIB} LLVMConfigGen
+  LINK_LIBS LLVMCollectMachineIR
 
   DEPENDS
   intrinsics_gen
