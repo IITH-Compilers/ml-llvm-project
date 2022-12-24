@@ -152,6 +152,11 @@ cl::opt<std::string> MLRA::mlra_server_address(
 cl::opt<std::string> statsFPMLRA("stats-path-mlra", cl::Hidden,
                                  cl::init("/home/"));
 
+cl::opt<bool> MLRA::enable_rl_inference_engine(
+    "rl-inference-engine", cl::Hidden,
+    cl::desc("Use RL-Inference-Engine for inferecing the model"),
+    cl::init(false));
+
 registerallocationinference::RegisterAllocationInference::Stub *Stub = nullptr;
 // gRPCUtil client;
 
@@ -2104,225 +2109,222 @@ void MLRA::inference() {
     return;
   }
 
-  DriverService *inference_driver = new DriverService();
-  // std::map<unsigned, unsigned> colour_map;
-  std::map<std::string, int64_t> colorMap;
-  inference_driver->getInfo(&regProfMap, &colorMap);
-  errs() << "Colour Map: \n";
-  unsigned numSpills = 0;
-  for (auto pair : colorMap) {
-    errs() << pair.first << " : " << pair.second << "\n";
-    if (pair.second == 0)
-      numSpills++;
+  if (enable_rl_inference_engine) {
+    DriverService *inference_driver = new DriverService();
+    // std::map<unsigned, unsigned> colour_map;
+    std::map<std::string, int64_t> colorMap;
+    inference_driver->getInfo(&regProfMap, &colorMap);
+    errs() << "Colour Map: \n";
+    unsigned numSpills = 0;
+    for (auto pair : colorMap) {
+      errs() << pair.first << " : " << pair.second << "\n";
+      if (pair.second == 0)
+        numSpills++;
+    }
+
+    this->FunctionVirtRegToColorMap[MF->getName()] = colorMap;
+    // assert(reply->funcname() == MF->getName());
+    allocatePhysRegsViaRL();
+    return;
   }
 
-  this->FunctionVirtRegToColorMap[MF->getName()] = colorMap;
-  // assert(reply->funcname() == MF->getName());
-  allocatePhysRegsViaRL();
-  return;
+  bool isGraphSet = false;
+  while (true) {
+    reply = new registerallocationinference::Data();
+    grpc::ClientContext context;
+    LLVM_DEBUG(errs() << "Printing register profile:\n";
+               printRegisterProfile());
+    if (!isGraphSet) {
+      request = new registerallocationinference::RegisterProfileList();
+      serializeRegProfData(request);
+      LLVM_DEBUG(errs() << "Call model first time\n");
+      if (request->mutable_regprof()->size() <= 0 ||
+          request->mutable_regprof()->size() > 500) {
+        ORE->emit([&]() {
+          return MachineOptimizationRemark(
+                     DEBUG_TYPE, "MLRA skipped Function ",
+                     MF->getFunction().front().front().getDebugLoc(),
+                     &MF->front())
+                 << MF->getFunction().getParent()->getSourceFileName() << "\t"
+                 << MF->getFunction().getName()
+                 << "--> skipped by MLRA (nodes not in serviceable range)";
+        });
+        return;
+      }
 
-  // bool isGraphSet = false;
-  // while (true) {
-  //   reply = new registerallocationinference::Data();
-  //   grpc::ClientContext context;
-  //   LLVM_DEBUG(errs() << "Printing register profile:\n";
-  //              printRegisterProfile());
-  //   if (!isGraphSet) {
-  //     request = new registerallocationinference::RegisterProfileList();
-  //     serializeRegProfData(request);
-  //     LLVM_DEBUG(errs() << "Call model first time\n");
-  //     if (request->mutable_regprof()->size() <= 0 ||
-  //         request->mutable_regprof()->size() > 500) {
-  //       ORE->emit([&]() {
-  //         return MachineOptimizationRemark(
-  //                    DEBUG_TYPE, "MLRA skipped Function ",
-  //                    MF->getFunction().front().front().getDebugLoc(),
-  //                    &MF->front())
-  //                << MF->getFunction().getParent()->getSourceFileName() <<
-  //                "\t"
-  //                << MF->getFunction().getName()
-  //                << "--> skipped by MLRA (nodes not in serviceable range)";
-  //       });
-  //       return;
-  //     }
+      for (auto it = MF->begin(); it != MF->end(); it++) {
+        if (it->isEHFuncletEntry() || it->isEHPad() || it->isEHScopeEntry() ||
+            it->isEHScopeReturnBlock()) {
+          return;
+        }
+        for (auto ist = it->begin(); ist != it->end(); ist++) {
+          if (ist->isEHLabel() || ist->isEHScopeReturn()) {
+            return;
+          }
+        }
+      }
 
-  //     for (auto it = MF->begin(); it != MF->end(); it++) {
-  //       if (it->isEHFuncletEntry() || it->isEHPad() || it->isEHScopeEntry()
-  //       ||
-  //           it->isEHScopeReturnBlock()) {
-  //         return;
-  //       }
-  //       for (auto ist = it->begin(); ist != it->end(); ist++) {
-  //         if (ist->isEHLabel() || ist->isEHScopeReturn()) {
-  //           return;
-  //         }
-  //       }
-  //     }
+      ORE->emit([&]() {
+        return MachineOptimizationRemark(
+                   DEBUG_TYPE, "MLRA Allocating Function ",
+                   MF->getFunction().front().front().getDebugLoc(),
+                   &MF->front())
+               << MF->getFunction().getParent()->getSourceFileName() << "\t"
+               << MF->getFunction().getName() << "--> Allocated by MLRA";
+      });
+      /*errs() << "Before calling model \n";
+      if (std::string s;
+      google::protobuf::TextFormat::PrintToString(*request, &s)) { std::cout
+      << "Your message: " << s; } else { std::cerr << "Message not valid
+      (partial content: "
+                                                                                                << request->ShortDebugString() << ")\n";
+                                                          }
+      errs() << "Before calling -- requetObj\n";
+      if (std::string s;
+      google::protobuf::TextFormat::PrintToString(*request, &s)) { std::cout
+      << "Your message: " << s; } else { std::cerr << "Message not valid
+      (partial content: "
+                                                                                                << request->ShortDebugString() << ")\n";
+                                                          }
+     */
+      // Stub->getInfo(&context, *request, reply);
+      isGraphSet = true;
+    } else {
+      // sendRegProfData<registerallocationinference::RegisterProfileList>(
+      //    request);
+      request->set_new_(false);
+      LLVM_DEBUG(errs() << "Call model again\n");
+      // Stub->getInfo(&context, *request, reply);
+    }
+    assert(request->mutable_regprof()->size() <= 1000 &&
+           "Graph size is greater than the expected.\n");
+    LLVM_DEBUG(errs() << "Before calling model \n");
+    /*  if (std::string s;
+       google::protobuf::TextFormat::PrintToString(*request, &s)) { std::cout
+       << "Your message: " << s; } else { std::cerr << "Message not valid
+       (partial content: "
+                                                                                                << request->ShortDebugString() << ")\n";
+                                                          }
+     */
+    Status status = Stub->getInfo(&context, *request, reply);
+    LLVM_DEBUG(errs() << "Status : " << status.error_code() << ": "
+                      << status.error_message() << "\n");
+    assert(status.ok() && "status i not OK.");
+    LLVM_DEBUG(errs() << "After calling model \n");
+    /*if (std::string s; google::protobuf::TextFormat::PrintToString(*reply,
+       &s)) { std::cout << "Yo
+    */
+    assert(reply->message() != "" && "reply msg is empty");
+    LLVM_DEBUG(errs() << "Taken performed : " << reply->message() << " vreg "
+                      << std::to_string(reply->regidx()) << " "
+                      << std::to_string(reply->payload()) << "\n");
+    // std::string str = "LLVM\n";
+    assert(!(reply->message() == "Split" && reply->regidx() == 0 &&
+             reply->payload() == 0) &&
+           "Error in python side...");
+    // response->set_payload(str);
+    if (reply->message() == "Color") {
+      ORE->emit([&]() {
+        return MachineOptimizationRemark(
+                   DEBUG_TYPE, "#Registers colored by MLRA:Greedy ",
+                   MF->getFunction().front().front().getDebugLoc(),
+                   &MF->front())
+               << "#Registers colored by MLRA:Greedy :: "
+               << std::to_string(reply->color_size()) + ":" +
+                      std::to_string(numUnsupportedRegs);
+      });
 
-  //     ORE->emit([&]() {
-  //       return MachineOptimizationRemark(
-  //                  DEBUG_TYPE, "MLRA Allocating Function ",
-  //                  MF->getFunction().front().front().getDebugLoc(),
-  //                  &MF->front())
-  //              << MF->getFunction().getParent()->getSourceFileName() << "\t"
-  //              << MF->getFunction().getName() << "--> Allocated by MLRA";
-  //     });
-  //     /*errs() << "Before calling model \n";
-  //     if (std::string s;
-  //     google::protobuf::TextFormat::PrintToString(*request, &s)) { std::cout
-  //     << "Your message: " << s; } else { std::cerr << "Message not valid
-  //     (partial content: "
-  //                                                                                               << request->ShortDebugString() << ")\n";
-  //                                                         }
-  //     errs() << "Before calling -- requetObj\n";
-  //     if (std::string s;
-  //     google::protobuf::TextFormat::PrintToString(*request, &s)) { std::cout
-  //     << "Your message: " << s; } else { std::cerr << "Message not valid
-  //     (partial content: "
-  //                                                                                               << request->ShortDebugString() << ")\n";
-  //                                                         }
-  //    */
-  //     // Stub->getInfo(&context, *request, reply);
-  //     isGraphSet = true;
-  //   } else {
-  //     // sendRegProfData<registerallocationinference::RegisterProfileList>(
-  //     //    request);
-  //     request->set_new_(false);
-  //     LLVM_DEBUG(errs() << "Call model again\n");
-  //     // Stub->getInfo(&context, *request, reply);
-  //   }
-  //   assert(request->mutable_regprof()->size() <= 1000 &&
-  //          "Graph size is greater than the expected.\n");
-  //   LLVM_DEBUG(errs() << "Before calling model \n");
-  //   /*  if (std::string s;
-  //      google::protobuf::TextFormat::PrintToString(*request, &s)) { std::cout
-  //      << "Your message: " << s; } else { std::cerr << "Message not valid
-  //      (partial content: "
-  //                                                                                               << request->ShortDebugString() << ")\n";
-  //                                                         }
-  //    */
-  //   Status status = Stub->getInfo(&context, *request, reply);
-  //   LLVM_DEBUG(errs() << "Status : " << status.error_code() << ": "
-  //                     << status.error_message() << "\n");
-  //   assert(status.ok() && "status i not OK.");
-  //   LLVM_DEBUG(errs() << "After calling model \n");
-  //   /*if (std::string s; google::protobuf::TextFormat::PrintToString(*reply,
-  //      &s)) { std::cout << "Yo
-  //   */
-  //   assert(reply->message() != "" && "reply msg is empty");
-  //   LLVM_DEBUG(errs() << "Taken performed : " << reply->message() << " vreg "
-  //                     << std::to_string(reply->regidx()) << " "
-  //                     << std::to_string(reply->payload()) << "\n");
-  //   // std::string str = "LLVM\n";
-  //   assert(!(reply->message() == "Split" && reply->regidx() == 0 &&
-  //            reply->payload() == 0) &&
-  //          "Error in python side...");
-  //   // response->set_payload(str);
-  //   if (reply->message() == "Color") {
-  //     ORE->emit([&]() {
-  //       return MachineOptimizationRemark(
-  //                  DEBUG_TYPE, "#Registers colored by MLRA:Greedy ",
-  //                  MF->getFunction().front().front().getDebugLoc(),
-  //                  &MF->front())
-  //              << "#Registers colored by MLRA:Greedy :: "
-  //              << std::to_string(reply->color_size()) + ":" +
-  //                     std::to_string(numUnsupportedRegs);
-  //     });
+      std::string ucf = "";
+      for (auto i : unsupportedClsFreq) {
+        ucf += "\n " + i.first.str() + " - " + std::to_string(i.second);
+      }
 
-  //     std::string ucf = "";
-  //     for (auto i : unsupportedClsFreq) {
-  //       ucf += "\n " + i.first.str() + " - " + std::to_string(i.second);
-  //     }
+      ORE->emit([&]() {
+        return MachineOptimizationRemark(
+                   DEBUG_TYPE, "Freq of unsupported reg cls",
+                   MF->getFunction().front().front().getDebugLoc(),
+                   &MF->front())
+               << "Freq of unsupported reg cls:\n"
+               << ucf;
+      });
 
-  //     ORE->emit([&]() {
-  //       return MachineOptimizationRemark(
-  //                  DEBUG_TYPE, "Freq of unsupported reg cls",
-  //                  MF->getFunction().front().front().getDebugLoc(),
-  //                  &MF->front())
-  //              << "Freq of unsupported reg cls:\n"
-  //              << ucf;
-  //     });
+      ORE->emit([&]() {
+        return MachineOptimizationRemark(
+                   DEBUG_TYPE, "#Splits",
+                   MF->getFunction().front().front().getDebugLoc(),
+                   &MF->front())
+               << "#Splits: " << std::to_string(numSplits);
+      });
 
-  //     ORE->emit([&]() {
-  //       return MachineOptimizationRemark(
-  //                  DEBUG_TYPE, "#Splits",
-  //                  MF->getFunction().front().front().getDebugLoc(),
-  //                  &MF->front())
-  //              << "#Splits: " << std::to_string(numSplits);
-  //     });
+      if (reply->color_size() == 0) {
+        LLVM_DEBUG(errs() << "*****Warning -" << MF->getName()
+                          << " - Predictions not generated for the graph\n");
+        return;
+      }
 
-  //     if (reply->color_size() == 0) {
-  //       LLVM_DEBUG(errs() << "*****Warning -" << MF->getName()
-  //                         << " - Predictions not generated for the graph\n");
-  //       return;
-  //     }
+      std::map<std::string, int64_t> colorMap;
+      unsigned numSpills = 0;
+      for (auto i : reply->color()) {
+        colorMap[i.key()] = i.value();
+        if (i.value() == 0)
+          numSpills++;
+      }
 
-  //     std::map<std::string, int64_t> colorMap;
-  //     unsigned numSpills = 0;
-  //     for (auto i : reply->color()) {
-  //       colorMap[i.key()] = i.value();
-  //       if (i.value() == 0)
-  //         numSpills++;
-  //     }
+      ORE->emit([&]() {
+        return MachineOptimizationRemark(
+                   DEBUG_TYPE, "#Spills",
+                   MF->getFunction().front().front().getDebugLoc(),
+                   &MF->front())
+               << "#Spills predicted by MLRA: " << std::to_string(numSpills)
+               << "#Regs allocated excluding spills by MLRA: "
+               << std::to_string(reply->color_size() - numSpills);
+      });
 
-  //     ORE->emit([&]() {
-  //       return MachineOptimizationRemark(
-  //                  DEBUG_TYPE, "#Spills",
-  //                  MF->getFunction().front().front().getDebugLoc(),
-  //                  &MF->front())
-  //              << "#Spills predicted by MLRA: " << std::to_string(numSpills)
-  //              << "#Regs allocated excluding spills by MLRA: "
-  //              << std::to_string(reply->color_size() - numSpills);
-  //     });
+      this->FunctionVirtRegToColorMap[MF->getName()] = colorMap;
+      // assert(reply->funcname() == MF->getName());
+      allocatePhysRegsViaRL();
 
-  //     this->FunctionVirtRegToColorMap[MF->getName()] = colorMap;
-  //     // assert(reply->funcname() == MF->getName());
-  //     allocatePhysRegsViaRL();
+      LLVM_DEBUG(errs() << "The ML allocated virtual registers: /n";
+                 for (auto i
+                      : mlAllocatedRegs) errs()
+                 << printReg(i, TRI) << "\t";
+                 errs() << "Done MLRA allocation for : " << MF->getName()
+                        << '\n');
+      return;
+    }
+    if (reply->message() == "Split" || reply->message() == "SplitAndCapture") {
+      unsigned splitRegIdx = reply->regidx();
+      int splitPoint = reply->payload();
+      SmallVector<unsigned, 2> NewVRegs;
+      LLVM_DEBUG(errs() << "==========================BEFORE "
+                           "SPLITTING==================================\n";
+                 MF->dump(); errs() << "====================================="
+                                       "=======================\n");
+      if (splitVirtReg(splitRegIdx, splitPoint, NewVRegs)) {
+        SmallSetVector<unsigned, 8> updatedRegIdxs;
+        updateRegisterProfileAfterSplit(splitRegIdx, NewVRegs, updatedRegIdxs);
+        if (enable_dump_ig_dot)
+          dumpInterferenceGraph(std::to_string(SplitCounter));
+        if (enable_mlra_checks)
+          verifyRegisterProfile();
 
-  //     LLVM_DEBUG(errs() << "The ML allocated virtual registers: /n";
-  //                for (auto i
-  //                     : mlAllocatedRegs) errs()
-  //                << printReg(i, TRI) << "\t";
-  //                errs() << "Done MLRA allocation for : " << MF->getName()
-  //                       << '\n');
-  //     return;
-  //   }
-  //   if (reply->message() == "Split" || reply->message() == "SplitAndCapture")
-  //   {
-  //     unsigned splitRegIdx = reply->regidx();
-  //     int splitPoint = reply->payload();
-  //     SmallVector<unsigned, 2> NewVRegs;
-  //     LLVM_DEBUG(errs() << "==========================BEFORE "
-  //                          "SPLITTING==================================\n";
-  //                MF->dump(); errs() <<
-  //                "====================================="
-  //                                      "=======================\n");
-  //     if (splitVirtReg(splitRegIdx, splitPoint, NewVRegs)) {
-  //       SmallSetVector<unsigned, 8> updatedRegIdxs;
-  //       updateRegisterProfileAfterSplit(splitRegIdx, NewVRegs,
-  //       updatedRegIdxs); if (enable_dump_ig_dot)
-  //         dumpInterferenceGraph(std::to_string(SplitCounter));
-  //       if (enable_mlra_checks)
-  //         verifyRegisterProfile();
-
-  //       request = new registerallocationinference::RegisterProfileList();
-  //       if (reply->message() == "Split")
-  //         sendRegProfData<registerallocationinference::RegisterProfileList>(
-  //             request, &updatedRegIdxs);
-  //       else
-  //         sendRegProfData<registerallocationinference::RegisterProfileList>(
-  //             request);
-  //     } else {
-  //       LLVM_DEBUG(
-  //           errs()
-  //           << "Still after spliting prediction; LLVM dees not perform
-  //           it.\n");
-  //       request->set_result(false);
-  //     }
-  //   }
-  //   if (reply->message() == "Exit")
-  //     return;
-  // }
+        request = new registerallocationinference::RegisterProfileList();
+        if (reply->message() == "Split")
+          sendRegProfData<registerallocationinference::RegisterProfileList>(
+              request, &updatedRegIdxs);
+        else
+          sendRegProfData<registerallocationinference::RegisterProfileList>(
+              request);
+      } else {
+        LLVM_DEBUG(
+            errs()
+            << "Still after spliting prediction; LLVM dees not performit.\n");
+        request->set_result(false);
+      }
+    }
+    if (reply->message() == "Exit")
+      return;
+  }
 }
 
 void MLRA::MLRegAlloc(MachineFunction &MF, SlotIndexes &Indexes,

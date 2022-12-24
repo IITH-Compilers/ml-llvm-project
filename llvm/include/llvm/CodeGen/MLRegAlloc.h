@@ -136,6 +136,7 @@ protected:
   static cl::opt<unsigned> funcID;
   static cl::opt<std::string> mlra_server_address;
   static cl::opt<bool> enable_random_alloc;
+  static cl::opt<bool> enable_rl_inference_engine;
   void MLRegAlloc(MachineFunction &MF, SlotIndexes &Indexes,
                   MachineBlockFrequencyInfo &MBFI,
                   MachineDominatorTree &DomTree, MachineLoopInfo &Loops,
