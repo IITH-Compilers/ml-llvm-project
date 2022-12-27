@@ -17,23 +17,27 @@
 
 
 ## Adding Binaries
-> To add a binary create a folder along with a binconfig in the folder. 
+'''
+To add a binary create a folder along with a binconfig in the folder. 
 * Add the path to this folder in config.py.(Refer to GREEDYBINSOURCE var in config.py)
 * For example please refer to the greedybinaries folder for the binconfig file
 
+'''
 
 ## Profiling and Generating Reports
-> Profiling script allows you to profile a single benchmark or all benchmarks along with binary type
+'''
+Profiling script allows you to profile a single benchmark or all benchmarks along with binary type
 * To run profiling run the following command:
 <br/> python3 [benchmark\_id  / all] [binary\_type] startperfprofile.py
 * To set binary\_type please refer to startPerfprofile.py
 <br/>
-> To generate report run the following command:
+To generate report run the following command:
 <br/> python3 generateReport.py
 * This should generate csv files in each benchmark directory
 <br/>
 > To clean the benchmark directories run the following command:
 <br/> python3 cleanAll.py
-* This will clean all profile data from benchmark directories
+this will clean all profile data from benchmark directories
 
+'''
 
