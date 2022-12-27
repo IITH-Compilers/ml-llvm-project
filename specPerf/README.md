@@ -36,7 +36,7 @@ Profiling script allows you to profile a single benchmark or all benchmarks alon
   
     python3 [benchmark_id  / all] [binary_type] startperfprofile.py
 
-* To set binary\_type please refer to startPerfprofile.py
+* To set binary_type please refer to startPerfprofile.py
 
 
 To generate report run the following command:
@@ -49,7 +49,7 @@ To clean the benchmark directories run the following command:
 
     python3 cleanAll.py
 
-this will clean all profile data from benchmark directories
+* This will clean all profile data from benchmark directories
 
 ```
 
