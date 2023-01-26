@@ -5,16 +5,17 @@ import shutil
 import random
 
 class fsystem:
+    # Get paths relative to LLVM and IR2Vec directories
     def __init__(self, LLVMPath="", IR2Vec=""):
-        self.LLVMPath = LLVMPath
-        self.OptPath = self.LLVMPath + "bin/opt"
-        self.MCAPath = self.LLVMPath + "bin/llvm-mca"
-        self.AddOptAttr = self.LLVMPath + "add-size-attr.so"
-        self.ClangPath = self.LLVMPath + "bin/clang"
-        self.LlcPath = self.LLVMPath + "bin/llc"
-        self.IR2Vec = IR2Vec
-        self.SeedEmbeddingPath = self.IR2Vec + "seedEmbeddingVocab-300-llvm10.txt"
-        self.IR2VecBin = self.IR2Vec + "ir2vec"
+        self.LLVMPath = os.path.abspath(LLVMPath)
+        self.OptPath = os.path.join(self.LLVMPath, "bin", "opt")
+        self.MCAPath = os.path.join(self.LLVMPath, "bin", "llvm-mca")
+        self.AddOptAttr = os.path.join(self.LLVMPath, "add-size-attr.so")
+        self.ClangPath = os.path.join(self.LLVMPath, "bin", "clang")
+        self.LlcPath = os.path.join(self.LLVMPath, "bin" , "llc")
+        self.IR2Vec = os.path.abspath(IR2Vec)
+        self.SeedEmbeddingPath = os.path.join(self.IR2Vec, "seedEmbeddingVocab-300-llvm10.txt")
+        self.IR2VecBin = os.path.join(self.IR2Vec, "ir2vec")
         self.TrainingDataPath = None
         self.PhaseOrderDir = os.getcwd()
 

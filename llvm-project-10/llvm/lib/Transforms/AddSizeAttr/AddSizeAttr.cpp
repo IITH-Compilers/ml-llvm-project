@@ -1,4 +1,5 @@
 //Add Code Size reduction attributes
+
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
 #include "llvm/InitializePasses.h"
@@ -16,7 +17,7 @@ static cl::opt<bool> RemoveNoInline("removeNoInlineAttr", cl::desc("Option to re
 namespace {
   class AddSizeAttrPass : public ModulePass {
   public:
-    static char ID; // Pass identification, replacement for typeid
+    static char ID;
 
     AddSizeAttrPass() : ModulePass(ID) {
       initializeAddSizeAttrPassPass(
@@ -37,24 +38,13 @@ namespace {
     }
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
-      // AU.addPreserved<>();
-      // AU.addPreserved<>();
-      // AU.addPreserved<>();
-      // AU.addPreserved<>();
       AU.setPreservesCFG();
-      // AU.addRequired<DominatorTreeWrapperPass>();
-      // AU.addRequired<TargetLibraryInfoWrapperPass>();
-      // AU.addPreserved<AAResultsWrapperPass>();
-      // AU.addPreserved<BasicAAWrapperPass>();
-      // AU.addPreserved<DominatorTreeWrapperPass>();
-      // AU.addPreserved<GlobalsAAWrapperPass>();
     }
   };
 }
 
 
 char AddSizeAttrPass::ID = 0;
-//static RegisterPass<AddSizeAttr>
 INITIALIZE_PASS_BEGIN(AddSizeAttrPass,
                       "add-size-attr",
                       "Add Function Attributes that reduce code size", false, false)
@@ -66,15 +56,6 @@ void llvm::initializeAddSizeAttr(PassRegistry &Registry) {
   initializeAddSizeAttrPassPass(Registry);
 }
 
-/*void LLVMInitializeAggressiveInstCombiner(LLVMPassRegistryRef R) {
-  initializeAggressiveInstCombinerLegacyPassPass(*unwrap(R));
-}*/
-
 ModulePass *llvm::createAddSizeAttrPass() {
   return new AddSizeAttrPass();
 }
-
-/*void LLVMAddAggressiveInstCombinerPass(LLVMPassManagerRef PM) {
-  unwrap(PM)->add(createAggressiveInstCombinerPass());
-}*/
-
