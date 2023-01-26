@@ -1,6 +1,23 @@
 # Script to perform inference on test LLVM IR files
-# Use run-inference.sh to call this script 
-# Usage: python inference.py --llvm_dir=<Path to llvm build directory> --ir2vec_dir=<Path to IR2Vec directory> --test_dir=<Path to directory withtest ll files> --model=<Path to saved RLLib model>
+# Use run-inference.sh to call this script
+# Usage: python inference.py --llvm_dir <Path to llvm build directory> \
+#                            --ir2vec_dir <Path to IR2Vec directory> \
+#                            --test_dir <Path to directory withtest ll files> \
+#                            --model <Path to saved RLLib model> \
+#                            [--isAArch]
+#                            --alpha <Alpha hyperparameter>
+#                            --beta <Beta hyperparameter>
+#                            --size_reward_thresh <Threshold value for size reward for an action>
+#                            --mca_reward_thresh <Threshold value for mca reward for an action>
+# Example: python inference.py --llvm_dir POSET-RL/llvm-project-10/build \
+#                              --ir2vec_dir POSET-RL/IR2Vec \
+#                              --test_dir test_ll \
+#                              --model POSET_RL/saved_models/model \
+#                              [--isAArch]
+#                              --alpha 10
+#                              --beta 5
+#                              --size_reward_thresh 0.2
+#                              --mca_reward_thresh 0.2
 
 import argparse
 import gym
@@ -38,6 +55,12 @@ parser.add_argument("--llvm_dir", help = "path to llvm-build directory")
 parser.add_argument("--ir2vec_dir", help = "path to IR2vec directory which has seed embedding and IR2Vec binary files")
 parser.add_argument("--test_dir", help = "Path to test directory")
 parser.add_argument("--model", help = "Path to saved checkpoint")
+parser.add_argument("-a", "--isAArch", required=False, default=False, action='store_true')
+parser.add_argument("-alpha", "--alpha", required=False, type=float, default=10)
+parser.add_argument("-beta", "--beta", required=False, type=float, default=5)
+parser.add_argument("-size_reward_thresh", "--size_reward_thresh", required=False, type=float, default=0.2)
+parser.add_argument("-mca_reward_thresh", "--mca_reward_thresh", required=False, type=float, default=0.2)
+
 
 class PhaseOrderInference:
     def __init__(self, model_path, llvm_dir, ir2vec_dir):
@@ -53,7 +76,8 @@ class PhaseOrderInference:
         }
 
         ModelCatalog.register_custom_model("My_torch_model", CustomPhaseOrderModel)
-
+        target_arch = "AArch64" if args.isAArch else "X86"
+        # Define model and environment config
         config = dict(
             {
                 "model": {
@@ -65,7 +89,7 @@ class PhaseOrderInference:
                     },
                 },
                 "env_config": {
-                    "target": "X86",
+                    "target": target_arch,
                     "state_size": 300,
                     "mode": "inference",
                     "dump_type": "One",
@@ -73,6 +97,11 @@ class PhaseOrderInference:
                     "llvm_dir": args.llvm_dir,
                     "ir2vec_dir": args.ir2vec_dir,
                     "test_dir": args.test_dir,
+                    "alpha": args.alpha,
+                    "beta": args.beta,
+                    "size_reward_thresh": args.size_reward_thresh,
+                    "mca_reward_thresh": args.mca_reward_thresh,
+                    "action_space_size": 34,
                 },
                 "framework": "torch",
                 "explore": False,
@@ -83,11 +112,14 @@ class PhaseOrderInference:
         
         def env_creator(env_config):
             return PhaseOrder(env_config)
+
+        # Create environment
         register_env("Environment", env_creator)
 
         self.train_agent= DQNTrainer(env='Environment', config=config)
 
         checkpoint = model_path
+        # Load saved model
         self.train_agent.restore(checkpoint)
 
         self.config = config
@@ -98,6 +130,7 @@ class PhaseOrderInference:
         graph_json = json_graph.adjacency_data(graph_netx)
         return graph_json
 
+    # Predict best optimization sequence for the given LLVM IR
     def run_predict(self, test_file):
         env = PhaseOrder(self.config["env_config"])
 
