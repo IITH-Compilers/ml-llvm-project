@@ -46,7 +46,7 @@ import random
 import sys
 import re
 
-sys.path.append('../../../../../llvm-grpc/Python-Utilities/')
+sys.path.append('../../../../../ml-llvm-tools/llvm-grpc/Python-Utilities/')
 from client import *
 import RegisterAllocationInference_pb2_grpc, RegisterAllocationInference_pb2, RegisterAllocation_pb2
 

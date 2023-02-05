@@ -1,9 +1,11 @@
+#ifndef LLVM_INFERENCE_ENGINE_AGENT_H
+#define LLVM_INFERENCE_ENGINE_AGENT_H
+
 #include "MLInferenceEngine/onnx.h"
-#include <llvm/ADT/SmallVector.h>
+#include "MLInferenceEngine/utils.h"
+#include "llvm/ADT/SmallVector.h"
 #include <stdio.h>
 #include <string>
-
-typedef float *Observation;
 
 class Agent {
 public:
@@ -19,3 +21,5 @@ public:
 //   NodeSelectionAgent(std::string model_path);
 //   unsigned computeAction(Observation obs);
 // };
+
+#endif

@@ -1,8 +1,6 @@
-// #include "ml-llvm-tools/llvm-inference-engine/agent.h"
-// #include "ml-llvm-tools/llvm-inference-engine/environment.h"
 #include "topological_sort.h"
+#include "MLInferenceEngine/environment.h"
 // #include "llvm/CodeGen/RegisterProfile.h"
-#include <stdio.h>
 
 typedef float *Observation;
 
@@ -15,8 +13,7 @@ typedef float *Observation;
 #define colourNodeObsSize 216
 #define splitNodeObsSize 700
 
-// class MultiAgentEnv : public Environment {
-class MultiAgentEnv {
+class MultiAgentEnv : public Environment {
 
   RegisterProfileMap regProfMap;
 
@@ -69,13 +66,11 @@ class MultiAgentEnv {
   void computeAnnotations();
 
 public:
-  std::string next_agent;
-
   Graph *graph_topology;
 
   std::map<unsigned, unsigned> nid_colour;
 
   Observation reset(RegisterProfileMap *regProfMap);
 
-  Observation step(unsigned action);
+  Observation step(Action action) override;
 };

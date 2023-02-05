@@ -48,6 +48,7 @@ file(MAKE_DIRECTORY ${LLVM_INCLUDE_DIR}/MLInferenceEngine)
 
 add_llvm_library(LLVMInferenceEngine
 onnx.cpp
+agent.cpp
 )
 
 target_link_libraries(LLVMInferenceEngine PUBLIC onnxruntime)

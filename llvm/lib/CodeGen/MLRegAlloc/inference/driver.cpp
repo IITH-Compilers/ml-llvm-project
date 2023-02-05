@@ -2,19 +2,21 @@
 #include <fstream>
 
 DriverService::DriverService() {
-  this->env = new MultiAgentEnv();
-  this->nodeSelectionAgent =
-      new Agent(nodeSelectionModelPath, selectNodeObsSize);
-  this->taskSelectionAgent =
-      new Agent(taskSelectionModelPath, selectTaskObsSize);
-  this->nodeColouringAgent =
-      new Agent(nodeColouringModelPath, colourNodeObsSize);
-  this->nodeSplitingAgent = new Agent(nodeSplitingModelPath, splitNodeObsSize);
+  setEnvironment(new MultiAgentEnv());
+  addAgent(new Agent(nodeSelectionModelPath, selectNodeObsSize),
+           "node_selection_agent");
+  addAgent(new Agent(taskSelectionModelPath, selectTaskObsSize),
+           "task_selection_agent");
+  addAgent(new Agent(nodeColouringModelPath, colourNodeObsSize),
+           "colour_node_agent");
+  addAgent(new Agent(nodeSplitingModelPath, splitNodeObsSize),
+           "split_node_agent");
 }
 
 void DriverService::getInfo(RegisterProfileMap *regProfMap,
                             std::map<std::string, int64_t> *colour_map) {
-  Observation nodeSelectionObs = this->env->reset(regProfMap);
+  Observation nodeSelectionObs =
+      static_cast<MultiAgentEnv *>(this->getEnvironment())->reset(regProfMap);
 
   std::ofstream outfile;
   outfile.open("./select_node_input-cpp_before.csv", std::ios::out);
@@ -26,10 +28,24 @@ void DriverService::getInfo(RegisterProfileMap *regProfMap,
 
   this->computeAction(nodeSelectionObs);
 
-  for (auto pair : this->env->nid_colour) {
+  for (auto pair :
+       static_cast<MultiAgentEnv *>(this->getEnvironment())->nid_colour) {
     // errs() << pair.first << " : " << pair.second << "\n";
     (*colour_map)[std::to_string(pair.first)] = pair.second;
   }
+}
+
+
+/*
+DriverService::DriverService() {
+  this->env = new MultiAgentEnv();
+  this->nodeSelectionAgent =
+      new Agent(nodeSelectionModelPath, selectNodeObsSize);
+  this->taskSelectionAgent =
+      new Agent(taskSelectionModelPath, selectTaskObsSize);
+  this->nodeColouringAgent =
+      new Agent(nodeColouringModelPath, colourNodeObsSize);
+  this->nodeSplitingAgent = new Agent(nodeSplitingModelPath, splitNodeObsSize);
 }
 
 void DriverService::computeAction(Observation obs) {
@@ -53,7 +69,7 @@ void DriverService::computeAction(Observation obs) {
       for (unsigned i = 0; i < selectTaskObsSize; i++) {
         outfile << obs[i] << " ";
       }
-      outfile << "\n";
+      // outfile << "\n";
       outfile.close();
 
       action = this->taskSelectionAgent->computeAction(obs);
@@ -84,3 +100,4 @@ void DriverService::computeAction(Observation obs) {
     }
   }
 }
+*/

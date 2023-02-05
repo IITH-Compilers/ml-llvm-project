@@ -1,5 +1,5 @@
 import sys
-sys.path.append('/home/VK/ML-Register-Allocation/llvm-grpc/Python-Utilities')
+sys.path.append('/home/cs20btech11024/repos/ML-Register-Allocation/ml-llvm-tools/llvm-grpc/Python-Utilities')
 import RegisterAllocationInference_pb2_grpc, RegisterAllocationInference_pb2
 
 from concurrent import futures
@@ -10,7 +10,7 @@ import json
 import ray
 import os
 # sys.path.append(os.path.realpath('../../model/RegAlloc/ggnn_drl/rllib_split_model/src'))
-sys.path.append('/home/VK/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src')
+sys.path.append('/home/cs20btech11024/repos/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src')
 # import inference
 import rollout as inference
 # import register_action_space
@@ -33,7 +33,7 @@ class service_server(RegisterAllocationInference_pb2_grpc.RegisterAllocationInfe
         #model_path = '/home/venkat/ray_results/experiment_2022-03-12_13-28-43/experiment_HierarchicalGraphColorEnv_3c7aa_00000_0_2022-03-12_13-28-43/checkpoint_004010/checkpoint-4010'
         # model_path = '/home/venkat/ray_results/X86_C5_200kEps_16_06_22/checkpoint-10219' # used for debuginh runtime and compile time issues
         # model_path = '/home/venkat/ray_results/X86_C1_200kEps_17-07-22/checkpoint-19700'
-        model_path = '/home/VK/ray_results/C7_warmstart_54k/checkpoint-5452'
+        model_path = '/home/cs20btech11024/ray_results/table5/checkpoint-10716'
         #model_path = '/home/venkat/ray_results/split_model/home/cs17m20p100001/ray_results/experiment_2022-01-04_21-47-31/experiment_HierarchicalGraphColorEnv_d1a8f_00000_0_2022-01-04_21-47-32/checkpoint_001500/checkpoint-1500'
         args = {'no_render' : True, 'checkpoint' : model_path, 'run' : 'PPO' , 'env' : '' , 'config' : {}, 'video_dir' : '', 'steps' : 0, 'episodes' : 0, 'arch' : 'X86'}
         args = Namespace(**args)

@@ -28,22 +28,29 @@ Observation MultiAgentEnv::reset(RegisterProfileMap *regProfMap) {
   this->graph_topology = new Graph(this->edges, this->regProfMap);
   this->registerAS = new RegisterActionSpace();
   Observation nodeSelectionObs = this->selectNodeObsConstructor();
-  this->next_agent = "node_selection_agent";
+  this->setNextAgent("node_selection_agent");
   return nodeSelectionObs;
 }
 
-Observation MultiAgentEnv::step(unsigned action) {
+Observation MultiAgentEnv::step(Action action) {
   // LLVM_DEBUG(errs() << "Inside step, next agent and action are: "
   //                   << this->next_agent << " " << action << "\n");
-  if (this->next_agent == "node_selection_agent") {
-    return this->select_node_step(action);
-  } else if (this->next_agent == "task_selection_agent") {
-    return this->select_task_step(action);
-  } else if (this->next_agent == "colour_node_agent") {
-    return this->colour_node_step(action);
-  } else if (this->next_agent == "split_node_agent") {
-    return this->split_node_step(action);
+  Observation result;
+  if (this->getNextAgent() == "node_selection_agent") {
+    result = this->select_node_step(action);
+  } else if (this->getNextAgent() == "task_selection_agent") {
+    result = this->select_task_step(action);
+  } else if (this->getNextAgent() == "colour_node_agent") {
+    result = this->colour_node_step(action);
+  } else if (this->getNextAgent() == "split_node_agent") {
+    result = this->split_node_step(action);
   }
+  if (this->graph_topology->all_discovered()) {
+    // LLVM_DEBUG(errs() << "Discovered All\n");
+    errs() << "Discovered All\n";
+    this->setDone();
+  }
+  return result;
 }
 
 Observation MultiAgentEnv::select_node_step(unsigned action) {
@@ -65,7 +72,7 @@ Observation MultiAgentEnv::select_node_step(unsigned action) {
   this->current_node = this->regProfMap[this->current_node_id];
   // LLVM_DEBUG(errs() << "Current node cls: " << this->current_node.cls <<
   // "\n");
-  this->next_agent = "task_selection_agent";
+  this->setNextAgent("task_selection_agent");
   this->graph_topology->UpdateVisitList(action);
   return this->taskSelectionObsConstructor();
 }
@@ -73,10 +80,10 @@ Observation MultiAgentEnv::select_node_step(unsigned action) {
 Observation MultiAgentEnv::select_task_step(unsigned action) {
   if (action == 0) {
     // LLVM_DEBUG(errs() << "Next is colouring agent\n");
-    this->next_agent = "colour_node_agent";
+    this->setNextAgent("colour_node_agent");
     return this->colourNodeObsConstructor();
   } else {
-    this->next_agent = "split_node_agent";
+    this->setNextAgent("split_node_agent");
     return this->splitNodeObsConstructor();
   }
 }
@@ -88,7 +95,7 @@ Observation MultiAgentEnv::colour_node_step(unsigned action) {
   this->graph_topology->UpdateColorVisitedNode(current_node_idx, action);
   this->nid_colour[this->current_node_id] = action;
   // this->current_node.color = action;
-  this->next_agent = "node_selection_agent";
+  this->setNextAgent("node_selection_agent");
   return this->selectNodeObsConstructor();
 }
 

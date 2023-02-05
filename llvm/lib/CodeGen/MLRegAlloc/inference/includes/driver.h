@@ -1,4 +1,4 @@
-#include "agent.h"
+#include "MLInferenceEngine/driver.h"
 #include "multi_agent_env.h"
 
 #define nodeSelectionModelPath                                                 \
@@ -14,6 +14,16 @@
   "/home/cs20mtech12003/ML-Register-Allocation/model/RegAlloc/ggnn_drl/"       \
   "rllib_split_model/src/node_split_model_inference/model.onnx"
 
+
+class DriverService : public InferenceEngine {
+public:
+  DriverService();
+  void getInfo(RegisterProfileMap *regProfMap,
+               std::map<std::string, int64_t> *colour_map);
+};
+
+
+/*
 class DriverService {
 
   MultiAgentEnv *env;
@@ -31,5 +41,6 @@ public:
   void getInfo(RegisterProfileMap *regProfMap,
                std::map<std::string, int64_t> *colour_map);
 
-  void computeAction(Observation obs);
+  void computeAction(Observation obs){};
 };
+*/

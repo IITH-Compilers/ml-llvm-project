@@ -23,7 +23,7 @@ unsigned Agent::computeAction(Observation obs) {
   // llvm::errs() << "output_tensor_info_dims = " << output_dims.size() << '\n';
   llvm::SmallVector<float, 8> model_output;
 
-  for (size_t j = 0; j < output_dims[1]; j++) {
+  for (auto j = 0; j < output_dims[1]; j++) {
     if (std::isnan(floatarr[j])) {
       float min_val = -1.17549e-038;
       model_output.insert(model_output.end(), min_val);
