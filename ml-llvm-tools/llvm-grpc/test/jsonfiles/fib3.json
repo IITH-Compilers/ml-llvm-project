@@ -1,0 +1,24 @@
+{
+    "Predictions": [
+        {
+            "FileName": "/home/venkat/IF-DV/Rohit/regAlloc/ML-Register-Allocation/sample/data/fibonaccidevS/level-O0-llfiles/fib3.ll",
+            "Function": "fib",
+            "mapping": {
+                "176": 18,
+                "190": 18,
+                "201": 18,
+                "203": 21,
+                "209": 16,
+                "210": 17,
+                "212": 0
+            }
+        },
+        {
+            "FileName": "/home/venkat/IF-DV/Rohit/regAlloc/ML-Register-Allocation/sample/data/fibonaccidevS/level-O0-llfiles/fib3.ll",
+            "Function": "main",
+            "mapping": {
+                "166": 16
+            }
+        }
+    ]
+}
