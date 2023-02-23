@@ -165,6 +165,34 @@ static cl::opt<bool>
 OptLevelO3("O3",
            cl::desc("Optimization level 3. Similar to clang -O3"));
 
+static cl::opt<bool>
+OptLevelO15("O15",
+           cl::desc("15 optimization subsequences."));
+
+static cl::opt<bool>
+OptLevelO17("O17",
+           cl::desc("17 optimization subsequences."));
+          
+static cl::opt<bool>
+OptLevelO30("O30",
+           cl::desc("30 optimization subsequences."));
+
+static cl::opt<bool>
+OptLevelO34("O34",
+           cl::desc("34 optimization subsequences."));
+
+static cl::opt<bool>
+OptLevelO34M("O34M",
+           cl::desc("34 optimization subsequences with mem2reg."));
+
+static cl::opt<unsigned>
+SubSeqNum("SubNum",
+           cl::desc("Optimization subsequence number."));
+
+static cl::opt<bool>
+OptLevelONone("ONone",
+           cl::desc("No optimization."));
+
 static cl::opt<unsigned>
 CodeGenOptLevel("codegen-opt-level",
                 cl::desc("Override optimization level for codegen hooks"));
@@ -377,7 +405,12 @@ static void AddOptimizationPasses(legacy::PassManagerBase &MPM,
 
   PassManagerBuilder Builder;
   Builder.OptLevel = OptLevel;
-  Builder.SizeLevel = SizeLevel;
+  if (SizeLevel > 2) {
+    Builder.SizeLevel = 2;
+  }
+  else {
+    Builder.SizeLevel = SizeLevel;
+  }
 
   if (DisableInline) {
     // No inlining pass
@@ -433,9 +466,14 @@ static void AddOptimizationPasses(legacy::PassManagerBase &MPM,
   default:
     break;
   }
-
-  Builder.populateFunctionPassManager(FPM);
-  Builder.populateModulePassManager(MPM);
+  if (SizeLevel < 3){
+    Builder.populateFunctionPassManager(FPM);
+    Builder.populateModulePassManager(MPM);
+  }
+  else if (SizeLevel >= 3){
+    Builder.customPopulateFunctionPassManager(FPM, SizeLevel, unsigned(SubSeqNum));
+    Builder.customPopulateModulePassManager(MPM, SizeLevel, unsigned(SubSeqNum));
+  }
 }
 
 static void AddStandardLinkPasses(legacy::PassManagerBase &PM) {
@@ -600,7 +638,7 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  // Strip debug info before running the verifier.
+  // Strip debug info before running the verifier.addPass
   if (StripDebug)
     StripDebugInfo(*M);
 
@@ -748,7 +786,8 @@ int main(int argc, char **argv) {
 
   std::unique_ptr<legacy::FunctionPassManager> FPasses;
   if (OptLevelO0 || OptLevelO1 || OptLevelO2 || OptLevelOs || OptLevelOz ||
-      OptLevelO3) {
+      OptLevelO3 || OptLevelO15 || OptLevelO17 || OptLevelO30 || OptLevelO34
+      || OptLevelO34M) {
     FPasses.reset(new legacy::FunctionPassManager(M.get()));
     FPasses->add(createTargetTransformInfoWrapperPass(
         TM ? TM->getTargetIRAnalysis() : TargetIRAnalysis()));
@@ -817,6 +856,31 @@ int main(int argc, char **argv) {
       OptLevelO3 = false;
     }
 
+    if (OptLevelO15 && OptLevelO15.getPosition() < PassList.getPosition(i)) {
+      AddOptimizationPasses(Passes, *FPasses, TM.get(), 2, 15);
+      OptLevelO15 = false;
+    }
+
+    if (OptLevelO17 && OptLevelO17.getPosition() < PassList.getPosition(i)) {
+      AddOptimizationPasses(Passes, *FPasses, TM.get(), 2, 17);
+      OptLevelO17 = false;
+    }
+
+    if (OptLevelO30 && OptLevelO30.getPosition() < PassList.getPosition(i)) {
+      AddOptimizationPasses(Passes, *FPasses, TM.get(), 2, 30);
+      OptLevelO30 = false;
+    }
+
+    if (OptLevelO34 && OptLevelO34.getPosition() < PassList.getPosition(i)) {
+      AddOptimizationPasses(Passes, *FPasses, TM.get(), 2, 34);
+      OptLevelO34 = false;
+    }
+
+    if (OptLevelO34M && OptLevelO34M.getPosition() < PassList.getPosition(i)) {
+      AddOptimizationPasses(Passes, *FPasses, TM.get(), 2, 40);
+      OptLevelO34M = false;
+    }
+
     const PassInfo *PassInf = PassList[i];
     Pass *P = nullptr;
     if (PassInf->getNormalCtor())
@@ -876,6 +940,21 @@ int main(int argc, char **argv) {
 
   if (OptLevelO3)
     AddOptimizationPasses(Passes, *FPasses, TM.get(), 3, 0);
+
+  if (OptLevelO15)
+    AddOptimizationPasses(Passes, *FPasses, TM.get(), 2, 15);
+
+  if (OptLevelO17)
+    AddOptimizationPasses(Passes, *FPasses, TM.get(), 2, 17);
+
+  if (OptLevelO30)
+    AddOptimizationPasses(Passes, *FPasses, TM.get(), 2, 30);
+
+  if (OptLevelO34)
+    AddOptimizationPasses(Passes, *FPasses, TM.get(), 2, 34);
+
+  if (OptLevelO34M)
+    AddOptimizationPasses(Passes, *FPasses, TM.get(), 2, 40);
 
   if (FPasses) {
     FPasses->doInitialization();
