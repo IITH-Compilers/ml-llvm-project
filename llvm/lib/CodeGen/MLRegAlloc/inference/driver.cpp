@@ -17,7 +17,7 @@ DriverService::DriverService(MachineFunction *MF) {
 void DriverService::getInfo(const RegisterProfileMap &regProfMap,
                             std::map<std::string, int64_t> &colour_map) {
   Observation nodeSelectionObs =
-      static_cast<MultiAgentEnv *>(this->getEnvironment())->reset(regProfMap);
+      *(static_cast<MultiAgentEnv *>(this->getEnvironment())->reset(regProfMap));
   // assert(nodeSelectionObs);
 
   std::ofstream outfile;
@@ -31,7 +31,7 @@ void DriverService::getInfo(const RegisterProfileMap &regProfMap,
   errs() << "----------------RUNNING ON: --------------------------------\n";
   errs() << "------------" << MF->getName() << "--------------------"
          << "\n";
-  this->computeAction(nodeSelectionObs);
+  this->computeAction(&nodeSelectionObs);
 
   for (auto pair :
        static_cast<MultiAgentEnv *>(this->getEnvironment())->nid_colour) {

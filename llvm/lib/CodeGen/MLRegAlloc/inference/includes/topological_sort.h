@@ -8,9 +8,10 @@
 
 class Graph {
 public:
-  llvm::SmallVector<unsigned, 8> getColorOfVisitedAdjNodes(unsigned node_idx);
-  llvm::SmallVector<unsigned, 8> getAdjNodes(unsigned node_idx);
-  void get_eligibleNodes(std::vector<int>& eligibleNodes);
+  void getColorOfVisitedAdjNodes(unsigned node_idx,
+                                 llvm::SmallVector<unsigned, 8> &colour_vec);
+  llvm::SmallVector<unsigned, 8> *getAdjNodes(unsigned node_idx);
+  void get_eligibleNodes(std::vector<int> &eligibleNodes);
   void UpdateColorVisitedNode(unsigned node_idx, unsigned colour);
   bool all_discovered();
   Graph(int edges[][2], const RegisterProfileMap &regProfMap);
@@ -34,7 +35,7 @@ public:
   static std::map<int, int> normal_org_map;
   static std::map<int, int> org_normal_map;
   static std::map<std::string, std::vector<int>> overlaps;
-  llvm::SmallVector<unsigned, 8>
-  maskActionSpace(llvm::StringRef regclass,
-                  llvm::SmallVector<unsigned, 8> adj_colors);
+  void maskActionSpace(
+      llvm::StringRef regclass, llvm::SmallVector<unsigned, 8> &adj_colors,
+      llvm::SmallVector<unsigned, 8> &action_space_filtered);
 };

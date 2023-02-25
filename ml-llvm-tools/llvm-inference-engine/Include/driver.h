@@ -29,7 +29,7 @@ public:
 
   // virtual void getInfo() = 0;
 
-  void computeAction(Observation obs) {
+  void computeAction(Observation* obs) {
     while (true) {
       Action action;
 

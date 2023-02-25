@@ -2115,6 +2115,7 @@ void MLRA::inference() {
     std::map<std::string, int64_t> colorMap;
 
     bool emptyGraph = true;
+    int count = 0;
     for (auto &rpi : regProfMap) {
       auto rp = rpi.second;
       if (rp.cls == "Phy" &&
@@ -2124,11 +2125,16 @@ void MLRA::inference() {
       else
       {
         emptyGraph = false;
-        break;
+        count++;
+        // break;
       }
     }
     if (emptyGraph)
       return;
+    
+    if(count >= 500)
+      return;
+
 
     inference_driver->getInfo(regProfMap, colorMap);
     errs() << "Colour Map: \n";

@@ -18,7 +18,7 @@ public:
 
   void setNextAgent(std::string name) { next_agent = name; }
 
-  virtual Observation step(Action action) = 0;
+  virtual Observation* step(Action action) = 0;
 };
 
 #endif

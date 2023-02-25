@@ -1,6 +1,8 @@
 #include "includes/multi_agent_env.h"
+#include "MLInferenceEngine/utils.h"
+#include <cassert>
 
-Observation MultiAgentEnv::reset(const RegisterProfileMap &regProfMap) {
+Observation *MultiAgentEnv::reset(const RegisterProfileMap &regProfMap) {
   // RegisterProfileMap regProfMap_new;
   for (auto &rpi : regProfMap) {
     auto rp = rpi.second;
@@ -14,10 +16,13 @@ Observation MultiAgentEnv::reset(const RegisterProfileMap &regProfMap) {
   // this->regProfMap = &regProfMap_new;
   int idx = 0;
   for (auto rpi : (this->regProfMap)) {
-    RegisterProfile rp = rpi.second;
+    RegisterProfile &rp = rpi.second;
     // LLVM_DEBUG(errs() << "Node mat size: " << rpi.first << " "
     //                   << rp.vecRep.size() << " " << rp.cls << "\n");
     float *nodeVec = this->constructNodeVector(rp.vecRep);
+
+    assert(nodeVec != nullptr && "nodeVec is nullptr\n");
+
     // this->nodeRepersentaion[idx] = nodeVec;
     this->nodeRepersentaion.insert(this->nodeRepersentaion.end(), nodeVec);
     this->nid_idx[rpi.first] = idx;
@@ -28,15 +33,15 @@ Observation MultiAgentEnv::reset(const RegisterProfileMap &regProfMap) {
   this->computeAnnotations();
   this->graph_topology = new Graph(this->edges, this->regProfMap);
   this->registerAS = new RegisterActionSpace();
-  Observation nodeSelectionObs = this->selectNodeObsConstructor();
+  Observation *nodeSelectionObs = this->selectNodeObsConstructor();
   this->setNextAgent("node_selection_agent");
   return nodeSelectionObs;
 }
 
-Observation MultiAgentEnv::step(Action action) {
+Observation *MultiAgentEnv::step(Action action) {
   // LLVM_DEBUG(errs() << "Inside step, next agent and action are: "
   //                   << this->next_agent << " " << action << "\n");
-  Observation result;
+  Observation *result;
   if (this->getNextAgent() == "node_selection_agent") {
     result = this->select_node_step(action);
   } else if (this->getNextAgent() == "task_selection_agent") {
@@ -54,7 +59,7 @@ Observation MultiAgentEnv::step(Action action) {
   return result;
 }
 
-Observation MultiAgentEnv::select_node_step(unsigned action) {
+Observation *MultiAgentEnv::select_node_step(unsigned action) {
   this->current_node_id = this->idx_nid[action];
   // LLVM_DEBUG(errs() << "Inside select_node_step function "
   //                   << this->current_node_id << " " << action << "\n");
@@ -84,7 +89,7 @@ Observation MultiAgentEnv::select_node_step(unsigned action) {
   return this->taskSelectionObsConstructor();
 }
 
-Observation MultiAgentEnv::select_task_step(unsigned action) {
+Observation *MultiAgentEnv::select_task_step(unsigned action) {
   if (action == 0) {
     // LLVM_DEBUG(errs() << "Next is colouring agent\n");
     this->setNextAgent("colour_node_agent");
@@ -95,7 +100,7 @@ Observation MultiAgentEnv::select_task_step(unsigned action) {
   }
 }
 
-Observation MultiAgentEnv::colour_node_step(unsigned action) {
+Observation *MultiAgentEnv::colour_node_step(unsigned action) {
   unsigned current_node_idx = this->nid_idx[this->current_node_id];
   this->annotations[current_node_idx][0] = 0;
   this->annotations[current_node_idx][1] = action;
@@ -106,45 +111,65 @@ Observation MultiAgentEnv::colour_node_step(unsigned action) {
   return this->selectNodeObsConstructor();
 }
 
-Observation MultiAgentEnv::split_node_step(unsigned action) { ; }
+Observation *MultiAgentEnv::split_node_step(unsigned action) { ; }
 
-Observation MultiAgentEnv::splitNodeObsConstructor() { ; }
+Observation *MultiAgentEnv::splitNodeObsConstructor() { ; }
 
-Observation MultiAgentEnv::selectNodeObsConstructor() {
+Observation *MultiAgentEnv::selectNodeObsConstructor() {
+
   // Observation temp_obs = new float[selectNodeObsSize]();
-  Observation temp_obs(selectNodeObsSize);
+  Observation *obs = new Observation(selectNodeObsSize);
+  Observation &temp_obs = *obs;
   int current_index = 0;
+
+  auto assertObsSize = [&](int lineno) {
+    if (current_index >= selectNodeObsSize) {
+      errs() << "multienv.cpp : line " << lineno << " -----------"
+             << "current_index = " << current_index << "\n";
+    }
+  };
+
   std::vector<int> action_mask(max_node_number);
   this->createNodeSelectMask(action_mask);
   // Setting action mask
   // LLVM_DEBUG(errs() << "Node Selection action mask: ");
   for (int i = 0; i < max_node_number; i++) {
+    assertObsSize(137);
     temp_obs[current_index++] = action_mask[i];
     // LLVM_DEBUG(errs() << action_mask[i] << " ");
   }
   // LLVM_DEBUG(errs() << "\n");
   // Set edge count in graph
+  assertObsSize(143);
   temp_obs[current_index++] = this->edge_count;
 
-  std::vector<float> edgesFlattened(max_edge_count*2);
+  std::vector<float> edgesFlattened(max_edge_count * 2);
   this->computeEdgesFlatened(edgesFlattened);
   for (int i = 0; i < max_edge_count * 2; i++) {
+    assertObsSize(148);
     temp_obs[current_index++] = edgesFlattened[i];
   }
-  temp_obs[current_index + this->edge_count] = 1;
+  current_index += this->edge_count;
+  assertObsSize(152);
+  temp_obs[current_index] = 1;
   current_index += max_edge_count;
   // Set number of node in graph
   unsigned node_count = this->regProfMap.size();
-  temp_obs[current_index + node_count] = 1;
+  assertObsSize(157);
+  current_index += node_count;
+  assertObsSize(159);
+  temp_obs[current_index] = 1;
   current_index += max_node_number;
   // Setting anotations
   std::vector<float> annotations(max_node_number * 3);
   this->createAnnotations(annotations);
   for (int i = 0; i < max_node_number * 3; i++) {
+    assertObsSize(166);
     temp_obs[current_index++] = annotations[i];
   }
   // Set Spill weights
   for (int i = 0; i < max_node_number; i++) {
+    assertObsSize(171);
     temp_obs[current_index++] = this->annotations[i][0];
   }
   // for (auto rpi : *(this->regProfMap)) {
@@ -160,6 +185,7 @@ Observation MultiAgentEnv::selectNodeObsConstructor() {
     float *nodeVec = this->nodeRepersentaion[node_idx];
     unsigned vec_size = IR2Vec_size;
     for (int i = 0; i < vec_size; i++) {
+      assertObsSize(187);
       temp_obs[current_index++] = nodeVec[i];
     }
   }
@@ -174,7 +200,7 @@ Observation MultiAgentEnv::selectNodeObsConstructor() {
   //     temp_obs[current_index++] = nodeVec[i];
   //   }
   // }
-  return temp_obs;
+  return obs;
 }
 
 void MultiAgentEnv::createNodeSelectMask(std::vector<int> &mask) {
@@ -185,13 +211,18 @@ void MultiAgentEnv::createNodeSelectMask(std::vector<int> &mask) {
   // LLVM_DEBUG(errs() << "Eligible node list size: " << eligibleNodes.size()
   //                   << "\n");
   for (auto elg_node : eligibleNodes) {
+    if (elg_node >= max_node_number) {
+      errs() << "elg_node : " << elg_node << "\n";
+    }
+    assert(elg_node < max_node_number &&
+           "elg_node_id is greater than max_node_number\n");
     mask[elg_node] = 1;
     // LLVM_DEBUG(errs() << elg_node << " ");
   }
   // LLVM_DEBUG(errs() << "\n");
 }
 
-void MultiAgentEnv::createAnnotations(std::vector<float>& temp_annotations) {
+void MultiAgentEnv::createAnnotations(std::vector<float> &temp_annotations) {
   int current_idx = 0;
   for (int i = 0; i < max_node_number; i++) {
     temp_annotations[current_idx++] = this->annotations[i][0];
@@ -240,7 +271,7 @@ unsigned MultiAgentEnv::computeEdgesFromRP() {
   return edge_count;
 }
 
-void MultiAgentEnv::computeEdgesFlatened(std::vector<float>& edgesFlattened) {
+void MultiAgentEnv::computeEdgesFlatened(std::vector<float> &edgesFlattened) {
   //   unsigned edge_count = 0;
   unsigned flatned_count = 0;
   int row_count = sizeof(this->edges) / sizeof(this->edges[0]);
@@ -250,8 +281,8 @@ void MultiAgentEnv::computeEdgesFlatened(std::vector<float>& edgesFlattened) {
   }
 }
 
-float *
-MultiAgentEnv::constructNodeVector(SmallVector<IR2Vec::Vector, 12> nodeMat) {
+float *MultiAgentEnv::constructNodeVector(
+    const SmallVector<IR2Vec::Vector, 12> &nodeMat) {
   if (nodeMat.size() > 0) {
     float *nodeVec = new float[nodeMat[0].size()]();
     for (int i = 0; i < nodeMat[0].size(); i++) {
@@ -263,31 +294,36 @@ MultiAgentEnv::constructNodeVector(SmallVector<IR2Vec::Vector, 12> nodeMat) {
     }
     return nodeVec;
   } else {
+    // assert(false && "nodeMat size is zero\n");
     return new float[IR2Vec_size]();
   }
 }
 
-Observation MultiAgentEnv::taskSelectionObsConstructor() {
+Observation *MultiAgentEnv::taskSelectionObsConstructor() {
   // LLVM_DEBUG(errs() << "Inside taskSelectionObsConstructor function\n");
   // Observation temp_obs = new float[selectTaskObsSize]();
-  Observation temp_obs(selectTaskObsSize);
+  Observation *obs = new Observation(selectTaskObsSize);
+  Observation &temp_obs = *obs;
   int current_index = 0;
   // Setting Action mask for task selection
-  float *action_mask = new float[2]();
-  action_mask[0] = 1;
-  action_mask[1] = 0;
-  temp_obs[current_index++] = action_mask[0];
-  temp_obs[current_index++] = action_mask[1];
+  // float *action_mask = new float[2]();
+  // action_mask[0] = 1;
+  // action_mask[1] = 0;
+  // temp_obs[current_index++] = action_mask[0];
+  // temp_obs[current_index++] = action_mask[1];
+
+  temp_obs[current_index++] = 1;
+  temp_obs[current_index++] = 0;
   // Setting node properties
 
   unsigned current_node_idx = this->nid_idx[this->current_node_id];
-  llvm::SmallVector<unsigned, 8> adj_nodes =
-      this->graph_topology->getAdjNodes(current_node_idx);
+  llvm::SmallVector<unsigned, 8> &adj_nodes =
+      *(this->graph_topology->getAdjNodes(current_node_idx));
   llvm::StringRef regclass = this->current_node.cls;
-  llvm::SmallVector<unsigned, 8> adj_colors =
-      this->graph_topology->getColorOfVisitedAdjNodes(current_node_idx);
-  llvm::SmallVector<unsigned, 8> masked_action_space =
-      this->registerAS->maskActionSpace(regclass, adj_colors);
+  llvm::SmallVector<unsigned, 8> adj_colors;
+  this->graph_topology->getColorOfVisitedAdjNodes(current_node_idx, adj_colors);
+  llvm::SmallVector<unsigned, 8> masked_action_space;
+  this->registerAS->maskActionSpace(regclass, adj_colors, masked_action_space);
   float spillcost = this->current_node.spillWeight;
   llvm::SmallVector<int, 8> use_distances = this->current_node.useDistances;
   temp_obs[current_index++] = adj_nodes.size();
@@ -300,12 +336,13 @@ Observation MultiAgentEnv::taskSelectionObsConstructor() {
   for (int i = 0; i < IR2Vec_size; i++) {
     temp_obs[current_index++] = nodeVec[i];
   }
-  return temp_obs;
+  return obs;
 }
 
-Observation MultiAgentEnv::colourNodeObsConstructor() {
+Observation *MultiAgentEnv::colourNodeObsConstructor() {
   // Observation temp_obs = new float[colourNodeObsSize]();
-  Observation temp_obs(colourNodeObsSize);
+  Observation *obs = new Observation(colourNodeObsSize);
+  Observation &temp_obs = *obs;
   // LLVM_DEBUG(errs() << "Inside colourNodeObsConstructor function\n");
   int current_index = 0;
 
@@ -314,14 +351,14 @@ Observation MultiAgentEnv::colourNodeObsConstructor() {
 
   unsigned current_node_idx = this->nid_idx[this->current_node_id];
   // Set action mask
-  float *colour_node_action_mask = new float[X86_action_space_size]();
+  std::vector<float> colour_node_action_mask(X86_action_space_size);
   llvm::StringRef regclass = this->current_node.cls;
-  llvm::SmallVector<unsigned, 8> adj_colors =
-      this->graph_topology->getColorOfVisitedAdjNodes(current_node_idx);
+  llvm::SmallVector<unsigned, 8> adj_colors;
+  this->graph_topology->getColorOfVisitedAdjNodes(current_node_idx, adj_colors);
   // LLVM_DEBUG(errs() << "Adjecent nodes colours: " << adj_colors.size() <<
   // "\n");
-  llvm::SmallVector<unsigned, 8> masked_action_space =
-      this->registerAS->maskActionSpace(regclass, adj_colors);
+  llvm::SmallVector<unsigned, 8> masked_action_space;
+  this->registerAS->maskActionSpace(regclass, adj_colors, masked_action_space);
   // LLVM_DEBUG(errs() << "Select node action mask size: "
   // << masked_action_space.size() << "\n");
   for (int i = 0; i < masked_action_space.size(); i++) {
@@ -341,5 +378,5 @@ Observation MultiAgentEnv::colourNodeObsConstructor() {
   for (int i = 0; i < IR2Vec_size; i++) {
     temp_obs[current_index++] = nodeVec[i];
   }
-  return temp_obs;
+  return obs;
 }
