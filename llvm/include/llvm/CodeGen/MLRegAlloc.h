@@ -66,6 +66,7 @@
 #include "llvm/Target/TargetMachine.h"
 
 #include "MLInferenceEngine/onnx.h"
+#include "multi_agent_env.h"
 // gRPC includes
 #include "grpc/RegisterAllocation/RegisterAllocation.grpc.pb.h"
 #include "grpc/RegisterAllocationInference/RegisterAllocationInference.grpc.pb.h"
@@ -93,7 +94,8 @@ namespace llvm {
 
 class MLRA : public RegAllocBase,
              public registerallocation::RegisterAllocation::Service,
-             public gRPCUtil {
+             public gRPCUtil,
+             public MultiAgentEnv {
 
   // context
   SlotIndexes *Indexes;
@@ -272,6 +274,8 @@ private:
   //
   unsigned getPhyRegForColor(LiveInterval &VirtReg, unsigned color,
                              SmallVector<unsigned, 4> &SplitVRegs);
+            
+  Observation split_node_step(unsigned action) override;
 
   // std::map<std::string, std::map<std::string, int64_t>>
   // parsePredictionJson(std::string jsonString) {

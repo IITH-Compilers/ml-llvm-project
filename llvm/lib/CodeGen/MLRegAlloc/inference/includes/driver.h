@@ -1,23 +1,26 @@
+#ifndef MLRA_INFERENCE_INCLUDES_DRIVER_H
+#define MLRA_INFERENCE_INCLUDES_DRIVER_H
+
 #include "MLInferenceEngine/driver.h"
 #include "multi_agent_env.h"
 
 #define nodeSelectionModelPath                                                 \
-  "/home/cs20mtech12003/ML-Register-Allocation/model/RegAlloc/ggnn_drl/"       \
+  "/home/es20btech11021/ML-Register-Allocation/model/RegAlloc/ggnn_drl/"       \
   "rllib_split_model/src/node_select_model_inference/model.onnx"
 #define taskSelectionModelPath                                                 \
-  "/home/cs20mtech12003/ML-Register-Allocation/model/RegAlloc/ggnn_drl/"       \
+  "/home/es20btech11021/ML-Register-Allocation/model/RegAlloc/ggnn_drl/"       \
   "rllib_split_model/src/select_task_model_inference/model.onnx"
 #define nodeColouringModelPath                                                 \
-  "/home/cs20mtech12003/ML-Register-Allocation/model/RegAlloc/ggnn_drl/"       \
+  "/home/es20btech11021/ML-Register-Allocation/model/RegAlloc/ggnn_drl/"       \
   "rllib_split_model/src/node_colour_model_inference/model.onnx"
 #define nodeSplitingModelPath                                                  \
-  "/home/cs20mtech12003/ML-Register-Allocation/model/RegAlloc/ggnn_drl/"       \
+  "/home/es20btech11021/ML-Register-Allocation/model/RegAlloc/ggnn_drl/"       \
   "rllib_split_model/src/node_split_model_inference/model.onnx"
 
 
 class DriverService : public InferenceEngine {
 public:
-  DriverService();
+  DriverService(MultiAgentEnv* env);
   void getInfo(RegisterProfileMap *regProfMap,
                std::map<std::string, int64_t> *colour_map);
 };
@@ -44,3 +47,5 @@ public:
   void computeAction(Observation obs){};
 };
 */
+
+#endif

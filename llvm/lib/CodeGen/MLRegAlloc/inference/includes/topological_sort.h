@@ -1,4 +1,8 @@
-#include "llvm/CodeGen/RegisterProfile.h"
+#ifndef MLRA_INFERENCE_INCLUDES_TOPOLOGICAL_SORT_H
+#define MLRA_INFERENCE_INCLUDES_TOPOLOGICAL_SORT_H
+
+// #include "multi_agent_env.h"
+ #include "llvm/CodeGen/RegisterProfile.h"
 #include <llvm/ADT/MapVector.h>
 #include <llvm/ADT/SmallVector.h>
 #include <map>
@@ -16,11 +20,14 @@ public:
   Graph(float edges[][2], RegisterProfileMap regProfMap);
   llvm::SmallVector<bool, 8> discovered;
   void UpdateVisitList(unsigned node_idx);
+  void removeNode(unsigned node_idx);
+  void addNode(RegisterProfile rp);
+  void updateEdges(float** edges);
+  unsigned node_number;
 
 private:
   llvm::SmallMapVector<unsigned, llvm::SmallVector<unsigned, 8>, 16>
       adjacencyList;
-  unsigned node_number;
   llvm::SmallVector<unsigned, 8> indegree;
   llvm::SmallVector<int, 8> colored;
 };
@@ -38,3 +45,5 @@ public:
   maskActionSpace(llvm::StringRef regclass,
                   llvm::SmallVector<unsigned, 8> adj_colors);
 };
+
+#endif

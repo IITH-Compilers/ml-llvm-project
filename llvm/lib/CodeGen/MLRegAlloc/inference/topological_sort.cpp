@@ -105,6 +105,44 @@ bool Graph::all_discovered() {
   return true;
 }
 
+void Graph::removeNode(unsigned node_idx) {
+  for (auto adj_node_idx : adjacencyList[node_idx]) {
+    auto adj_node_list = adjacencyList[adj_node_idx];
+    auto itr = std::find(adj_node_list.begin(), adj_node_list.end(), node_idx);
+    if (itr != adj_node_list.end()) {
+      adj_node_list.erase(itr);
+    }
+    adjacencyList[adj_node_idx] = adj_node_list;
+  }
+  auto it = adjacencyList.find(node_idx);
+  adjacencyList.erase(it);
+  discovered[node_idx] = true;
+}
+
+void Graph::addNode(RegisterProfile rp) {
+  node_number += 1;
+  discovered.push_back(false);
+  llvm::SmallVector<unsigned, 8> interferences;
+  for (auto item : rp.interferences) {
+    interferences.push_back(item);
+  }
+  adjacencyList.insert({node_number, interferences});
+  // indegree.append(0);
+  colored.push_back(-1);
+}
+
+void Graph::updateEdges(float** edges) {
+  // float edges[max_edge_count][2];
+  int edgeCount = 0;
+  for (auto item : adjacencyList) {
+    for(auto adj_node : adjacencyList[item.first]) {
+      edges[edgeCount][0] = item.first;
+      edges[edgeCount][1] = adj_node;
+      edgeCount++;
+    }
+  }
+}
+
 llvm::SmallVector<unsigned, 8> RegisterActionSpace::maskActionSpace(
     llvm::StringRef regclass, llvm::SmallVector<unsigned, 8> adj_colors) {
   llvm::SmallVector<unsigned, 8> action_space;

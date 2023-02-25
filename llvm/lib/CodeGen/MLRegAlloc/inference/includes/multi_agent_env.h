@@ -1,5 +1,9 @@
+#ifndef MLRA_INFERENCE_INCLUDES_MULTI_AGENT_ENV_H
+#define MLRA_INFERENCE_INCLUDES_MULTI_AGENT_ENV_H
+
 #include "topological_sort.h"
 #include "MLInferenceEngine/environment.h"
+// #include "llvm/ADT/SetVector.h
 // #include "llvm/CodeGen/RegisterProfile.h"
 
 typedef float *Observation;
@@ -7,6 +11,8 @@ typedef float *Observation;
 #define max_node_number 600
 #define IR2Vec_size 100
 #define X86_action_space_size 113
+#define max_usepoints_count 200
+#define split_threshold 10
 
 #define selectNodeObsSize 153601
 #define selectTaskObsSize 106
@@ -21,17 +27,21 @@ class MultiAgentEnv : public Environment {
 
   RegisterProfile current_node;
 
-  unsigned current_node_id;
-
   unsigned edge_count;
 
-  int *nid_idx = new int[max_node_number]();
+  // int *nid_idx = new int[max_node_number]();
 
-  int *idx_nid = new int[max_node_number]();
+  std::map<int, int> nid_idx;
+
+  // int *idx_nid = new int[max_node_number]();
+
+  std::map<int, int> idx_nid;
 
   float edges[max_edge_count][2];
 
   float annotations[max_node_number][3];
+
+  unsigned splitStepCount = 0;
 
   // float *nodeRepersentaion[max_node_number];
 
@@ -43,11 +53,11 @@ class MultiAgentEnv : public Environment {
 
   Observation colour_node_step(unsigned action);
 
-  Observation split_node_step(unsigned action);
-
-  Observation selectNodeObsConstructor();
-
   float *createNodeSelectMask();
+
+  float *createNodeSplitMask();
+
+  float *getSplitPointProperties();
 
   float *createAnnotations();
 
@@ -70,7 +80,20 @@ public:
 
   std::map<unsigned, unsigned> nid_colour;
 
+  unsigned current_node_id;
+
+  unsigned splitPoint;
+
   Observation reset(RegisterProfileMap *regProfMap);
 
   Observation step(Action action) override;
+
+  void update_env(RegisterProfileMap *regProfMap, SmallSetVector<unsigned, 8> updatedRegIdxs);
+
+  Observation selectNodeObsConstructor();
+
+  virtual Observation split_node_step(unsigned action) = 0;  
+
 };
+
+#endif

@@ -1,8 +1,9 @@
 #include "driver.h"
+#include "includes/multi_agent_env.h"
 #include <fstream>
 
-DriverService::DriverService() {
-  setEnvironment(new MultiAgentEnv());
+DriverService::DriverService(MultiAgentEnv* env) {
+  setEnvironment(env);
   addAgent(new Agent(nodeSelectionModelPath, selectNodeObsSize),
            "node_selection_agent");
   addAgent(new Agent(taskSelectionModelPath, selectTaskObsSize),
@@ -17,14 +18,6 @@ void DriverService::getInfo(RegisterProfileMap *regProfMap,
                             std::map<std::string, int64_t> *colour_map) {
   Observation nodeSelectionObs =
       static_cast<MultiAgentEnv *>(this->getEnvironment())->reset(regProfMap);
-
-  std::ofstream outfile;
-  outfile.open("./select_node_input-cpp_before.csv", std::ios::out);
-  for (unsigned i = 0; i < selectNodeObsSize; i++) {
-    outfile << nodeSelectionObs[i] << " ";
-  }
-  outfile << "\n";
-  outfile.close();
 
   this->computeAction(nodeSelectionObs);
 

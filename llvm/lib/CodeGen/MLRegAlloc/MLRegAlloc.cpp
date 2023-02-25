@@ -17,6 +17,7 @@
 #include "SpillPlacement.h"
 #include "Spiller.h"
 #include "SplitKit.h"
+#include "inference/includes/multi_agent_env.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
@@ -381,6 +382,36 @@ void MLRA::sendRegProfData(T *response,
     LLVM_DEBUG(errs() << "update not happeed\n");
     response->set_result(false);
   }
+}
+
+Observation MLRA::split_node_step(unsigned action) {
+  unsigned splitRegIdx = this->current_node_id;
+  splitPoint = action;
+  SmallVector<unsigned, 2> NewVRegs;
+  // LLVM_DEBUG(errs() << "==========================BEFORE "
+  //                       "SPLITTING==================================\n";
+  //             MF->dump(); errs() << "====================================="
+  //                                   "=======================\n");
+  errs() << "Tring to split: " << splitRegIdx << " at point: " << splitPoint
+         << "\n";
+  if (splitVirtReg(splitRegIdx, splitPoint, NewVRegs)) {
+    SmallSetVector<unsigned, 8> updatedRegIdxs;
+    updateRegisterProfileAfterSplit(splitRegIdx, NewVRegs, updatedRegIdxs);
+    if (enable_dump_ig_dot)
+      dumpInterferenceGraph(std::to_string(SplitCounter));
+    if (enable_mlra_checks)
+      verifyRegisterProfile();
+    errs() << "Splitted register successfuly: " << splitRegIdx << "\n";
+    this->update_env(&regProfMap, updatedRegIdxs);
+  } else {
+    LLVM_DEBUG(
+        errs()
+        << "Still after spliting prediction; LLVM dees not performit.\n");
+    // request->set_result(false);
+    errs() << "Still after spliting prediction; LLVM dees not performit.\n";
+  }
+  this->setNextAgent("node_selection_agent");
+  return this->selectNodeObsConstructor();
 }
 
 bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
@@ -2110,7 +2141,7 @@ void MLRA::inference() {
   }
 
   if (enable_rl_inference_engine) {
-    DriverService *inference_driver = new DriverService();
+    DriverService *inference_driver = new DriverService(this);
     // std::map<unsigned, unsigned> colour_map;
     std::map<std::string, int64_t> colorMap;
     inference_driver->getInfo(&regProfMap, &colorMap);

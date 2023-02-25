@@ -43,6 +43,7 @@ Observation MultiAgentEnv::step(Action action) {
   } else if (this->getNextAgent() == "colour_node_agent") {
     result = this->colour_node_step(action);
   } else if (this->getNextAgent() == "split_node_agent") {
+    splitStepCount++;
     result = this->split_node_step(action);
   }
   if (this->graph_topology->all_discovered()) {
@@ -51,6 +52,56 @@ Observation MultiAgentEnv::step(Action action) {
     this->setDone();
   }
   return result;
+}
+
+void MultiAgentEnv::update_env(RegisterProfileMap *regProfMap, SmallSetVector<unsigned, 8> updatedRegIdxs) {
+  SmallVector<unsigned, 2> newNodeIdxs;
+  for (auto regId : updatedRegIdxs) {
+    if(nid_idx.find(regId) == nid_idx.end()) {
+      newNodeIdxs.insert(newNodeIdxs.end(), regId);
+    }
+  }
+  auto splitedNodeIdx = nid_idx[current_node_id];
+  graph_topology->removeNode(splitedNodeIdx);
+  SmallVector<IR2Vec::Vector, 12> currentNodeMatrix = this->regProfMap[current_node_id].vecRep;
+  IR2Vec::Vector CPY_INST_VEC(IR2Vec_size, 0.001);
+  SmallVector<IR2Vec::Vector, 12> V1(currentNodeMatrix.begin(), currentNodeMatrix.begin() + splitPoint + 1);
+  SmallVector<IR2Vec::Vector, 12> V2(currentNodeMatrix.begin() + 1, currentNodeMatrix.end());
+  int newNodecount = 0;
+  for (auto rpi : *regProfMap) {
+    RegisterProfile rp = rpi.second;
+    if (this->regProfMap.find(rpi.first) == this->regProfMap.end()){
+      newNodecount += 1;
+      nid_idx.insert(std::pair<unsigned, unsigned>(
+          rpi.first, graph_topology->node_number + 1));
+      idx_nid.insert(std::pair<unsigned, unsigned>(
+          graph_topology->node_number + 1, rpi.first));
+      graph_topology->addNode(rp);
+      this->regProfMap.insert({rpi.first, rpi.second});
+      SmallVector<IR2Vec::Vector, 12> newNodeMatrix;
+      float *nodeVec;
+      if (newNodecount < 3) {
+        if(newNodecount == 1) {
+          nodeVec = this->constructNodeVector(V1);
+        }
+        else if(newNodecount == 2) {
+          nodeVec = this->constructNodeVector(V2);
+        }
+      } else {
+        newNodeMatrix.push_back(CPY_INST_VEC);
+        nodeVec = this->constructNodeVector(newNodeMatrix);
+      }
+      this->nodeRepersentaion.insert(this->nodeRepersentaion.end(), nodeVec);
+    }
+    else {
+      this->regProfMap[rpi.first] = rpi.second;
+    }
+  }
+  float **edges_ptr;
+  edges_ptr = new float *[2];
+  for(int i = 0; i <max_edge_count; i++)
+    edges_ptr[i] = this->edges[i];
+  graph_topology->updateEdges(edges_ptr);
 }
 
 Observation MultiAgentEnv::select_node_step(unsigned action) {
@@ -99,9 +150,55 @@ Observation MultiAgentEnv::colour_node_step(unsigned action) {
   return this->selectNodeObsConstructor();
 }
 
-Observation MultiAgentEnv::split_node_step(unsigned action) { ; }
+// Observation MultiAgentEnv::split_node_step(unsigned action) { ; }
 
-Observation MultiAgentEnv::splitNodeObsConstructor() { ; }
+Observation MultiAgentEnv::splitNodeObsConstructor() { 
+  unsigned current_node_idx = this->nid_idx[this->current_node_id];
+  Observation temp_obs = new float[selectNodeObsSize]();
+  int current_index = 0;
+  float *action_mask = this->createNodeSplitMask();
+  for (int i = 0; i < max_node_number; i++) {
+    temp_obs[current_index++] = action_mask[i];
+  }
+  float *nodeVec = this->nodeRepersentaion[current_node_idx];
+  for (int i = 0; i < IR2Vec_size; i++) {
+    temp_obs[current_index++] = nodeVec[i];
+  }
+  float *splitPointProperties = getSplitPointProperties();
+  for (int i = 0; i < max_usepoints_count * 2; i++) {
+    temp_obs[current_index++] = splitPointProperties[i];
+  }
+  return temp_obs;
+}
+
+float *MultiAgentEnv::createNodeSplitMask() { 
+  float *mask = new float[max_usepoints_count]();
+  unsigned current_node_idx = this->nid_idx[this->current_node_id];
+  auto splitSlots = current_node.splitSlots;
+  auto useDistanceList = current_node.useDistances;
+  errs() << "Valid split points are: ";
+  for (int i = 0; i < max_usepoints_count; i++) {
+    if(std::find(splitSlots.begin(), splitSlots.end(), i) != splitSlots.end() && i != useDistanceList.size() - 1) {
+      mask[i] = 1;
+      errs() << i << ", ";
+    } else {
+      mask[i] = 0;
+    }
+  }
+  errs() << "\n";
+  return mask;
+}
+
+float *MultiAgentEnv::getSplitPointProperties() { 
+  float *usepointProperties = new float[max_usepoints_count*2]();
+  int current_index = 0;
+  for (int i = 0; i < current_node.spillWeights.size(); i++) {
+    usepointProperties[current_index++] =  current_node.spillWeights[i];
+    if( i < current_node.useDistances.size() - 1)
+      usepointProperties[current_index++] =  current_node.useDistances[i+1] - current_node.useDistances[i];
+  }
+  return usepointProperties;
+}
 
 Observation MultiAgentEnv::selectNodeObsConstructor() {
   Observation temp_obs = new float[selectNodeObsSize]();
@@ -268,6 +365,17 @@ Observation MultiAgentEnv::taskSelectionObsConstructor() {
   float *action_mask = new float[2]();
   action_mask[0] = 1;
   action_mask[1] = 0;
+  auto splitNodeMask = createNodeSplitMask();
+  if(splitStepCount < split_threshold){
+    for (int i = 0; i < max_usepoints_count; i++) {
+      if(int(splitNodeMask[i]) == 1) {
+        action_mask[1] = 1;
+        errs() << "Splitting Possible Node Id: " << current_node_id << "\n";
+        break;
+      }
+    }
+  }
+
   temp_obs[current_index++] = action_mask[0];
   temp_obs[current_index++] = action_mask[1];
   // Setting node properties
