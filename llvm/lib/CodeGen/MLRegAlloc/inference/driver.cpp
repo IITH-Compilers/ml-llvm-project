@@ -14,20 +14,20 @@ DriverService::DriverService(MultiAgentEnv* env) {
            "split_node_agent");
 }
 
-void DriverService::getInfo(RegisterProfileMap *regProfMap,
-                            std::map<std::string, int64_t> *colour_map) {
+void DriverService::getInfo(const RegisterProfileMap &regProfMap,
+                            std::map<std::string, int64_t> &colour_map) {
   Observation nodeSelectionObs =
       static_cast<MultiAgentEnv *>(this->getEnvironment())->reset(regProfMap);
+  // assert(nodeSelectionObs);
 
   this->computeAction(nodeSelectionObs);
 
   for (auto pair :
        static_cast<MultiAgentEnv *>(this->getEnvironment())->nid_colour) {
     // errs() << pair.first << " : " << pair.second << "\n";
-    (*colour_map)[std::to_string(pair.first)] = pair.second;
+    colour_map[std::to_string(pair.first)] = pair.second;
   }
 }
-
 
 /*
 DriverService::DriverService() {

@@ -6,7 +6,7 @@
 // #include "llvm/ADT/SetVector.h
 // #include "llvm/CodeGen/RegisterProfile.h"
 
-typedef float *Observation;
+typedef std::vector<float> Observation;
 
 #define max_node_number 600
 #define IR2Vec_size 100
@@ -31,13 +31,12 @@ class MultiAgentEnv : public Environment {
 
   // int *nid_idx = new int[max_node_number]();
 
-  std::map<int, int> nid_idx;
-
   // int *idx_nid = new int[max_node_number]();
 
-  std::map<int, int> idx_nid;
+  std::map<int,int> nid_idx;
+  std::map<int,int> idx_nid;
 
-  float edges[max_edge_count][2];
+  int edges[max_edge_count][2];
 
   float annotations[max_node_number][3];
 
@@ -53,17 +52,16 @@ class MultiAgentEnv : public Environment {
 
   Observation colour_node_step(unsigned action);
 
-  float *createNodeSelectMask();
-
   float *createNodeSplitMask();
 
   float *getSplitPointProperties();
+  void createNodeSelectMask(std::vector<int>& mask);
 
-  float *createAnnotations();
+  void createAnnotations(std::vector<float>& temp_annotations);
 
   unsigned computeEdgesFromRP();
 
-  float *computeEdgesFlatened();
+  void computeEdgesFlatened(std::vector<float>& edgesFlattened);
 
   float *constructNodeVector(SmallVector<IR2Vec::Vector, 12> nodeMat);
 
@@ -83,8 +81,8 @@ public:
   unsigned current_node_id;
 
   unsigned splitPoint;
-
-  Observation reset(RegisterProfileMap *regProfMap);
+  
+  Observation reset(const RegisterProfileMap& regProfMap);
 
   Observation step(Action action) override;
 

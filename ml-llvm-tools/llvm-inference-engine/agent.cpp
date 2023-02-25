@@ -10,14 +10,15 @@ Agent::Agent(std::string modelPath, int input_size) {
   this->input_size = input_size;
 }
 
-unsigned Agent::computeAction(Observation obs) {
+unsigned Agent::computeAction(Observation input) {
   // Set input for model
-  std::vector<float> input;
-  for (int i = 0; i < this->input_size; i++) {
-    input.insert(input.end(), obs[i]);
-  }
+  // std::vector<float> input;
+  // for (int i = 0; i < this->input_size; i++) {
+  //   input.insert(input.end(), obs[i]);
+  // }
 
   // Call model on input
+  assert(input.size() > 0);
   std::vector<int64_t> output_dims;
   auto floatarr = this->model->run(input, output_dims);
   // llvm::errs() << "output_tensor_info_dims = " << output_dims.size() << '\n';
@@ -39,7 +40,13 @@ unsigned Agent::computeAction(Observation obs) {
   auto max = std::max_element(model_output.begin(),
                               model_output.end()); // [2, 4)
   int argmaxVal = std::distance(model_output.begin(), max);
-  // llvm::errs() << "max value and index are " << *max << " " << argmaxVal
-  // << "\n";
+  
+  llvm::errs() << "---------------MODEL OUTPUT VECTOR:----------------\n";
+  for(auto e : model_output)
+  {
+    llvm::errs() << e << " ";
+  }
+  llvm::errs() << "\nmax value and index are " << *max << " " << argmaxVal
+  << "\n";
   return argmaxVal;
 }

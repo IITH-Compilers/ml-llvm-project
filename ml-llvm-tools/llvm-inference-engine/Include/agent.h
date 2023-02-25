@@ -1,8 +1,8 @@
 #ifndef LLVM_INFERENCE_ENGINE_AGENT_H
 #define LLVM_INFERENCE_ENGINE_AGENT_H
 
-#include "MLInferenceEngine/onnx.h"
-#include "MLInferenceEngine/utils.h"
+#include "onnx.h"
+#include "utils.h"
 #include "llvm/ADT/SmallVector.h"
 #include <stdio.h>
 #include <string>

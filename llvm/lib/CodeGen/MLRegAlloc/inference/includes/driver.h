@@ -3,6 +3,7 @@
 
 #include "MLInferenceEngine/driver.h"
 #include "multi_agent_env.h"
+#include "llvm/CodeGen/MachineFunction.h"
 
 #define nodeSelectionModelPath                                                 \
   "/home/es20btech11021/ML-Register-Allocation/model/RegAlloc/ggnn_drl/"       \
