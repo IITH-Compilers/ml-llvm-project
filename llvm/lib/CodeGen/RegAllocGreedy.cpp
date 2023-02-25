@@ -3273,6 +3273,7 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
   LastEvicted.clear();
 
   if (enable_dump_ig_dot || enable_mlra_inference || enable_mlra_training) {
+    LLVM_DEBUG(dbgs() << "======1.5\n";);
     MLRegAlloc(*MF, *Indexes, *MBFI, *DomTree, *Loops, *AA, *DebugVars,
                *SpillPlacer, *ORE);
     ExtraRegInfo.resize(MRI->getNumVirtRegs());

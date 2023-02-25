@@ -2,7 +2,7 @@
 #include "MLInferenceEngine/environment.h"
 // #include "llvm/CodeGen/RegisterProfile.h"
 
-typedef float *Observation;
+typedef std::vector<float> Observation;
 
 #define max_node_number 600
 #define IR2Vec_size 100
@@ -25,11 +25,14 @@ class MultiAgentEnv : public Environment {
 
   unsigned edge_count;
 
-  int *nid_idx = new int[max_node_number]();
+  // int *nid_idx = new int[max_node_number]();
 
-  int *idx_nid = new int[max_node_number]();
+  // int *idx_nid = new int[max_node_number]();
 
-  float edges[max_edge_count][2];
+  std::map<int,int> nid_idx;
+  std::map<int,int> idx_nid;
+
+  int edges[max_edge_count][2];
 
   float annotations[max_node_number][3];
 
@@ -47,13 +50,13 @@ class MultiAgentEnv : public Environment {
 
   Observation selectNodeObsConstructor();
 
-  float *createNodeSelectMask();
+  void createNodeSelectMask(std::vector<int>& mask);
 
-  float *createAnnotations();
+  void createAnnotations(std::vector<float>& temp_annotations);
 
   unsigned computeEdgesFromRP();
 
-  float *computeEdgesFlatened();
+  void computeEdgesFlatened(std::vector<float>& edgesFlattened);
 
   float *constructNodeVector(SmallVector<IR2Vec::Vector, 12> nodeMat);
 
@@ -70,7 +73,7 @@ public:
 
   std::map<unsigned, unsigned> nid_colour;
 
-  Observation reset(RegisterProfileMap *regProfMap);
+  Observation reset(const RegisterProfileMap& regProfMap);
 
   Observation step(Action action) override;
 };

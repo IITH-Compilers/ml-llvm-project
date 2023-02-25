@@ -2110,10 +2110,27 @@ void MLRA::inference() {
   }
 
   if (enable_rl_inference_engine) {
-    DriverService *inference_driver = new DriverService();
+    DriverService *inference_driver = new DriverService(MF);
     // std::map<unsigned, unsigned> colour_map;
     std::map<std::string, int64_t> colorMap;
-    inference_driver->getInfo(&regProfMap, &colorMap);
+
+    bool emptyGraph = true;
+    for (auto &rpi : regProfMap) {
+      auto rp = rpi.second;
+      if (rp.cls == "Phy" &&
+          rp.frwdInterferences.begin() == rp.frwdInterferences.end()) {
+        continue;
+      }
+      else
+      {
+        emptyGraph = false;
+        break;
+      }
+    }
+    if (emptyGraph)
+      return;
+
+    inference_driver->getInfo(regProfMap, colorMap);
     errs() << "Colour Map: \n";
     unsigned numSpills = 0;
     for (auto pair : colorMap) {
@@ -2458,7 +2475,7 @@ void MLRA::MLRegAlloc(MachineFunction &MF, SlotIndexes &Indexes,
   LLVM_DEBUG(dbgs() << "unsupportedClsFreq in MLRA for function "
                     << MF.getName() << " is: "
                     << std::to_string(unsupportedClsFreq.size()) << "\n");
-
+  return;
   std::ofstream outfile;
   outfile.open(statsFPMLRA + "/mlra_stats.csv", std::ios::app);
   outfile << MF.getFunction().getParent()->getSourceFileName() << ","

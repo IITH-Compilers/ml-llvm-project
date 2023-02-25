@@ -1,7 +1,8 @@
 #include "driver.h"
 #include <fstream>
 
-DriverService::DriverService() {
+DriverService::DriverService(MachineFunction *MF) {
+  this->MF = MF;
   setEnvironment(new MultiAgentEnv());
   addAgent(new Agent(nodeSelectionModelPath, selectNodeObsSize),
            "node_selection_agent");
@@ -13,10 +14,11 @@ DriverService::DriverService() {
            "split_node_agent");
 }
 
-void DriverService::getInfo(RegisterProfileMap *regProfMap,
-                            std::map<std::string, int64_t> *colour_map) {
+void DriverService::getInfo(const RegisterProfileMap &regProfMap,
+                            std::map<std::string, int64_t> &colour_map) {
   Observation nodeSelectionObs =
       static_cast<MultiAgentEnv *>(this->getEnvironment())->reset(regProfMap);
+  // assert(nodeSelectionObs);
 
   std::ofstream outfile;
   outfile.open("./select_node_input-cpp_before.csv", std::ios::out);
@@ -26,15 +28,17 @@ void DriverService::getInfo(RegisterProfileMap *regProfMap,
   outfile << "\n";
   outfile.close();
 
+  errs() << "----------------RUNNING ON: --------------------------------\n";
+  errs() << "------------" << MF->getName() << "--------------------"
+         << "\n";
   this->computeAction(nodeSelectionObs);
 
   for (auto pair :
        static_cast<MultiAgentEnv *>(this->getEnvironment())->nid_colour) {
     // errs() << pair.first << " : " << pair.second << "\n";
-    (*colour_map)[std::to_string(pair.first)] = pair.second;
+    colour_map[std::to_string(pair.first)] = pair.second;
   }
 }
-
 
 /*
 DriverService::DriverService() {
