@@ -384,7 +384,7 @@ void MLRA::sendRegProfData(T *response,
   }
 }
 
-Observation MLRA::split_node_step(unsigned action) {
+Observation *MLRA::split_node_step(unsigned action) {
   unsigned splitRegIdx = this->current_node_id;
   splitPoint = action;
   SmallVector<unsigned, 2> NewVRegs;
@@ -2146,19 +2146,25 @@ void MLRA::inference() {
     std::map<std::string, int64_t> colorMap;
 
     bool emptyGraph = true;
+    int count = 0;
+    int edge_count = 0;
     for (auto &rpi : regProfMap) {
       auto rp = rpi.second;
       if (rp.cls == "Phy" &&
           rp.frwdInterferences.begin() == rp.frwdInterferences.end()) {
         continue;
-      }
-      else
-      {
+      } else {
         emptyGraph = false;
-        break;
+        count++;
+        edge_count += (rp.interferences.size());
+        // break;
       }
     }
     if (emptyGraph)
+      return;
+
+    errs() << "edge_count = " << edge_count << "\n";
+    if (count >= 500 || (edge_count >= MAX_EDGE_COUNT))
       return;
 
     inference_driver->getInfo(regProfMap, colorMap);

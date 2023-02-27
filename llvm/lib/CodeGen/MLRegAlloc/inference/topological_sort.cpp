@@ -64,9 +64,8 @@ Graph::Graph(std::vector<std::vector<int>> &edges, const RegisterProfileMap &reg
   errs() << "in topological_sort.cpp : line 48\n";
 }
 
-llvm::SmallVector<unsigned, 8>
-Graph::getColorOfVisitedAdjNodes(unsigned node_idx) {
-  llvm::SmallVector<unsigned, 8> colour_vec;
+void Graph::getColorOfVisitedAdjNodes(
+    unsigned node_idx, llvm::SmallVector<unsigned, 8> &colour_vec) {
   errs() << "getColorOfVisitedAdjNodes: " << node_idx << "--"
          << this->adjacencyList.size() << "\n";
   llvm::SmallVector<unsigned, 8> interfering_nodes =
@@ -81,11 +80,11 @@ Graph::getColorOfVisitedAdjNodes(unsigned node_idx) {
     // LLVM_DEBUG(errs() << node << " and colour " << this->colored[node] <<
     // "\n");
   }
-  return colour_vec;
+  return;
 }
 
-llvm::SmallVector<unsigned, 8> Graph::getAdjNodes(unsigned node_idx) {
-  return this->adjacencyList[node_idx];
+llvm::SmallVector<unsigned, 8> *Graph::getAdjNodes(unsigned node_idx) {
+  return &adjacencyList[node_idx];
 }
 
 void Graph::addAdjNodes(unsigned node_idx, llvm::SmallVector<unsigned, 8> &adjNodeList) {
@@ -190,13 +189,15 @@ void Graph::addNode(RegisterProfile rp) {
 //   }
 // }
 
-llvm::SmallVector<unsigned, 8> RegisterActionSpace::maskActionSpace(
-    llvm::StringRef regclass, llvm::SmallVector<unsigned, 8> adj_colors) {
+void RegisterActionSpace::maskActionSpace(
+    llvm::StringRef regclass, const llvm::SmallVector<unsigned, 8> &adj_colors,
+    llvm::SmallVector<unsigned, 8> &action_space_filtered) {
   llvm::SmallVector<unsigned, 8> action_space;
+
   if (std::find(this->supported_regclasses.begin(),
                 this->supported_regclasses.end(),
                 regclass) != this->supported_regclasses.end()) {
-    std::vector<int> selectedInterval =
+    std::vector<int> &selectedInterval =
         this->suppcls_regs_normalize_map.at(regclass);
     for (auto reg : selectedInterval) {
       action_space.insert(action_space.end(), this->ac_sp_normlize[reg]);
@@ -209,7 +210,7 @@ llvm::SmallVector<unsigned, 8> RegisterActionSpace::maskActionSpace(
           int reg = this->normal_org_map.at(adj);
           if (this->overlaps.find(std::to_string(reg)) !=
               this->overlaps.end()) {
-            std::vector<int> overlaps_value =
+            std::vector<int> &overlaps_value =
                 this->overlaps.at(std::to_string(reg));
             for (auto val : overlaps_value) {
               if (this->org_normal_map.find(val) !=
@@ -226,18 +227,19 @@ llvm::SmallVector<unsigned, 8> RegisterActionSpace::maskActionSpace(
                         tmp_mask_sidi.end());
       extend_adj.erase(unique(extend_adj.begin(), extend_adj.end()),
                        extend_adj.end());
-      llvm::SmallVector<unsigned, 8> action_space_filtered;
       for (auto reg : action_space) {
         if (find(extend_adj.begin(), extend_adj.end(), reg) ==
             extend_adj.end()) {
           action_space_filtered.insert(action_space_filtered.end(), reg);
         }
       }
-      return action_space_filtered;
     }
   } else {
-    // LLVM_DEBUG(errs() << "Register class not supported: " << regclass <<
-    // "\n");
+    // assert(false);
+    errs() << "Register class not supported: " << regclass << "\n";
+    for (auto reg : action_space) {
+      action_space_filtered.insert(action_space_filtered.end(), reg);
+    }
   }
-  return action_space;
+  // return action_space;
 }

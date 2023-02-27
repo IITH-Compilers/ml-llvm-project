@@ -21,7 +21,7 @@ typedef std::vector<float> Observation;
 #define splitNodeObsSize 700
 
 class MultiAgentEnv : public Environment {
-
+  int debug_ct=0;
   RegisterProfileMap regProfMap;
 
   RegisterActionSpace *registerAS;
@@ -34,8 +34,8 @@ class MultiAgentEnv : public Environment {
 
   // int *idx_nid = new int[max_node_number]();
 
-  std::map<int,int> nid_idx;
-  std::map<int,int> idx_nid;
+  std::map<int, int> nid_idx;
+  std::map<int, int> idx_nid;
 
 
   float annotations[max_node_number][3];
@@ -44,34 +44,37 @@ class MultiAgentEnv : public Environment {
 
   // float *nodeRepersentaion[max_node_number];
 
-  llvm::SmallVector<float *, 8> nodeRepersentaion;
+  std::vector<std::vector<float>> nodeRepresentation;
 
-  Observation select_node_step(unsigned action);
+  Observation *select_node_step(unsigned action);
 
-  Observation select_task_step(unsigned action);
+  Observation *select_task_step(unsigned action);
 
-  Observation colour_node_step(unsigned action);
+  Observation *colour_node_step(unsigned action);
 
   std::vector<float> createNodeSplitMask();
 
   std::vector<float> getSplitPointProperties();
-  void createNodeSelectMask(std::vector<int>& mask);
+  
+  void createNodeSelectMask(std::vector<int> &mask);
 
-  void createAnnotations(std::vector<float>& temp_annotations);
+  void createAnnotations(std::vector<float> &temp_annotations);
 
   unsigned computeEdgesFromRP();
 
-  void computeEdgesFlatened(std::vector<float>& edgesFlattened);
+  void computeEdgesFlatened(std::vector<float> &edgesFlattened);
 
-  float *constructNodeVector(SmallVector<IR2Vec::Vector, 12> nodeMat);
+  void constructNodeVector(const SmallVector<IR2Vec::Vector, 12>& nodeMat, std::vector<float>& nodeVec);
 
-  Observation taskSelectionObsConstructor();
+  Observation *taskSelectionObsConstructor();
 
-  Observation colourNodeObsConstructor();
+  Observation *colourNodeObsConstructor();
 
-  Observation splitNodeObsConstructor();
+  Observation *splitNodeObsConstructor();
 
   void computeAnnotations();
+  void printRegisterProfile() const;
+
 
   // void updateEdges();
 
@@ -86,15 +89,15 @@ public:
 
   unsigned splitPoint;
 
-  Observation reset(const RegisterProfileMap& regProfMap);
+  Observation* reset(const RegisterProfileMap& regProfMap);
 
-  Observation step(Action action) override;
+  Observation* step(Action action) override;
 
   void update_env(RegisterProfileMap *regProfMap, SmallSetVector<unsigned, 8> updatedRegIdxs);
 
-  Observation selectNodeObsConstructor();
+  Observation *selectNodeObsConstructor();
 
-  virtual Observation split_node_step(unsigned action) = 0; 
+  virtual Observation* split_node_step(unsigned action) = 0; 
 
   MultiAgentEnv(){
     edges = std::vector<std::vector<int>>(MAX_EDGE_COUNT, std::vector<int>(2));

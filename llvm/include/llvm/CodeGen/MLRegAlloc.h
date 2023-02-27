@@ -275,7 +275,7 @@ private:
   unsigned getPhyRegForColor(LiveInterval &VirtReg, unsigned color,
                              SmallVector<unsigned, 4> &SplitVRegs);
             
-  Observation split_node_step(unsigned action) override;
+  Observation* split_node_step(unsigned action) override;
 
   // std::map<std::string, std::map<std::string, int64_t>>
   // parsePredictionJson(std::string jsonString) {
