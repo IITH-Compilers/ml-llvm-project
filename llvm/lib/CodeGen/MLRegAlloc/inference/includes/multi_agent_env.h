@@ -14,7 +14,7 @@ typedef std::vector<float> Observation;
 #define splitNodeObsSize 700
 
 class MultiAgentEnv : public Environment {
-
+  int debug_ct=0;
   RegisterProfileMap regProfMap;
 
   RegisterActionSpace *registerAS;
@@ -36,9 +36,9 @@ class MultiAgentEnv : public Environment {
 
   float annotations[max_node_number][3];
 
-  // float *nodeRepersentaion[max_node_number];
+  // float *nodeRepresentation[max_node_number];
 
-  llvm::SmallVector<float *, 8> nodeRepersentaion;
+  std::vector<std::vector<float>> nodeRepresentation;
 
   Observation *select_node_step(unsigned action);
 
@@ -58,7 +58,7 @@ class MultiAgentEnv : public Environment {
 
   void computeEdgesFlatened(std::vector<float> &edgesFlattened);
 
-  float *constructNodeVector(const SmallVector<IR2Vec::Vector, 12>& nodeMat);
+  void constructNodeVector(const SmallVector<IR2Vec::Vector, 12>& nodeMat, std::vector<float>& nodeVec);
 
   Observation *taskSelectionObsConstructor();
 
@@ -67,6 +67,8 @@ class MultiAgentEnv : public Environment {
   Observation *splitNodeObsConstructor();
 
   void computeAnnotations();
+  void printRegisterProfile() const;
+
 
 public:
   Graph *graph_topology;

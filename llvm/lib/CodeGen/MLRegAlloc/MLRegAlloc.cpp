@@ -2116,25 +2116,25 @@ void MLRA::inference() {
 
     bool emptyGraph = true;
     int count = 0;
+    int edge_count = 0;
     for (auto &rpi : regProfMap) {
       auto rp = rpi.second;
       if (rp.cls == "Phy" &&
           rp.frwdInterferences.begin() == rp.frwdInterferences.end()) {
         continue;
-      }
-      else
-      {
+      } else {
         emptyGraph = false;
         count++;
+        edge_count += (rp.interferences.size());
         // break;
       }
     }
     if (emptyGraph)
       return;
-    
-    if(count >= 500)
-      return;
 
+    errs() << "edge_count = " << edge_count << "\n";
+    if (count >= 500 || (edge_count >= max_edge_count))
+      return;
 
     inference_driver->getInfo(regProfMap, colorMap);
     errs() << "Colour Map: \n";

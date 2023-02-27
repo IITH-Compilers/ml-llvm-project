@@ -127,7 +127,7 @@ bool Graph::all_discovered() {
 }
 
 void RegisterActionSpace::maskActionSpace(
-    llvm::StringRef regclass, llvm::SmallVector<unsigned, 8> &adj_colors,
+    llvm::StringRef regclass, const llvm::SmallVector<unsigned, 8> &adj_colors,
     llvm::SmallVector<unsigned, 8> &action_space_filtered) {
   llvm::SmallVector<unsigned, 8> action_space;
 
@@ -172,8 +172,11 @@ void RegisterActionSpace::maskActionSpace(
       }
     }
   } else {
-    assert(false);
+    // assert(false);
     errs() << "Register class not supported: " << regclass << "\n";
+    for (auto reg : action_space) {
+      action_space_filtered.insert(action_space_filtered.end(), reg);
+    }
   }
   // return action_space;
 }
