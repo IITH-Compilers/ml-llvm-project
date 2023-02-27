@@ -3,7 +3,7 @@
 #include <llvm/Support/raw_ostream.h>
 
 using namespace llvm;
-Graph::Graph(int edges[][2], const RegisterProfileMap &regProfMap) {
+Graph::Graph(std::vector<std::vector<int>> &edges, const RegisterProfileMap &regProfMap) {
   errs() << "in topological_sort.cpp : line 7\n";
   this->node_number = regProfMap.size();
   errs() << "in topological_sort.cpp : line 9\n";
@@ -16,7 +16,7 @@ Graph::Graph(int edges[][2], const RegisterProfileMap &regProfMap) {
   }
 
   errs() << "in topological_sort.cpp : line 18\n";
-  for (int i = 0; i < max_edge_count; i++) {
+  for (int i = 0; i < MAX_EDGE_COUNT; i++) {
     errs() << "line 20: i = " << i << "\n";
     if (edges[i][0] == edges[i][1])
       break;
@@ -88,6 +88,29 @@ llvm::SmallVector<unsigned, 8> Graph::getAdjNodes(unsigned node_idx) {
   return this->adjacencyList[node_idx];
 }
 
+void Graph::addAdjNodes(unsigned node_idx, llvm::SmallVector<unsigned, 8> &adjNodeList) {
+  // errs() << "this->adjacencyList size: " << this->adjacencyList.size() << "\n";
+  // for(auto i : adjacencyList){
+  //   errs() << i.first << ": ";
+  //   for (auto p : i.second) {
+  //     errs() << p << "\t";
+  //   }
+  //   errs() << "\n";
+  // }
+  auto pairTmp = std::make_pair(node_idx, adjNodeList);
+  this->adjacencyList.insert(std::make_pair(node_idx, adjNodeList));
+  // errs() << "after inserting \n";
+  // for(auto i : adjacencyList){
+  //   errs() << i.first << ": ";
+  //   for (auto p : i.second) {
+  //     errs() << p << "\t";
+  //   }
+  //   errs() << "\n";
+  // }
+  // errs() << "after printing \n";
+
+}
+
 void Graph::get_eligibleNodes(std::vector<int> &eligibleNodes) {
   for (int i = 0; i < this->discovered.size(); i++) {
     if (!this->discovered[i]) {
@@ -144,26 +167,28 @@ void Graph::removeNode(unsigned node_idx) {
 void Graph::addNode(RegisterProfile rp) {
   node_number += 1;
   discovered.push_back(false);
-  llvm::SmallVector<unsigned, 8> interferences;
-  for (auto item : rp.interferences) {
-    interferences.push_back(item);
-  }
-  adjacencyList.insert({node_number, interferences});
+  assert(node_number == discovered.size() &&
+         "Some issue in discovered node vector");
+  // llvm::SmallVector<unsigned, 8> interferences;
+  // for (auto item : rp.interferences) {
+  //   interferences.push_back(item);
+  // }
+  // adjacencyList.insert({node_number, interferences});
   // indegree.append(0);
   colored.push_back(-1);
 }
 
-void Graph::updateEdges(float** edges) {
-  // float edges[max_edge_count][2];
-  int edgeCount = 0;
-  for (auto item : adjacencyList) {
-    for(auto adj_node : adjacencyList[item.first]) {
-      edges[edgeCount][0] = item.first;
-      edges[edgeCount][1] = adj_node;
-      edgeCount++;
-    }
-  }
-}
+// void Graph::updateEdges(std::vector<std::vector<int>> &edges ) {
+//   // float edges[MAX_EDGE_COUNT][2];
+//   int edgeCount = 0;
+//   for (auto item : adjacencyList) {
+//     for(auto adj_node : adjacencyList[item.first]) {
+//       edges[edgeCount][0] = item.first;
+//       edges[edgeCount][1] = adj_node;
+//       edgeCount++;
+//     }
+//   }
+// }
 
 llvm::SmallVector<unsigned, 8> RegisterActionSpace::maskActionSpace(
     llvm::StringRef regclass, llvm::SmallVector<unsigned, 8> adj_colors) {

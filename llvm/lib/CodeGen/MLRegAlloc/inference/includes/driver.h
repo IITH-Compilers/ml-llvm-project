@@ -22,8 +22,8 @@
 class DriverService : public InferenceEngine {
 public:
   DriverService(MultiAgentEnv* env);
-  void getInfo(RegisterProfileMap *regProfMap,
-               std::map<std::string, int64_t> *colour_map);
+  void getInfo(const RegisterProfileMap &regProfMap,
+               std::map<std::string, int64_t> &colour_map);
 };
 
 

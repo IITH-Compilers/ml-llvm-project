@@ -2141,11 +2141,7 @@ void MLRA::inference() {
   }
 
   if (enable_rl_inference_engine) {
-<<<<<<< HEAD
     DriverService *inference_driver = new DriverService(this);
-=======
-    DriverService *inference_driver = new DriverService(MF);
->>>>>>> d6ae3b4e30a76bd205d686170d03ffe953fcb562
     // std::map<unsigned, unsigned> colour_map;
     std::map<std::string, int64_t> colorMap;
 

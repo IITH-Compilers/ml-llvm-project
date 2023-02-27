@@ -3,6 +3,7 @@
 
 #include "topological_sort.h"
 #include "MLInferenceEngine/environment.h"
+#include <vector>
 // #include "llvm/ADT/SetVector.h
 // #include "llvm/CodeGen/RegisterProfile.h"
 
@@ -36,7 +37,6 @@ class MultiAgentEnv : public Environment {
   std::map<int,int> nid_idx;
   std::map<int,int> idx_nid;
 
-  int edges[max_edge_count][2];
 
   float annotations[max_node_number][3];
 
@@ -52,9 +52,9 @@ class MultiAgentEnv : public Environment {
 
   Observation colour_node_step(unsigned action);
 
-  float *createNodeSplitMask();
+  std::vector<float> createNodeSplitMask();
 
-  float *getSplitPointProperties();
+  std::vector<float> getSplitPointProperties();
   void createNodeSelectMask(std::vector<int>& mask);
 
   void createAnnotations(std::vector<float>& temp_annotations);
@@ -73,15 +73,19 @@ class MultiAgentEnv : public Environment {
 
   void computeAnnotations();
 
+  // void updateEdges();
+
 public:
   Graph *graph_topology;
+  
+  std::vector<std::vector<int>> edges;
 
   std::map<unsigned, unsigned> nid_colour;
 
   unsigned current_node_id;
 
   unsigned splitPoint;
-  
+
   Observation reset(const RegisterProfileMap& regProfMap);
 
   Observation step(Action action) override;
@@ -90,8 +94,11 @@ public:
 
   Observation selectNodeObsConstructor();
 
-  virtual Observation split_node_step(unsigned action) = 0;  
+  virtual Observation split_node_step(unsigned action) = 0; 
 
+  MultiAgentEnv(){
+    edges = std::vector<std::vector<int>>(MAX_EDGE_COUNT, std::vector<int>(2));
+  }
 };
 
 #endif

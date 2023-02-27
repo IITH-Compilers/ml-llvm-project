@@ -1,4 +1,5 @@
 #include "includes/multi_agent_env.h"
+#include "includes/topological_sort.h"
 
 Observation MultiAgentEnv::reset(const RegisterProfileMap &regProfMap) {
   // RegisterProfileMap regProfMap_new;
@@ -22,6 +23,7 @@ Observation MultiAgentEnv::reset(const RegisterProfileMap &regProfMap) {
     this->nodeRepersentaion.insert(this->nodeRepersentaion.end(), nodeVec);
     this->nid_idx[rpi.first] = idx;
     this->idx_nid[idx] = rpi.first;
+    errs() << "Adding nodeID: " << rpi.first << " at idx: " << idx << "\n";
     idx++;
   }
   this->edge_count = this->computeEdgesFromRP();
@@ -56,60 +58,110 @@ Observation MultiAgentEnv::step(Action action) {
 }
 
 void MultiAgentEnv::update_env(RegisterProfileMap *regProfMap, SmallSetVector<unsigned, 8> updatedRegIdxs) {
+
+
   SmallVector<unsigned, 2> newNodeIdxs;
-  for (auto regId : updatedRegIdxs) {
-    if(nid_idx.find(regId) == nid_idx.end()) {
-      newNodeIdxs.insert(newNodeIdxs.end(), regId);
+  int newNodeCount = 0;
+  for (auto rpi : *regProfMap) {
+    RegisterProfile rp = rpi.second;
+    if (rp.cls == "Phy" &&
+        rp.frwdInterferences.begin() == rp.frwdInterferences.end()) {
+      continue;
+    }
+    if (this->regProfMap.find(rpi.first) == this->regProfMap.end()){
+      newNodeIdxs.insert(newNodeIdxs.end(), rpi.first);
+      nid_idx.insert(std::pair<unsigned, unsigned>(
+          rpi.first, graph_topology->node_number + newNodeCount));
+      idx_nid.insert(std::pair<unsigned, unsigned>(
+          graph_topology->node_number + newNodeCount, rpi.first));
+    errs() << "Adding nodeID: " << rpi.first << " at idx: " << graph_topology->node_number + newNodeCount << "\n";      
+      newNodeCount++;
     }
   }
   auto splitedNodeIdx = nid_idx[current_node_id];
   graph_topology->removeNode(splitedNodeIdx);
-  SmallVector<IR2Vec::Vector, 12> currentNodeMatrix = this->regProfMap[current_node_id].vecRep;
+  errs() << "Remove node successfuly: " << current_node_id << " "
+         << splitedNodeIdx << "\n";
+  // SmallVector<IR2Vec::Vector, 12> currentNodeMatrix =
+  //     this->regProfMap[current_node_id].vecRep;
   IR2Vec::Vector CPY_INST_VEC(IR2Vec_size, 0.001);
-  SmallVector<IR2Vec::Vector, 12> V1(currentNodeMatrix.begin(), currentNodeMatrix.begin() + splitPoint + 1);
-  SmallVector<IR2Vec::Vector, 12> V2(currentNodeMatrix.begin() + 1, currentNodeMatrix.end());
+  // SmallVector<IR2Vec::Vector, 12> V1(currentNodeMatrix.begin(), currentNodeMatrix.begin() + splitPoint + 1);
+  // SmallVector<IR2Vec::Vector, 12> V2(currentNodeMatrix.begin() + 1, currentNodeMatrix.end());
+  errs() << "Created node vector maxtrix successfuly\n";
   int newNodecount = 0;
   for (auto rpi : *regProfMap) {
     RegisterProfile rp = rpi.second;
+    if (rp.cls == "Phy" &&
+        rp.frwdInterferences.begin() == rp.frwdInterferences.end()) {
+      continue;
+    }
     if (this->regProfMap.find(rpi.first) == this->regProfMap.end()){
       newNodecount += 1;
-      nid_idx.insert(std::pair<unsigned, unsigned>(
-          rpi.first, graph_topology->node_number + 1));
-      idx_nid.insert(std::pair<unsigned, unsigned>(
-          graph_topology->node_number + 1, rpi.first));
+      // nid_idx.insert(std::pair<unsigned, unsigned>(
+      //     rpi.first, graph_topology->node_number));
+      // idx_nid.insert(std::pair<unsigned, unsigned>(
+      //     graph_topology->node_number, rpi.first));
+      errs() << "Adding pair to idx_nid map: " << rpi.first << "\n";
+      llvm::SmallVector<unsigned, 8> interferences;
+      for (auto item : rp.interferences) {
+        interferences.push_back(this->nid_idx[item]);
+      }
+      errs() << "Computed interfereces size: " << interferences.size() << " ---- " << rp.interferences.size() <<  "\n";
+      graph_topology->addAdjNodes(graph_topology->node_number, interferences);
+      errs() << "Test this\n";
+      errs() << "Adding node to adj list: " << rpi.first << "\n";      
       graph_topology->addNode(rp);
+
       this->regProfMap.insert({rpi.first, rpi.second});
+      errs() << "Adding nodeId to map regProfMap: " << rpi.first << "\n";
       SmallVector<IR2Vec::Vector, 12> newNodeMatrix;
       float *nodeVec;
       if (newNodecount < 3) {
-        if(newNodecount == 1) {
-          nodeVec = this->constructNodeVector(V1);
-        }
-        else if(newNodecount == 2) {
-          nodeVec = this->constructNodeVector(V2);
-        }
+        // if(newNodecount == 1) {
+        //   nodeVec = this->constructNodeVector(V1);
+        // }
+        // else if(newNodecount == 2) {
+        //   nodeVec = this->constructNodeVector(V2);
+        // }
+        nodeVec = this->constructNodeVector(rp.vecRep);
       } else {
         newNodeMatrix.push_back(CPY_INST_VEC);
         nodeVec = this->constructNodeVector(newNodeMatrix);
       }
       this->nodeRepersentaion.insert(this->nodeRepersentaion.end(), nodeVec);
+      errs() << "Added nodeRepersentaion for new node: " << rpi.first << "\n";
     }
     else {
       this->regProfMap[rpi.first] = rpi.second;
     }
   }
-  float **edges_ptr;
-  edges_ptr = new float *[2];
-  for(int i = 0; i <max_edge_count; i++)
-    edges_ptr[i] = this->edges[i];
-  graph_topology->updateEdges(edges_ptr);
+  errs() << "Updated node interferences successfuly\n";
+  this->edges = std::vector<std::vector<int>>(MAX_EDGE_COUNT, std::vector<int>(2));
+  this->edge_count = this->computeEdgesFromRP();
+  // updateEdges();
+  errs() << "Updated ghaph edges successfuly\n";
+
 }
+
+// void MultiAgentEnv::updateEdges() {
+//   // float edges[MAX_EDGE_COUNT][2];
+//   int edgeCount = 0;
+//   for(auto rpi : regProfMap){
+//     auto node_idx = nid_idx[rpi.first];
+//     auto adjList = graph_topology->getAdjNodes(node_idx);
+//     for (auto adj_node : adjList) {
+//       edges[edgeCount][0] = node_idx;
+//       edges[edgeCount][1] = nid_idx[adj_node];
+//       edgeCount++;
+//     }
+//   }
+// }
 
 Observation MultiAgentEnv::select_node_step(unsigned action) {
   this->current_node_id = this->idx_nid[action];
   // LLVM_DEBUG(errs() << "Inside select_node_step function "
   //                   << this->current_node_id << " " << action << "\n");
-
+  errs() << "Node selected is: " << this->current_node_id << "\n";
   auto pos = this->regProfMap.find(this->current_node_id);
   errs() << "--------------regProfMap keys-----------------\n";
   for (auto e : this->regProfMap) {
@@ -118,7 +170,9 @@ Observation MultiAgentEnv::select_node_step(unsigned action) {
   if (pos == this->regProfMap.end()) {
     // LLVM_DEBUG(errs() << "Selected node id and idx NOT FOUND in the map: "
     //                   << this->current_node_id << " " << action << "\n");
-    errs() << "current_node_id = " << this->current_node_id << "\n";
+    errs() << "current_node_id = " << this->current_node_id << " " << action << "\n";
+    errs() << (this->regProfMap[current_node_id]).cls << " "
+           << (this->regProfMap[current_node_id]).color;
     errs() << "\n";
     assert(false && "Some issue");
   } else {
@@ -160,26 +214,32 @@ Observation MultiAgentEnv::colour_node_step(unsigned action) {
 // Observation MultiAgentEnv::split_node_step(unsigned action) { ; }
 
 Observation MultiAgentEnv::splitNodeObsConstructor() { 
+  errs() << "Current node id to split: " << this->current_node_id << "\n";  
   unsigned current_node_idx = this->nid_idx[this->current_node_id];
-  Observation temp_obs = new float[selectNodeObsSize]();
+  Observation temp_obs(splitNodeObsSize);
   int current_index = 0;
-  float *action_mask = this->createNodeSplitMask();
-  for (int i = 0; i < max_node_number; i++) {
+  Observation action_mask = this->createNodeSplitMask();
+  errs() << "Split node mask length: " << action_mask.size() << " " << current_index << "\n";
+  for (int i = 0; i < max_usepoints_count; i++) {
     temp_obs[current_index++] = action_mask[i];
   }
+  errs() << "Current node idx to split: " << current_node_idx << " " << current_index << "\n";
   float *nodeVec = this->nodeRepersentaion[current_node_idx];
   for (int i = 0; i < IR2Vec_size; i++) {
     temp_obs[current_index++] = nodeVec[i];
   }
-  float *splitPointProperties = getSplitPointProperties();
+  std::vector<float> splitPointProperties = getSplitPointProperties();
+  errs() << "splitPointProperties size: " << splitPointProperties.size()
+         << " " << current_index << "\n";
   for (int i = 0; i < max_usepoints_count * 2; i++) {
     temp_obs[current_index++] = splitPointProperties[i];
   }
+  errs() << "Current idex value: " << current_index << "\n";
   return temp_obs;
 }
 
-float *MultiAgentEnv::createNodeSplitMask() { 
-  float *mask = new float[max_usepoints_count]();
+Observation MultiAgentEnv::createNodeSplitMask() { 
+  Observation mask(max_usepoints_count);
   unsigned current_node_idx = this->nid_idx[this->current_node_id];
   auto splitSlots = current_node.splitSlots;
   auto useDistanceList = current_node.useDistances;
@@ -196,8 +256,8 @@ float *MultiAgentEnv::createNodeSplitMask() {
   return mask;
 }
 
-float *MultiAgentEnv::getSplitPointProperties() { 
-  float *usepointProperties = new float[max_usepoints_count*2]();
+std::vector<float> MultiAgentEnv::getSplitPointProperties() { 
+  std::vector<float> usepointProperties(max_usepoints_count*2);
   int current_index = 0;
   for (int i = 0; i < current_node.spillWeights.size(); i++) {
     usepointProperties[current_index++] =  current_node.spillWeights[i];
@@ -223,13 +283,13 @@ Observation MultiAgentEnv::selectNodeObsConstructor() {
   // Set edge count in graph
   temp_obs[current_index++] = this->edge_count;
 
-  std::vector<float> edgesFlattened(max_edge_count*2);
+  std::vector<float> edgesFlattened(MAX_EDGE_COUNT*2);
   this->computeEdgesFlatened(edgesFlattened);
-  for (int i = 0; i < max_edge_count * 2; i++) {
+  for (int i = 0; i < MAX_EDGE_COUNT * 2; i++) {
     temp_obs[current_index++] = edgesFlattened[i];
   }
   temp_obs[current_index + this->edge_count] = 1;
-  current_index += max_edge_count;
+  current_index += MAX_EDGE_COUNT;
   // Set number of node in graph
   unsigned node_count = this->regProfMap.size();
   temp_obs[current_index + node_count] = 1;
@@ -340,8 +400,8 @@ unsigned MultiAgentEnv::computeEdgesFromRP() {
 void MultiAgentEnv::computeEdgesFlatened(std::vector<float>& edgesFlattened) {
   //   unsigned edge_count = 0;
   unsigned flatned_count = 0;
-  int row_count = sizeof(this->edges) / sizeof(this->edges[0]);
-  for (int i = 0; i < row_count; i++) {
+  // int row_count = sizeof(this->edges) / sizeof(this->edges[0]);
+  for (int i = 0; i < MAX_EDGE_COUNT; i++) {
     edgesFlattened[flatned_count++] = this->edges[i][0];
     edgesFlattened[flatned_count++] = this->edges[i][1];
   }
