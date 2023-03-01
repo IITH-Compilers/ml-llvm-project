@@ -97,12 +97,12 @@ void Graph::addAdjNodes(unsigned node_idx, llvm::SmallVector<unsigned, 8> &adjNo
 
 void Graph::setAdjNodes(unsigned node_idx, llvm::SmallVector<unsigned, 8> adjNodeList) {
   auto tempList = this->adjacencyList[node_idx];
-  for (auto adjIdx : adjNodeList) {
-    if(std::find(tempList.begin(), tempList.end(), adjIdx) ==  tempList.end()) {
-      auto *curAdjList = &this->adjacencyList[node_idx];
-      curAdjList->push_back(adjIdx);
-    }
-  }
+  // for (auto adjIdx : adjNodeList) {
+  //   if(std::find(tempList.begin(), tempList.end(), adjIdx) ==  tempList.end()) {
+  //     auto *curAdjList = &this->adjacencyList[node_idx];
+  //     curAdjList->push_back(adjIdx);
+  //   }
+  // }
   // this->adjacencyList[node_idx] =  adjNodeList;
 }
 

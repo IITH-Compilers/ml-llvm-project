@@ -1,6 +1,6 @@
 #include "includes/multi_agent_env.h"
-#include "includes/topological_sort.h"
 #include "MLInferenceEngine/utils.h"
+#include "includes/topological_sort.h"
 
 Observation *MultiAgentEnv::reset(const RegisterProfileMap &regProfMap) {
   // RegisterProfileMap regProfMap_new;
@@ -86,8 +86,8 @@ Observation *MultiAgentEnv::step(Action action) {
   return result;
 }
 
-void MultiAgentEnv::update_env(RegisterProfileMap *regProfMap, SmallSetVector<unsigned, 8> updatedRegIdxs) {
-
+void MultiAgentEnv::update_env(RegisterProfileMap *regProfMap,
+                               SmallSetVector<unsigned, 8> updatedRegIdxs) {
 
   SmallVector<unsigned, 2> newNodeIdxs;
   int newNodeCount = 0;
@@ -97,23 +97,41 @@ void MultiAgentEnv::update_env(RegisterProfileMap *regProfMap, SmallSetVector<un
         rp.frwdInterferences.begin() == rp.frwdInterferences.end()) {
       continue;
     }
-    if (this->regProfMap.find(rpi.first) == this->regProfMap.end()){
+    if (this->regProfMap.find(rpi.first) == this->regProfMap.end()) {
       newNodeIdxs.insert(newNodeIdxs.end(), rpi.first);
       nid_idx.insert(std::pair<unsigned, unsigned>(
           rpi.first, graph_topology->node_number + newNodeCount));
       idx_nid.insert(std::pair<unsigned, unsigned>(
           graph_topology->node_number + newNodeCount, rpi.first));
-      errs() << "Adding nodeID: " << rpi.first << " at idx: " << graph_topology->node_number + newNodeCount << "\n";      
+      errs() << "Adding nodeID: " << rpi.first
+             << " at idx: " << graph_topology->node_number + newNodeCount
+             << "\n";
       newNodeCount++;
     }
-    else if(std::find(updatedRegIdxs.begin(), updatedRegIdxs.end(), rpi.first) !=  updatedRegIdxs.end()) {
+    // else if (std::find(updatedRegIdxs.begin(), updatedRegIdxs.end(),
+    //  rpi.first) != updatedRegIdxs.end()) {
+    else {
       // this->regProfMap[rpi.first].interferences = rp.interferences;
       int nodeIdxTemp = nid_idx[rpi.first];
+
+      auto currAdjList = graph_topology->getAdjNodes(nodeIdxTemp);
+
+      std::set<int> s;
+
+      for (auto e : *currAdjList)
+        s.insert(e);
+
       llvm::SmallVector<unsigned, 8> interferences;
       for (auto item : rp.interferences) {
         interferences.push_back(this->nid_idx[item]);
       }
-      graph_topology->setAdjNodes(nodeIdxTemp, interferences);
+      for (auto e : interferences)
+        s.insert(e);
+
+      llvm::SmallVector<unsigned int, 8> newIntereferences;
+      for (auto e : s)
+        newIntereferences.push_back(e);
+      graph_topology->setAdjNodes(nodeIdxTemp, newIntereferences);
     }
   }
   auto splitedNodeIdx = nid_idx[current_node_id];
@@ -123,8 +141,9 @@ void MultiAgentEnv::update_env(RegisterProfileMap *regProfMap, SmallSetVector<un
   // SmallVector<IR2Vec::Vector, 12> currentNodeMatrix =
   //     this->regProfMap[current_node_id].vecRep;
   IR2Vec::Vector CPY_INST_VEC(IR2Vec_size, 0.001);
-  // SmallVector<IR2Vec::Vector, 12> V1(currentNodeMatrix.begin(), currentNodeMatrix.begin() + splitPoint + 1);
-  // SmallVector<IR2Vec::Vector, 12> V2(currentNodeMatrix.begin() + 1, currentNodeMatrix.end());
+  // SmallVector<IR2Vec::Vector, 12> V1(currentNodeMatrix.begin(),
+  // currentNodeMatrix.begin() + splitPoint + 1); SmallVector<IR2Vec::Vector,
+  // 12> V2(currentNodeMatrix.begin() + 1, currentNodeMatrix.end());
   errs() << "Created node vector maxtrix successfuly\n";
   int newNodecount = 0;
   for (auto rpi : *regProfMap) {
@@ -133,7 +152,7 @@ void MultiAgentEnv::update_env(RegisterProfileMap *regProfMap, SmallSetVector<un
         rp.frwdInterferences.begin() == rp.frwdInterferences.end()) {
       continue;
     }
-    if (this->regProfMap.find(rpi.first) == this->regProfMap.end()){
+    if (this->regProfMap.find(rpi.first) == this->regProfMap.end()) {
       newNodecount += 1;
       // nid_idx.insert(std::pair<unsigned, unsigned>(
       //     rpi.first, graph_topology->node_number));
@@ -144,10 +163,11 @@ void MultiAgentEnv::update_env(RegisterProfileMap *regProfMap, SmallSetVector<un
       for (auto item : rp.interferences) {
         interferences.push_back(this->nid_idx[item]);
       }
-      errs() << "Computed interfereces size: " << interferences.size() << " ---- " << rp.interferences.size() <<  "\n";
+      errs() << "Computed interfereces size: " << interferences.size()
+             << " ---- " << rp.interferences.size() << "\n";
       graph_topology->addAdjNodes(graph_topology->node_number, interferences);
       errs() << "Test this\n";
-      errs() << "Adding node to adj list: " << rpi.first << "\n";      
+      errs() << "Adding node to adj list: " << rpi.first << "\n";
       graph_topology->addNode(rp);
 
       this->regProfMap.insert({rpi.first, rpi.second});
@@ -174,11 +194,11 @@ void MultiAgentEnv::update_env(RegisterProfileMap *regProfMap, SmallSetVector<un
     // }
   }
   errs() << "Updated node interferences successfuly\n";
-  this->edges = std::vector<std::vector<int>>(MAX_EDGE_COUNT, std::vector<int>(2));
+  this->edges =
+      std::vector<std::vector<int>>(MAX_EDGE_COUNT, std::vector<int>(2));
   this->edge_count = this->computeEdgesFromRP();
   // updateEdges();
   errs() << "Updated ghaph edges successfuly\n";
-
 }
 
 // void MultiAgentEnv::updateEdges() {
@@ -208,7 +228,8 @@ Observation *MultiAgentEnv::select_node_step(unsigned action) {
   if (pos == this->regProfMap.end()) {
     // errs( << "Selected node id and idx NOT FOUND in the map: "
     //                   << this->current_node_id << " " << action << "\n");
-    errs() << "current_node_id = " << this->current_node_id << " " << action << "\n";
+    errs() << "current_node_id = " << this->current_node_id << " " << action
+           << "\n";
     errs() << (this->regProfMap[current_node_id]).cls << " "
            << (this->regProfMap[current_node_id]).color;
     errs() << "\n";
@@ -252,25 +273,30 @@ Observation *MultiAgentEnv::colour_node_step(unsigned action) {
 
 // Observation MultiAgentEnv::split_node_step(unsigned action) { ; }
 
-Observation *MultiAgentEnv::splitNodeObsConstructor() { 
-  errs() << "Current node id to split: " << this->current_node_id << "\n";  
+Observation *MultiAgentEnv::splitNodeObsConstructor() {
+  errs() << "Current node id to split: " << this->current_node_id << "\n";
   unsigned current_node_idx = this->nid_idx[this->current_node_id];
   Observation *obs = new Observation(splitNodeObsSize);
   Observation &temp_obs = *obs;
   int current_index = 0;
-  Observation action_mask = this->createNodeSplitMask();
-  errs() << "Split node mask length: " << action_mask.size() << " " << current_index << "\n";
+
+  Observation action_mask(max_usepoints_count);
+  this->createNodeSplitMask(action_mask);
+  errs() << "Split node mask length: " << action_mask.size() << " "
+         << current_index << "\n";
   for (int i = 0; i < max_usepoints_count; i++) {
     temp_obs[current_index++] = action_mask[i];
   }
-  errs() << "Current node idx to split: " << current_node_idx << " " << current_index << "\n";
-  std::vector<float>& nodeVec = this->nodeRepresentation[current_node_idx];
+  errs() << "Current node idx to split: " << current_node_idx << " "
+         << current_index << "\n";
+  std::vector<float> &nodeVec = this->nodeRepresentation[current_node_idx];
   for (int i = 0; i < IR2Vec_size; i++) {
     temp_obs[current_index++] = nodeVec[i];
   }
-  std::vector<float> splitPointProperties = getSplitPointProperties();
-  errs() << "splitPointProperties size: " << splitPointProperties.size()
-         << " " << current_index << "\n";
+  std::vector<float> splitPointProperties(max_usepoints_count * 2);
+  this->getSplitPointProperties(splitPointProperties);
+  errs() << "splitPointProperties size: " << splitPointProperties.size() << " "
+         << current_index << "\n";
   for (int i = 0; i < max_usepoints_count * 2; i++) {
     temp_obs[current_index++] = splitPointProperties[i];
   }
@@ -278,14 +304,16 @@ Observation *MultiAgentEnv::splitNodeObsConstructor() {
   return obs;
 }
 
-Observation MultiAgentEnv::createNodeSplitMask() { 
-  Observation mask(max_usepoints_count);
+void MultiAgentEnv::createNodeSplitMask(std::vector<float> &mask) {
+  // Observation mask(max_usepoints_count);
   unsigned current_node_idx = this->nid_idx[this->current_node_id];
-  auto splitSlots = current_node.splitSlots;
-  auto useDistanceList = current_node.useDistances;
+  auto &splitSlots = current_node.splitSlots;
+  auto &useDistanceList = current_node.useDistances;
   errs() << "Valid split points are: ";
   for (int i = 0; i < max_usepoints_count; i++) {
-    if(std::find(splitSlots.begin(), splitSlots.end(), i) != splitSlots.end() && i != useDistanceList.size() - 1) {
+    if (std::find(splitSlots.begin(), splitSlots.end(), i) !=
+            splitSlots.end() &&
+        i != useDistanceList.size() - 1) {
       mask[i] = 1;
       errs() << i << ", ";
     } else {
@@ -293,18 +321,18 @@ Observation MultiAgentEnv::createNodeSplitMask() {
     }
   }
   errs() << "\n";
-  return mask;
 }
 
-std::vector<float> MultiAgentEnv::getSplitPointProperties() { 
-  std::vector<float> usepointProperties(max_usepoints_count*2);
+void MultiAgentEnv::getSplitPointProperties(
+    std::vector<float> &usepointProperties) {
+  // std::vector<float> usepointProperties(max_usepoints_count * 2);
   int current_index = 0;
   for (int i = 0; i < current_node.spillWeights.size(); i++) {
-    usepointProperties[current_index++] =  current_node.spillWeights[i];
-    if( i < current_node.useDistances.size() - 1)
-      usepointProperties[current_index++] =  current_node.useDistances[i+1] - current_node.useDistances[i];
+    usepointProperties[current_index++] = current_node.spillWeights[i];
+    if (i < current_node.useDistances.size() - 1)
+      usepointProperties[current_index++] =
+          current_node.useDistances[i + 1] - current_node.useDistances[i];
   }
-  return usepointProperties;
 }
 Observation *MultiAgentEnv::selectNodeObsConstructor() {
   errs() << "noderepre.size()" << nodeRepresentation.size() << "\n";
@@ -345,7 +373,7 @@ Observation *MultiAgentEnv::selectNodeObsConstructor() {
   assertObsSize(143);
   temp_obs[current_index++] = this->edge_count;
 
-  std::vector<float> edgesFlattened(MAX_EDGE_COUNT*2);
+  std::vector<float> edgesFlattened(MAX_EDGE_COUNT * 2);
   this->computeEdgesFlatened(edgesFlattened);
   for (int i = 0; i < MAX_EDGE_COUNT * 2; i++) {
     temp_obs[current_index++] = edgesFlattened[i];
@@ -509,48 +537,56 @@ void MultiAgentEnv::printRegisterProfile() const {
 unsigned MultiAgentEnv::computeEdgesFromRP() {
   unsigned edge_count = 0;
   int node_idx = 0;
-    // printRegisterProfile();  
+  // printRegisterProfile();
   for (auto rpi : (this->regProfMap)) {
     // unsigned src_id = rpi.first;
-    // errs() << "0.00 noderep size = " << this->nodeRepresentation.size() << "\n";
-  
+    // errs() << "0.00 noderep size = " << this->nodeRepresentation.size() <<
+    // "\n";
+
     RegisterProfile rp = rpi.second;
-    // errs() << "0.01 noderep size = " << this->nodeRepresentation.size() << "\n";
+    // errs() << "0.01 noderep size = " << this->nodeRepresentation.size() <<
+    // "\n";
 
     // int src = this->nid_idx[rpi.first];
     int src = node_idx;
     // errs() << "RPI for " << rpi.first << "\n";
     // if(rpi.first > 700)
     // assert(false);
-    // errs() << "0.0 noderep size = " << this->nodeRepresentation.size() << "\n";
-    // errs() << "Interferences for nodeId " << node_idx << " :";
+    // errs() << "0.0 noderep size = " << this->nodeRepresentation.size() <<
+    // "\n"; errs() << "Interferences for nodeId " << node_idx << " :";
     for (auto des_id : rp.interferences) {
-      // errs() << "starting loop noderep size = " << this->nodeRepresentation.size() << "\n";
+      // errs() << "starting loop noderep size = " <<
+      // this->nodeRepresentation.size() << "\n";
 
       // errs() << des_id << "\t";
       int des = this->nid_idx[des_id];
-      // errs() << "Inside loop noderep size = " << this->nodeRepresentation.size() << "\n";
-      // errs() << "(" << des << ")\t";
+      // errs() << "Inside loop noderep size = " <<
+      // this->nodeRepresentation.size() << "\n"; errs() << "(" << des << ")\t";
       if (src != des) {
-        //  errs() << "1. Inside loop noderep size = " << this->nodeRepresentation.size() << "\n";
-        //  errs() << "src = " << src << "\n";
-        //  errs() << "Before" << edges[edge_count][0] << "\n";
-        //  errs() << edge_count << "----- \n";
+        //  errs() << "1. Inside loop noderep size = " <<
+        //  this->nodeRepresentation.size() << "\n"; errs() << "src = " << src
+        //  << "\n"; errs() << "Before" << edges[edge_count][0] << "\n"; errs()
+        //  << edge_count << "----- \n";
         this->edges[edge_count][0] = src;
         //  errs() << "after" <<  edges[edge_count][0] << "\t(" << src << ")\n";
-        // errs() << "2. Inside loop noderep size = " << this->nodeRepresentation.size() << "\n";
+        // errs() << "2. Inside loop noderep size = " <<
+        // this->nodeRepresentation.size() << "\n";
         this->edges[edge_count][1] = des;
-        // errs() << "3. Inside loop noderep size = " << this->nodeRepresentation.size() << "\n";
+        // errs() << "3. Inside loop noderep size = " <<
+        // this->nodeRepresentation.size() << "\n";
         edge_count += 1;
-        // errs() << "4. Inside loop noderep size = " << this->nodeRepresentation.size() << "\n";
+        // errs() << "4. Inside loop noderep size = " <<
+        // this->nodeRepresentation.size() << "\n";
       }
-      // errs() << "5. Inside loop noderep size = " << this->nodeRepresentation.size() << "\n";
+      // errs() << "5. Inside loop noderep size = " <<
+      // this->nodeRepresentation.size() << "\n";
 
       // errs() << des << " ";
     }
     // errs() << "\n";
     node_idx++;
-    // errs() << "\n 0.02 noderep size = " << this->nodeRepresentation.size() << "\n";
+    // errs() << "\n 0.02 noderep size = " << this->nodeRepresentation.size() <<
+    // "\n";
   }
   // errs() << "0.1 noderep size = " << this->nodeRepresentation.size() << "\n";
   // assert(false);
@@ -591,10 +627,11 @@ Observation *MultiAgentEnv::taskSelectionObsConstructor() {
   float *action_mask = new float[2]();
   action_mask[0] = 1;
   action_mask[1] = 0;
-  auto splitNodeMask = createNodeSplitMask();
-  if(splitStepCount < split_threshold){
+  std::vector<float> splitNodeMask(max_usepoints_count);
+  createNodeSplitMask(splitNodeMask);
+  if (splitStepCount < split_threshold) {
     for (int i = 0; i < max_usepoints_count; i++) {
-      if(int(splitNodeMask[i]) == 1) {
+      if (int(splitNodeMask[i]) == 1) {
         action_mask[1] = 1;
         errs() << "Splitting Possible Node Id: " << current_node_id << "\n";
         break;

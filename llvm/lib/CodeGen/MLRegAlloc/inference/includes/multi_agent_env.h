@@ -4,6 +4,7 @@
 #include "topological_sort.h"
 #include "MLInferenceEngine/environment.h"
 #include <vector>
+#include <set>
 // #include "llvm/ADT/SetVector.h
 // #include "llvm/CodeGen/RegisterProfile.h"
 
@@ -52,9 +53,9 @@ class MultiAgentEnv : public Environment {
 
   Observation *colour_node_step(unsigned action);
 
-  std::vector<float> createNodeSplitMask();
+  void createNodeSplitMask(std::vector<float>& mask);
 
-  std::vector<float> getSplitPointProperties();
+  void getSplitPointProperties(std::vector<float>& usepointProperties);
   
   void createNodeSelectMask(std::vector<int> &mask);
 

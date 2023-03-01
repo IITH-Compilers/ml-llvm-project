@@ -6,16 +6,16 @@
 #include "llvm/CodeGen/MachineFunction.h"
 
 #define nodeSelectionModelPath                                                 \
-  "/home/es20btech11021/ML-Register-Allocation/model/RegAlloc/ggnn_drl/"       \
+  "/home/cs20btech11024/repos/ML-Register-Allocation/model/RegAlloc/ggnn_drl/"       \
   "rllib_split_model/src/node_select_model_inference/model.onnx"
 #define taskSelectionModelPath                                                 \
-  "/home/es20btech11021/ML-Register-Allocation/model/RegAlloc/ggnn_drl/"       \
+  "/home/cs20btech11024/repos/ML-Register-Allocation/model/RegAlloc/ggnn_drl/"       \
   "rllib_split_model/src/select_task_model_inference/model.onnx"
 #define nodeColouringModelPath                                                 \
-  "/home/es20btech11021/ML-Register-Allocation/model/RegAlloc/ggnn_drl/"       \
+  "/home/cs20btech11024/repos/ML-Register-Allocation/model/RegAlloc/ggnn_drl/"       \
   "rllib_split_model/src/node_colour_model_inference/model.onnx"
 #define nodeSplitingModelPath                                                  \
-  "/home/es20btech11021/ML-Register-Allocation/model/RegAlloc/ggnn_drl/"       \
+  "/home/cs20btech11024/repos/ML-Register-Allocation/model/RegAlloc/ggnn_drl/"       \
   "rllib_split_model/src/node_split_model_inference/model.onnx"
 
 
