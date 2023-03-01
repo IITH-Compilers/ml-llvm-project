@@ -4,9 +4,9 @@
 
 using namespace llvm;
 Graph::Graph(std::vector<std::vector<int>> &edges, const RegisterProfileMap &regProfMap) {
-  errs() << "in topological_sort.cpp : line 7\n";
+  // errs() << "in topological_sort.cpp : line 7\n";
   this->node_number = regProfMap.size();
-  errs() << "in topological_sort.cpp : line 9\n";
+  // errs() << "in topological_sort.cpp : line 9\n";
   //   LLVM_DEBUG(errs() << "Number of nodes in graph is: " << node_number <<
   //   "\n");
   for (int i = 0; i < node_number; i++) {
@@ -15,38 +15,38 @@ Graph::Graph(std::vector<std::vector<int>> &edges, const RegisterProfileMap &reg
     this->colored.insert(this->colored.end(), -1);
   }
 
-  errs() << "in topological_sort.cpp : line 18\n";
+  // errs() << "in topological_sort.cpp : line 18\n";
   for (int i = 0; i < MAX_EDGE_COUNT; i++) {
-    errs() << "line 20: i = " << i << "\n";
+    // errs() << "line 20: i = " << i << "\n";
     if (edges[i][0] == edges[i][1])
       break;
     if (this->adjacencyList.count(int(edges[i][0])) == 0) {
-      errs() << "line 24: \n";
+      // errs() << "line 24: \n";
       llvm::SmallVector<unsigned, 8> temp_vec;
       temp_vec.insert(temp_vec.begin(), edges[i][1]);
       this->adjacencyList.insert({int(edges[i][0]), temp_vec});
     } else {
-      errs() << "line 29: \n";
-      errs() << "Before ----------------------------------\n";
-      errs() << "line 30: size = " << this->adjacencyList.size() << " "
-             << "edges[" << i << "][0] = " << edges[i][0] << "\n";
-      errs() << "After ----------------------------------\n";
+      // errs() << "line 29: \n";
+      // errs() << "Before ----------------------------------\n";
+      // errs() << "line 30: size = " << this->adjacencyList.size() << " "
+      //        << "edges[" << i << "][0] = " << edges[i][0] << "\n";
+      // errs() << "After ----------------------------------\n";
 
       llvm::SmallVector<unsigned, 8> temp_vec =
           this->adjacencyList[int(edges[i][0])];
-      errs() << "line 33: temp_vec size = " << temp_vec.size() << "\n";
+      errs() << "Adding edge to adjaceccy list: " << edges[i][0] << " --- " << edges[i][1] << "\n";
       temp_vec.insert(temp_vec.end(), int(edges[i][1]));
-      errs() << "line 35: temp_vec size = " << temp_vec.size() << "\n";
-      errs() << "adjList size : " << adjacencyList.size() << " --- "
-             << "edges[" << i << "][0] = " << int(edges[i][0]) << "\n";
+      // errs() << "line 35: temp_vec size = " << temp_vec.size() << "\n";
+      // errs() << "adjList size : " << adjacencyList.size() << " --- "
+      //        << "edges[" << i << "][0] = " << int(edges[i][0]) << "\n";
       this->adjacencyList[int(edges[i][0])] = temp_vec;
-      errs() << "End of else block\n";
+      // errs() << "End of else block\n";
     }
     // errs() << "indegree size: " << indegree.size()  << " ---- edges[" << i <<
     // "][1] = " << int(edges[i][1]) << "\n"; this->indegree[int(edges[i][1])]
     // += 1;
   }
-  errs() << "in topological_sort.cpp : line 33\n";
+  // errs() << "in topological_sort.cpp : line 33\n";
   int node_idx = 0;
   for (auto rpi : (regProfMap)) {
     RegisterProfile rp = rpi.second;
@@ -61,7 +61,7 @@ Graph::Graph(std::vector<std::vector<int>> &edges, const RegisterProfileMap &reg
     }
     node_idx++;
   }
-  errs() << "in topological_sort.cpp : line 48\n";
+  // errs() << "in topological_sort.cpp : line 48\n";
 }
 
 void Graph::getColorOfVisitedAdjNodes(
@@ -88,26 +88,22 @@ llvm::SmallVector<unsigned, 8> *Graph::getAdjNodes(unsigned node_idx) {
 }
 
 void Graph::addAdjNodes(unsigned node_idx, llvm::SmallVector<unsigned, 8> &adjNodeList) {
-  // errs() << "this->adjacencyList size: " << this->adjacencyList.size() << "\n";
-  // for(auto i : adjacencyList){
-  //   errs() << i.first << ": ";
-  //   for (auto p : i.second) {
-  //     errs() << p << "\t";
-  //   }
-  //   errs() << "\n";
-  // }
-  auto pairTmp = std::make_pair(node_idx, adjNodeList);
   this->adjacencyList.insert(std::make_pair(node_idx, adjNodeList));
-  // errs() << "after inserting \n";
-  // for(auto i : adjacencyList){
-  //   errs() << i.first << ": ";
-  //   for (auto p : i.second) {
-  //     errs() << p << "\t";
-  //   }
-  //   errs() << "\n";
-  // }
-  // errs() << "after printing \n";
+  for(auto adjNodeIdx : adjNodeList) {
+    llvm::SmallVector<unsigned, 8>* adjNodeListTemp = &adjacencyList[adjNodeIdx];
+    adjNodeListTemp->push_back(node_idx);
+  }
+}
 
+void Graph::setAdjNodes(unsigned node_idx, llvm::SmallVector<unsigned, 8> adjNodeList) {
+  auto tempList = this->adjacencyList[node_idx];
+  for (auto adjIdx : adjNodeList) {
+    if(std::find(tempList.begin(), tempList.end(), adjIdx) ==  tempList.end()) {
+      auto *curAdjList = &this->adjacencyList[node_idx];
+      curAdjList->push_back(adjIdx);
+    }
+  }
+  // this->adjacencyList[node_idx] =  adjNodeList;
 }
 
 void Graph::get_eligibleNodes(std::vector<int> &eligibleNodes) {
@@ -168,13 +164,13 @@ void Graph::addNode(RegisterProfile rp) {
   discovered.push_back(false);
   assert(node_number == discovered.size() &&
          "Some issue in discovered node vector");
+  colored.push_back(-1);
   // llvm::SmallVector<unsigned, 8> interferences;
   // for (auto item : rp.interferences) {
   //   interferences.push_back(item);
   // }
   // adjacencyList.insert({node_number, interferences});
   // indegree.append(0);
-  colored.push_back(-1);
 }
 
 // void Graph::updateEdges(std::vector<std::vector<int>> &edges ) {

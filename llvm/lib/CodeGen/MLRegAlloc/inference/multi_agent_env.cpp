@@ -103,8 +103,17 @@ void MultiAgentEnv::update_env(RegisterProfileMap *regProfMap, SmallSetVector<un
           rpi.first, graph_topology->node_number + newNodeCount));
       idx_nid.insert(std::pair<unsigned, unsigned>(
           graph_topology->node_number + newNodeCount, rpi.first));
-    errs() << "Adding nodeID: " << rpi.first << " at idx: " << graph_topology->node_number + newNodeCount << "\n";      
+      errs() << "Adding nodeID: " << rpi.first << " at idx: " << graph_topology->node_number + newNodeCount << "\n";      
       newNodeCount++;
+    }
+    else if(std::find(updatedRegIdxs.begin(), updatedRegIdxs.end(), rpi.first) !=  updatedRegIdxs.end()) {
+      // this->regProfMap[rpi.first].interferences = rp.interferences;
+      int nodeIdxTemp = nid_idx[rpi.first];
+      llvm::SmallVector<unsigned, 8> interferences;
+      for (auto item : rp.interferences) {
+        interferences.push_back(this->nid_idx[item]);
+      }
+      graph_topology->setAdjNodes(nodeIdxTemp, interferences);
     }
   }
   auto splitedNodeIdx = nid_idx[current_node_id];
@@ -160,9 +169,9 @@ void MultiAgentEnv::update_env(RegisterProfileMap *regProfMap, SmallSetVector<un
       this->nodeRepresentation.insert(this->nodeRepresentation.end(), nodeVec);
       errs() << "Added nodeRepresentation for new node: " << rpi.first << "\n";
     }
-    else {
-      this->regProfMap[rpi.first] = rpi.second;
-    }
+    // else {
+    //   this->regProfMap[rpi.first] = rpi.second;
+    // }
   }
   errs() << "Updated node interferences successfuly\n";
   this->edges = std::vector<std::vector<int>>(MAX_EDGE_COUNT, std::vector<int>(2));
@@ -220,10 +229,11 @@ Observation *MultiAgentEnv::select_node_step(unsigned action) {
 
 Observation *MultiAgentEnv::select_task_step(unsigned action) {
   if (action == 0) {
-    // errs() << "Next is colouring agent\n";
+    errs() << "Next is colouring agent\n";
     this->setNextAgent("colour_node_agent");
     return this->colourNodeObsConstructor();
   } else {
+    errs() << "Next is spliting agent\n";
     this->setNextAgent("split_node_agent");
     return this->splitNodeObsConstructor();
   }
@@ -502,33 +512,33 @@ unsigned MultiAgentEnv::computeEdgesFromRP() {
     // printRegisterProfile();  
   for (auto rpi : (this->regProfMap)) {
     // unsigned src_id = rpi.first;
-    errs() << "0.00 noderep size = " << this->nodeRepresentation.size() << "\n";
+    // errs() << "0.00 noderep size = " << this->nodeRepresentation.size() << "\n";
   
     RegisterProfile rp = rpi.second;
-    errs() << "0.01 noderep size = " << this->nodeRepresentation.size() << "\n";
+    // errs() << "0.01 noderep size = " << this->nodeRepresentation.size() << "\n";
 
     // int src = this->nid_idx[rpi.first];
     int src = node_idx;
-    errs() << "RPI for " << rpi.first << "\n";
+    // errs() << "RPI for " << rpi.first << "\n";
     // if(rpi.first > 700)
     // assert(false);
-    errs() << "0.0 noderep size = " << this->nodeRepresentation.size() << "\n";
+    // errs() << "0.0 noderep size = " << this->nodeRepresentation.size() << "\n";
     // errs() << "Interferences for nodeId " << node_idx << " :";
     for (auto des_id : rp.interferences) {
-      errs() << "starting loop noderep size = " << this->nodeRepresentation.size() << "\n";
+      // errs() << "starting loop noderep size = " << this->nodeRepresentation.size() << "\n";
 
       // errs() << des_id << "\t";
       int des = this->nid_idx[des_id];
-      errs() << "Inside loop noderep size = " << this->nodeRepresentation.size() << "\n";
+      // errs() << "Inside loop noderep size = " << this->nodeRepresentation.size() << "\n";
       // errs() << "(" << des << ")\t";
       if (src != des) {
-         errs() << "1. Inside loop noderep size = " << this->nodeRepresentation.size() << "\n";
-         errs() << "src = " << src << "\n";
-         errs() << "Before" << edges[edge_count][0] << "\n";
-         errs() << edge_count << "----- \n";
+        //  errs() << "1. Inside loop noderep size = " << this->nodeRepresentation.size() << "\n";
+        //  errs() << "src = " << src << "\n";
+        //  errs() << "Before" << edges[edge_count][0] << "\n";
+        //  errs() << edge_count << "----- \n";
         this->edges[edge_count][0] = src;
-         errs() << "after" <<  edges[edge_count][0] << "\t(" << src << ")\n";
-        errs() << "2. Inside loop noderep size = " << this->nodeRepresentation.size() << "\n";
+        //  errs() << "after" <<  edges[edge_count][0] << "\t(" << src << ")\n";
+        // errs() << "2. Inside loop noderep size = " << this->nodeRepresentation.size() << "\n";
         this->edges[edge_count][1] = des;
         // errs() << "3. Inside loop noderep size = " << this->nodeRepresentation.size() << "\n";
         edge_count += 1;

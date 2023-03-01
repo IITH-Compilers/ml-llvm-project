@@ -25,6 +25,8 @@ public:
   void UpdateVisitList(unsigned node_idx);
   void removeNode(unsigned node_idx);
   void addNode(RegisterProfile rp);
+  void setAdjNodes(unsigned node_idx,
+                   llvm::SmallVector<unsigned, 8> adjNodeList);
   // void updateEdges(std::vector<std::vector<int>> &edges);
   unsigned node_number;
 
