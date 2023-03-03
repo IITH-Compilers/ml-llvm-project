@@ -29,7 +29,7 @@ public:
 
   // virtual void getInfo() = 0;
 
-  void computeAction(Observation* obs) {
+  void computeAction(Observation *obs) {
     while (true) {
       Action action;
 
@@ -40,7 +40,7 @@ public:
       obs = this->env->step(action);
 
       if (this->env->checkDone()) {
-        std::cout << "Done🎉\n";
+        // std::cout << "Done🎉\n";
         break;
       }
     }

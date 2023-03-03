@@ -41,11 +41,11 @@ unsigned Agent::computeAction(Observation *input) {
                               model_output.end()); // [2, 4)
   int argmaxVal = std::distance(model_output.begin(), max);
 
-  llvm::errs() << "---------------MODEL OUTPUT VECTOR:----------------\n";
-  for (auto e : model_output) {
-    llvm::errs() << e << " ";
-  }
-  llvm::errs() << "\nmax value and index are " << *max << " " << argmaxVal
-               << "\n";
+  // llvm::errs() << "---------------MODEL OUTPUT VECTOR:----------------\n";
+  // for (auto e : model_output) {
+  //   llvm::errs() << e << " ";
+  // }
+  // llvm::errs() << "\nmax value and index are " << *max << " " << argmaxVal
+              //  << "\n";
   return argmaxVal;
 }

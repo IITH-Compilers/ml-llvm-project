@@ -29,9 +29,9 @@ void DriverService::getInfo(const RegisterProfileMap &regProfMap,
   outfile.close();
 
   LLVM_DEBUG(
-      errs()
+      dbgs()
       << "----------------RUNNING ON: --------------------------------\n");
-  LLVM_DEBUG(errs() << "------------" << MF->getName() << "--------------------"
+  LLVM_DEBUG(dbgs() << "------------" << MF->getName() << "--------------------"
                     << "\n");
   this->computeAction(&nodeSelectionObs);
 
@@ -93,14 +93,14 @@ void DriverService::computeAction(Observation obs) {
       action = this->nodeSplitingAgent->computeAction(obs);
       assert(false && "Splitting pridected");
     }
-    // LLVM_DEBUG(errs() << "Computed action for agent " <<
+    // LLVM_DEBUG(dbgs() << "Computed action for agent " <<
     // this->env->next_agent
     //                   << " is: " << action << "\n");
     Observation next_obs = this->env->step(action);
     obs = next_obs;
     if (this->env->graph_topology->all_discovered()) {
-      // LLVM_DEBUG(errs() << "Discovered All\n");
-      LLVM_DEBUG(errs() << "Discovered All\n");
+      // LLVM_DEBUG(dbgs() << "Discovered All\n");
+      LLVM_DEBUG(dbgs() << "Discovered All\n");
       break;
     }
   }

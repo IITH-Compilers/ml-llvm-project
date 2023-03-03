@@ -2132,15 +2132,15 @@ void MLRA::inference() {
     if (emptyGraph)
       return;
 
-    errs() << "edge_count = " << edge_count << "\n";
+    // LLVM_DEBUG(errs() << "edge_count = " << edge_count << "\n");
     if (count >= 500 || (edge_count >= max_edge_count))
       return;
 
     inference_driver->getInfo(regProfMap, colorMap);
-    errs() << "Colour Map: \n";
+    LLVM_DEBUG(errs() << "Colour Map: \n");
     unsigned numSpills = 0;
     for (auto pair : colorMap) {
-      errs() << pair.first << " : " << pair.second << "\n";
+      // errs() << pair.first << " : " << pair.second << "\n";
       if (pair.second == 0)
         numSpills++;
     }

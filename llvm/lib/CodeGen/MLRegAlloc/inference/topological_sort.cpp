@@ -4,10 +4,10 @@
 
 using namespace llvm;
 Graph::Graph(int edges[][2], const RegisterProfileMap &regProfMap) {
-  LLVM_DEBUG(LLVM_DEBUG(errs() << "in topological_sort.cpp : line 7\n"));
+  LLVM_DEBUG(LLVM_DEBUG(dbgs() << "in topological_sort.cpp : line 7\n"));
   this->node_number = regProfMap.size();
-  LLVM_DEBUG(errs() << "in topological_sort.cpp : line 9\n");
-  //   LLVM_DEBUG(errs() << "Number of nodes in graph is: " << node_number <<
+  LLVM_DEBUG(dbgs() << "in topological_sort.cpp : line 9\n");
+  //   LLVM_DEBUG(dbgs() << "Number of nodes in graph is: " << node_number <<
   //   "\n");
   for (int i = 0; i < node_number; i++) {
     // this->indegree.insert(this->indegree.end(), 0);
@@ -15,41 +15,41 @@ Graph::Graph(int edges[][2], const RegisterProfileMap &regProfMap) {
     this->colored.insert(this->colored.end(), -1);
   }
 
-  LLVM_DEBUG(errs() << "in topological_sort.cpp : line 18\n");
+  LLVM_DEBUG(dbgs() << "in topological_sort.cpp : line 18\n");
   for (int i = 0; i < max_edge_count; i++) {
-    LLVM_DEBUG(errs() << "line 20: i = " << i << "\n");
+    LLVM_DEBUG(dbgs() << "line 20: i = " << i << "\n");
     if (edges[i][0] == edges[i][1])
       break;
     if (this->adjacencyList.count(int(edges[i][0])) == 0) {
-      LLVM_DEBUG(errs() << "line 24: \n");
+      LLVM_DEBUG(dbgs() << "line 24: \n");
       llvm::SmallVector<unsigned, 8> temp_vec;
       temp_vec.insert(temp_vec.begin(), edges[i][1]);
       this->adjacencyList.insert({int(edges[i][0]), temp_vec});
     } else {
-      LLVM_DEBUG(errs() << "line 29: \n");
-      LLVM_DEBUG(errs() << "Before ----------------------------------\n");
-      LLVM_DEBUG(errs() << "line 30: size = " << this->adjacencyList.size()
+      LLVM_DEBUG(dbgs() << "line 29: \n");
+      LLVM_DEBUG(dbgs() << "Before ----------------------------------\n");
+      LLVM_DEBUG(dbgs() << "line 30: size = " << this->adjacencyList.size()
                         << " "
                         << "edges[" << i << "][0] = " << edges[i][0] << "\n");
-      LLVM_DEBUG(errs() << "After ----------------------------------\n");
+      LLVM_DEBUG(dbgs() << "After ----------------------------------\n");
 
       llvm::SmallVector<unsigned, 8> temp_vec =
           this->adjacencyList[int(edges[i][0])];
-      LLVM_DEBUG(errs() << "line 33: temp_vec size = " << temp_vec.size()
+      LLVM_DEBUG(dbgs() << "line 33: temp_vec size = " << temp_vec.size()
                         << "\n");
       temp_vec.insert(temp_vec.end(), int(edges[i][1]));
-      LLVM_DEBUG(errs() << "line 35: temp_vec size = " << temp_vec.size()
+      LLVM_DEBUG(dbgs() << "line 35: temp_vec size = " << temp_vec.size()
                         << "\n");
-      errs() << "adjList size : " << adjacencyList.size() << " --- "
-             << "edges[" << i << "][0] = " << int(edges[i][0]) << "\n";
+      LLVM_DEBUG(dbgs() << "adjList size : " << adjacencyList.size() << " --- "
+             << "edges[" << i << "][0] = " << int(edges[i][0]) << "\n");
       this->adjacencyList[int(edges[i][0])] = temp_vec;
-      LLVM_DEBUG(errs() << "End of else block\n");
+      LLVM_DEBUG(dbgs() << "End of else block\n");
     }
-    // errs() << "indegree size: " << indegree.size()  << " ---- edges[" << i <<
+    // dbgs() << "indegree size: " << indegree.size()  << " ---- edges[" << i <<
     // "][1] = " << int(edges[i][1]) << "\n"; this->indegree[int(edges[i][1])]
     // += 1;
   }
-  LLVM_DEBUG(errs() << "in topological_sort.cpp : line 33\n");
+  LLVM_DEBUG(dbgs() << "in topological_sort.cpp : line 33\n");
   int node_idx = 0;
   for (auto rpi : (regProfMap)) {
     RegisterProfile rp = rpi.second;
@@ -57,32 +57,32 @@ Graph::Graph(int edges[][2], const RegisterProfileMap &regProfMap) {
       int colour = rp.color;
       this->UpdateVisitList(node_idx);
       this->UpdateColorVisitedNode(node_idx, colour);
-      // LLVM_DEBUG(errs() << "Phy reg colour is: " << rp.cls << " " << colour
+      // LLVM_DEBUG(dbgs() << "Phy reg colour is: " << rp.cls << " " << colour
       // << "\n");
     } else {
-      // LLVM_DEBUG(LLVM_DEBUG(errs() << "Virtual reg colour is: " << rp.cls <<
+      // LLVM_DEBUG(LLVM_DEBUG(dbgs() << "Virtual reg colour is: " << rp.cls <<
       // "\n"));
     }
     node_idx++;
   }
-  LLVM_DEBUG(errs() << "in topological_sort.cpp : line 48\n");
+  LLVM_DEBUG(dbgs() << "in topological_sort.cpp : line 48\n");
 }
 
 void Graph::getColorOfVisitedAdjNodes(
     unsigned node_idx, llvm::SmallVector<unsigned, 8> &colour_vec) {
-  errs() << "getColorOfVisitedAdjNodes: " << node_idx << "--"
-         << this->adjacencyList.size() << "\n";
+  LLVM_DEBUG(dbgs() << "getColorOfVisitedAdjNodes: " << node_idx << "--"
+         << this->adjacencyList.size() << "\n");
   llvm::SmallVector<unsigned, 8> interfering_nodes =
       this->adjacencyList[node_idx];
-  // LLVM_DEBUG(LLVM_DEBUG(errs() << "Node " << node_idx << " interferes with
+  // LLVM_DEBUG(LLVM_DEBUG(dbgs() << "Node " << node_idx << " interferes with
   // "));
   for (auto node : interfering_nodes) {
-    LLVM_DEBUG(errs() << "this->discovered[node]: " << node << "--"
+    LLVM_DEBUG(dbgs() << "this->discovered[node]: " << node << "--"
                       << this->discovered.size() << "\n");
     if (this->discovered[node]) {
       colour_vec.insert(colour_vec.end(), this->colored[node]);
     }
-    // LLVM_DEBUG(errs() << node << " and colour " << this->colored[node] <<
+    // LLVM_DEBUG(dbgs() << node << " and colour " << this->colored[node] <<
     // "\n");
   }
   return;
@@ -96,7 +96,7 @@ void Graph::get_eligibleNodes(std::vector<int> &eligibleNodes) {
   for (int i = 0; i < this->discovered.size(); i++) {
     if (!this->discovered[i]) {
       eligibleNodes.insert(eligibleNodes.end(), i);
-      // LLVM_DEBUG(LLVM_DEBUG(errs() << "Adding node to eligible list: " << i
+      // LLVM_DEBUG(LLVM_DEBUG(dbgs() << "Adding node to eligible list: " << i
       // << "\n"));
     }
   }
@@ -111,14 +111,14 @@ void Graph::UpdateColorVisitedNode(unsigned node_idx, unsigned colour) {
 void Graph::UpdateVisitList(unsigned node_idx) {
   if (!this->discovered[node_idx]) {
     this->discovered[node_idx] = true;
-    // LLVM_DEBUG(errs() << "Setting discoved to true from node idx: " <<
+    // LLVM_DEBUG(dbgs() << "Setting discoved to true from node idx: " <<
     // node_idx
     //                   << "\n");
     // for (auto adj_node : this->adjacencyList[node_idx]) {
     //   this->indegree[adj_node] -= 1;
     // }
   } else {
-    // LLVM_DEBUG(LLVM_DEBUG(errs() << "Node idx already visited: " << node_idx
+    // LLVM_DEBUG(LLVM_DEBUG(dbgs() << "Node idx already visited: " << node_idx
     // << "\n"));
     assert(false && "Node idx already visited");
   }
@@ -180,7 +180,7 @@ void RegisterActionSpace::maskActionSpace(
     }
   } else {
     // assert(false);
-    LLVM_DEBUG(errs() << "Register class not supported: " << regclass << "\n");
+    LLVM_DEBUG(dbgs() << "Register class not supported: " << regclass << "\n");
     for (auto reg : action_space) {
       action_space_filtered.insert(action_space_filtered.end(), reg);
     }
