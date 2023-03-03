@@ -16,8 +16,8 @@ DriverService::DriverService(MachineFunction *MF) {
 
 void DriverService::getInfo(const RegisterProfileMap &regProfMap,
                             std::map<std::string, int64_t> &colour_map) {
-  Observation nodeSelectionObs =
-      *(static_cast<MultiAgentEnv *>(this->getEnvironment())->reset(regProfMap));
+  Observation nodeSelectionObs = *(
+      static_cast<MultiAgentEnv *>(this->getEnvironment())->reset(regProfMap));
   // assert(nodeSelectionObs);
 
   std::ofstream outfile;
@@ -28,14 +28,15 @@ void DriverService::getInfo(const RegisterProfileMap &regProfMap,
   outfile << "\n";
   outfile.close();
 
-  errs() << "----------------RUNNING ON: --------------------------------\n";
-  errs() << "------------" << MF->getName() << "--------------------"
-         << "\n";
+  LLVM_DEBUG(
+      errs()
+      << "----------------RUNNING ON: --------------------------------\n");
+  LLVM_DEBUG(errs() << "------------" << MF->getName() << "--------------------"
+                    << "\n");
   this->computeAction(&nodeSelectionObs);
 
   for (auto pair :
        static_cast<MultiAgentEnv *>(this->getEnvironment())->nid_colour) {
-    // errs() << pair.first << " : " << pair.second << "\n";
     colour_map[std::to_string(pair.first)] = pair.second;
   }
 }
@@ -99,7 +100,7 @@ void DriverService::computeAction(Observation obs) {
     obs = next_obs;
     if (this->env->graph_topology->all_discovered()) {
       // LLVM_DEBUG(errs() << "Discovered All\n");
-      errs() << "Discovered All\n";
+      LLVM_DEBUG(errs() << "Discovered All\n");
       break;
     }
   }

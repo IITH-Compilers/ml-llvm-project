@@ -1,10 +1,13 @@
 #include "llvm/CodeGen/RegisterProfile.h"
+#include "llvm/Support/Debug.h"
 #include <llvm/ADT/MapVector.h>
 #include <llvm/ADT/SmallVector.h>
 #include <map>
 #include <stdio.h>
 
 #define max_edge_count 30000
+
+#define DEBUG_TYPE "rl-inference-engine"
 
 class Graph {
 public:
@@ -35,7 +38,7 @@ public:
   static std::map<int, int> normal_org_map;
   static std::map<int, int> org_normal_map;
   static std::map<std::string, std::vector<int>> overlaps;
-  void maskActionSpace(
-      llvm::StringRef regclass, const llvm::SmallVector<unsigned, 8> &adj_colors,
-      llvm::SmallVector<unsigned, 8> &action_space_filtered);
+  void maskActionSpace(llvm::StringRef regclass,
+                       const llvm::SmallVector<unsigned, 8> &adj_colors,
+                       llvm::SmallVector<unsigned, 8> &action_space_filtered);
 };

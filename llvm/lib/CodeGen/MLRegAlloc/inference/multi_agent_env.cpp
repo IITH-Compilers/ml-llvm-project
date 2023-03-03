@@ -14,8 +14,8 @@ Observation *MultiAgentEnv::reset(const RegisterProfileMap &regProfMap) {
     this->regProfMap.insert({rpi.first, rpi.second});
   }
 
-  errs() << "rp size = " << this->regProfMap.size() << "\n";
-  errs() << "noderep size = " << this->nodeRepresentation.size() << "\n";
+  LLVM_DEBUG(errs() << "rp size = " << this->regProfMap.size() << "\n");
+
   // assert(false);
   // this->regProfMap = &regProfMap_new;
   int idx = 0;
@@ -33,30 +33,34 @@ Observation *MultiAgentEnv::reset(const RegisterProfileMap &regProfMap) {
     this->idx_nid[idx] = rpi.first;
     idx++;
   }
-  errs() << "rp size = " << this->regProfMap.size() << "\n";
-  errs() << "noderep size = " << this->nodeRepresentation.size() << "\n";
+  LLVM_DEBUG(errs() << "rp size = " << this->regProfMap.size() << "\n");
+  LLVM_DEBUG(errs() << "noderep size = " << this->nodeRepresentation.size()
+                    << "\n");
   // assert(false);
   // if (debug_ct < 1) {
-  //   errs() << nodeRepresentation.size() << "\n";
+  //   LLVM_DEBUG(errs() << nodeRepresentation.size() << "\n");
   //   debug_ct++;
   // } else
   //   assert(false);
 
   // for (int i = 422; i > 412; i--) {
   //   for (auto e : nodeRepresentation[i])
-  //     errs() << e << " ";
-  //   errs() << "\n";
+  //     LLVM_DEBUG(errs() << e << " ");
+  //   LLVM_DEBUG(errs() << "\n");
   // }
   // assert(false);
 
   this->edge_count = this->computeEdgesFromRP();
-  errs() << "0. noderep size = " << this->nodeRepresentation.size() << "\n";
+  LLVM_DEBUG(errs() << "0. noderep size = " << this->nodeRepresentation.size()
+                    << "\n");
   this->computeAnnotations();
-  errs() << "1. noderep size = " << this->nodeRepresentation.size() << "\n";
+  LLVM_DEBUG(errs() << "1. noderep size = " << this->nodeRepresentation.size()
+                    << "\n");
   // assert(false);
   this->graph_topology = new Graph(this->edges, this->regProfMap);
   this->registerAS = new RegisterActionSpace();
-  errs() << "2. noderep size = " << this->nodeRepresentation.size() << "\n";
+  LLVM_DEBUG(errs() << "2. noderep size = " << this->nodeRepresentation.size()
+                    << "\n");
   // assert()
   Observation *nodeSelectionObs = this->selectNodeObsConstructor();
   this->setNextAgent("node_selection_agent");
@@ -78,8 +82,8 @@ Observation *MultiAgentEnv::step(Action action) {
     result = this->split_node_step(action);
   }
   if (this->graph_topology->all_discovered()) {
-    // errs() << "Discovered All\n";
-    errs() << "Discovered All\n";
+    // LLVM_DEBUG(errs() << "Discovered All\n");
+    LLVM_DEBUG(errs() << "Discovered All\n");
     this->setDone();
   }
   return result;
@@ -91,15 +95,15 @@ Observation *MultiAgentEnv::select_node_step(unsigned action) {
   //                   << this->current_node_id << " " << action << "\n");
 
   auto pos = this->regProfMap.find(this->current_node_id);
-  errs() << "--------------regProfMap keys-----------------\n";
+  LLVM_DEBUG(errs() << "--------------regProfMap keys-----------------\n");
   for (auto e : this->regProfMap) {
-    errs() << e.first << " ";
+    LLVM_DEBUG(errs() << e.first << " ");
   }
   if (pos == this->regProfMap.end()) {
     // errs( << "Selected node id and idx NOT FOUND in the map: "
     //                   << this->current_node_id << " " << action << "\n");
-    errs() << "current_node_id = " << this->current_node_id << "\n";
-    errs() << "\n";
+    LLVM_DEBUG(errs() << "current_node_id = " << this->current_node_id << "\n");
+    LLVM_DEBUG(errs() << "\n");
     assert(false && "Some issue");
   } else {
     // errs( << "Selected node id and idx are: "
@@ -117,7 +121,7 @@ Observation *MultiAgentEnv::select_node_step(unsigned action) {
 
 Observation *MultiAgentEnv::select_task_step(unsigned action) {
   if (action == 0) {
-    // errs() << "Next is colouring agent\n";
+    // LLVM_DEBUG(errs() << "Next is colouring agent\n");
     this->setNextAgent("colour_node_agent");
     return this->colourNodeObsConstructor();
   } else {
@@ -142,7 +146,7 @@ Observation *MultiAgentEnv::split_node_step(unsigned action) { ; }
 Observation *MultiAgentEnv::splitNodeObsConstructor() { ; }
 
 Observation *MultiAgentEnv::selectNodeObsConstructor() {
-  errs() << "noderepre.size()" << nodeRepresentation.size() << "\n";
+  LLVM_DEBUG(errs() << "noderepre.size()" << nodeRepresentation.size() << "\n");
 
   // Observation temp_obs = new float[selectNodeObsSize]();
   Observation *obs = new Observation(selectNodeObsSize);
@@ -161,21 +165,22 @@ Observation *MultiAgentEnv::selectNodeObsConstructor() {
   std::vector<int> action_mask(max_node_number);
   this->createNodeSelectMask(action_mask);
 
-  errs() << "--------------ACTION_MASK-----------------\n";
+  LLVM_DEBUG(errs() << "--------------ACTION_MASK-----------------\n");
   for (int i = 0; i < action_mask.size(); i++) {
     if (action_mask[i] != 0)
-      errs() << "action_mask[" << i << "] = " << action_mask[i] << "\n";
+      LLVM_DEBUG(errs() << "action_mask[" << i << "] = " << action_mask[i]
+                        << "\n");
   }
-  errs() << "\n";
+  LLVM_DEBUG(errs() << "\n");
   // Setting action mask
-  // errs() << "Node Selection action mask: ";
+  // LLVM_DEBUG(errs() << "Node Selection action mask: ");
   for (int i = 0; i < max_node_number; i++) {
     assertObsSize(137);
     temp_obs[current_index++] = action_mask[i];
-    // errs() << action_mask[i] << " ";
+    // LLVM_DEBUG(errs() << action_mask[i] << " ");
   }
   assert(current_index == 600 && "current_index is not 600\n");
-  // errs() << "\n";
+  // LLVM_DEBUG(errs() << "\n");
   // Set edge count in graph
   assertObsSize(143);
   temp_obs[current_index++] = this->edge_count;
@@ -198,7 +203,7 @@ Observation *MultiAgentEnv::selectNodeObsConstructor() {
   assert(current_index == 91201 && "current_index is not 91201\n");
   // Setting anotations
   std::vector<float> annotations(max_node_number * 3);
-  errs() << "current_index = " << current_index << "\n";
+  LLVM_DEBUG(errs() << "current_index = " << current_index << "\n");
   this->createAnnotations(annotations);
   for (int i = 0; i < max_node_number * 3; i++) {
     assertObsSize(166);
@@ -217,23 +222,23 @@ Observation *MultiAgentEnv::selectNodeObsConstructor() {
 
   // Set node embeddings
 
-  errs() << "current_index = " << current_index << "\n";
+  LLVM_DEBUG(errs() << "current_index = " << current_index << "\n");
   for (int node_idx = 0; node_idx < this->nodeRepresentation.size();
        node_idx++) {
-    // errs() << "line 196: current_index = " << current_index << "\n";
-    // errs() << "node_idx = " << node_idx
+    // LLVM_DEBUG(errs() << "line 196: current_index = " << current_index <<
+    // "\n"); errs() << "node_idx = " << node_idx
     //        << "-------------- noderepresentation size = "
     //        << nodeRepresentation.size() << "\n";
-    // errs() << "THIS IS PRINTING!!!!!!!!!!!!!!!!!\n";
+    // LLVM_DEBUG(errs() << "THIS IS PRINTING!!!!!!!!!!!!!!!!!\n");
 
     // assert(false);
 
     // for (auto e : nodeRepresentation[0])
-    //   errs() << e << " ";
-    // errs() << "\n";
-    // errs() << "nodepre[0].size()" << nodeRepresentation[0].size() << "\n";
-    // unsigned vec_size = IR2Vec_size;
-    // errs() << "line 199: current_index = " << current_index << "\n";
+    //   LLVM_DEBUG(errs() << e << " ");
+    // LLVM_DEBUG(errs() << "\n");
+    // LLVM_DEBUG(errs() << "nodepre[0].size()" << nodeRepresentation[0].size()
+    // << "\n"); unsigned vec_size = IR2Vec_size; LLVM_DEBUG(errs() << "line
+    // 199: current_index = " << current_index << "\n");
     auto nodeVec = this->nodeRepresentation[node_idx];
     for (int i = 0; i < IR2Vec_size; i++) {
       assertObsSize(187);
@@ -241,7 +246,7 @@ Observation *MultiAgentEnv::selectNodeObsConstructor() {
     }
   }
 
-  // errs() << "Current idx value: " << current_index << "\n";
+  // LLVM_DEBUG(errs() << "Current idx value: " << current_index << "\n");
   // for (auto rpi : *(this->regProfMap)) {
   //   RegisterProfile rp = rpi.second;
   //   int node_idx = this->nid_idx[rpi.first];
@@ -263,14 +268,14 @@ void MultiAgentEnv::createNodeSelectMask(std::vector<int> &mask) {
   //                   << "\n");
   for (auto elg_node : eligibleNodes) {
     if (elg_node >= max_node_number) {
-      errs() << "elg_node : " << elg_node << "\n";
+      LLVM_DEBUG(errs() << "elg_node : " << elg_node << "\n");
     }
     assert(elg_node < max_node_number &&
            "elg_node_id is greater than max_node_number\n");
     mask[elg_node] = 1;
-    // errs() << elg_node << " ";
+    // LLVM_DEBUG(errs() << elg_node << " ");
   }
-  // errs() << "\n";
+  // LLVM_DEBUG(errs() << "\n");
 }
 
 void MultiAgentEnv::createAnnotations(std::vector<float> &temp_annotations) {
@@ -300,97 +305,109 @@ void MultiAgentEnv::computeAnnotations() {
 }
 
 void MultiAgentEnv::printRegisterProfile() const {
-  errs() << "\nPRinting regProfMap\n";
+  LLVM_DEBUG(errs() << "\nPRinting regProfMap\n");
   for (auto rpi : regProfMap) {
-    errs() << "ID = " << rpi.first << "\n";
+    LLVM_DEBUG(errs() << "ID = " << rpi.first << "\n");
     auto rp = rpi.second;
-    errs() << "cls =" << rp.cls << "\n";
+    LLVM_DEBUG(errs() << "cls =" << rp.cls << "\n");
     // if (!rp.cls.equals("Phy")) {
     //   unsigned step = TRI->getNumRegs() + 1;
     //   LIS->getInterval(Register::index2VirtReg(rpi.first - step)).dump();
     // }
-    errs() << "Interferences: ";
+    LLVM_DEBUG(errs() << "Interferences: ");
 
     SmallVector<unsigned, 8> interferencesVector(rp.interferences.begin(),
                                                  rp.interferences.end());
     std::sort(interferencesVector.begin(), interferencesVector.end());
 
     for (auto interference : interferencesVector)
-      errs() << interference << ", ";
-    errs() << "Use distances: ";
+      LLVM_DEBUG(errs() << interference << ", ");
+    LLVM_DEBUG(errs() << "Use distances: ");
     for (auto ud : rp.useDistances) {
-      errs() << ud << ", ";
+      LLVM_DEBUG(errs() << ud << ", ");
     }
-    // errs() << "\nOverlaps start: \n";
+    // LLVM_DEBUG(errs() << "\nOverlaps start: \n");
     // for (auto o : rp.overlapsStart) {
-    //   errs() << "\n\tInterf: " << o.first << "\nOverlaps: ";
+    //   LLVM_DEBUG(errs() << "\n\tInterf: " << o.first << "\nOverlaps: ");
     //   for (auto val : o.second) {
     //     val.dump();
     //   }
     // }
-    // errs() << "\nOverlaps end: \n";
+    // LLVM_DEBUG(errs() << "\nOverlaps end: \n");
     // for (auto o : rp.overlapsEnd) {
-    //   errs() << "\n\tInterf: " << o.first << "\nOverlaps: ";
+    //   LLVM_DEBUG(errs() << "\n\tInterf: " << o.first << "\nOverlaps: ");
     //   for (auto val : o.second) {
     //     val.dump();
     //   }
     // }
-    errs() << "\nSplit slots: \n";
+    LLVM_DEBUG(errs() << "\nSplit slots: \n");
     for (auto o : rp.splitSlots) {
-      errs() << o << ", ";
+      LLVM_DEBUG(errs() << o << ", ");
     }
-    errs() << "\n--------------------------------\n";
+    LLVM_DEBUG(errs() << "\n--------------------------------\n");
   }
 }
 
 unsigned MultiAgentEnv::computeEdgesFromRP() {
   unsigned edge_count = 0;
   int node_idx = 0;
-    // printRegisterProfile();  
+  // printRegisterProfile();
   for (auto rpi : (this->regProfMap)) {
     // unsigned src_id = rpi.first;
-    errs() << "0.00 noderep size = " << this->nodeRepresentation.size() << "\n";
-  
+    LLVM_DEBUG(errs() << "0.00 noderep size = "
+                      << this->nodeRepresentation.size() << "\n");
+
     RegisterProfile rp = rpi.second;
-    errs() << "0.01 noderep size = " << this->nodeRepresentation.size() << "\n";
+    LLVM_DEBUG(errs() << "0.01 noderep size = "
+                      << this->nodeRepresentation.size() << "\n");
 
     // int src = this->nid_idx[rpi.first];
     int src = node_idx;
-    errs() << "RPI for " << rpi.first << "\n";
+    LLVM_DEBUG(errs() << "RPI for " << rpi.first << "\n");
     // if(rpi.first > 700)
     // assert(false);
-    errs() << "0.0 noderep size = " << this->nodeRepresentation.size() << "\n";
-    // errs() << "Interferences for nodeId " << node_idx << " :";
+    LLVM_DEBUG(errs() << "0.0 noderep size = "
+                      << this->nodeRepresentation.size() << "\n");
+    // LLVM_DEBUG(errs() << "Interferences for nodeId " << node_idx << " :");
     for (auto des_id : rp.interferences) {
-      errs() << "starting loop noderep size = " << this->nodeRepresentation.size() << "\n";
+      errs() << "starting loop noderep size = "
+             << this->nodeRepresentation.size() << "\n";
 
-      // errs() << des_id << "\t";
+      // LLVM_DEBUG(errs() << des_id << "\t");
       int des = this->nid_idx[des_id];
-      errs() << "Inside loop noderep size = " << this->nodeRepresentation.size() << "\n";
-      // errs() << "(" << des << ")\t";
+      errs() << "Inside loop noderep size = " << this->nodeRepresentation.size()
+             << "\n";
+      // LLVM_DEBUG(errs() << "(" << des << ")\t");
       if (src != des) {
-         errs() << "1. Inside loop noderep size = " << this->nodeRepresentation.size() << "\n";
-         errs() << "src = " << src << "\n";
-         errs() << "Before" << edges[edge_count][0] << "\n";
-         errs() << edge_count << "----- \n";
+        errs() << "1. Inside loop noderep size = "
+               << this->nodeRepresentation.size() << "\n";
+        LLVM_DEBUG(errs() << "src = " << src << "\n");
+        LLVM_DEBUG(errs() << "Before" << edges[edge_count][0] << "\n");
+        LLVM_DEBUG(errs() << edge_count << "----- \n");
         this->edges[edge_count][0] = src;
-         errs() << "after" <<  edges[edge_count][0] << "\t(" << src << ")\n";
-        errs() << "2. Inside loop noderep size = " << this->nodeRepresentation.size() << "\n";
+        LLVM_DEBUG(errs() << "after" << edges[edge_count][0] << "\t(" << src
+                          << ")\n");
+        errs() << "2. Inside loop noderep size = "
+               << this->nodeRepresentation.size() << "\n";
         this->edges[edge_count][1] = des;
-        // errs() << "3. Inside loop noderep size = " << this->nodeRepresentation.size() << "\n";
+        // errs() << "3. Inside loop noderep size = " <<
+        // this->nodeRepresentation.size() << "\n";
         edge_count += 1;
-        // errs() << "4. Inside loop noderep size = " << this->nodeRepresentation.size() << "\n";
+        // errs() << "4. Inside loop noderep size = " <<
+        // this->nodeRepresentation.size() << "\n";
       }
-      // errs() << "5. Inside loop noderep size = " << this->nodeRepresentation.size() << "\n";
+      // errs() << "5. Inside loop noderep size = " <<
+      // this->nodeRepresentation.size() << "\n";
 
-      // errs() << des << " ";
+      // LLVM_DEBUG(errs() << des << " ");
     }
-    // errs() << "\n";
+    // LLVM_DEBUG(errs() << "\n");
     node_idx++;
-    // errs() << "\n 0.02 noderep size = " << this->nodeRepresentation.size() << "\n";
+    // errs() << "\n 0.02 noderep size = " << this->nodeRepresentation.size() <<
+    // "\n";
   }
-  // errs() << "0.1 noderep size = " << this->nodeRepresentation.size() << "\n";
-  // assert(false);
+  // LLVM_DEBUG(errs() << "0.1 noderep size = " <<
+  // this->nodeRepresentation.size() << "\n"); assert(false);
   return edge_count;
 }
 
@@ -419,7 +436,7 @@ void MultiAgentEnv::constructNodeVector(
 }
 
 Observation *MultiAgentEnv::taskSelectionObsConstructor() {
-  // errs() << "Inside taskSelectionObsConstructor function\n";
+  // LLVM_DEBUG(errs() << "Inside taskSelectionObsConstructor function\n");
   // Observation temp_obs = new float[selectTaskObsSize]();
   Observation *obs = new Observation(selectTaskObsSize);
   Observation &temp_obs = *obs;
@@ -443,8 +460,8 @@ Observation *MultiAgentEnv::taskSelectionObsConstructor() {
   this->graph_topology->getColorOfVisitedAdjNodes(current_node_idx, adj_colors);
   llvm::SmallVector<unsigned, 8> masked_action_space;
   this->registerAS->maskActionSpace(regclass, adj_colors, masked_action_space);
-  errs() << "line 336: masked_action_space size = "
-         << masked_action_space.size() << "\n";
+  LLVM_DEBUG(errs() << "line 336: masked_action_space size = "
+                    << masked_action_space.size() << "\n");
   float spillcost = this->current_node.spillWeight;
   llvm::SmallVector<int, 8> use_distances = this->current_node.useDistances;
   temp_obs[current_index++] = adj_nodes.size();
@@ -464,7 +481,7 @@ Observation *MultiAgentEnv::colourNodeObsConstructor() {
   // Observation temp_obs = new float[colourNodeObsSize]();
   Observation *obs = new Observation(colourNodeObsSize);
   Observation &temp_obs = *obs;
-  // errs() << "Inside colourNodeObsConstructor function\n";
+  // LLVM_DEBUG(errs() << "Inside colourNodeObsConstructor function\n");
   int current_index = 0;
 
   // this->current_node_id = this->idx_nid[102]; // Just for debuging
