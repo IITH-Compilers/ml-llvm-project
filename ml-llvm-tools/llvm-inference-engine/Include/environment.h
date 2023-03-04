@@ -1,7 +1,7 @@
 #ifndef LLVM_INFERENCE_ENGINE_ENVIRONMENT_H
 #define LLVM_INFERENCE_ENGINE_ENVIRONMENT_H
 
-#include "MLInferenceEngine/agent.h"
+#include "agent.h"
 
 typedef signed Action;
 
