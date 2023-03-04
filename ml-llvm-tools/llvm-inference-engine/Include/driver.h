@@ -5,8 +5,8 @@
 #include <map>
 #include <string>
 
-#include "MLInferenceEngine/agent.h"
-#include "MLInferenceEngine/environment.h"
+#include "agent.h"
+#include "environment.h"
 
 class InferenceEngine {
   Environment *env;
