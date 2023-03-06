@@ -47,8 +47,14 @@
 #include "llvm/Transforms/Vectorize.h"
 #include "llvm/Transforms/Vectorize/LoopVectorize.h"
 #include "llvm/Transforms/Vectorize/SLPVectorizer.h"
+#include "llvm/Transforms/PosetRL/PosetRL.h"
 
 using namespace llvm;
+
+
+static cl::opt<bool>
+    OPosetRL("OPosetRL", cl::init(false), cl::Hidden,
+                       cl::desc("poset rl pass sequence"));
 
 static cl::opt<bool>
     RunPartialInlining("enable-partial-inlining", cl::init(false), cl::Hidden,
@@ -419,6 +425,7 @@ void PassManagerBuilder::addFunctionSimplificationPasses(
     MPM.add(createLibCallsShrinkWrapPass());
   addExtensionsToPM(EP_Peephole, MPM);
 
+
   // Optimize memory intrinsic calls based on the profiled size information.
   if (SizeLevel == 0)
     MPM.add(createPGOMemOPSizeOptLegacyPass());
@@ -508,6 +515,11 @@ void PassManagerBuilder::addFunctionSimplificationPasses(
 
 void PassManagerBuilder::customPopulateModulePassManager(
     legacy::PassManagerBase &MPM, unsigned customSizeLevel, unsigned subSeqNum) {
+  
+  if (customSizeLevel == 0 && subSeqNum == 0){
+    MPM.add(createPosetRLPass());
+    
+  }
   
   if (((customSizeLevel == 15 || customSizeLevel == 17) && subSeqNum == 0) || (customSizeLevel == 30 && subSeqNum == 29)){
     // Allow forcing function attributes as a debugging and tuning aid.
@@ -1408,6 +1420,11 @@ void PassManagerBuilder::populateModulePassManager(
   // is handled separately, so just check this is not the ThinLTO post-link.
   bool DefaultOrPreLinkPipeline = !PerformThinLTO;
 
+  if (OPosetRL){
+      errs() << "opt level "<< OptLevel << " SizeLevel " << SizeLevel << "\n";
+      MPM.add(createPosetRLPass());
+      return;
+  }
   if (!PGOSampleUse.empty()) {
     MPM.add(createPruneEHPass());
     // In ThinLTO mode, when flattened profile is used, all the available
