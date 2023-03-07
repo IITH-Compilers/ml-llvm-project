@@ -20,6 +20,9 @@ set(LLVM_LINK_COMPONENTS
   Target
   TransformUtils
   Vectorize
+  PosetRL
+  InferenceEngine
+  IR2Vec
   )
 
 add_llvm_tool(bugpoint

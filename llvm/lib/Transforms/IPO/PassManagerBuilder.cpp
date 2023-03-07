@@ -516,10 +516,10 @@ void PassManagerBuilder::addFunctionSimplificationPasses(
 void PassManagerBuilder::customPopulateModulePassManager(
     legacy::PassManagerBase &MPM, unsigned customSizeLevel, unsigned subSeqNum) {
   
-  if (customSizeLevel == 0 && subSeqNum == 0){
-    MPM.add(createPosetRLPass());
+  // if (customSizeLevel == 0 && subSeqNum == 0){
+  //   MPM.add(createPosetRLPass());
     
-  }
+  // }
   
   if (((customSizeLevel == 15 || customSizeLevel == 17) && subSeqNum == 0) || (customSizeLevel == 30 && subSeqNum == 29)){
     // Allow forcing function attributes as a debugging and tuning aid.

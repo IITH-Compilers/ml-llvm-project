@@ -23,6 +23,9 @@ set(LLVM_LINK_COMPONENTS
   TransformUtils
   Vectorize
   Passes
+  PosetRL
+  InferenceEngine
+  IR2Vec
 )
 
 add_llvm_fuzzer(llvm-opt-fuzzer
