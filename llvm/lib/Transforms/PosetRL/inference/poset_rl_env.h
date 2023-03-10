@@ -20,7 +20,6 @@ class PosetRLEnv : public Environment {
     ActionMask CurrActionMask;      
 
     public:
-    std::vector<int> Sequence;
     PosetRLEnv();
     Observation reset();
     Observation step(Action) override;
@@ -30,8 +29,7 @@ class PosetRLEnv : public Environment {
 
 Observation PosetRLEnv::step(Action Action){
     applySeq(Action);
-
-    Sequence.push_back(Action);
+    
     Actioncount +=1;
     CurrActionMask[Action % ActionMaskSize] = 0;
     CurrEmbedding = getEmbeddings();

@@ -124,7 +124,7 @@ class PhaseOrderInference:
 
         self.config = config
         
-        # self.train_agent.export_policy_model("/home/cs20btech11018/repos/ML-Phase-Ordering/Model/RLLib-PhaseOrder/poset-RL-onnx-model", onnx=int(os.getenv("ONNX_OPSET", "11")))
+        self.train_agent.export_policy_model("/home/cs20btech11018/repos/ML-Phase-Ordering/Model/RLLib-PhaseOrder/poset-RL-onnx-model", onnx=int(os.getenv("ONNX_OPSET", "11")))
         
         
 
