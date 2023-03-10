@@ -22,8 +22,8 @@ using namespace llvm;
 
 STATISTIC(hellomodule, "Counts number of functions greeted");
 
-std::string embeddings = "/media/lavo07/lavo07/llvm-sidepro/ir2vec/vocabulary/"
-                         "seedEmbeddingVocab-300-llvm10.txt";
+std::string embeddings = "/home/cs20btech11018/repos/ML-Phase-Ordering/ir2vec/"
+                         "vocabulary/seedEmbeddingVocab-300-llvm10.txt";
 
 namespace {
 // Hello2 - The second implementation with getAnalysisUsage implemented.
@@ -44,7 +44,7 @@ struct HelloModule : public ModulePass {
     auto pgmVec = ir2vec.getProgramVector();
 
     for (auto val : pgmVec)
-      outs() << val << "\n";
+      outs() << val << "\t";
 
     return false;
   }
