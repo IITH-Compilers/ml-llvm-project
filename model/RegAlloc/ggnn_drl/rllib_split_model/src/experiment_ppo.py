@@ -23,7 +23,7 @@ from ray.rllib.policy.sample_batch import SampleBatch
 
 from gym.spaces import Discrete, Box, Dict, Tuple
 # from simple_q import SimpleQTrainer, DEFAULT_CONFIG
-from ppo import PPO, DEFAULT_CONFIG
+from ppo_new import PPO, DEFAULT_CONFIG
 # from env import GraphColorEnv, set_config
 from multiagentEnv import HierarchicalGraphColorEnv
 from register_action_space import RegisterActionSpace

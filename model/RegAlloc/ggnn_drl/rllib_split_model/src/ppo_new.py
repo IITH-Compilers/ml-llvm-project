@@ -92,8 +92,8 @@ class PPOConfig(PGConfig):
         self.use_gae = True
         self.lambda_ = 1.0
         self.kl_coeff = 0.2
-        self.sgd_minibatch_size = 128
-        self.num_sgd_iter = 30
+        self.sgd_minibatch_size = 64
+        self.num_sgd_iter = 3
         self.shuffle_sequences = True
         self.vf_loss_coeff = 1.0
         self.entropy_coeff = 0.0
@@ -105,17 +105,17 @@ class PPOConfig(PGConfig):
 
         # Override some of PG/AlgorithmConfig's default values with PPO-specific values.
         self.num_rollout_workers = 2
-        self.train_batch_size = 4000
+        self.train_batch_size = 256
         self.lr = 5e-5
         self.model["vf_share_layers"] = False
         self._disable_preprocessor_api = False
         # __sphinx_doc_end__
-        # fmt: on
+        # fmt: on   
 
         # Deprecated keys.
         self.vf_share_layers = DEPRECATED_VALUE
 
-        self.batch_mode = "complete_episodes";
+        self.batch_mode = "complete_episodes"
 
         self.env_config = {
             "target": "X86",
@@ -138,7 +138,7 @@ class PPOConfig(PGConfig):
             "graphs_num": 10000,
             "action_space_size": RegisterActionSpace("X86", "/home/ai20btech11004/ML-Register-Allocation/llvm/lib/CodeGen/MLRegAlloc/config_json").ac_sp_normlize_size,
             "check_point": None,
-            "episode_number": 10000,
+            "episode_number": 5,
             "GPU_ID": '1',
             "X86_CFLAGS": "-mllvm -regalloc=greedy  -march=core2",
             "AArch64_CFLAGS": "-mllvm -regalloc=greedy  -mcpu=cortex-a72",
@@ -146,7 +146,7 @@ class PPOConfig(PGConfig):
             "enable_GGNN": True,
             "file_repeat_frequency": 1,
             "current_batch": 10,
-            "Workers_starting_port": "50045",
+            "Workers_starting_port": "50035",
             "use_local_reward": True,
             "use_mca_reward": True,
             "use_mca_self_play_reward": False,
@@ -158,6 +158,8 @@ class PPOConfig(PGConfig):
 
         self.framework = 'torch'
         self.horizon = 1000
+
+        self.num_gpus = 1
 
     @override(AlgorithmConfig)
     def training(

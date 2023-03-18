@@ -101,6 +101,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.best_throughput_map = {}
         self.iteration_number = 1
 
+        self.curr_file_name = None
+
         print("env_config.worker_index", env_config.worker_index)
         
         if self.mode != 'inference':
@@ -250,6 +252,9 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         node_mat = state.initial_node_representation
         cur_obs = np.zeros((self.max_number_nodes, self.emb_size))
         cur_obs[0:node_mat.shape[0], :] = node_mat
+
+        self.node_representation_mat = cur_obs
+        
         # cur_obs = np.zeros((self.max_number_nodes, self.emb_size))
         annotations = np.zeros((self.max_number_nodes, self.annotation_size))
         annotations[0:state.annotations.shape[0], :] = state.annotations
