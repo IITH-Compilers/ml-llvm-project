@@ -2,23 +2,36 @@
 #define LLVM_INFERENCE_ENGINE_ENVIRONMENT_H
 
 #include "agent.h"
+#include "llvm/ADT/StringMap.h"
 
 typedef signed Action;
 
 class Environment {
   bool done = false;
-  std::string next_agent;
+  std::string nextAgent;
+  llvm::StringMap<Observation *> obsMap;
 
 public:
   bool checkDone() { return done == true; };
 
   void setDone() { done = true; }
 
-  std::string getNextAgent() { return next_agent; };
+  void setCurrentObservation(Observation &obs, std::string agentName) {
+    obsMap[agentName] = &obs;
+  }
 
-  void setNextAgent(std::string name) { next_agent = name; }
+  Observation* getCurrentObservation(std::string agentName) {
+    // assert(obsMap[agentName] && "obsMap should contain the observation");
+    return obsMap[agentName];
+  }
 
-  virtual Observation* step(Action action) = 0;
+  // void cleanObsMap() { obsMap.clear(); }
+
+  std::string getNextAgent() { return nextAgent; };
+
+  void setNextAgent(std::string name) { nextAgent = name; }
+
+  virtual void step(Action action) = 0;
 };
 
 #endif
