@@ -384,7 +384,7 @@ void MLRA::sendRegProfData(T *response,
   }
 }
 
-Observation *MLRA::split_node_step(unsigned action) {
+Observation& MLRA::split_node_step(unsigned action) {
   unsigned splitRegIdx = this->current_node_id;
   splitPoint = action;
   SmallVector<unsigned, 2> NewVRegs;
@@ -401,17 +401,20 @@ Observation *MLRA::split_node_step(unsigned action) {
       dumpInterferenceGraph(std::to_string(SplitCounter));
     if (enable_mlra_checks)
       verifyRegisterProfile();
-    errs() << "Splitted register successfuly: " << splitRegIdx << "\n";
+    LLVM_DEBUG(errs() << "Splitted register successfuly: " << splitRegIdx << "\n");
     this->update_env(&regProfMap, updatedRegIdxs);
   } else {
     LLVM_DEBUG(
         errs()
         << "Still after spliting prediction; LLVM dees not performit.\n");
     // request->set_result(false);
-    errs() << "Still after spliting prediction; LLVM dees not performit.\n";
+    LLVM_DEBUG(errs() << "Still after spliting prediction; LLVM dees not performit.\n");
   }
-  this->setNextAgent("node_selection_agent");
-  return this->selectNodeObsConstructor();
+  this->setNextAgent(NODE_SELECTION_AGENT);
+  Observation nodeSelectionObs(selectNodeObsSize);
+  this->selectNodeObsConstructor(nodeSelectionObs);
+  this->setCurrentObservation(nodeSelectionObs, NODE_SELECTION_AGENT);
+  return nodeSelectionObs;
 }
 
 bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
@@ -2163,15 +2166,15 @@ void MLRA::inference() {
     if (emptyGraph)
       return;
 
-    errs() << "edge_count = " << edge_count << "\n";
+    LLVM_DEBUG(errs() << "edge_count = " << edge_count << "\n");
     if (count >= 500 || (edge_count >= MAX_EDGE_COUNT))
       return;
 
     inference_driver->getInfo(regProfMap, colorMap);
-    errs() << "Colour Map: \n";
+    LLVM_DEBUG(errs() << "Colour Map: \n");
     unsigned numSpills = 0;
     for (auto pair : colorMap) {
-      errs() << pair.first << " : " << pair.second << "\n";
+      LLVM_DEBUG(errs() << pair.first << " : " << pair.second << "\n");
       if (pair.second == 0)
         numSpills++;
     }

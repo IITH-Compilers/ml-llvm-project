@@ -181,25 +181,6 @@ protected:
     // std::cout << "\n";
   }
 
-  void testONNX() {
-    ONNXModel model("/Pramana/RL4Real/temp/node_select_model.onnx");
-    std::vector<float> input;
-    read_input(input);
-    // model.setInput(input);
-
-    std::vector<int64_t> output_dims;
-    auto floatarr = model.run(input, output_dims);
-
-    std::cout << "output_tensor_info_dims = " << output_dims.size() << '\n';
-    for (size_t j = 0; j < output_dims.size(); j++) {
-      std::cout << " : dim[" << j << "] =" << output_dims[j] << '\n';
-    }
-
-    for (unsigned i = 0; i < output_dims[1]; i++)
-      std::cout << floatarr[i] << ",";
-    std::cout << "\n";
-  }
-
 private:
   // struct RegisterProfile {
   //   StringRef cls;
@@ -275,7 +256,7 @@ private:
   unsigned getPhyRegForColor(LiveInterval &VirtReg, unsigned color,
                              SmallVector<unsigned, 4> &SplitVRegs);
             
-  Observation* split_node_step(unsigned action) override;
+  Observation& split_node_step(unsigned action) override;
 
   // std::map<std::string, std::map<std::string, int64_t>>
   // parsePredictionJson(std::string jsonString) {

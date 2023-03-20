@@ -4,9 +4,9 @@
 
 using namespace llvm;
 Graph::Graph(std::vector<std::vector<int>> &edges, const RegisterProfileMap &regProfMap) {
-  // errs() << "in topological_sort.cpp : line 7\n";
+  // LLVM_DEBUG(errs() << "in topological_sort.cpp : line 7\n");
   this->node_number = regProfMap.size();
-  // errs() << "in topological_sort.cpp : line 9\n";
+  // LLVM_DEBUG(errs() << "in topological_sort.cpp : line 9\n");
   //   LLVM_DEBUG(errs() << "Number of nodes in graph is: " << node_number <<
   //   "\n");
   for (int i = 0; i < node_number; i++) {
@@ -15,38 +15,38 @@ Graph::Graph(std::vector<std::vector<int>> &edges, const RegisterProfileMap &reg
     this->colored.insert(this->colored.end(), -1);
   }
 
-  // errs() << "in topological_sort.cpp : line 18\n";
+  // LLVM_DEBUG(errs() << "in topological_sort.cpp : line 18\n");
   for (int i = 0; i < MAX_EDGE_COUNT; i++) {
-    // errs() << "line 20: i = " << i << "\n";
+    // LLVM_DEBUG(errs() << "line 20: i = " << i << "\n");
     if (edges[i][0] == edges[i][1])
       break;
     if (this->adjacencyList.count(int(edges[i][0])) == 0) {
-      // errs() << "line 24: \n";
+      // LLVM_DEBUG(errs() << "line 24: \n");
       llvm::SmallVector<unsigned, 8> temp_vec;
       temp_vec.insert(temp_vec.begin(), edges[i][1]);
       this->adjacencyList.insert({int(edges[i][0]), temp_vec});
     } else {
-      // errs() << "line 29: \n";
-      // errs() << "Before ----------------------------------\n";
+      // LLVM_DEBUG(errs() << "line 29: \n");
+      // LLVM_DEBUG(errs() << "Before ----------------------------------\n");
       // errs() << "line 30: size = " << this->adjacencyList.size() << " "
       //        << "edges[" << i << "][0] = " << edges[i][0] << "\n";
-      // errs() << "After ----------------------------------\n";
+      // LLVM_DEBUG(errs() << "After ----------------------------------\n");
 
       llvm::SmallVector<unsigned, 8> temp_vec =
           this->adjacencyList[int(edges[i][0])];
-      errs() << "Adding edge to adjaceccy list: " << edges[i][0] << " --- " << edges[i][1] << "\n";
+      LLVM_DEBUG(errs() << "Adding edge to adjaceccy list: " << edges[i][0] << " --- " << edges[i][1] << "\n");
       temp_vec.insert(temp_vec.end(), int(edges[i][1]));
-      // errs() << "line 35: temp_vec size = " << temp_vec.size() << "\n";
+      // LLVM_DEBUG(errs() << "line 35: temp_vec size = " << temp_vec.size() << "\n");
       // errs() << "adjList size : " << adjacencyList.size() << " --- "
       //        << "edges[" << i << "][0] = " << int(edges[i][0]) << "\n";
       this->adjacencyList[int(edges[i][0])] = temp_vec;
-      // errs() << "End of else block\n";
+      // LLVM_DEBUG(errs() << "End of else block\n");
     }
     // errs() << "indegree size: " << indegree.size()  << " ---- edges[" << i <<
     // "][1] = " << int(edges[i][1]) << "\n"; this->indegree[int(edges[i][1])]
     // += 1;
   }
-  // errs() << "in topological_sort.cpp : line 33\n";
+  // LLVM_DEBUG(errs() << "in topological_sort.cpp : line 33\n");
   int node_idx = 0;
   for (auto rpi : (regProfMap)) {
     RegisterProfile rp = rpi.second;
@@ -61,7 +61,7 @@ Graph::Graph(std::vector<std::vector<int>> &edges, const RegisterProfileMap &reg
     }
     node_idx++;
   }
-  // errs() << "in topological_sort.cpp : line 48\n";
+  // LLVM_DEBUG(errs() << "in topological_sort.cpp : line 48\n");
 }
 
 void Graph::getColorOfVisitedAdjNodes(
@@ -72,10 +72,12 @@ void Graph::getColorOfVisitedAdjNodes(
       this->adjacencyList[node_idx];
   // LLVM_DEBUG(errs() << "Node " << node_idx << " interferes with ");
   for (auto node : interfering_nodes) {
-    errs() << "this->discovered[node]: " << node << "--"
-           << this->discovered.size() << "\n";
+    LLVM_DEBUG(errs() << "this->discovered[node]: " << node << "--"
+           << this->discovered.size() << "\n");
     if (this->discovered[node]) {
       colour_vec.insert(colour_vec.end(), this->colored[node]);
+      LLVM_DEBUG(errs() << "Added node " << node << " with color: " << this->colored[node]
+             << "\n");
     }
     // LLVM_DEBUG(errs() << node << " and colour " << this->colored[node] <<
     // "\n");
@@ -90,20 +92,23 @@ llvm::SmallVector<unsigned, 8> *Graph::getAdjNodes(unsigned node_idx) {
 void Graph::addAdjNodes(unsigned node_idx, llvm::SmallVector<unsigned, 8> &adjNodeList) {
   this->adjacencyList.insert(std::make_pair(node_idx, adjNodeList));
   for(auto adjNodeIdx : adjNodeList) {
-    llvm::SmallVector<unsigned, 8>* adjNodeListTemp = &adjacencyList[adjNodeIdx];
-    adjNodeListTemp->push_back(node_idx);
+    llvm::SmallVector<unsigned, 8> adjNodeListTemp = this->adjacencyList[adjNodeIdx];    
+    adjNodeListTemp.push_back(node_idx);
+    this->adjacencyList[adjNodeIdx] = adjNodeListTemp;
+    assert(std::find(adjNodeListTemp.begin(), adjNodeListTemp.end(), node_idx) != adjNodeListTemp.end() &&
+           "New node not present in interference list of afected nodes");
   }
 }
 
 void Graph::setAdjNodes(unsigned node_idx, llvm::SmallVector<unsigned, 8> adjNodeList) {
-  auto tempList = this->adjacencyList[node_idx];
+  // auto tempList = this->adjacencyList[node_idx];
   // for (auto adjIdx : adjNodeList) {
   //   if(std::find(tempList.begin(), tempList.end(), adjIdx) ==  tempList.end()) {
   //     auto *curAdjList = &this->adjacencyList[node_idx];
   //     curAdjList->push_back(adjIdx);
   //   }
   // }
-  // this->adjacencyList[node_idx] =  adjNodeList;
+  this->adjacencyList[node_idx] =  adjNodeList;
 }
 
 void Graph::get_eligibleNodes(std::vector<int> &eligibleNodes) {
@@ -118,6 +123,12 @@ void Graph::get_eligibleNodes(std::vector<int> &eligibleNodes) {
 void Graph::UpdateColorVisitedNode(unsigned node_idx, unsigned colour) {
   if (this->discovered[node_idx] && this->colored[node_idx] == -1) {
     this->colored[node_idx] = colour;
+  }
+  else {
+    LLVM_DEBUG(errs() << "color update failed for node " << node_idx
+           << " with color: " << colour << " (" << this->discovered[node_idx] << ", " << this->colored[node_idx] << ")\n");
+    LLVM_DEBUG(errs() << this->discovered.size() << " " << node_idx << "\n");
+    assert(false);
   }
 }
 
@@ -232,7 +243,7 @@ void RegisterActionSpace::maskActionSpace(
     }
   } else {
     // assert(false);
-    errs() << "Register class not supported: " << regclass << "\n";
+    LLVM_DEBUG(errs() << "Register class not supported: " << regclass << "\n");
     for (auto reg : action_space) {
       action_space_filtered.insert(action_space_filtered.end(), reg);
     }

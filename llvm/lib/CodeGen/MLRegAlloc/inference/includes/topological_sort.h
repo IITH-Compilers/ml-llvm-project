@@ -3,6 +3,8 @@
 
 // #include "multi_agent_env.h"
 #include "llvm/CodeGen/RegisterProfile.h"
+#include "MLInferenceEngine/utils.h"
+
 #include <llvm/ADT/MapVector.h>
 #include <llvm/ADT/SmallVector.h>
 #include <map>

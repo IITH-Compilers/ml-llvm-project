@@ -5,31 +5,24 @@
 DriverService::DriverService(MultiAgentEnv* env) {
   setEnvironment(env);
   addAgent(new Agent(nodeSelectionModelPath, selectNodeObsSize),
-           "node_selection_agent");
+           NODE_SELECTION_AGENT);
   addAgent(new Agent(taskSelectionModelPath, selectTaskObsSize),
-           "task_selection_agent");
+           TASK_SELECTION_AGENT);
   addAgent(new Agent(nodeColouringModelPath, colourNodeObsSize),
-           "colour_node_agent");
+           COLOR_NODE_AGENT);
   addAgent(new Agent(nodeSplitingModelPath, splitNodeObsSize),
-           "split_node_agent");
+           SPLIT_NODE_AGENT);
 }
 
 void DriverService::getInfo(const RegisterProfileMap &regProfMap,
                             std::map<std::string, int64_t> &colour_map) {
-  Observation nodeSelectionObs =
-      *(static_cast<MultiAgentEnv *>(this->getEnvironment())->reset(regProfMap));
-  // assert(nodeSelectionObs);
-
-  // errs() << "----------------RUNNING ON: --------------------------------\n";
-  // errs() << "------------" << MF->getName() << "--------------------"
-  //        << "\n";
-  this->computeAction(&nodeSelectionObs);
-
-  for (auto pair :
-       static_cast<MultiAgentEnv *>(this->getEnvironment())->nid_colour) {
-    // errs() << pair.first << " : " << pair.second << "\n";
-    colour_map[std::to_string(pair.first)] = pair.second;
-  }
+  (static_cast<MultiAgentEnv *>(this->getEnvironment())->reset(regProfMap));
+  /// auto nodeSelectionObs =
+  //     getEnvironment()->getCurrentObservation(NODE_SELECTION_AGENT);
+  // llvm::errs()
+  //     << "**************************************************************"
+  //     << nodeSelectionObs->size() << "\n";
+  this->computeAction();
 }
 
 /*
@@ -47,7 +40,7 @@ DriverService::DriverService() {
 void DriverService::computeAction(Observation obs) {
   while (true) {
     unsigned action;
-    if (this->env->next_agent == "node_selection_agent") {
+    if (this->env->next_agent == NODE_SELECTION_AGENT) {
 
       std::ofstream outfile;
       outfile.open("./select_node_input-cpp.csv", std::ios::out);
@@ -58,7 +51,7 @@ void DriverService::computeAction(Observation obs) {
       outfile.close();
 
       action = this->nodeSelectionAgent->computeAction(obs);
-    } else if (this->env->next_agent == "task_selection_agent") {
+    } else if (this->env->next_agent == TASK_SELECTION_AGENT) {
 
       std::ofstream outfile;
       outfile.open("./task_node_input-cpp.csv", std::ios::out);
@@ -69,7 +62,7 @@ void DriverService::computeAction(Observation obs) {
       outfile.close();
 
       action = this->taskSelectionAgent->computeAction(obs);
-    } else if (this->env->next_agent == "colour_node_agent") {
+    } else if (this->env->next_agent == COLOR_NODE_AGENT) {
 
       std::ofstream outfile;
       outfile.open("./colour_node_input-cpp.csv", std::ios::out);
@@ -80,7 +73,7 @@ void DriverService::computeAction(Observation obs) {
       outfile.close();
 
       action = this->nodeColouringAgent->computeAction(obs);
-    } else if (this->env->next_agent == "split_node_agent") {
+    } else if (this->env->next_agent == SPLIT_NODE_AGENT) {
       action = this->nodeSplitingAgent->computeAction(obs);
       assert(false && "Splitting pridected");
     }
