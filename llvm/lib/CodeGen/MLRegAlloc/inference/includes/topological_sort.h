@@ -13,6 +13,8 @@
 
 #define MAX_EDGE_COUNT 30000
 
+#define DEBUG_TYPE "rl-inference-engine"
+
 class Graph {
 public:
   void getColorOfVisitedAdjNodes(unsigned node_idx,

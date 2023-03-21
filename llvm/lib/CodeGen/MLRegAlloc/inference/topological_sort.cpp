@@ -42,7 +42,7 @@ Graph::Graph(std::vector<std::vector<int>> &edges, const RegisterProfileMap &reg
       this->adjacencyList[int(edges[i][0])] = temp_vec;
       // LLVM_DEBUG(errs() << "End of else block\n");
     }
-    // errs() << "indegree size: " << indegree.size()  << " ---- edges[" << i <<
+    // dbgs() << "indegree size: " << indegree.size()  << " ---- edges[" << i <<
     // "][1] = " << int(edges[i][1]) << "\n"; this->indegree[int(edges[i][1])]
     // += 1;
   }
@@ -54,10 +54,11 @@ Graph::Graph(std::vector<std::vector<int>> &edges, const RegisterProfileMap &reg
       int colour = rp.color;
       this->UpdateVisitList(node_idx);
       this->UpdateColorVisitedNode(node_idx, colour);
-      // LLVM_DEBUG(errs() << "Phy reg colour is: " << rp.cls << " " << colour
+      // LLVM_DEBUG(dbgs() << "Phy reg colour is: " << rp.cls << " " << colour
       // << "\n");
     } else {
-      // LLVM_DEBUG(errs() << "Virtual reg colour is: " << rp.cls << "\n");
+      // LLVM_DEBUG(LLVM_DEBUG(dbgs() << "Virtual reg colour is: " << rp.cls <<
+      // "\n"));
     }
     node_idx++;
   }
@@ -66,11 +67,12 @@ Graph::Graph(std::vector<std::vector<int>> &edges, const RegisterProfileMap &reg
 
 void Graph::getColorOfVisitedAdjNodes(
     unsigned node_idx, llvm::SmallVector<unsigned, 8> &colour_vec) {
-  errs() << "getColorOfVisitedAdjNodes: " << node_idx << "--"
-         << this->adjacencyList.size() << "\n";
+  LLVM_DEBUG(errs() << "getColorOfVisitedAdjNodes: " << node_idx << "--"
+         << this->adjacencyList.size() << "\n");
   llvm::SmallVector<unsigned, 8> interfering_nodes =
       this->adjacencyList[node_idx];
-  // LLVM_DEBUG(errs() << "Node " << node_idx << " interferes with ");
+  // LLVM_DEBUG(LLVM_DEBUG(dbgs() << "Node " << node_idx << " interferes with
+  // "));
   for (auto node : interfering_nodes) {
     LLVM_DEBUG(errs() << "this->discovered[node]: " << node << "--"
            << this->discovered.size() << "\n");
@@ -79,7 +81,7 @@ void Graph::getColorOfVisitedAdjNodes(
       LLVM_DEBUG(errs() << "Added node " << node << " with color: " << this->colored[node]
              << "\n");
     }
-    // LLVM_DEBUG(errs() << node << " and colour " << this->colored[node] <<
+    // LLVM_DEBUG(dbgs() << node << " and colour " << this->colored[node] <<
     // "\n");
   }
   return;
@@ -101,13 +103,6 @@ void Graph::addAdjNodes(unsigned node_idx, llvm::SmallVector<unsigned, 8> &adjNo
 }
 
 void Graph::setAdjNodes(unsigned node_idx, llvm::SmallVector<unsigned, 8> adjNodeList) {
-  // auto tempList = this->adjacencyList[node_idx];
-  // for (auto adjIdx : adjNodeList) {
-  //   if(std::find(tempList.begin(), tempList.end(), adjIdx) ==  tempList.end()) {
-  //     auto *curAdjList = &this->adjacencyList[node_idx];
-  //     curAdjList->push_back(adjIdx);
-  //   }
-  // }
   this->adjacencyList[node_idx] =  adjNodeList;
 }
 
@@ -115,7 +110,8 @@ void Graph::get_eligibleNodes(std::vector<int> &eligibleNodes) {
   for (int i = 0; i < this->discovered.size(); i++) {
     if (!this->discovered[i]) {
       eligibleNodes.insert(eligibleNodes.end(), i);
-      // LLVM_DEBUG(errs() << "Adding node to eligible list: " << i << "\n");
+      // LLVM_DEBUG(LLVM_DEBUG(dbgs() << "Adding node to eligible list: " << i
+      // << "\n"));
     }
   }
 }
@@ -135,14 +131,15 @@ void Graph::UpdateColorVisitedNode(unsigned node_idx, unsigned colour) {
 void Graph::UpdateVisitList(unsigned node_idx) {
   if (!this->discovered[node_idx]) {
     this->discovered[node_idx] = true;
-    // LLVM_DEBUG(errs() << "Setting discoved to true from node idx: " <<
+    // LLVM_DEBUG(dbgs() << "Setting discoved to true from node idx: " <<
     // node_idx
     //                   << "\n");
     // for (auto adj_node : this->adjacencyList[node_idx]) {
     //   this->indegree[adj_node] -= 1;
     // }
   } else {
-    // LLVM_DEBUG(errs() << "Node idx already visited: " << node_idx << "\n");
+    // LLVM_DEBUG(LLVM_DEBUG(dbgs() << "Node idx already visited: " << node_idx
+    // << "\n"));
     assert(false && "Node idx already visited");
   }
 }
@@ -176,25 +173,7 @@ void Graph::addNode(RegisterProfile rp) {
   assert(node_number == discovered.size() &&
          "Some issue in discovered node vector");
   colored.push_back(-1);
-  // llvm::SmallVector<unsigned, 8> interferences;
-  // for (auto item : rp.interferences) {
-  //   interferences.push_back(item);
-  // }
-  // adjacencyList.insert({node_number, interferences});
-  // indegree.append(0);
 }
-
-// void Graph::updateEdges(std::vector<std::vector<int>> &edges ) {
-//   // float edges[MAX_EDGE_COUNT][2];
-//   int edgeCount = 0;
-//   for (auto item : adjacencyList) {
-//     for(auto adj_node : adjacencyList[item.first]) {
-//       edges[edgeCount][0] = item.first;
-//       edges[edgeCount][1] = adj_node;
-//       edgeCount++;
-//     }
-//   }
-// }
 
 void RegisterActionSpace::maskActionSpace(
     llvm::StringRef regclass, const llvm::SmallVector<unsigned, 8> &adj_colors,
