@@ -43,9 +43,9 @@ public:
       // current agent
       auto current_agent = this->agents[this->env->getNextAgent()];
 
-      auto obs = *(this->env->getCurrentObservation(this->env->getNextAgent()));
-      llvm::outs() << "Before Next agent in compute action is: " << this->env->getNextAgent()
-             << " with obs size: " << obs.size() << "\n";
+      auto obs = this->env->getCurrentObservation(this->env->getNextAgent());
+      LLVM_DEBUG(llvm::outs() << "Before Next agent in compute action is: " << this->env->getNextAgent()
+             << " with obs size: " << obs.size() << "\n");
       action = current_agent->computeAction(obs);
       this->env->step(action);
       LLVM_DEBUG(llvm::outs() << "After Next agent in compute action is: " << this->env->getNextAgent()

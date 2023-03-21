@@ -4,12 +4,14 @@
 #include "agent.h"
 #include "llvm/ADT/StringMap.h"
 
+#include <map>
+
 typedef signed Action;
 
 class Environment {
   bool done = false;
   std::string nextAgent;
-  llvm::StringMap<Observation *> obsMap;
+  std::map<std::string, Observation> obsMap;
 
 public:
   bool checkDone() { return done == true; };
@@ -17,10 +19,10 @@ public:
   void setDone() { done = true; }
 
   void setCurrentObservation(Observation &obs, std::string agentName) {
-    obsMap[agentName] = &obs;
+    obsMap[agentName] = obs;
   }
 
-  Observation* getCurrentObservation(std::string agentName) {
+  Observation getCurrentObservation(std::string agentName) {
     // assert(obsMap[agentName] && "obsMap should contain the observation");
     return obsMap[agentName];
   }
