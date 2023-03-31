@@ -2163,14 +2163,35 @@ void MLRA::inference() {
         // break;
       }
     }
-    if (emptyGraph)
+    if (emptyGraph){
+      LLVM_DEBUG(errs() << "Error msg: graph is empty\n");
       return;
+    }
+
+    for (auto it = MF->begin(); it != MF->end(); it++) {
+      if (it->isEHFuncletEntry() || it->isEHPad() || it->isEHScopeEntry() ||
+          it->isEHScopeReturnBlock()) {
+        return;
+      }
+      for (auto ist = it->begin(); ist != it->end(); ist++) {
+        if (ist->isEHLabel() || ist->isEHScopeReturn()) {
+          return;
+        }
+      }
+    }
 
     LLVM_DEBUG(errs() << "edge_count = " << edge_count << "\n");
-    if (count >= 500 || (edge_count >= MAX_EDGE_COUNT))
+    if (count >= 500 || count <= 0) {
+      LLVM_DEBUG(errs() << "Error msg: Node count is more then max value\n");
       return;
+    }
+    if ((edge_count >= MAX_EDGE_COUNT) || (edge_count <= 0)) {
+      LLVM_DEBUG(errs() << "Error msg: Edge count is more then max value\n");
+      return;
+    }
 
     inference_driver->getInfo(regProfMap, colorMap);
+    LLVM_DEBUG(errs() << "Processing funtion: " << MF->getName() << "\n");
     LLVM_DEBUG(errs() << "Colour Map: \n");
     unsigned numSpills = 0;
     for (auto pair : colorMap) {
@@ -2246,6 +2267,7 @@ void MLRA::inference() {
      */
       // Stub->getInfo(&context, *request, reply);
       isGraphSet = true;
+      LLVM_DEBUG(errs() << "Processing funtion: " << MF->getName() << "\n");
     } else {
       // sendRegProfData<registerallocationinference::RegisterProfileList>(
       //    request);

@@ -19,8 +19,8 @@ class Graph {
 public:
   void getColorOfVisitedAdjNodes(unsigned node_idx,
                                  llvm::SmallVector<unsigned, 8> &colour_vec);
-  llvm::SmallVector<unsigned, 8> *getAdjNodes(unsigned node_idx);
-  void addAdjNodes(unsigned node_idx, llvm::SmallVector<unsigned, 8> &adjNodeList);
+  llvm::SmallVector<unsigned, 8> getAdjNodes(unsigned node_idx);
+  void addAdjNodes(unsigned node_idx, llvm::SmallVector<unsigned, 8> adjNodeList);
   void get_eligibleNodes(std::vector<int> &eligibleNodes);
   void UpdateColorVisitedNode(unsigned node_idx, unsigned colour);
   bool all_discovered();

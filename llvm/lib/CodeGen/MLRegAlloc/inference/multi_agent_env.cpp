@@ -76,7 +76,8 @@ void MultiAgentEnv::reset(const RegisterProfileMap &regProfMap) {
   // return nodeSelectionObs;
 }
 
-void MultiAgentEnv::clearDataStructures() { 
+void MultiAgentEnv::clearDataStructures() {
+  this->resetDone();
   this->regProfMap.clear();
   this->edge_count = 0;
   this->nid_idx.clear();
@@ -113,6 +114,9 @@ void MultiAgentEnv::step(Action action) {
     this->select_node_step(action);
   } else if (this->getNextAgent() == TASK_SELECTION_AGENT) {
     this->select_task_step(action);
+    if(this->getNextAgent() == SPLIT_NODE_AGENT) {
+      auto splitNodeObs = this->getCurrentObservation(SPLIT_NODE_AGENT);
+    }
   } else if (this->getNextAgent() == COLOR_NODE_AGENT) {
     this->colour_node_step(action);
   } else if (this->getNextAgent() == SPLIT_NODE_AGENT) {
@@ -123,8 +127,8 @@ void MultiAgentEnv::step(Action action) {
     llvm_unreachable("Unexpected agent found");
   }
   LLVM_DEBUG(errs() << "Next Agent is: " << this->getNextAgent() << "\n");
-  if (this->graph_topology->all_discovered()) {
-    // LLVM_DEBUG(errs() << "Discovered All\n");
+  if (this->graph_topology->all_discovered() && this->getNextAgent() == NODE_SELECTION_AGENT ) {
+    LLVM_DEBUG(errs() << "Next Agent before Done is called: " << this->getNextAgent() << "\n");
     LLVM_DEBUG(errs() << "Discovered All\n");
     this->setDone();
     LLVM_DEBUG(errs() << "nodeRepresentation size before done: " << this->nodeRepresentation.size()
@@ -160,7 +164,7 @@ void MultiAgentEnv::update_env(RegisterProfileMap *regProfMap,
       //     rpi.first, this->graph_topology->node_number + newNodeCount));
       // this->idx_nid.insert(std::pair<unsigned, unsigned>(
       //     this->graph_topology->node_number + newNodeCount, rpi.first));
-      LLVM_DEBUG(errs() << "Adding nodeID: " << rpi.first
+      LLVM_DEBUG(errs() << "Adding new nodeID: " << rpi.first
              << " at idx: " << graph_topology->node_number + newNodeCount
              << "\n");
       newNodeCount++;
@@ -170,21 +174,16 @@ void MultiAgentEnv::update_env(RegisterProfileMap *regProfMap,
     else {
       // this->regProfMap[rpi.first].interferences = rp.interferences;
       int nodeIdxTemp = nid_idx[rpi.first];
-
       auto currAdjList = graph_topology->getAdjNodes(nodeIdxTemp);
-
       std::set<int> s;
-
-      for (auto e : *currAdjList)
+      for (auto e : currAdjList)
         s.insert(e);
-
       llvm::SmallVector<unsigned, 8> interferences;
       for (auto item : rp.interferences) {
         interferences.push_back(this->nid_idx[item]);
       }
       for (auto e : interferences)
         s.insert(e);
-
       llvm::SmallVector<unsigned int, 8> newIntereferences;
       for (auto e : s)
         newIntereferences.push_back(e);
@@ -220,14 +219,11 @@ void MultiAgentEnv::update_env(RegisterProfileMap *regProfMap,
       for (auto item : rp.interferences) {
         interferences.push_back(this->nid_idx[item]);
       }
-      if(rpi.first == 339) {
-        LLVM_DEBUG(errs() << "Node 339 adj Nodes: ");
-        for (auto item : rp.interferences) {
-          interferences.push_back(this->nid_idx[item]);
-          LLVM_DEBUG(errs() << item << ", ");
-        }
-        LLVM_DEBUG(errs() << "\n");
+      LLVM_DEBUG(errs() << "Node " << rpi.first << " adj Nodes: ");
+      for (auto item : rp.interferences) {
+        LLVM_DEBUG(errs() << item << ", ");
       }
+      LLVM_DEBUG(errs() << "\n");
       LLVM_DEBUG(errs() << "Computed interfereces size: " << interferences.size()
              << " ---- " << rp.interferences.size() << "\n");
       this->graph_topology->addAdjNodes(this->graph_topology->node_number, interferences);
@@ -269,17 +265,9 @@ void MultiAgentEnv::update_env(RegisterProfileMap *regProfMap,
 
 Observation& MultiAgentEnv::select_node_step(unsigned action) {
   this->current_node_id = this->idx_nid[action];
-  // errs( << "Inside select_node_step function "
-  //                   << this->current_node_id << " " << action << "\n");
   LLVM_DEBUG(errs() << "Node selected is: " << this->current_node_id << " --- " << action<<"\n");
   auto pos = this->regProfMap.find(this->current_node_id);
-  LLVM_DEBUG(errs() << "--------------regProfMap keys-----------------\n");
-  for (auto e : this->regProfMap) {
-    LLVM_DEBUG(errs() << e.first << " ");
-  }
   if (pos == this->regProfMap.end()) {
-    // errs( << "Selected node id and idx NOT FOUND in the map: "
-    //                   << this->current_node_id << " " << action << "\n");
     LLVM_DEBUG(errs() << "current_node_id = " << this->current_node_id << " " << action
            << "\n");
     LLVM_DEBUG(errs() << (this->regProfMap[current_node_id]).cls << " "
@@ -317,12 +305,18 @@ Observation& MultiAgentEnv::select_task_step(unsigned action) {
     this->setNextAgent(SPLIT_NODE_AGENT);
     Observation splitNodeObs(splitNodeObsSize);
     this->splitNodeObsConstructor(splitNodeObs);
-    std::ofstream outfile;
-    outfile.open("/home/es20btech11021/ML-Register-Allocation/llvm/lib/CodeGen/MLRegAlloc/inference/splitNodeObs.log", std::ios::app);
-    for (int i = 0; i < splitNodeObs.size();i++)
-      outfile << splitNodeObs[i] << ", ";
-    outfile.close();
+    // std::ofstream outfile;
+    // outfile.open("/home/es20btech11021/ML-Register-Allocation/llvm/lib/CodeGen/MLRegAlloc/inference/splitNodeObs-write.log", std::ios::app);
+    // for (int i = 0; i < splitNodeObs.size();i++)
+    //   outfile << splitNodeObs[i] << ", ";
+    // outfile.close();
     this->setCurrentObservation(splitNodeObs, SPLIT_NODE_AGENT);
+    auto readObs = this->getCurrentObservation(SPLIT_NODE_AGENT);
+    // std::ofstream outfile;
+    // outfile.open("/home/es20btech11021/ML-Register-Allocation/llvm/lib/CodeGen/MLRegAlloc/inference/splitNodeObs-read.log", std::ios::app);
+    // for (int i = 0; i < readObs.size();i++)
+    //   outfile << readObs[i] << ", ";
+    // outfile.close();
     return splitNodeObs;
   }
 }
@@ -331,10 +325,7 @@ Observation& MultiAgentEnv::colour_node_step(unsigned action) {
   assert(this->nid_idx.find(this->current_node_id) != this->nid_idx.end() &&
          "Current nid not theit in nid_idx map");
   unsigned current_node_idx = this->nid_idx[this->current_node_id];
-  LLVM_DEBUG(errs() << "Printing nid_idx map: \n" );
-  for(auto item : nid_idx) {
-    LLVM_DEBUG(errs() << item.first << " ------ " << item.second << "\n");
-  }
+  LLVM_DEBUG(errs() << "Selected colour for node is: " << action << "\n");
   LLVM_DEBUG(errs() << this->current_node_id << " idx is: " << current_node_idx << "\n");
   this->annotations[current_node_idx][0] = 0;
   this->annotations[current_node_idx][1] = action;
@@ -344,6 +335,11 @@ Observation& MultiAgentEnv::colour_node_step(unsigned action) {
   this->setNextAgent(NODE_SELECTION_AGENT);
   Observation nodeSelectionObs(selectNodeObsSize);
   this->selectNodeObsConstructor(nodeSelectionObs);
+  // std::ofstream outfile;
+  // outfile.open("/home/es20btech11021/ML-Register-Allocation/llvm/lib/CodeGen/MLRegAlloc/inference/nodeSelectionObs.log", std::ios::app);
+  // for (int i = 0; i < nodeSelectionObs.size();i++)
+  //   outfile << nodeSelectionObs[i] << ", ";
+  // outfile.close();
   this->setCurrentObservation(nodeSelectionObs, NODE_SELECTION_AGENT);
   return nodeSelectionObs;
 }
@@ -428,14 +424,6 @@ void MultiAgentEnv::selectNodeObsConstructor(Observation &obs) {
   std::vector<int> action_mask(max_node_number);
   this->createNodeSelectMask(action_mask);
 
-  LLVM_DEBUG(errs() << "--------------ACTION_MASK-----------------\n");
-  for (int i = 0; i < action_mask.size(); i++) {
-    if (action_mask[i] != 0)
-      LLVM_DEBUG(errs() << "action_mask[" << i << "] = " << action_mask[i] << "\n");
-  }
-  LLVM_DEBUG(errs() << "\n");
-  // Setting action mask
-  // LLVM_DEBUG(dbgs() << "Node Selection action mask: ");
   for (int i = 0; i < max_node_number; i++) {
     assertObsSize(137);
     obs[current_index++] = action_mask[i];
@@ -521,7 +509,8 @@ void MultiAgentEnv::computeAnnotations() {
       this->annotations[current_idx][0] = 0;
       this->annotations[current_idx][1] = rp.color;
     } else {
-      this->annotations[current_idx][0] = rp.spillWeight;
+      if(std::isinf(rp.spillWeight)) {this->annotations[current_idx][0] = 1;}
+      else {this->annotations[current_idx][0] = rp.spillWeight;}
       this->annotations[current_idx][1] = 0;
     }
     this->annotations[current_idx][2] = 0;
@@ -629,8 +618,8 @@ void MultiAgentEnv::taskSelectionObsConstructor(Observation &obs) {
   // Setting node properties
 
   unsigned current_node_idx = this->nid_idx[this->current_node_id];
-  llvm::SmallVector<unsigned, 8> &adj_nodes =
-      *(this->graph_topology->getAdjNodes(current_node_idx));
+  llvm::SmallVector<unsigned, 8> adj_nodes =
+      this->graph_topology->getAdjNodes(current_node_idx);
   llvm::StringRef regclass = this->current_node.cls;
   llvm::SmallVector<unsigned, 8> adj_colors;
   this->graph_topology->getColorOfVisitedAdjNodes(current_node_idx, adj_colors);
@@ -661,20 +650,23 @@ void MultiAgentEnv::colourNodeObsConstructor(Observation &obs) {
   llvm::SmallVector<unsigned, 8> adj_colors;
   this->graph_topology->getColorOfVisitedAdjNodes(current_node_idx, adj_colors);
   llvm::SmallVector<unsigned, 8> masked_action_space;
+  LLVM_DEBUG(errs() << "Adj nodes colour list size = "
+         << adj_colors.size() << "\n");
   this->registerAS->maskActionSpace(regclass, adj_colors, masked_action_space);
   LLVM_DEBUG(errs() << "line 372: masked_action_space size = "
          << masked_action_space.size() << "\n");
-  if(this->current_node_id == 339) {
-    LLVM_DEBUG(errs() << "Colour agent action mask: ");
-    for (int i = 0; i < masked_action_space.size(); i++) {
-      LLVM_DEBUG(errs() << masked_action_space[i] << ", ");
+  if(masked_action_space.size() == 1) { // If only sigle register avialable then avoid coloring for 'ran out of register' error
+    for (int i = 0; i < X86_action_space_size; i++) {
+      colour_node_action_mask[i] = 0;
     }
-    LLVM_DEBUG(errs() << "\n");
+    colour_node_action_mask[0] = 1;
+    LLVM_DEBUG(errs() << "Only one colour left\n");
+  } else {
+    for (int i = 0; i < masked_action_space.size(); i++) {
+      colour_node_action_mask[masked_action_space[i]] = 1;
+    }
   }
 
-  for (int i = 0; i < masked_action_space.size(); i++) {
-    colour_node_action_mask[masked_action_space[i]] = 1;
-  }
   for (int i = 0; i < X86_action_space_size; i++) {
     obs[current_index++] = colour_node_action_mask[i];
   }

@@ -71,29 +71,30 @@ void Graph::getColorOfVisitedAdjNodes(
          << this->adjacencyList.size() << "\n");
   llvm::SmallVector<unsigned, 8> interfering_nodes =
       this->adjacencyList[node_idx];
-  // LLVM_DEBUG(LLVM_DEBUG(dbgs() << "Node " << node_idx << " interferes with
-  // "));
   for (auto node : interfering_nodes) {
-    LLVM_DEBUG(errs() << "this->discovered[node]: " << node << "--"
-           << this->discovered.size() << "\n");
-    if (this->discovered[node]) {
+    if (this->discovered[node] && (std::find(colour_vec.begin(), colour_vec.end(),  this->colored[node]) == colour_vec.end())) {
       colour_vec.insert(colour_vec.end(), this->colored[node]);
       LLVM_DEBUG(errs() << "Added node " << node << " with color: " << this->colored[node]
              << "\n");
     }
-    // LLVM_DEBUG(dbgs() << node << " and colour " << this->colored[node] <<
-    // "\n");
   }
   return;
 }
 
-llvm::SmallVector<unsigned, 8> *Graph::getAdjNodes(unsigned node_idx) {
-  return &adjacencyList[node_idx];
+llvm::SmallVector<unsigned, 8> Graph::getAdjNodes(unsigned node_idx) {
+  return adjacencyList[node_idx];
 }
 
-void Graph::addAdjNodes(unsigned node_idx, llvm::SmallVector<unsigned, 8> &adjNodeList) {
-  this->adjacencyList.insert(std::make_pair(node_idx, adjNodeList));
-  for(auto adjNodeIdx : adjNodeList) {
+void Graph::addAdjNodes(unsigned node_idx, llvm::SmallVector<unsigned, 8> adjNodeList) {
+  LLVM_DEBUG(errs() << "Before adding Node " << node_idx
+         << " interference size: " << adjNodeList.size()
+         << "\n");
+  // this->adjacencyList.insert(std::make_pair(node_idx, adjNodeList));
+  this->adjacencyList[node_idx] = adjNodeList;
+  LLVM_DEBUG(errs() << "Newly Addd Node " << node_idx
+         << " interference size: " << (this->adjacencyList[node_idx]).size()
+         << "\n");
+  for (auto adjNodeIdx : adjNodeList) {
     llvm::SmallVector<unsigned, 8> adjNodeListTemp = this->adjacencyList[adjNodeIdx];    
     adjNodeListTemp.push_back(node_idx);
     this->adjacencyList[adjNodeIdx] = adjNodeListTemp;
@@ -185,11 +186,15 @@ void RegisterActionSpace::maskActionSpace(
                 regclass) != this->supported_regclasses.end()) {
     std::vector<int> &selectedInterval =
         this->suppcls_regs_normalize_map.at(regclass);
+    LLVM_DEBUG(errs() << "Selected regclass regs size:" << selectedInterval.size() << "\n");
     for (auto reg : selectedInterval) {
       action_space.insert(action_space.end(), this->ac_sp_normlize[reg]);
+      // action_space.push_back(this->ac_sp_normlize[reg]);
     }
+    LLVM_DEBUG(errs() << "Action space size:" << action_space.size() << "\n");
+
+    std::vector<int> extend_adj;
     if (adj_colors.size() > 0) {
-      std::vector<int> extend_adj;
       extend_adj.insert(extend_adj.end(), adj_colors.begin(), adj_colors.end());
       for (auto adj : adj_colors) {
         if (this->normal_org_map.find(adj) != this->normal_org_map.end()) {
@@ -208,18 +213,19 @@ void RegisterActionSpace::maskActionSpace(
           }
         }
       }
-      std::vector<int> tmp_mask_sidi = {33, 43, 45, 44, 17, 40, 27, 19};
-      extend_adj.insert(extend_adj.end(), tmp_mask_sidi.begin(),
-                        tmp_mask_sidi.end());
-      extend_adj.erase(unique(extend_adj.begin(), extend_adj.end()),
-                       extend_adj.end());
-      for (auto reg : action_space) {
-        if (find(extend_adj.begin(), extend_adj.end(), reg) ==
-            extend_adj.end()) {
-          action_space_filtered.insert(action_space_filtered.end(), reg);
-        }
-      }
     }
+    std::vector<int> tmp_mask_sidi = {33, 43, 45, 44, 17, 40, 27, 19};
+    extend_adj.insert(extend_adj.end(), tmp_mask_sidi.begin(),
+                      tmp_mask_sidi.end());
+    extend_adj.erase(unique(extend_adj.begin(), extend_adj.end()),
+                      extend_adj.end());
+    for (auto reg : action_space) {
+      if (find(extend_adj.begin(), extend_adj.end(), reg) ==
+          extend_adj.end()) {
+        action_space_filtered.insert(action_space_filtered.end(), reg);
+        // action_space_filtered.push_back(reg);
+      }
+    }    
   } else {
     // assert(false);
     LLVM_DEBUG(errs() << "Register class not supported: " << regclass << "\n");
