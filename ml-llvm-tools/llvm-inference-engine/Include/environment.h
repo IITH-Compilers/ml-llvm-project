@@ -18,6 +18,8 @@ public:
 
   void setDone() { done = true; }
 
+  void resetDone() { done = false; }
+
   void setCurrentObservation(Observation &obs, std::string agentName) {
     obsMap[agentName] = obs;
   }
