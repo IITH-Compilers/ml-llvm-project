@@ -88,19 +88,18 @@ class APPOConfig(ImpalaConfig):
         self.kl_target = 0.01
 
         # Override some of ImpalaConfig's default values with APPO-specific values.
-        self.num_rollout_workers = 1
-        self.rollout_fragment_length = 50
-        self.train_batch_size = 256
-        self.min_time_s_per_iteration = 120
-        self.sample_async = True
+        self.num_rollout_workers = 10
+        self.rollout_fragment_length = 8
+        self.train_batch_size = 32
+        self.sample_async = False
         self.num_gpus = 1
-        self.num_multi_gpu_tower_stacks = 0
-        self.minibatch_buffer_size = 8
+        # self.num_multi_gpu_tower_stacks = 2
+        self.minibatch_buffer_size = 1
         self.num_sgd_iter = 1
         self.replay_proportion = 0.0
         self.replay_buffer_num_slots = 100
-        self.learner_queue_size = 32
-        self.learner_queue_timeout = 300
+        self.learner_queue_size = 8
+        self.learner_queue_timeout = 5
         self.max_sample_requests_in_flight_per_worker = 2
         self.broadcast_interval = 1
         self.grad_clip = 40.0
@@ -113,6 +112,11 @@ class APPOConfig(ImpalaConfig):
         self.vf_loss_coeff = 0.5
         self.entropy_coeff = 0.01
         self.entropy_coeff_schedule = None
+
+        self.num_envs_per_worker = 1
+        # self.num_cpus_per_worker = 1
+        self.num_gpus_per_worker = .1
+
 
         # __sphinx_doc_end__
         # fmt: on
@@ -140,12 +144,12 @@ class APPOConfig(ImpalaConfig):
             "graphs_num": 10000,
             "action_space_size": RegisterActionSpace("X86", "/home/ai20btech11004/ML-Register-Allocation/llvm/lib/CodeGen/MLRegAlloc/config_json").ac_sp_normlize_size,
             "check_point": None,
-            "episode_number": 10,
+            "episode_number": 100,
             "GPU_ID": '0',
             "X86_CFLAGS": "-mllvm -regalloc=greedy  -march=core2",
             "AArch64_CFLAGS": "-mllvm -regalloc=greedy  -mcpu=cortex-a72",
             "dataset_bucket": "set_120-500",
-            "enable_GGNN": True,
+            "enable_GGNN": False,
             "file_repeat_frequency": 1,
             "current_batch": 1,
             "Workers_starting_port": "50045",

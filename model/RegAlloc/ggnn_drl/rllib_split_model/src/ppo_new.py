@@ -104,7 +104,7 @@ class PPOConfig(PGConfig):
         self.kl_target = 0.01
 
         # Override some of PG/AlgorithmConfig's default values with PPO-specific values.
-        self.num_rollout_workers = 2
+        self.num_rollout_workers = 4   
         self.train_batch_size = 256
         self.lr = 5e-5
         self.model["vf_share_layers"] = False
@@ -138,14 +138,14 @@ class PPOConfig(PGConfig):
             "graphs_num": 10000,
             "action_space_size": RegisterActionSpace("X86", "/home/ai20btech11004/ML-Register-Allocation/llvm/lib/CodeGen/MLRegAlloc/config_json").ac_sp_normlize_size,
             "check_point": None,
-            "episode_number": 5,
+            "episode_number": 10,
             "GPU_ID": '1',
             "X86_CFLAGS": "-mllvm -regalloc=greedy  -march=core2",
             "AArch64_CFLAGS": "-mllvm -regalloc=greedy  -mcpu=cortex-a72",
             "dataset_bucket": "set_120-500",
             "enable_GGNN": True,
             "file_repeat_frequency": 1,
-            "current_batch": 10,
+            "current_batch": 1,
             "Workers_starting_port": "50035",
             "use_local_reward": True,
             "use_mca_reward": True,

@@ -26,10 +26,10 @@ from gym.spaces import Discrete, Box, Dict, Tuple
 # from simple_q import SimpleQTrainer, DEFAULT_CONFIG
 from appo import APPO, DEFAULT_CONFIG
 # from env import GraphColorEnv, set_config
-from multiagentEnv_new import HierarchicalGraphColorEnv
+from multiagentEnv import HierarchicalGraphColorEnv
 from register_action_space import RegisterActionSpace
 from ray.rllib.models import ModelCatalog
-from model_new import SelectTaskNetwork, SelectNodeNetwork, ColorNetwork, SplitNodeNetwork
+from model import SelectTaskNetwork, SelectNodeNetwork, ColorNetwork, SplitNodeNetwork
 import logging
 from ray.rllib.utils.torch_utils import FLOAT_MIN, FLOAT_MAX
 from ray.rllib.utils.spaces.repeated import Repeated
@@ -137,8 +137,8 @@ if __name__ == "__main__":
 
     config = DEFAULT_CONFIG.copy()
 
-    os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
-    os.environ["CUDA_VISIBLE_DEVICES"]= config["env_config"]["GPU_ID"]
+    # os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
+    # os.environ["CUDA_VISIBLE_DEVICES"]= config["env_config"]["GPU_ID"]
 
     # os.environ['GRPC_VERBOSITY']='DEBUG'
 
