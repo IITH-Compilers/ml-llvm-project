@@ -17,6 +17,7 @@
 #include "SpillPlacement.h"
 #include "Spiller.h"
 #include "SplitKit.h"
+#include "inference/includes/multi_agent_env.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
@@ -381,6 +382,40 @@ void MLRA::sendRegProfData(T *response,
     LLVM_DEBUG(errs() << "update not happeed\n");
     response->set_result(false);
   }
+}
+
+Observation& MLRA::split_node_step(unsigned action) {
+  unsigned splitRegIdx = this->current_node_id;
+  splitPoint = action;
+  SmallVector<unsigned, 2> NewVRegs;
+  // LLVM_DEBUG(errs() << "==========================BEFORE "
+  //                       "SPLITTING==================================\n";
+  //             MF->dump(); errs() << "====================================="
+  //                                   "=======================\n");
+  errs() << "Tring to split: " << splitRegIdx << " at point: " << splitPoint
+         << "\n";
+  if (splitVirtReg(splitRegIdx, splitPoint, NewVRegs)) {
+    SmallSetVector<unsigned, 8> updatedRegIdxs;
+    updateRegisterProfileAfterSplit(splitRegIdx, NewVRegs, updatedRegIdxs);
+    if (enable_dump_ig_dot)
+      dumpInterferenceGraph(std::to_string(SplitCounter));
+    if (enable_mlra_checks)
+      verifyRegisterProfile();
+    LLVM_DEBUG(errs() << "Splitted register successfuly: " << splitRegIdx << "\n");
+    this->update_env(&regProfMap, updatedRegIdxs);
+  } else {
+    this->graph_topology->markNodeAsNotVisited(this->getNodeIdx(this->current_node_id));
+    LLVM_DEBUG(
+        errs()
+        << "Still after spliting prediction; LLVM dees not performit.\n");
+    // request->set_result(false);
+    LLVM_DEBUG(errs() << "Still after spliting prediction; LLVM dees not performit.\n");
+  }
+  this->setNextAgent(NODE_SELECTION_AGENT);
+  Observation nodeSelectionObs(selectNodeObsSize);
+  this->selectNodeObsConstructor(nodeSelectionObs);
+  this->setCurrentObservation(nodeSelectionObs, NODE_SELECTION_AGENT);
+  return nodeSelectionObs;
 }
 
 bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
@@ -2110,7 +2145,7 @@ void MLRA::inference() {
   }
 
   if (enable_rl_inference_engine) {
-    DriverService *inference_driver = new DriverService(MF);
+    DriverService *inference_driver = new DriverService(this);
     // std::map<unsigned, unsigned> colour_map;
     std::map<std::string, int64_t> colorMap;
 
@@ -2129,18 +2164,39 @@ void MLRA::inference() {
         // break;
       }
     }
-    if (emptyGraph)
+    if (emptyGraph){
+      LLVM_DEBUG(errs() << "Error msg: graph is empty\n");
       return;
+    }
 
-    // LLVM_DEBUG(errs() << "edge_count = " << edge_count << "\n");
-    if (count >= 500 || (edge_count >= max_edge_count))
+    for (auto it = MF->begin(); it != MF->end(); it++) {
+      if (it->isEHFuncletEntry() || it->isEHPad() || it->isEHScopeEntry() ||
+          it->isEHScopeReturnBlock()) {
+        return;
+      }
+      for (auto ist = it->begin(); ist != it->end(); ist++) {
+        if (ist->isEHLabel() || ist->isEHScopeReturn()) {
+          return;
+        }
+      }
+    }
+
+    LLVM_DEBUG(errs() << "edge_count = " << edge_count << "\n");
+    if (count >= 500 || count <= 0) {
+      LLVM_DEBUG(errs() << "Error msg: Node count is more then max value\n");
       return;
+    }
+    if ((edge_count >= MAX_EDGE_COUNT) || (edge_count <= 0)) {
+      LLVM_DEBUG(errs() << "Error msg: Edge count is more then max value\n");
+      return;
+    }
 
     inference_driver->getInfo(regProfMap, colorMap);
+    LLVM_DEBUG(errs() << "Processing funtion: " << MF->getName() << "\n");
     LLVM_DEBUG(errs() << "Colour Map: \n");
     unsigned numSpills = 0;
     for (auto pair : colorMap) {
-      // errs() << pair.first << " : " << pair.second << "\n";
+      LLVM_DEBUG(errs() << pair.first << " : " << pair.second << "\n");
       if (pair.second == 0)
         numSpills++;
     }
@@ -2212,6 +2268,7 @@ void MLRA::inference() {
      */
       // Stub->getInfo(&context, *request, reply);
       isGraphSet = true;
+      LLVM_DEBUG(errs() << "Processing funtion: " << MF->getName() << "\n");
     } else {
       // sendRegProfData<registerallocationinference::RegisterProfileList>(
       //    request);

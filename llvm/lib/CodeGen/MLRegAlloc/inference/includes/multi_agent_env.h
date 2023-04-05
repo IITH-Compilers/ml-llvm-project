@@ -1,12 +1,25 @@
-#include "MLInferenceEngine/environment.h"
+#ifndef MLRA_INFERENCE_INCLUDES_MULTI_AGENT_ENV_H
+#define MLRA_INFERENCE_INCLUDES_MULTI_AGENT_ENV_H
+
 #include "topological_sort.h"
+#include "MLInferenceEngine/environment.h"
+#include "MLInferenceEngine/utils.h"
+
+#include <vector>
+#include <set>
+// #include "llvm/ADT/SetVector.h
 // #include "llvm/CodeGen/RegisterProfile.h"
 
-typedef std::vector<float> Observation;
+#define NODE_SELECTION_AGENT "node_selection_agent"
+#define TASK_SELECTION_AGENT "task_selection_agent"
+#define COLOR_NODE_AGENT "color_node_agent"
+#define SPLIT_NODE_AGENT "split_node_agent"
 
 #define max_node_number 600
 #define IR2Vec_size 100
 #define X86_action_space_size 113
+#define max_usepoints_count 200
+#define split_threshold 10
 
 #define selectNodeObsSize 153601
 #define selectTaskObsSize 106
@@ -16,66 +29,60 @@ typedef std::vector<float> Observation;
 class MultiAgentEnv : public Environment {
   int debug_ct=0;
   RegisterProfileMap regProfMap;
-
   RegisterActionSpace *registerAS;
-
   RegisterProfile current_node;
-
-  unsigned current_node_id;
-
   unsigned edge_count;
-
-  // int *nid_idx = new int[max_node_number]();
-
-  // int *idx_nid = new int[max_node_number]();
 
   std::map<int, int> nid_idx;
   std::map<int, int> idx_nid;
 
-  int edges[max_edge_count][2];
-
   float annotations[max_node_number][3];
+  unsigned splitStepCount = 0;
+  SmallVector<IR2Vec::Vector, 12> nodeRepresentation;
 
-  // float *nodeRepresentation[max_node_number];
+  Observation& select_node_step(unsigned action);
+  Observation& select_task_step(unsigned action);
+  Observation& colour_node_step(unsigned action);
 
-  std::vector<std::vector<float>> nodeRepresentation;
-
-  Observation *select_node_step(unsigned action);
-
-  Observation *select_task_step(unsigned action);
-
-  Observation *colour_node_step(unsigned action);
-
-  Observation *split_node_step(unsigned action);
-
-  Observation *selectNodeObsConstructor();
-
+  void getSplitPointProperties(Observation& usepointProperties);
+  void createNodeSplitMask(Observation& mask);
   void createNodeSelectMask(std::vector<int> &mask);
-
-  void createAnnotations(std::vector<float> &temp_annotations);
+  void createAnnotations(Observation &temp_annotations);
 
   unsigned computeEdgesFromRP();
+  unsigned updateEdgesFromRP();
+  void computeEdgesFlatened(Observation &edgesFlattened);
+  void constructNodeVector(const SmallVector<IR2Vec::Vector, 12>& nodeMat, IR2Vec::Vector& nodeVec);
 
-  void computeEdgesFlatened(std::vector<float> &edgesFlattened);
-
-  void constructNodeVector(const SmallVector<IR2Vec::Vector, 12>& nodeMat, std::vector<float>& nodeVec);
-
-  Observation *taskSelectionObsConstructor();
-
-  Observation *colourNodeObsConstructor();
-
-  Observation *splitNodeObsConstructor();
+  void taskSelectionObsConstructor(Observation &obs);
+  void colourNodeObsConstructor(Observation &obs);
+  void splitNodeObsConstructor(Observation &obs);
 
   void computeAnnotations();
   void printRegisterProfile() const;
 
+  void clearDataStructures();
+  // void updateEdges();
 
 public:
-  Graph *graph_topology;
-
+  Graph *graph_topology;  
+  std::vector<std::vector<int>> edges;
   std::map<unsigned, unsigned> nid_colour;
 
-  Observation *reset(const RegisterProfileMap &regProfMap);
+  unsigned current_node_id;
+  unsigned splitPoint;
 
-  Observation *step(Action action) override;
+  void reset(const RegisterProfileMap& regProfMap);
+  void step(Action action) override;
+
+  void update_env(RegisterProfileMap *regProfMap, SmallSetVector<unsigned, 8> updatedRegIdxs);\
+  void selectNodeObsConstructor(Observation &obs);
+  virtual Observation &split_node_step(unsigned action) = 0;
+  unsigned getNodeIdx(unsigned nodeId) { return nid_idx[nodeId];}
+
+  MultiAgentEnv(){
+    edges = std::vector<std::vector<int>>(MAX_EDGE_COUNT, std::vector<int>(2));
+  }
 };
+
+#endif

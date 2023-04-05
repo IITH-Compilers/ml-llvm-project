@@ -1,108 +1,26 @@
 #include "driver.h"
+#include "includes/multi_agent_env.h"
 #include <fstream>
 
-DriverService::DriverService(MachineFunction *MF) {
-  this->MF = MF;
-  setEnvironment(new MultiAgentEnv());
+DriverService::DriverService(MultiAgentEnv* env) {
+  setEnvironment(env);
   addAgent(new Agent(nodeSelectionModelPath, selectNodeObsSize),
-           "node_selection_agent");
+           NODE_SELECTION_AGENT);
   addAgent(new Agent(taskSelectionModelPath, selectTaskObsSize),
-           "task_selection_agent");
+           TASK_SELECTION_AGENT);
   addAgent(new Agent(nodeColouringModelPath, colourNodeObsSize),
-           "colour_node_agent");
+           COLOR_NODE_AGENT);
   addAgent(new Agent(nodeSplitingModelPath, splitNodeObsSize),
-           "split_node_agent");
+           SPLIT_NODE_AGENT);
 }
 
 void DriverService::getInfo(const RegisterProfileMap &regProfMap,
                             std::map<std::string, int64_t> &colour_map) {
-  Observation nodeSelectionObs = *(
-      static_cast<MultiAgentEnv *>(this->getEnvironment())->reset(regProfMap));
-  // assert(nodeSelectionObs);
-
-  std::ofstream outfile;
-  outfile.open("./select_node_input-cpp_before.csv", std::ios::out);
-  for (unsigned i = 0; i < selectNodeObsSize; i++) {
-    outfile << nodeSelectionObs[i] << " ";
-  }
-  outfile << "\n";
-  outfile.close();
-
-  LLVM_DEBUG(
-      dbgs()
-      << "----------------RUNNING ON: --------------------------------\n");
-  LLVM_DEBUG(dbgs() << "------------" << MF->getName() << "--------------------"
-                    << "\n");
-  this->computeAction(&nodeSelectionObs);
+  (static_cast<MultiAgentEnv *>(this->getEnvironment())->reset(regProfMap));
+  this->computeAction();
 
   for (auto pair :
        static_cast<MultiAgentEnv *>(this->getEnvironment())->nid_colour) {
     colour_map[std::to_string(pair.first)] = pair.second;
   }
 }
-
-/*
-DriverService::DriverService() {
-  this->env = new MultiAgentEnv();
-  this->nodeSelectionAgent =
-      new Agent(nodeSelectionModelPath, selectNodeObsSize);
-  this->taskSelectionAgent =
-      new Agent(taskSelectionModelPath, selectTaskObsSize);
-  this->nodeColouringAgent =
-      new Agent(nodeColouringModelPath, colourNodeObsSize);
-  this->nodeSplitingAgent = new Agent(nodeSplitingModelPath, splitNodeObsSize);
-}
-
-void DriverService::computeAction(Observation obs) {
-  while (true) {
-    unsigned action;
-    if (this->env->next_agent == "node_selection_agent") {
-
-      std::ofstream outfile;
-      outfile.open("./select_node_input-cpp.csv", std::ios::out);
-      for (unsigned i = 0; i < selectNodeObsSize; i++) {
-        outfile << obs[i] << " ";
-      }
-      outfile << "\n";
-      outfile.close();
-
-      action = this->nodeSelectionAgent->computeAction(obs);
-    } else if (this->env->next_agent == "task_selection_agent") {
-
-      std::ofstream outfile;
-      outfile.open("./task_node_input-cpp.csv", std::ios::out);
-      for (unsigned i = 0; i < selectTaskObsSize; i++) {
-        outfile << obs[i] << " ";
-      }
-      // outfile << "\n";
-      outfile.close();
-
-      action = this->taskSelectionAgent->computeAction(obs);
-    } else if (this->env->next_agent == "colour_node_agent") {
-
-      std::ofstream outfile;
-      outfile.open("./colour_node_input-cpp.csv", std::ios::out);
-      for (unsigned i = 0; i < colourNodeObsSize; i++) {
-        outfile << obs[i] << " ";
-      }
-      outfile << "\n";
-      outfile.close();
-
-      action = this->nodeColouringAgent->computeAction(obs);
-    } else if (this->env->next_agent == "split_node_agent") {
-      action = this->nodeSplitingAgent->computeAction(obs);
-      assert(false && "Splitting pridected");
-    }
-    // LLVM_DEBUG(dbgs() << "Computed action for agent " <<
-    // this->env->next_agent
-    //                   << " is: " << action << "\n");
-    Observation next_obs = this->env->step(action);
-    obs = next_obs;
-    if (this->env->graph_topology->all_discovered()) {
-      // LLVM_DEBUG(dbgs() << "Discovered All\n");
-      LLVM_DEBUG(dbgs() << "Discovered All\n");
-      break;
-    }
-  }
-}
-*/

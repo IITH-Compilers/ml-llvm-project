@@ -1,3 +1,6 @@
+#ifndef MLRA_INFERENCE_INCLUDES_DRIVER_H
+#define MLRA_INFERENCE_INCLUDES_DRIVER_H
+
 #include "MLInferenceEngine/driver.h"
 #include "multi_agent_env.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -18,11 +21,9 @@
 
 class DriverService : public InferenceEngine {
 public:
-  MachineFunction* MF;
-  // DriverService();
-  DriverService(MachineFunction* MF);
-  void getInfo(const RegisterProfileMap& regProfMap,
-               std::map<std::string, int64_t>& colour_map);
+  DriverService(MultiAgentEnv* env);
+  void getInfo(const RegisterProfileMap &regProfMap,
+               std::map<std::string, int64_t> &colour_map);
 };
 
 
@@ -47,3 +48,5 @@ public:
   void computeAction(Observation obs){};
 };
 */
+
+#endif

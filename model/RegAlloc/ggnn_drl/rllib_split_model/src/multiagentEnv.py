@@ -228,32 +228,15 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
         select_node_mask = self.createNodeSelectMask()
         # select_node_mask = self.createNodeSelectMaskSpillWeightBased()
-        spill_weight_list = self.getSpillWeightListExpanded()
+        # spill_weight_list = self.getSpillWeightListExpanded()
         state = self.obs
-        # print("Some node in eligible nodes", self.obs.graph_topology.get_eligibleNodes())
-        # print('Print the mask : ', select_node_mask)
-        # import math
-        # for i, vec in enumerate(state.initial_node_representation):
-        #     for v in vec:
-        #         if math.isnan(v):
-        #             print('multiagentEnv state.initial_node_representation ****NAN****', v, i)
-
-        # for i, vec in enumerate(state.annotations):
-        #     for v in vec:
-        #         if math.isnan(v):
-        #             print('multiagentEnv state.annotation ****NAN****', v, i)
-
-        
-        # self.hidden_state =  self.ggnn(initial_node_representation=state.initial_node_representation, annotations=state.annotations, adjacency_lists=state.adjacency_lists)
-        # node_mat = self.hidden_state.detach().numpy()
-        # print("input node rep type", state.initial_node_representation.size(), state.annotations.size(), np.array(state.adjacency_lists))
         node_mat = state.initial_node_representation
         cur_obs = np.zeros((self.max_number_nodes, self.emb_size))
         cur_obs[0:node_mat.shape[0], :] = node_mat
         # cur_obs = np.zeros((self.max_number_nodes, self.emb_size))
         annotations = np.zeros((self.max_number_nodes, self.annotation_size))
         annotations[0:state.annotations.shape[0], :] = state.annotations
-        # print("Annotations shape", annotations.shape)
+        spill_weight_list = annotations[:, 0]  # Annotations first element is spill weights 
         # annotations = state.annotations
         adjacency_lists = (state.adjacency_lists[0].getNodeNum(), np.array(state.adjacency_lists[0].getData()))
         # print("hidden_state", node_mat.shape, cur_obs[1, :10])
@@ -269,6 +252,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         edges_unroll = np.zeros((2*max_edge_count,))
         if self.mode == 'inference':
             if result is None or result.shape[0] > 2*max_edge_count:
+                print("Exiting inference due to no edge or more then max edge:", result)
                 return None
 
         if result is not None:
@@ -329,6 +313,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
     def createNodeSelectMask(self):
         mask = [0]*self.max_number_nodes
         eligibleNodes = self.obs.graph_topology.get_eligibleNodes()
+        # print("Eligible set of nodes:", eligibleNodes)
         assert len(eligibleNodes) < self.max_number_nodes, "Graph has more then maximum nodes allowed"
         for inx, x in enumerate(eligibleNodes):            
             if x in eligibleNodes:
@@ -527,6 +512,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             adj_colors = self.obs.graph_topology.getColorOfVisitedAdjNodes(self.cur_node)
 
             masked_action_space = self.registerAS.maskActionSpace(regclass, adj_colors)
+            # print("Colour mask: ", self.obs.idx_nid[self.cur_node], masked_action_space)
             # if len(masked_action_space) > 0:
             #     # idx = random.randint(1, len(masked_action_space))
             #     idx = 1    
@@ -539,6 +525,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             is_mask_empty = True
             colour_node_mask = []
             count = 0
+            # print("Action mask content: ", self.obs.idx_nid[self.cur_node], masked_action_space)
             for i in range(self.action_space_size):
                 if i in masked_action_space:
                     colour_node_mask.append(1)
@@ -547,7 +534,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 else:
                     colour_node_mask.append(0)
             
-            if count == 1:
+            if count == 1: # If only sigle register avialable then avoid coloring for 'ran out of register' error
                 colour_node_mask = [0]*self.action_space_size
                 colour_node_mask[0] = 1
             
@@ -640,7 +627,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
         select_task_mask = self.creatTaskSelectMask()
 
-        spill_weight_list = self.getSpillWeightListExpanded()
+        # spill_weight_list = self.getSpillWeightListExpanded()
         state = self.obs
         # hidden_state =  self.ggnn(initial_node_representation=state.initial_node_representation, annotations=state.annotations, adjacency_lists=state.adjacency_lists)        
         # node_mat = hidden_state.detach().numpy()
@@ -653,6 +640,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         cur_obs = self.node_representation_mat
         annotations = np.zeros((self.max_number_nodes, self.annotation_size))
         annotations[0:state.annotations.shape[0], :] = state.annotations
+        spill_weight_list = annotations[:, 0]  # Annotations first element is spill weights 
         # annotations = state.annotations
         adjacency_lists = (state.adjacency_lists[0].getNodeNum(), np.array(state.adjacency_lists[0].getData()))
         result = None
@@ -782,6 +770,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             self.split_node_agent_id = "split_node_agent_{}".format(self.agent_count)
             self.colour_node_agent_id = "colour_node_agent_{}".format(self.agent_count)
             
+            
 
             # obs[self.select_node_agent_id] = { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(select_node_mask), 'state' : cur_obs}
             obs[self.select_node_agent_id] = { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(select_node_mask), 'state' : cur_obs, 'annotations': np.array(annotations) ,'adjacency_lists': adjacency_lists}
@@ -855,7 +844,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
            split_done = True
            logging.info("Select node mask is all zero")
 
-        spill_weight_list = self.getSpillWeightListExpanded()
+        # spill_weight_list = self.getSpillWeightListExpanded()
         state = self.obs
         # hidden_state =  self.ggnn(initial_node_representation=state.initial_node_representation, annotations=state.annotations, adjacency_lists=state.adjacency_lists)
         # node_mat = hidden_state.detach().numpy()
@@ -868,6 +857,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         cur_obs = self.node_representation_mat
         annotations = np.zeros((self.max_number_nodes, self.annotation_size))
         annotations[0:state.annotations.shape[0], :] = state.annotations
+        spill_weight_list = annotations[:, 0]  # Annotations first element is spill weights 
         # annotations = state.annotations
         adjacency_lists = (state.adjacency_lists[0].getNodeNum(), np.array(state.adjacency_lists[0].getData()))
         result = None
