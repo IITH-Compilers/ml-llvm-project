@@ -51,7 +51,6 @@ file(MAKE_DIRECTORY ${LLVM_INCLUDE_DIR}/grpc)
 
 # message(STATUS "include dirs:" ${LLVM_INCLUDE_DIR})
 
-
 foreach(proto ${proto_list})
   get_filename_component(proto_name ${proto} NAME_WLE)
   file(GLOB cc_file ${CMAKE_CURRENT_SOURCE_DIR}/Service/${proto_name}/*.cc)
@@ -128,3 +127,24 @@ target_include_directories(LLVMgRPC PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/Include)
 
 
 target_include_directories(LLVMgRPC PUBLIC ${Protobuf_INCLUDE_DIRS})
+
+if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
+  install(DIRECTORY include/
+    DESTINATION include
+    FILES_MATCHING
+    PATTERN "*.h"
+    PATTERN ".svn" EXCLUDE
+    )
+
+  install(DIRECTORY include/
+    DESTINATION include/grpc
+    FILES_MATCHING
+    PATTERN "*.h"
+    PATTERN "CMakeFiles" EXCLUDE
+    PATTERN ".svn" EXCLUDE
+    )
+
+  install(DIRECTORY ${LLVM_INCLUDE_DIR}/grpc
+    DESTINATION include
+  )
+endif()
