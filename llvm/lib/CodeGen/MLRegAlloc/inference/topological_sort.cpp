@@ -25,6 +25,7 @@ Graph::Graph(std::vector<std::vector<int>> &edges, const RegisterProfileMap &reg
       llvm::SmallVector<unsigned, 8> temp_vec;
       temp_vec.insert(temp_vec.begin(), edges[i][1]);
       this->adjacencyList.insert({int(edges[i][0]), temp_vec});
+      LLVM_DEBUG(errs() << "Adding edge to adjaceccy list: " << edges[i][0] << " --- " << edges[i][1] << "\n");
     } else {
       // LLVM_DEBUG(errs() << "line 29: \n");
       // LLVM_DEBUG(errs() << "Before ----------------------------------\n");
@@ -82,6 +83,10 @@ void Graph::getColorOfVisitedAdjNodes(
 }
 
 llvm::SmallVector<unsigned, 8> Graph::getAdjNodes(unsigned node_idx) {
+  if (adjacencyList.find(node_idx) == adjacencyList.end()) {
+    LLVM_DEBUG(errs() << "NodeId not in map is: " << node_idx << "\n");
+    assert(false && "Node not found in adjacencyList");
+  }
   return adjacencyList[node_idx];
 }
 
@@ -111,8 +116,8 @@ void Graph::get_eligibleNodes(std::vector<int> &eligibleNodes) {
   for (int i = 0; i < this->discovered.size(); i++) {
     if (!this->discovered[i]) {
       eligibleNodes.insert(eligibleNodes.end(), i);
-      // LLVM_DEBUG(LLVM_DEBUG(dbgs() << "Adding node to eligible list: " << i
-      // << "\n"));
+      LLVM_DEBUG(LLVM_DEBUG(dbgs() << "Adding node to eligible list: " << i
+      << "\n"));
     }
   }
 }
@@ -174,6 +179,14 @@ void Graph::addNode(RegisterProfile rp) {
   assert(node_number == discovered.size() &&
          "Some issue in discovered node vector");
   colored.push_back(-1);
+}
+
+void Graph::markNodeAsNotVisited(unsigned node_idx) {
+  if (this->discovered[node_idx]) {
+    this->discovered[node_idx] = false;
+  } else {
+    assert(false && "Called markNodeAsNotVisited with non-discovered node");
+  }
 }
 
 void RegisterActionSpace::maskActionSpace(

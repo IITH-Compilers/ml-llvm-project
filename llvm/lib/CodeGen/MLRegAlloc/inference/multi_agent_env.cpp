@@ -180,7 +180,8 @@ void MultiAgentEnv::update_env(RegisterProfileMap *regProfMap,
         s.insert(e);
       llvm::SmallVector<unsigned, 8> interferences;
       for (auto item : rp.interferences) {
-        interferences.push_back(this->nid_idx[item]);
+        if(this->nid_idx.find(item) !=  this->nid_idx.end())
+          interferences.push_back(this->nid_idx[item]);
       }
       for (auto e : interferences)
         s.insert(e);
@@ -192,6 +193,7 @@ void MultiAgentEnv::update_env(RegisterProfileMap *regProfMap,
   }
   auto splitedNodeIdx = this->nid_idx[current_node_id];
   this->graph_topology->removeNode(splitedNodeIdx);
+  this->regProfMap.erase(current_node_id);
   LLVM_DEBUG(errs() << "Remove node successfuly: " << current_node_id << " "
          << splitedNodeIdx << "\n");
   // SmallVector<IR2Vec::Vector, 12> currentNodeMatrix =
@@ -258,7 +260,7 @@ void MultiAgentEnv::update_env(RegisterProfileMap *regProfMap,
   LLVM_DEBUG(errs() << "Updated node interferences successfuly\n");
   this->edges =
       std::vector<std::vector<int>>(MAX_EDGE_COUNT, std::vector<int>(2));
-  this->edge_count = this->computeEdgesFromRP();
+  this->edge_count = this->updateEdgesFromRP();
   // updateEdges();
   LLVM_DEBUG(errs() << "Updated ghaph edges successfuly\n");
 }
@@ -567,6 +569,30 @@ unsigned MultiAgentEnv::computeEdgesFromRP() {
   return edge_count;
 }
 
+unsigned MultiAgentEnv::updateEdgesFromRP() {
+  unsigned edge_count = 0;
+  // int node_idx = 0;
+  LLVM_DEBUG(errs() << "Edges are:");
+  for (auto rpi : (this->regProfMap)) {
+    RegisterProfile rp = rpi.second;
+    int src = nid_idx[rpi.first];
+    auto tempInterferences = this->graph_topology->getAdjNodes(src);
+    for (auto des_id : tempInterferences) {
+      // int des = this->nid_idx[des_id];
+      int des = des_id;
+      if (src != des) {
+        this->edges[edge_count][0] = src;
+        this->edges[edge_count][1] = des;
+        edge_count += 1;
+        LLVM_DEBUG(errs() << "(" << src << ", " << des << "), ");
+      }
+    }
+    // node_idx++;
+  }
+  LLVM_DEBUG(errs() << "\n");
+  return edge_count;
+}
+
 void MultiAgentEnv::computeEdgesFlatened(Observation &edgesFlattened) {
   //   unsigned edge_count = 0;
   unsigned flatned_count = 0;
@@ -603,7 +629,7 @@ void MultiAgentEnv::taskSelectionObsConstructor(Observation &obs) {
   action_mask[1] = 0;
   Observation splitNodeMask(max_usepoints_count);
   createNodeSplitMask(splitNodeMask);
-  if (splitStepCount < split_threshold) {
+  if (splitStepCount <= split_threshold) {
     for (int i = 0; i < max_usepoints_count; i++) {
       if (int(splitNodeMask[i]) == 1) {
         action_mask[1] = 1;
@@ -629,7 +655,9 @@ void MultiAgentEnv::taskSelectionObsConstructor(Observation &obs) {
   llvm::SmallVector<int, 8> use_distances = this->current_node.useDistances;
   obs[current_index++] = adj_nodes.size();
   obs[current_index++] = masked_action_space.size();
-  obs[current_index++] = spillcost;
+  if(std::isinf(spillcost)) {this->annotations[current_index++][0] = 10000;}
+  else {this->annotations[current_index++][0] = spillcost;}
+  // obs[current_index++] = spillcost;
   obs[current_index++] = use_distances.size();
   // Set node state
   // int current_node_idx = this->nid_idx[this->current_node_id];

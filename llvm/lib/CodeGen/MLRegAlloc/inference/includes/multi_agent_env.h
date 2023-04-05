@@ -50,6 +50,7 @@ class MultiAgentEnv : public Environment {
   void createAnnotations(Observation &temp_annotations);
 
   unsigned computeEdgesFromRP();
+  unsigned updateEdgesFromRP();
   void computeEdgesFlatened(Observation &edgesFlattened);
   void constructNodeVector(const SmallVector<IR2Vec::Vector, 12>& nodeMat, IR2Vec::Vector& nodeVec);
 
@@ -76,7 +77,8 @@ public:
 
   void update_env(RegisterProfileMap *regProfMap, SmallSetVector<unsigned, 8> updatedRegIdxs);\
   void selectNodeObsConstructor(Observation &obs);
-  virtual Observation& split_node_step(unsigned action) = 0; 
+  virtual Observation &split_node_step(unsigned action) = 0;
+  unsigned getNodeIdx(unsigned nodeId) { return nid_idx[nodeId];}
 
   MultiAgentEnv(){
     edges = std::vector<std::vector<int>>(MAX_EDGE_COUNT, std::vector<int>(2));

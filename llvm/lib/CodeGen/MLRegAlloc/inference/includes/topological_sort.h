@@ -32,6 +32,7 @@ public:
   void setAdjNodes(unsigned node_idx,
                    llvm::SmallVector<unsigned, 8> adjNodeList);
   // void updateEdges(std::vector<std::vector<int>> &edges);
+  void markNodeAsNotVisited(unsigned node_idx);
   unsigned node_number;
 
 private:
@@ -50,8 +51,8 @@ public:
   static std::map<int, int> normal_org_map;
   static std::map<int, int> org_normal_map;
   static std::map<std::string, std::vector<int>> overlaps;
-  void maskActionSpace(
-      llvm::StringRef regclass, const llvm::SmallVector<unsigned, 8> &adj_colors,
-      llvm::SmallVector<unsigned, 8> &action_space_filtered);
+  void maskActionSpace(llvm::StringRef regclass,
+                       const llvm::SmallVector<unsigned, 8> &adj_colors,
+                       llvm::SmallVector<unsigned, 8> &action_space_filtered);
 };
 #endif

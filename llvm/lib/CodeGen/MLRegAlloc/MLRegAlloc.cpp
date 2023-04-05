@@ -404,6 +404,7 @@ Observation& MLRA::split_node_step(unsigned action) {
     LLVM_DEBUG(errs() << "Splitted register successfuly: " << splitRegIdx << "\n");
     this->update_env(&regProfMap, updatedRegIdxs);
   } else {
+    this->graph_topology->markNodeAsNotVisited(this->getNodeIdx(this->current_node_id));
     LLVM_DEBUG(
         errs()
         << "Still after spliting prediction; LLVM dees not performit.\n");
