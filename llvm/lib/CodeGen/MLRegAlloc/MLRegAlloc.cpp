@@ -1651,8 +1651,8 @@ void MLRA::updateRegisterProfileAfterSplit(
 
       SA->analyze(OtherVReg);
       if (SA->getUseSlots().empty() || MRI->reg_nodbg_empty(Reg))
-	continue;
-      
+        continue;
+
       if (NewVirtReg == OtherVReg)
         continue;
 
@@ -2119,7 +2119,7 @@ void MLRA::inference() {
       request = new registerallocationinference::RegisterProfileList();
       serializeRegProfData(request);
       errs() << "Call model first time\n";
-      if (request->mutable_regprof()->size() <= 0 ||
+      if (request->mutable_regprof()->size() < 120 ||
           request->mutable_regprof()->size() > 500) {
         ORE->emit([&]() {
           return MachineOptimizationRemark(

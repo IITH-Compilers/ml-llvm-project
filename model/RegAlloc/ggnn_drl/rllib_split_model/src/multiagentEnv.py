@@ -24,7 +24,7 @@ from gym.spaces import Discrete, Box
 # from memory_profiler import profile
 
 # from ggnn import constructGraph
-from ggnn_1 import get_observations, get_observationsInf, GatedGraphNeuralNetwork, constructVectorFromMatrix, AdjacencyList
+from ggnn_1 import get_observations, get_observationsInf, GatedGraphNeuralNetwork, constructVectorFromMatrix, AdjacencyList, SPILL_COST_THRESHOLD
 from register_action_space import RegisterActionSpace
 
 import ray
@@ -137,7 +137,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.interference_difference_threshold = 50
         self.task_selected = 0
         self.split_threshold = 10
-        self.reward_max_value = 10000.0
+        self.reward_max_value = SPILL_COST_THRESHOLD
 
         self.grpc_rtt = 0
         self.spill_successful = 0

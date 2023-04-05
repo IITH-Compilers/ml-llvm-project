@@ -17,6 +17,8 @@ import json
 logger = logging.getLogger(__file__) 
 device ='cpu' #torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
+SPILL_COST_THRESHOLD = 10000
+
 class AdjacencyList:
     """represent the topology of a graph"""
     def __init__(self, node_num: int, adj_list: List, device: torch.device):
@@ -469,8 +471,9 @@ def get_observationsInf(graph):
 
         # logging.debug('Allocation type : {}'.format(allocate_type))
         # print(spill_cost, type(spill_cost))
-        if spill_cost in [float('inf'), "inf", "INF"]:
-            spill_cost = float(1)
+        if spill_cost in [float('inf'), "inf", "INF"] or spill_cost > SPILL_COST_THRESHOLD:
+            spill_cost = float(SPILL_COST_THRESHOLD)
+        
         # node['label'] = re.sub(" {.*} ", '', node['label'])
         
         # print(node.vectors)
@@ -609,8 +612,10 @@ def get_observations(graph):
         logging.debug('Allocation type : {}'.format(allocate_type))
         if spill_cost not in ["inf", "INF"]:
             spill_cost = eval(spill_cost)
+            if spill_cost > SPILL_COST_THRESHOLD:
+                spill_cost = float(SPILL_COST_THRESHOLD)
         else:
-            spill_cost = float(1)
+            spill_cost = float(SPILL_COST_THRESHOLD)
         node['label'] = re.sub(" {.*} ", '', node['label'])
         
         if node['label'] != "\"\"":
