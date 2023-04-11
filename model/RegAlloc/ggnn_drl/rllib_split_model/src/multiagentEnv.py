@@ -1185,13 +1185,16 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                                     
                                     if throughput_diff < 0:
                                         reward = 10
+                                    elif throughput_diff == 0:
+                                        reward = 0
                                     else:
                                         reward = -10
                                     print("Throughput:", mlra_throughput, greedy_throughput)
-                                    print("Reward in compaire to greedy throughput:", reward)
-                            # else:
-                            #     print("Path:", self.path)
-                            #     print("Greedy map keys", greedy_throughput_map.keys())
+                                    print("Reward in compare to greedy throughput:", reward)
+
+                                else:
+                                    print("Following key not in Greedy map:", key)
+                                    # print("Greedy map keys", greedy_throughput_map.keys())
                             
                         else:
                             print("MCA timeout happned")                    

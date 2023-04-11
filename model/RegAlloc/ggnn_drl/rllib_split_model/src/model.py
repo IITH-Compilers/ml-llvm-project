@@ -68,8 +68,8 @@ class SelectTaskNetwork(TorchModelV2, nn.Module):
         inf_mask = torch.clamp(torch.log(mask), min=FLOAT_MIN)
         x = x + inf_mask        
         assert not torch.isnan(x).any(), "Nan in select task model output"
-        # return x, state, self._features
-        return x, state
+        return x, state, self._features
+        # return x, state
 
     def value_function(self):
         return self._value_branch(self._features).squeeze(1)
@@ -164,8 +164,9 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
         # x = torch.where(mask, x, torch.tensor(masking_value).to(x.device))
         #x = torch.where(mask, x, torch.tensor(FLOAT_MIN).to(x.device))        
         assert not torch.isnan(x).any(), "Nan in select node model output"
-        # return x, state, input_state_list
-        return x, state
+        torch.set_printoptions(threshold=10_000)
+        return x, state, input_state_list
+        # return x, state
 
     def value_function(self):
         return self._value_branch(self._features).squeeze(1)
@@ -217,8 +218,8 @@ class ColorNetwork(TorchModelV2, nn.Module):
         x = x + inf_mask
         # x = torch.where(mask, x, torch.tensor(masking_value).to(x.device))
         #x = torch.where(mask, x, torch.tensor(FLOAT_MIN).to(x.device))        
-        # return x, state, self._features
-        return x, state
+        return x, state, self._features
+        # return x, state
     
     def value_function(self):
         return self._value_branch(self._features).squeeze(1)
@@ -275,8 +276,8 @@ class SplitNodeNetwork(TorchModelV2, nn.Module):
         inf_mask = torch.clamp(torch.log(mask), min=FLOAT_MIN)
         x = x + inf_mask
         assert not torch.isnan(x).any(), "Nan in split node model output"
-        # return x, state, self._features
-        return x, state
+        return x, state, self._features
+        # return x, state
     
     def value_function(self):
         return self._value_branch(self._features).squeeze(1)

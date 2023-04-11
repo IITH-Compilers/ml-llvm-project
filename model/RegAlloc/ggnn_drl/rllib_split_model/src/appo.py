@@ -144,24 +144,23 @@ class APPOConfig(ImpalaConfig):
             "graphs_num": 10000,
             "action_space_size": RegisterActionSpace("X86", "/home/ai20btech11004/ML-Register-Allocation/llvm/lib/CodeGen/MLRegAlloc/config_json").ac_sp_normlize_size,
             "check_point": None,
-            "episode_number": 100,
+            "episode_number": 10000,
             "GPU_ID": '0',
             "X86_CFLAGS": "-mllvm -regalloc=greedy  -march=core2",
             "AArch64_CFLAGS": "-mllvm -regalloc=greedy  -mcpu=cortex-a72",
             "dataset_bucket": "set_120-500",
             "enable_GGNN": False,
             "file_repeat_frequency": 1,
-            "current_batch": 1,
+            "current_batch": 5,
             "Workers_starting_port": "50045",
             "use_local_reward": True,
             "use_mca_reward": True,
             "use_mca_self_play_reward": False,
             "mca_reward_clip": 10,
             "mca_timeout": 30,
-            "greedy_mca_throughput_file_path": "/home/ai20btech11004/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src/greedy-throughput_set_120-500.json",
-            "mca_cycles_file_path": "/home/ai20btech11004/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src/greedy-cycles_set_120-500.json"
+            "greedy_mca_throughput_file_path": "/home/ai20btech11004/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src/LTS_x86_greedy-throughput_set_120-500.json",
+            "mca_cycles_file_path": "/home/ai20btech11004/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src/LTS_x86_greedy-cycles_set_120-500.json"
         }
-        self.framework = 'torch'
         self.horizon = 1000
 
     @override(ImpalaConfig)

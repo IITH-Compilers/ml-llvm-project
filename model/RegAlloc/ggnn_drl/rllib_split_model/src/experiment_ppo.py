@@ -136,8 +136,8 @@ if __name__ == "__main__":
 
     config = DEFAULT_CONFIG.copy()
 
-    os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
-    os.environ["CUDA_VISIBLE_DEVICES"]= config["env_config"]["GPU_ID"]
+    # os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
+    # os.environ["CUDA_VISIBLE_DEVICES"]= config["env_config"]["GPU_ID"]
 
     # os.environ['GRPC_VERBOSITY']='DEBUG'
 
@@ -299,7 +299,7 @@ if __name__ == "__main__":
         experiment,
         config=config,
         # resources_per_trial=SimpleQTrainer.default_resource_request(config),
-        resources_per_trial=    PPO.default_resource_request(config),
+        resources_per_trial=PPO.default_resource_request(config),
         # fail_fast=True,
         # max_failures=10
         )
