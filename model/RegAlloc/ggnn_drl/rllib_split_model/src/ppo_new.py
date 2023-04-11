@@ -88,32 +88,39 @@ class PPOConfig(PGConfig):
         # fmt: off
         # __sphinx_doc_begin__
         # PPO specific settings:
+        self.vtrace = True
         self.use_critic = True
         self.use_gae = True
         self.lambda_ = 1.0
-        self.kl_coeff = 0.2
-        self.sgd_minibatch_size = 64
-        self.num_sgd_iter = 3
+        self.kl_coeff = 1.0
+        self.sgd_minibatch_size = 32
+        self.num_sgd_iter = 1
         self.shuffle_sequences = True
         self.vf_loss_coeff = 1.0
-        self.entropy_coeff = 0.0
+        self.entropy_coeff = 0.01
         self.entropy_coeff_schedule = None
         self.clip_param = 0.3
         self.vf_clip_param = 10.0
-        self.grad_clip = None
+        self.grad_clip = 40
         self.kl_target = 0.01
 
         # Override some of PG/AlgorithmConfig's default values with PPO-specific values.
-        self.num_rollout_workers = 4   
-        self.train_batch_size = 256
-        self.lr = 5e-5
+        self.num_rollout_workers = 10
+        self.train_batch_size = 32
+        self.lr = 5e-4
         self.model["vf_share_layers"] = False
         self._disable_preprocessor_api = False
+
+        self.num_gpus = 1
+        self.num_cpus_per_worker = 1
+        self.num_gpus_per_worker = .1
+        self.num_envs_per_worker = 1
+        self.rollout_fragment_length = "auto"
         # __sphinx_doc_end__
         # fmt: on   
 
         # Deprecated keys.
-        self.vf_share_layers = DEPRECATED_VALUE
+
 
         self.batch_mode = "complete_episodes"
 
@@ -133,33 +140,30 @@ class PPOConfig(PGConfig):
             "Register_config": "/home/ai20btech11004/ML-Register-Allocation/llvm/lib/CodeGen/MLRegAlloc/config_json",
             "log_path": "/home/ai20btech11004/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src/log",
             #"dataset": "/raid/cs17m20P100001/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_new_data/",
-            # "dataset": "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_aarch64_new_data/",
+            #"dataset": "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_aarch64_new_data/",
             "dataset": "/home/ai20btech11004/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/LTS-ll-files_train_mlra_x86_split_data",
             "graphs_num": 10000,
             "action_space_size": RegisterActionSpace("X86", "/home/ai20btech11004/ML-Register-Allocation/llvm/lib/CodeGen/MLRegAlloc/config_json").ac_sp_normlize_size,
             "check_point": None,
-            "episode_number": 10,
-            "GPU_ID": '1',
+            "episode_number": 10000,
+            "GPU_ID": '0',
             "X86_CFLAGS": "-mllvm -regalloc=greedy  -march=core2",
             "AArch64_CFLAGS": "-mllvm -regalloc=greedy  -mcpu=cortex-a72",
             "dataset_bucket": "set_120-500",
-            "enable_GGNN": True,
+            "enable_GGNN": False,
             "file_repeat_frequency": 1,
-            "current_batch": 1,
+            "current_batch": 5,
             "Workers_starting_port": "50035",
             "use_local_reward": True,
             "use_mca_reward": True,
             "use_mca_self_play_reward": False,
             "mca_reward_clip": 10,
             "mca_timeout": 30,
-            "greedy_mca_throughput_file_path": "/home/ai20btech11004/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src/greedy-throughput_set_120-500.json",
-            "mca_cycles_file_path": "/home/ai20btech11004/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src/greedy-cycles_set_120-500.json"
+            "greedy_mca_throughput_file_path": "/home/ai20btech11004/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src/LTS_x86_greedy-throughput_set_120-500.json",
+            "mca_cycles_file_path": "/home/ai20btech11004/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src/LTS_x86_greedy-cycles_set_120-500.json"
         }
 
-        self.framework = 'torch'
         self.horizon = 1000
-
-        self.num_gpus = 1
 
     @override(AlgorithmConfig)
     def training(
