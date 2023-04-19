@@ -163,6 +163,8 @@ private:
 
   SmallVector<unsigned, 16> splitInvalidRegs;
 
+  float moveCostBefore = 0;
+
   bool isSafeVReg(unsigned);
   grpc::Status
   codeGen(grpc::ServerContext *context, const registerallocation::Data *request,
@@ -203,8 +205,8 @@ private:
                        SmallSetVector<unsigned, 8> *updatedRegs = nullptr);
   void dumpInterferenceGraph(std::string ID = "");
   void allocatePhysRegsViaRL();
-  void allocatePhysRegsViaRandom(int,int);
-  void juggleAllocation(int,int,SmallVector<LiveInterval *, 256>&);
+  void allocatePhysRegsViaRandom(int, int);
+  void juggleAllocation(int, int, SmallVector<LiveInterval *, 256> &);
   void training_flow();
   void inference();
   void verifyRegisterProfile();
@@ -335,6 +337,37 @@ private:
   void setPrediction(std::map<std::string, std::map<std::string, int64_t>>
                          FunctionVirtRegToColorMap) {
     this->FunctionVirtRegToColorMap = FunctionVirtRegToColorMap;
+  }
+
+  float countCopyAndMoveInstructions(MachineFunction &MF) {
+    int NumCopies = 0;
+    int NumMoves = 0;
+    float copyCost = 0;
+    for (auto &MBB : MF) {
+      for (auto &MI : MBB) {
+        if (MI.getOpcode() == TargetOpcode::COPY) {
+          NumCopies++;
+          LLVM_DEBUG(errs() << "COPY: ");
+          LLVM_DEBUG(MI.dump());
+
+          BlockFrequency Freq = MBFI->getBlockFreq(&MBB);
+          // errs() << "MBFI->getEntryFreq() = " << MBFI->getEntryFreq() <<
+          // "\n"; errs() << "Freq.getFrequency() = " << Freq.getFrequency() <<
+          // "\n";
+          const float Scale = 1.0f / MBFI->getEntryFreq();
+          copyCost += Freq.getFrequency() * Scale;
+          // errs() << "Frequency: " << (Freq.getFrequency() * Scale) << "\n";
+        } else if (MI.getOpcode() == TargetOpcode::IMPLICIT_DEF) {
+          NumMoves++;
+          LLVM_DEBUG(errs() << "MOVE: ");
+          LLVM_DEBUG(MI.dump());
+        }
+      }
+    }
+    LLVM_DEBUG(errs() << "No. of COPY instructions: " << NumCopies << "\n");
+    LLVM_DEBUG(errs() << "No. of IMPLICIT_DEF instructions: " << NumMoves
+                      << "\n");
+    return copyCost;
   }
 };
 

@@ -13,8 +13,8 @@ endif()
 add_llvm_library(LLVMHelloModule MODULE BUILDTREE_ONLY
   Hello.cpp
   
-  LINK_COMPONENTS
-  IR2Vec
+  # LINK_COMPONENTS
+  # IR2Vec
 
   DEPENDS
   intrinsics_gen

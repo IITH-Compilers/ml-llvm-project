@@ -440,6 +440,8 @@ public:
         MachineFunctionProperties::Property::NoPHIs);
   }
 
+  float countCopyAndMoveInstructions(MachineFunction &MF);
+
   static char ID;
 
 private:
@@ -3256,6 +3258,7 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
   DebugVars = &getAnalysis<LiveDebugVariables>();
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
 
+  float moveCostBefore = countCopyAndMoveInstructions(mf);
   initializeCSRCost();
 
   calculateSpillWeightsAndHints(*LIS, mf, VRM, *Loops, *MBFI);
@@ -3293,7 +3296,7 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
     //       MF->verify(this, "After spilling");
     //   }
     // }
-;
+    ;
     for (auto i : mlSplitRegs) {
       // errs() << "mlSplitRegs " << printReg(i, TRI) << "\n";
       setStage(LIS->getInterval(i), RS_Spill);
@@ -3310,6 +3313,11 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
   tryHintsRecoloring();
   postOptimization();
   reportNumberOfSplillsReloads();
+  float moveCostAfter = countCopyAndMoveInstructions(mf);
+
+  float movesCost = moveCostAfter - moveCostBefore;
+  float totalCost = computeAllocationCost(movesCost);
+  LLVM_DEBUG(errs() << "Computed cost score is: " << totalCost << "\n");
 
   std::ofstream outfile;
   int numAlloc = 0;
@@ -3337,4 +3345,33 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
                     << " is: " << std::to_string(SE->NumFinishedMF) << '\n');
   releaseMemory();
   return true;
+}
+
+float RAGreedy::countCopyAndMoveInstructions(MachineFunction &MF) {
+  int NumCopies = 0;
+  int NumMoves = 0;
+  float copyCost = 0;
+  for (auto &MBB : MF) {
+    for (auto &MI : MBB) {
+      if (MI.getOpcode() == TargetOpcode::COPY) {
+        NumCopies++;
+        // errs() << "COPY: ";
+        // MI.dump();
+
+        BlockFrequency Freq = MBFI->getBlockFreq(&MBB);
+        // errs() << "MBFI->getEntryFreq() = " << MBFI->getEntryFreq() << "\n";
+        // errs() << "Freq.getFrequency() = " << Freq.getFrequency() << "\n";
+        const float Scale = 1.0f / MBFI->getEntryFreq();
+        copyCost += Freq.getFrequency() * Scale;
+        // errs() << "Frequency: " << (Freq.getFrequency() * Scale) << "\n";
+      } else if (MI.getOpcode() == TargetOpcode::IMPLICIT_DEF) {
+        NumMoves++;
+        // errs() << "MOVE: ";
+        // MI.dump();
+      }
+    }
+  }
+  // errs() << "No. of COPY instructions: " << NumCopies << "\n";
+  // errs() << "No. of IMPLICIT_DEF instructions: " << NumMoves << "\n\n";
+  return copyCost;
 }
