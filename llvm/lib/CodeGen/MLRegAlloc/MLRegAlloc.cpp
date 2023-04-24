@@ -210,8 +210,9 @@ void MLRA::verifyRegisterProfile() {
 grpc::Status MLRA::codeGen(grpc::ServerContext *context,
                            const registerallocation::Data *request,
                            registerallocation::RegisterProfileList *response) {
-  errs() << "Inside Codegen\n";
-  errs() << request->message();
+  LLVM_DEBUG(errs() << "Inside Codegen\n");
+  LLVM_DEBUG(errs() << request->message());
+  SmallVector<std::string, 8> spilledRegIds;
   // std::string str = "LLVM\n";
   // response->set_payload(str);
   if (request->message() == "Exit") {
@@ -219,11 +220,30 @@ grpc::Status MLRA::codeGen(grpc::ServerContext *context,
     unsigned numSpills = 0;
     for (auto i : request->color()) {
       colorMap[i.key()] = i.value();
-      if (i.value() == 0)
+      if (i.value() == 0) {
         numSpills++;
+        spilledRegIds.push_back(i.key());
+      }
     }
     this->FunctionVirtRegToColorMap[MF->getName()] = colorMap;
     exit_requested->set_value();
+
+    unsigned step = TRI->getNumRegs() + 1;
+    for (auto regId : spilledRegIds) {
+      unsigned i = std::stoul(regId, nullptr, 0) - step;
+      unsigned Reg = Register::index2VirtReg(i);
+      auto VirtReg = &LIS->getInterval(Reg);
+      spilledRegs.push_back(VirtReg);
+    }
+    // spilledRegs = mlSpilledRegs;
+    LLVM_DEBUG(errs() << "Spilled Register count: " << spilledRegs.size()
+                      << "\n");
+    float moveCostAfter = countCopyAndMoveInstructions(*MF);
+    float movesCost = moveCostAfter - this->moveCostBefore;
+    float totalCost = computeAllocationCost(movesCost);
+    LLVM_DEBUG(errs() << "Computed cost score from MLRA is: " << totalCost
+                      << "\n");
+    response->set_cost(totalCost);
   }
 
   if (request->message() == "Split" ||
@@ -2369,6 +2389,8 @@ void MLRA::MLRegAlloc(MachineFunction &MF, SlotIndexes &Indexes,
   default:
     this->targetName = "UnKnown";
   }
+
+  this->moveCostBefore = countCopyAndMoveInstructions(MF);
 
   // TODO - PLace the check for node size in proper place to increase the
   // performance.

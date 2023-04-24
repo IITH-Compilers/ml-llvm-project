@@ -197,3 +197,20 @@ void RegAllocBase::postOptimization() {
   }
   DeadRemats.clear();
 }
+
+float RegAllocBase::accumulateSpilledRegWeights() {
+  float spillWeightTotal = 0;
+  for (LiveInterval *vreg : spilledRegs) {
+    spillWeightTotal += vreg->weight;
+  }
+  return spillWeightTotal;
+}
+
+float RegAllocBase::computeAllocationCost(float movesCost) {
+  float alpha = 1;
+  float beta = 0;
+  // float movesCost = 0;
+  float spillRegWeightsTotal = accumulateSpilledRegWeights();
+  float cost = alpha * spillRegWeightsTotal + beta * movesCost;
+  return cost;
+}

@@ -82,6 +82,8 @@ protected:
   /// original reg.
   SmallPtrSet<MachineInstr *, 32> DeadRemats;
 
+  SmallVector<LiveInterval *, 10> spilledRegs;
+
   RegAllocBase() = default;
   virtual ~RegAllocBase() = default;
 
@@ -118,6 +120,10 @@ protected:
 
   /// Method called when the allocator is about to remove a LiveInterval.
   virtual void aboutToRemoveInterval(LiveInterval &LI) {}
+
+  float accumulateSpilledRegWeights();
+
+  float computeAllocationCost(float movesCost);
 
 public:
   /// VerifyEnabled - True when -verify-regalloc is given.

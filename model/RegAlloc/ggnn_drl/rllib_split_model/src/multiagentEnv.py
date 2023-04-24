@@ -98,7 +98,10 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.mca_cycles_file_path = env_config["mca_cycles_file_path"]
         self.use_mca_self_play_reward= env_config["use_mca_self_play_reward"]
         self.repeat_freq = env_config["file_repeat_frequency"]
+        self.disable_spliting = env_config["disable_spliting"]
         self.best_throughput_map = {}
+        self.best_allocation_cost = {}
+        self.use_costbased_reward = env_config["use_costbased_reward"]
         self.iteration_number = 1
 
         print("env_config.worker_index", env_config.worker_index)
@@ -493,7 +496,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         prop = self.getNodeProperties()
         prop_value_list = list(prop.values())
         select_task_mask = self.creatTaskSelectMask()
-        # select_task_mask = [1, 0]
+        if self.disable_spliting:
+            select_task_mask = [1, 0]
         # print("select_task_mask", select_task_mask)
         # print("Node Embding", self.cur_obs)
         reward = {
@@ -1087,8 +1091,26 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             # print('Seerver : {}'.format(self.server_pid))
             # self.server_pid.join()# terminate()
             if self.mode != 'inference':
-                self.stable_grpc('Exit', 0, 0)                   
-                if self.use_mca_reward:
+                exit_response = self.stable_grpc('Exit', 0, 0)
+                current_cost = SPILL_COST_THRESHOLD
+                if exit_response:
+                    # print("Cost of spilling and moves:", exit_response.cost)
+                    current_cost = exit_response.cost
+                key = os.path.basename(self.fileName) + "_" + self.functionName
+                # print("searching for key = " + key)                            
+                if self.use_costbased_reward:
+                    if key not in self.best_allocation_cost.keys():
+                        self.best_allocation_cost[key] = current_cost
+                    best_cost = self.best_allocation_cost[key]
+                    if best_cost > current_cost:
+                        self.best_allocation_cost[key] = current_cost
+                        reward = 10
+                    elif best_cost == current_cost:
+                        reward = 0
+                    else:
+                        reward = -10
+                    # print("Cost based reward is", best_cost, current_cost, reward)
+                elif self.use_mca_reward:
                     # starttime = time.time()                    
                     # while self.server_pid.poll() is None:
                     #     # print("Inside while loop")
@@ -1150,8 +1172,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                                 greedy_throughput_map = json.load(f)
                             # with open('greedy-throughput.json') as f:
                             #     greedy_throughput_map = json.load(f)
-                            key = os.path.basename(self.fileName) + "_" + self.functionName
-                            print("searching for key = " + key)
                             if self.use_mca_self_play_reward:
                                 if key not in self.best_throughput_map.keys():
                                     self.best_throughput_map[key] = mlra_throughput
@@ -1325,7 +1345,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             logdir = self.env_config["log_dir"]
             self.server_pid = utils_1.startServer(self.fileName, self.functionName, self.fun_id, ipadd, build_path, cflags, logdir, self.worker_index, self.use_mca_reward)
             # print("Server pid", self.server_pid.pid, hostport)
-            #time.sleep(5)
+            # time.sleep(5)
             # print('Active thread mid the server starts : ', threading.active_count())
             self.queryllvm = RegisterAllocationClient(hostport=hostport)
             # self.color_assignment_map = {}
