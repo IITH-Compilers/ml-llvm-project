@@ -4,7 +4,7 @@ import torch.nn.functional as F
 import logging
 from register_action_space import RegisterActionSpace
 from ray.rllib.models.torch.torch_modelv2 import TorchModelV2
-from ray.rllib.utils.torch_ops import FLOAT_MIN
+from ray.rllib.utils.torch_utils import FLOAT_MIN
 from ray.rllib.models.torch.misc import SlimFC, normc_initializer
 import numpy as np
 from ggnn_1 import get_observations, get_observationsInf, GatedGraphNeuralNetwork, constructVectorFromMatrix, AdjacencyList
@@ -70,6 +70,7 @@ class SelectTaskNetwork(TorchModelV2, nn.Module):
         x = x + inf_mask        
         assert not torch.isnan(x).any(), "Nan in select task model output"
         return x, state, self._features
+        # return x, state
 
     def value_function(self):
         return self._value_branch(self._features).squeeze(1)
@@ -211,7 +212,9 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
         #x = torch.where(mask, x, torch.tensor(FLOAT_MIN).to(x.device))
         # print("Select node output and emb device", x.device, node_mat.device)        
         assert not torch.isnan(x).any(), "Nan in select node model output"
+        torch.set_printoptions(threshold=10_000)
         return x, state, input_state_list
+        # return x, state
 
     def value_function(self):
         return self._value_branch(self._features).squeeze(1)
@@ -266,6 +269,7 @@ class ColorNetwork(TorchModelV2, nn.Module):
         # x = torch.where(mask, x, torch.tensor(masking_value).to(x.device))
         #x = torch.where(mask, x, torch.tensor(FLOAT_MIN).to(x.device))        
         return x, state, self._features
+        # return x, state
     
     def value_function(self):
         return self._value_branch(self._features).squeeze(1)
@@ -323,6 +327,7 @@ class SplitNodeNetwork(TorchModelV2, nn.Module):
         x = x + inf_mask
         assert not torch.isnan(x).any(), "Nan in split node model output"
         return x, state, self._features
+        # return x, state
     
     def value_function(self):
         return self._value_branch(self._features).squeeze(1)

@@ -11,7 +11,7 @@ from joblib import Parallel, delayed
 def startServer(filename, fun_name, fun_id, worker_index):
     def run(filename, fun_id, worker_index):
         # cmd = "{clang} -O3 -mllvm -regalloc=greedy -march=core2 -mllvm -mlra-training -mllvm -debug-only=mlra-regalloc -mllvm -mlra-funcID={fun_id} -mllvm -mlra-server-address={ip} {src_file} -o /dev/null &> llvm_logs_1.log".format(clang=os.environ['CLANG'], src_file=filename, fun_id=fun_id, ip=ip)
-        cmd = "{clang} -S -Xclang -load -Xclang /home/cs20mtech12003/ML-Register-Allocation/build_aarch_new/lib/MCAInstrument.so -O3 -mcpu=cortex-a72 -mllvm -mca-funcID={fun_name} -mllvm -regalloc=greedy -mllvm -mlra-funcID={fun_id} {src_file} -o - | {mca} -mcpu=cortex-a72".format(clang=os.environ['CLANG'], src_file=filename, fun_name=fun_name, fun_id=fun_id, worker_index=worker_index, mca=os.environ['MCA'])
+        cmd = "{clang} -S -Xclang -load -Xclang /home/ai20btech11004/ML-Register-Allocation/build_x86/lib/MCAInstrument.so -O3 -mcpu=core2 -mllvm -mca-funcID={fun_name} -mllvm -regalloc=greedy -mllvm -mlra-funcID={fun_id} {src_file} -o - | {mca} -mcpu=core2".format(clang=os.environ['CLANG'], src_file=filename, fun_name=fun_name, fun_id=fun_id, worker_index=worker_index, mca=os.environ['MCA'])
         print("Clang command:", cmd)
         #os.system(cmd)
         pid = subprocess.Popen(cmd, executable='/bin/bash', shell=True, preexec_fn=os.setsid, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
@@ -103,18 +103,18 @@ def run(path):
     
 
 start_time = time.time()
-dataset = '/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_aarch64_new_data/'
-training_graphs = glob.glob(os.path.join(dataset, 'graphs/IG/set_70-120/*.json'))
+dataset = '/home/ai20btech11004/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/LTS-ll-files_train_mlra_x86_split_data/'
+training_graphs = glob.glob(os.path.join(dataset, 'graphs/IG/set_120-500/*.json'))
 throughput_map = {}
 cycle_map = {}
-results = Parallel(n_jobs=70)(delayed(run)(path) for path in training_graphs)
+results = Parallel(n_jobs=50)(delayed(run)(path) for path in training_graphs)
 print("Results", results)
 for t in results:
     if t is not None:
         cycle_map[t[0]] = t[1]
         throughput_map[t[0]] = t[2]
-with open('greedy-cycles_set_70-120.json', 'w') as fp:
+with open('LTS_x86_greedy-cycles_set_120-500.json', 'w') as fp:
     json.dump(cycle_map, fp)
-with open('greedy-throughput_set_70-120.json', 'w') as fp:
+with open('LTS_x86_greedy-throughput_set_120-500.json', 'w') as fp:
     json.dump(throughput_map, fp)
 print("Total time in seconds is: ", (time.time() - start_time))

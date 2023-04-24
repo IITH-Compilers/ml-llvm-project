@@ -104,6 +104,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.use_costbased_reward = env_config["use_costbased_reward"]
         self.iteration_number = 1
 
+        self.curr_file_name = None
+
         print("env_config.worker_index", env_config.worker_index)
         
         if self.mode != 'inference':
@@ -253,6 +255,9 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         node_mat = state.initial_node_representation
         cur_obs = np.zeros((self.max_number_nodes, self.emb_size))
         cur_obs[0:node_mat.shape[0], :] = node_mat
+
+        self.node_representation_mat = cur_obs
+        
         # cur_obs = np.zeros((self.max_number_nodes, self.emb_size))
         annotations = np.zeros((self.max_number_nodes, self.annotation_size))
         annotations[0:state.annotations.shape[0], :] = state.annotations
@@ -1200,13 +1205,16 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                                     
                                     if throughput_diff < 0:
                                         reward = 10
+                                    elif throughput_diff == 0:
+                                        reward = 0
                                     else:
                                         reward = -10
                                     print("Throughput:", mlra_throughput, greedy_throughput)
-                                    print("Reward in compaire to greedy throughput:", reward)
-                            # else:
-                            #     print("Path:", self.path)
-                            #     print("Greedy map keys", greedy_throughput_map.keys())
+                                    print("Reward in compare to greedy throughput:", reward)
+
+                                else:
+                                    print("Following key not in Greedy map:", key)
+                                    # print("Greedy map keys", greedy_throughput_map.keys())
                             
                         else:
                             print("MCA timeout happned")                    
