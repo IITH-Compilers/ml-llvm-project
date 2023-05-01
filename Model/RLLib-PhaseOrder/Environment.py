@@ -284,6 +284,7 @@ class PhaseOrder(gym.Env):
 
         ##### Applying the action and saving the IR file as <filename>_<StateIndex>
         command = self.FileSys_Obj.OptPath + " " + self.opt_arch_flag + " -S -O34 -SubNum=" + str(action) + " " + self.CurrIR + " -o " + new_IR
+        print("Opt Command: "+command)
         os.system(command)
         command = self.FileSys_Obj.ClangPath + " " + self.clang_arch_flag + " -c " + new_IR + " -o " + new_file + ".o"
         os.system(command)

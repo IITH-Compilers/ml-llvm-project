@@ -30,7 +30,7 @@ class CustomPhaseOrderModel(TorchModelV2, nn.Module):
 
     def forward(self, input_dict, state, seq_lens):
        
-        obs_flat = (input_dict['obs_flat']).detach().numpy()
+        obs_flat = (input_dict['obs_flat']).cpu().detach().numpy()
         # DF = pd.DataFrame(obs_flat)        
         # save the dataframe as a csv file
         # print(type(input_dict['obs_flat']), type(input_dict["obs"]["state"]))

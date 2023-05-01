@@ -50,4 +50,4 @@ python3 inference.py --llvm_dir=$LLVM_BUILD_DIR \
 # Collect results
 bash collect-results.sh inference $LLVM_BUILD_DIR $OUTPUT
 # Removes temporary files created
-make clean
+#make clean

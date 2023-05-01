@@ -120,6 +120,7 @@ if __name__ == '__main__':
                 },
             },
             "env": PhaseOrder,
+            "lr": 0.0001,
             "env_config": {
                 "target": target_arch,
                 "state_size": 300,
@@ -135,19 +136,25 @@ if __name__ == '__main__':
                 "mca_reward_thresh": args.mca_reward_thresh,
                 "action_space_size": 34,
             },
+            "batch_size": 128,
             "exploration_config": {
+                "type": "EpsilonGreedy",
+                "initial_epsilon": 1.0,
                 "final_epsilon": 0.01,
-                "epsilon_timesteps": 20,
+                "epsilon_timesteps": 20000,
             },
             # "horizon":10,
             "framework": "torch",
             "train-iterations": args.train_iterations,
             "batch_mode": "truncate_episodes",
             "seed": 1,
+            "num_gpus": 1,
+            # "num_rollout_workers": 2,
+            # "num_gpus_per_worker": 0.2
         },
         **cfg)
     # config = dict(config,**default_config)
-    config["timesteps_per_iteration"] = 100
+    config["timesteps_per_iteration"] = 1005
     # config["learning_starts"] = 20
     # config["prioritized_replay_beta_annealing_timesteps"] = 20
     # config["target_network_update_freq"] = 5

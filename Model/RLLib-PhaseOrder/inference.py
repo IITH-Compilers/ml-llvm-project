@@ -28,6 +28,7 @@ import os
 import shutil
 import utils
 import logging
+import time
 
 import ray
 from ray import tune
@@ -106,7 +107,7 @@ class PhaseOrderInference:
                 "framework": "torch",
                 "explore": False,
                 "num_workers": 0,
-                "train_batch_size": 32,
+                "train_batch_size": 1,
             },
             **cfg)
         
@@ -168,5 +169,9 @@ if __name__ == '__main__':
 
     inference_obj = PhaseOrderInference(args.model, args.llvm_dir, args.ir2vec_dir)
 
+    f = open("timetaken.txt", "w")
     for file in os.listdir(args.test_dir):
+        start = time.time()
         reward, response = inference_obj.run_predict(file)
+        end = time.time()
+        f.write("Time taken for {} is {}\n".format(file, end-start))
