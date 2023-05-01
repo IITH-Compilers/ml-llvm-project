@@ -26,6 +26,7 @@ set(LLVM_LINK_COMPONENTS
   Vectorize
   Passes
   PosetRL
+  AddSizeAttr
   InferenceEngine
   IR2Vec
   )

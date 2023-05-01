@@ -34,7 +34,10 @@ void initializeObjCARCOpts(PassRegistry&);
 void initializeVectorization(PassRegistry&);
 
 /// Initialize all passes linked into the InstCombine library.
-void initializeInstCombine(PassRegistry&);
+void initializeInstCombine(PassRegistry &);
+
+/// Initialize all passes linked into the AddSizeAttr library.
+void initializeAddSizeAttr(PassRegistry &);
 
 /// Initialize all passes linked into the AggressiveInstCombine library.
 void initializeAggressiveInstCombine(PassRegistry&);
@@ -65,6 +68,7 @@ void initializeAAResultsWrapperPassPass(PassRegistry&);
 void initializeADCELegacyPassPass(PassRegistry&);
 void initializeAddDiscriminatorsLegacyPassPass(PassRegistry&);
 void initializeModuleAddressSanitizerLegacyPassPass(PassRegistry &);
+void initializeAddSizeAttrPassPass(PassRegistry &);
 void initializeASanGlobalsMetadataWrapperPassPass(PassRegistry &);
 void initializeAddressSanitizerLegacyPassPass(PassRegistry &);
 void initializeAggressiveInstCombinerLegacyPassPass(PassRegistry&);

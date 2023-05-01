@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.4.3)
 
+link_directories("${ONNXRUNTIME_ROOTDIR}/lib")
+
 if(POLICY CMP0075)
   cmake_policy(SET CMP0075 NEW)
 endif()

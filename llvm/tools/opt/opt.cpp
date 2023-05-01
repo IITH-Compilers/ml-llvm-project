@@ -571,6 +571,7 @@ int main(int argc, char **argv) {
   initializeInstrumentation(Registry);
   initializeTarget(Registry);
   initializePosetRLPass(Registry);
+  initializeAddSizeAttrPassPass(Registry);
   // For codegen passes, only passes that do IR to IR transformation are
   // supported.
   initializeExpandMemCmpPassPass(Registry);
