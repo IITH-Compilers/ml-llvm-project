@@ -9,6 +9,8 @@
 #include "llvm/Pass.h"
 #include "llvm/PassSupport.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 
@@ -22,13 +24,25 @@ struct PosetRL : public ModulePass, public PosetRLEnv {
     // M.print(errs(), nullptr);
     this->M = &M;
     runInference();
+    errs() << "Sequence: ";
+    for (auto a : Sequence)
+      errs() << a << " ";
+    errs() << "\n";
     return true;
   }
   Embedding getEmbeddings() override {
-    // M->print(errs(), nullptr);
+    
+    //redirecting the module to a file
+    std::error_code EC;
+    static int count = 0;
+    std::string path = to_string(count++)+".ll";
+    llvm::raw_fd_ostream os(path.c_str(),EC,llvm::sys::fs::OF_None);
+    M->print(os, nullptr);
+    os.close();
+
     auto Ir2vec = IR2Vec::Embeddings(
         *M, IR2Vec::IR2VecMode::FlowAware,
-        "/home/cs20btech11018/repos/ML-Phase-Ordering/ir2vec/"
+        "/home/cs20btech11018/repos/ML-Phase-Ordering/IR2Vec/"
         "vocabulary/seedEmbeddingVocab-300-llvm10.txt");
 
     auto ProgVector = Ir2vec.getProgramVector();
@@ -38,7 +52,7 @@ struct PosetRL : public ModulePass, public PosetRLEnv {
   void applySeq(Action Action) override {
     PassManagerBuilder Builder;
     Builder.OptLevel = 2;
-    Builder.SizeLevel = 0;
+    Builder.SizeLevel = 2;
 
     legacy::FunctionPassManager FPM(M);
     legacy::PassManager MPM;

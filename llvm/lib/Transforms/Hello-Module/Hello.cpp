@@ -22,7 +22,7 @@ using namespace llvm;
 
 STATISTIC(hellomodule, "Counts number of functions greeted");
 
-std::string embeddings = "/home/cs20btech11018/repos/ML-Phase-Ordering/ir2vec/"
+std::string embeddings = "/home/cs20btech11018/repos/ML-Phase-Ordering/IR2Vec/"
                          "vocabulary/seedEmbeddingVocab-300-llvm10.txt";
 
 namespace {

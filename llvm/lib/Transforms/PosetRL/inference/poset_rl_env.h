@@ -4,6 +4,7 @@
 #include <vector>
 #include <algorithm>
 #include <iterator>
+#include "llvm/Support/raw_ostream.h"
 
 #define ActionMaskSize 34
 #define EmbeddingSize 300
@@ -12,6 +13,9 @@ using namespace llvm;
 
 typedef std::vector<float> Embedding;
 typedef std::vector<float> ActionMask;
+
+
+std::vector<int> Sequence;
 
 
 class PosetRLEnv : public Environment {
@@ -28,6 +32,8 @@ class PosetRLEnv : public Environment {
 };
 
 Observation PosetRLEnv::step(Action Action){
+    Sequence.push_back(Action);
+    errs() << "Action: " << Action << "\n";
     applySeq(Action);
     
     Actioncount +=1;

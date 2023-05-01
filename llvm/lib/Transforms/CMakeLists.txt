@@ -11,8 +11,6 @@ add_subdirectory(Hello-Module)
 add_subdirectory(ObjCARC)
 add_subdirectory(Coroutines)
 add_subdirectory(CFGuard)
-<<<<<<< HEAD
+add_subdirectory(AddSizeAttr)
 add_subdirectory(PosetRL)
-=======
-add_subdirectory(PosetRL)
->>>>>>> 60f9fe27b746759208b43fa3a356f835180f081e
+

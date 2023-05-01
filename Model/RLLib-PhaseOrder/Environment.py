@@ -90,10 +90,6 @@ class PhaseOrder(gym.Env):
         # Get IR2Vec FlowAware embeddings
         command = self.FileSys_Obj.IR2VecBin + " -fa -vocab " + self.FileSys_Obj.SeedEmbeddingPath + " -o " + EmbFile + " -level p " + fileName
         os.system(command)
-<<<<<<< HEAD
-        print("Embedding command {}".format(command))
-=======
->>>>>>> 60f9fe27b746759208b43fa3a356f835180f081e
         emb = np.loadtxt(EmbFile)
         # Threshold for embedding values
         emb[emb>100000.0] = 100000.0
@@ -289,11 +285,6 @@ class PhaseOrder(gym.Env):
         ##### Applying the action and saving the IR file as <filename>_<StateIndex>
         command = self.FileSys_Obj.OptPath + " " + self.opt_arch_flag + " -S -O34 -SubNum=" + str(action) + " " + self.CurrIR + " -o " + new_IR
         os.system(command)
-<<<<<<< HEAD
-        print("Opt Command {}".format(command))
-=======
-
->>>>>>> 60f9fe27b746759208b43fa3a356f835180f081e
         command = self.FileSys_Obj.ClangPath + " " + self.clang_arch_flag + " -c " + new_IR + " -o " + new_file + ".o"
         os.system(command)
 
