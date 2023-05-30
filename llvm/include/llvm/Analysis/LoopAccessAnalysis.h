@@ -197,11 +197,26 @@ public:
     ++AccessIdx;
   }
 
+  /// Register the location (instructions are given increasing numbers)
+  /// of a write access.
+  // For RAR dependences
+  void addAccess_RAR(LoadInst *LI) {
+    Value *Ptr = LI->getPointerOperand();
+    Accesses[MemAccessInfo(Ptr, true)].push_back(AccessIdx);
+    InstMap.push_back(LI);
+    ++AccessIdx;
+  }
+
   /// Check whether the dependencies between the accesses are safe.
   ///
   /// Only checks sets with elements in \p CheckDeps.
   bool areDepsSafe(DepCandidates &AccessSets, MemAccessInfoList &CheckDeps,
                    const ValueToValueMap &Strides);
+
+  /// Check whether the dependencies between the accesses are safe.
+  /// For RAR Memory Dependences
+  bool areDepsSafe_RAR(DepCandidates &AccessSets, MemAccessInfoList &CheckDeps,
+                       const ValueToValueMap &Strides);
 
   /// No memory dependence was encountered that would inhibit
   /// vectorization.
@@ -231,7 +246,12 @@ public:
     return RecordDependences ? &Dependences : nullptr;
   }
 
-  void clearDependences() { Dependences.clear(); }
+  using DepDist = DenseMap<Dependence *, int64_t>;
+  const DepDist *getDependenceDistance() const { return &DependenceDistance; }
+
+  const SmallVector<int64_t, 8> getDDist() const { return DDist; }
+
+  void clearDependences() { Dependences.clear(); DDist.clear(); }
 
   /// The vector of memory access instructions.  The indices are used as
   /// instruction identifiers in the Dependence class.
@@ -265,7 +285,7 @@ private:
   const Loop *InnermostLoop;
 
   /// Maps access locations (ptr, read/write) to program order.
-  DenseMap<MemAccessInfo, std::vector<unsigned> > Accesses;
+  DenseMap<MemAccessInfo, std::vector<unsigned>> Accesses;
 
   /// Memory access instructions in program order.
   SmallVector<Instruction *, 16> InstMap;
@@ -299,6 +319,24 @@ private:
   /// Memory dependences collected during the analysis.  Only valid if
   /// RecordDependences is true.
   SmallVector<Dependence, 8> Dependences;
+
+  ////////////////////////////////////////////////////////////////////////////
+  // add variable "Distance" to return dependence distance between two memmory
+  // accesses //
+  ////////////////////////////////////////////////////////////////////////////
+  int64_t dist;
+  // using DepDist = DenseMap<Dependence *, int64_t>;
+  DepDist DependenceDistance;
+  SmallVector<int64_t, 8> DDist;
+  /////////////////////////////////////////////////////
+  // add Function "isDep
+  ///////////////////////endent" to return dependence distance between two
+  /// memmory accesses //
+  ////////////////////////////////////////////////////////////////////////////
+  // Dependence::DepType isDependent(const MemAccessInfo &A, unsigned AIdx,
+  //                                 const MemAccessInfo &B, unsigned BIdx,
+  //                                 const ValueToValueMap &Strides, int64_t
+  //                                 Distance);
 
   /// Check whether there is a plausible dependence between the two
   /// accesses.
@@ -481,8 +519,7 @@ private:
                    bool UseDependencies);
 
   /// Generate the checks and return them.
-  SmallVector<PointerCheck, 4>
-  generateChecks() const;
+  SmallVector<PointerCheck, 4> generateChecks() const;
 
   /// Holds a pointer to the ScalarEvolution analysis.
   ScalarEvolution *SE;
@@ -518,6 +555,10 @@ public:
   LoopAccessInfo(Loop *L, ScalarEvolution *SE, const TargetLibraryInfo *TLI,
                  AliasAnalysis *AA, DominatorTree *DT, LoopInfo *LI);
 
+  // Constructor for RAR analysis
+  LoopAccessInfo(Loop *L, ScalarEvolution *SE, const TargetLibraryInfo *TLI,
+                 AliasAnalysis *AA, DominatorTree *DT, LoopInfo *LI, bool RAR);
+
   /// Return true we can analyze the memory accesses in the loop and there are
   /// no memory dependence cycles.
   bool canVectorizeMemory() const { return CanVecMem; }
@@ -547,7 +588,7 @@ public:
 
   uint64_t getMaxSafeDepDistBytes() const { return MaxSafeDepDistBytes; }
   unsigned getNumStores() const { return NumStores; }
-  unsigned getNumLoads() const { return NumLoads;}
+  unsigned getNumLoads() const { return NumLoads; }
 
   /// Add code that checks at runtime if the accessed arrays overlap.
   ///
@@ -609,6 +650,10 @@ private:
   /// Analyze the loop.
   void analyzeLoop(AliasAnalysis *AA, LoopInfo *LI,
                    const TargetLibraryInfo *TLI, DominatorTree *DT);
+
+  /// Analyze the loop for RAR dependences.
+  void analyzeLoop_RAR(AliasAnalysis *AA, LoopInfo *LI,
+                       const TargetLibraryInfo *TLI, DominatorTree *DT);
 
   /// Check if the structure of the loop allows it to be analyzed by this
   /// pass.
@@ -735,9 +780,12 @@ public:
   /// If there is no cached result available run the analysis.
   const LoopAccessInfo &getInfo(Loop *L);
 
+  const LoopAccessInfo &getInfo(Loop *L, bool RAR_flag);
+
   void releaseMemory() override {
     // Invalidate the cache when the pass is freed.
     LoopAccessInfoMap.clear();
+    LoopAccessInfoMap_R.clear();
   }
 
   /// Print the result of the analysis when invoked with -analyze.
@@ -746,6 +794,8 @@ public:
 private:
   /// The cache.
   DenseMap<Loop *, std::unique_ptr<LoopAccessInfo>> LoopAccessInfoMap;
+
+  DenseMap<Loop *, std::unique_ptr<LoopAccessInfo>> LoopAccessInfoMap_R;
 
   // The used analysis passes.
   ScalarEvolution *SE = nullptr;
@@ -762,8 +812,7 @@ private:
 /// querying the loop access info via AM.getResult<LoopAccessAnalysis>.
 /// getResult return a LoopAccessInfo object.  See this class for the
 /// specifics of what information is provided.
-class LoopAccessAnalysis
-    : public AnalysisInfoMixin<LoopAccessAnalysis> {
+class LoopAccessAnalysis : public AnalysisInfoMixin<LoopAccessAnalysis> {
   friend AnalysisInfoMixin<LoopAccessAnalysis>;
   static AnalysisKey Key;
 
@@ -773,16 +822,16 @@ public:
   Result run(Loop &L, LoopAnalysisManager &AM, LoopStandardAnalysisResults &AR);
 };
 
-inline Instruction *MemoryDepChecker::Dependence::getSource(
-    const LoopAccessInfo &LAI) const {
+inline Instruction *
+MemoryDepChecker::Dependence::getSource(const LoopAccessInfo &LAI) const {
   return LAI.getDepChecker().getMemoryInstructions()[Source];
 }
 
-inline Instruction *MemoryDepChecker::Dependence::getDestination(
-    const LoopAccessInfo &LAI) const {
+inline Instruction *
+MemoryDepChecker::Dependence::getDestination(const LoopAccessInfo &LAI) const {
   return LAI.getDepChecker().getMemoryInstructions()[Destination];
 }
 
-} // End llvm namespace
+} // namespace llvm
 
 #endif

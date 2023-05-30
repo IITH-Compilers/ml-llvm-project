@@ -51,6 +51,8 @@ public:
     Root,
   };
 
+  std::string NodeLabel;
+
   DDGNode() = delete;
   DDGNode(const NodeKind K) : DDGNodeBase(), Kind(K) {}
   DDGNode(const DDGNode &N) : DDGNodeBase(N), Kind(N.Kind) {}
@@ -104,6 +106,8 @@ public:
 
 /// Subclass of DDGNode representing single or multi-instruction nodes.
 class SimpleDDGNode : public DDGNode {
+  friend class DDGBuilder;
+
 public:
   SimpleDDGNode() = delete;
   SimpleDDGNode(Instruction &I);
@@ -143,6 +147,46 @@ public:
            N->getKind() == NodeKind::MultiInstruction;
   }
   static bool classof(const SimpleDDGNode *N) { return true; }
+
+  ///////////////////////////////////////////////////////////////////////////
+  // added to support Store Node
+  //////////////////////////////////////////////////////////////////////////
+  void appendInstructionsStoreNode(const InstructionListType &Input) {
+    using InstructionListType = SmallVector<Instruction *, 2>;
+    InstructionListType newInputList;
+    bool alreadyExist = 0;
+    for (auto *i : Input) {
+      alreadyExist = 0;
+      // errs() << "Check Instruction: " << *i << "\n";
+      for (auto *I : InstList) {
+        // errs() << "I Instruction: " << *I << "\n";
+        if (I == i) {
+          alreadyExist = 1;
+          break;
+        }
+      }
+      if (alreadyExist == 0) {
+        newInputList.push_back(i);
+      }
+    }
+
+    // for (auto *I : InstList) {
+    //   errs() << "this node: " << *I << "\n";
+    // }
+    // for (auto *I : newInputList) {
+    //   errs() << "Input node: " << *I << "\n";
+    // }
+    InstList.insert(InstList.end(), newInputList.begin(), newInputList.end());
+  }
+
+  void appendInstructionsStoreNode(const SimpleDDGNode &Input) {
+    // for (auto *I : InstList) {
+    //   errs() << "this node: " << *I << "\n";
+    // }
+    // errs() << "this\n";
+    appendInstructionsStoreNode(Input.getInstructions());
+  }
+  ///////////////////////////////////////////////////////////////////////////////
 
 private:
   /// Append the list of instructions in \p Input to this node.
@@ -254,8 +298,13 @@ public:
   /// otherwise.
   bool isRooted() const { return Kind == EdgeKind::Rooted; }
 
+  void insertWeight(int weight) { EdgeWeight = weight; }
+
+  int getEdgeWeight() { return EdgeWeight; }
+
 private:
   EdgeKind Kind;
+  int EdgeWeight;
 };
 
 /// Encapsulate some common data and functionality needed for different
@@ -275,12 +324,22 @@ public:
   /// Return the label that is used to name this graph.
   const StringRef getName() const { return Name; }
 
+  //  bool hasRoot() const {
+  //    return Root;
+  //  }
+
   /// Return the root node of the graph.
   NodeType &getRoot() const {
-    assert(Root && "Root node is not available yet. Graph construction may "
-                   "still be in progress\n");
+    //  assert(Root && "Root node is not available yet. Graph construction may "
+    //                 "still be in progress\n");
     return *Root;
   }
+
+  /// Collect all the data dependency infos coming from any pair of memory
+  /// accesses from \p Src to \p Dst, and store them into \p Deps. Return true
+  /// if a dependence exists, and false otherwise.
+  bool getDependencies(const NodeType &Src, const NodeType &Dst,
+                       DependenceList &Deps) const;
 
 protected:
   // Name of the graph.
@@ -291,8 +350,8 @@ protected:
   // queried it is recomputed using @DI.
   const DependenceInfo DI;
 
-  // A special node in the graph that has an edge to every connected component of
-  // the graph, to ensure all nodes are reachable in a graph walk.
+  // A special node in the graph that has an edge to every connected component
+  // of the graph, to ensure all nodes are reachable in a graph walk.
   NodeType *Root = nullptr;
 };
 
@@ -312,12 +371,30 @@ public:
   DataDependenceGraph(DataDependenceGraph &&G)
       : DDGBase(std::move(G)), DDGInfo(std::move(G)) {}
   DataDependenceGraph(Function &F, DependenceInfo &DI);
-  DataDependenceGraph(Loop &L, LoopInfo &LI, DependenceInfo &DI);
+  DataDependenceGraph(Loop &L, LoopInfo &LI, DependenceInfo &DI,
+                      ScalarEvolution *SE);
   ~DataDependenceGraph();
 
   /// If node \p N belongs to a pi-block return a pointer to the pi-block,
   /// otherwise return null.
   const PiBlockDDGNode *getPiBlock(const NodeType &N) const;
+
+  // Insert Function Name for which loop belongs to
+  void InsertFunctionName(std::string name) { FunctionName = name; }
+
+  // Get FunctionName
+  std::string GetFunctionName() { return FunctionName; }
+
+  // Assign Loop Id to Loop
+  void CreateLoopId(int id) { LoopId = id; }
+
+  // Get LoopId
+  int GetLoopId() { return LoopId; }
+
+  // Total Number of SCC Store Nodes
+  int totalSCCNodes;
+  int dependenceSize;
+  bool SCCExist = 0;
 
 protected:
   /// Add node \p N to the graph, if it's not added yet, and keep track of the
@@ -331,6 +408,8 @@ private:
   /// Mapping from graph nodes to their containing pi-blocks. If a node is not
   /// part of a pi-block, it will not appear in this map.
   PiBlockMapType PiBlockMap;
+  std::string FunctionName;
+  int LoopId;
 };
 
 /// Concrete implementation of a pure data dependence graph builder. This class
@@ -342,8 +421,8 @@ private:
 class DDGBuilder : public AbstractDependenceGraphBuilder<DataDependenceGraph> {
 public:
   DDGBuilder(DataDependenceGraph &G, DependenceInfo &D,
-             const BasicBlockListType &BBs)
-      : AbstractDependenceGraphBuilder(G, D, BBs) {}
+             const BasicBlockListType &BBs, const InstructionListType &RPHIList)
+      : AbstractDependenceGraphBuilder(G, D, BBs, RPHIList) {}
   DDGNode &createRootNode() final override {
     auto *RN = new RootDDGNode();
     assert(RN && "Failed to allocate memory for DDG root node.");
@@ -360,6 +439,11 @@ public:
     auto *Pi = new PiBlockDDGNode(L);
     assert(Pi && "Failed to allocate memory for pi-block node.");
     Graph.addNode(*Pi);
+    //  for (DDGNode *NI : Pi->getNodes()){
+    //    errs() << "header Pi-block Node: \n";
+    //    Graph.removeNode(*NI);
+    //    destroyNode(*NI);
+    //  }
     return *Pi;
   }
   DDGEdge &createDefUseEdge(DDGNode &Src, DDGNode &Tgt) final override {
@@ -374,6 +458,16 @@ public:
     Graph.connect(Src, Tgt, *E);
     return *E;
   }
+
+  // Append edge weight to given edge
+  DDGEdge &createMemoryWeightedEdge(DDGNode &Src, DDGNode &Tgt, int Weight) {
+    auto *E = new DDGEdge(Tgt, DDGEdge::EdgeKind::MemoryDependence);
+    assert(E && "Failed to allocate memory for edge");
+    E->insertWeight(Weight);
+    Graph.connect(Src, Tgt, *E);
+    return *E;
+  }
+
   DDGEdge &createRootedEdge(DDGNode &Src, DDGNode &Tgt) final override {
     auto *E = new DDGEdge(Tgt, DDGEdge::EdgeKind::Rooted);
     assert(E && "Failed to allocate memory for edge");
@@ -388,6 +482,12 @@ public:
     return PiNode->getNodes();
   }
 
+  /// Return true if the two nodes \pSrc and \pTgt are both simple nodes and
+  /// the consecutive instructions after merging belong to the same basic block.
+  bool areNodesMergeable(const DDGNode &Src,
+                         const DDGNode &Tgt) const final override;
+  void mergeNodes(DDGNode &Src, DDGNode &Tgt) final override;
+  bool shouldSimplify() const final override;
   bool shouldCreatePiBlocks() const final override;
 };
 
@@ -422,6 +522,32 @@ public:
 private:
   raw_ostream &OS;
 };
+
+//===--------------------------------------------------------------------===//
+// DependenceGraphInfo Implementation
+//===--------------------------------------------------------------------===//
+
+template <typename NodeType>
+bool DependenceGraphInfo<NodeType>::getDependencies(
+    const NodeType &Src, const NodeType &Dst, DependenceList &Deps) const {
+  assert(Deps.empty() && "Expected empty output list at the start.");
+
+  // List of memory access instructions from src and dst nodes.
+  SmallVector<Instruction *, 8> SrcIList, DstIList;
+  auto isMemoryAccess = [](const Instruction *I) {
+    return I->mayReadOrWriteMemory();
+  };
+  Src.collectInstructions(isMemoryAccess, SrcIList);
+  Dst.collectInstructions(isMemoryAccess, DstIList);
+
+  for (auto *SrcI : SrcIList)
+    for (auto *DstI : DstIList)
+      if (auto Dep =
+              const_cast<DependenceInfo *>(&DI)->depends(SrcI, DstI, true))
+        Deps.push_back(std::move(Dep));
+
+  return !Deps.empty();
+}
 
 //===--------------------------------------------------------------------===//
 // GraphTraits specializations for the DDG

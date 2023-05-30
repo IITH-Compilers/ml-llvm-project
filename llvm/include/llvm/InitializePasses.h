@@ -426,6 +426,14 @@ void initializeWriteBitcodePassPass(PassRegistry&);
 void initializeWriteThinLTOBitcodePass(PassRegistry&);
 void initializeXRayInstrumentationPass(PassRegistry&);
 
+
+void initializeRDGWrapperPassPass(PassRegistry&);
+
+void initializeLoopDistributionWrapperPassPass(PassRegistry&);
+
+void initializecustom_loop_distributionPass(PassRegistry&);
+
+void initializeInnerMostLoopPassPass(PassRegistry&);
 } // end namespace llvm
 
 #endif // LLVM_INITIALIZEPASSES_H

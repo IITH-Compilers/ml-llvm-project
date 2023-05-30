@@ -1,0 +1,9 @@
+numpy
+networkx
+pandas
+pycparser
+pydot==1.3.0
+pyparsing==2.4.7
+PySocks
+six
+termcolor

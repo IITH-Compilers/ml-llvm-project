@@ -10,15 +10,21 @@
 //===----------------------------------------------------------------------===//
 #include "llvm/Analysis/DDG.h"
 #include "llvm/ADT/SCCIterator.h"
+#include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
 
-static cl::opt<bool>
-    CreatePiBlocks("ddg-pi-blocks", cl::init(true), cl::Hidden, cl::ZeroOrMore,
-                   cl::desc("Create pi-block nodes."));
+static cl::opt<bool> SimplifyDDG(
+    "ddg-simplify", cl::init(true), cl::Hidden, cl::ZeroOrMore,
+    cl::desc(
+        "Simplify DDG by merging nodes that have less interesting edges."));
+
+static cl::opt<bool> CreatePiBlocks("ddg-pi-blocks", cl::init(true), cl::Hidden,
+                                    cl::ZeroOrMore,
+                                    cl::desc("Create pi-block nodes."));
 
 #define DEBUG_TYPE "ddg"
 
@@ -46,8 +52,8 @@ bool DDGNode::collectInstructions(
       PN->collectInstructions(Pred, TmpIList);
       IList.insert(IList.end(), TmpIList.begin(), TmpIList.end());
     }
-  } else
-    llvm_unreachable("unimplemented type of node");
+  } // else
+    //  llvm_unreachable("unimplemented type of node");
   return !IList.empty();
 }
 
@@ -101,7 +107,7 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const DDGNode &N) {
 //===--------------------------------------------------------------------===//
 
 SimpleDDGNode::SimpleDDGNode(Instruction &I)
-  : DDGNode(NodeKind::SingleInstruction), InstList() {
+    : DDGNode(NodeKind::SingleInstruction), InstList() {
   assert(InstList.empty() && "Expected empty list.");
   InstList.push_back(&I);
 }
@@ -178,21 +184,24 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const DDGEdge &E) {
 // DataDependenceGraph implementation
 //===--------------------------------------------------------------------===//
 using BasicBlockListType = SmallVector<BasicBlock *, 8>;
+using InstructionListType = SmallVector<Instruction *, 2>;
 
 DataDependenceGraph::DataDependenceGraph(Function &F, DependenceInfo &D)
     : DependenceGraphInfo(F.getName().str(), D) {
   // Put the basic blocks in program order for correct dependence
   // directions.
   BasicBlockListType BBList;
+  InstructionListType ReductionPHIList;
   for (auto &SCC : make_range(scc_begin(&F), scc_end(&F)))
-    for (BasicBlock * BB : SCC)
+    for (BasicBlock *BB : SCC)
       BBList.push_back(BB);
   std::reverse(BBList.begin(), BBList.end());
-  DDGBuilder(*this, D, BBList).populate();
+  DDGBuilder(*this, D, BBList, ReductionPHIList).populate();
 }
 
 DataDependenceGraph::DataDependenceGraph(Loop &L, LoopInfo &LI,
-                                         DependenceInfo &D)
+                                         DependenceInfo &D,
+                                         ScalarEvolution *SE = nullptr)
     : DependenceGraphInfo(Twine(L.getHeader()->getParent()->getName() + "." +
                                 L.getHeader()->getName())
                               .str(),
@@ -202,9 +211,45 @@ DataDependenceGraph::DataDependenceGraph(Loop &L, LoopInfo &LI,
   LoopBlocksDFS DFS(&L);
   DFS.perform(&LI);
   BasicBlockListType BBList;
-  for (BasicBlock *BB : make_range(DFS.beginRPO(), DFS.endRPO()))
+  InstructionListType ReductionPHIList;
+
+  for (BasicBlock *BB : make_range(DFS.beginRPO(), DFS.endRPO())) {
     BBList.push_back(BB);
-  DDGBuilder(*this, D, BBList).populate();
+    //  errs() << "BB: " << *BB << "\n";
+
+    for (auto &I : *BB) {
+      if (auto *Phi = dyn_cast<PHINode>(&I)) {
+        RecurrenceDescriptor RD;
+        InductionDescriptor ID;
+        //  errs() << "phi node: " << *Phi << "\n";
+        //  errs() << "oprands: " << Phi->getNumIncomingValues() << "\n";
+        //  if(RecurrenceDescriptor::isReductionPHI(Phi, &L, RD)) {
+        //   errs() << "Reduction phi node: " << *Phi << "\n";
+        //   }
+        // errs() << "Phi Node Value: " << Phi->getNumIncomingValues() << "\n";
+        /*  if (Phi->getNumIncomingValues() == 2) {
+           if (!InductionDescriptor::isInductionPHI(Phi, &L, SE, ID)) {
+             LLVM_DEBUG(errs() << "Not a Induction phi node: " << *Phi << "\n");
+             // errs() << "Not a Induction phi node: " << *Phi << "\n";
+             // ReductionPHIList.push_back(&I);
+             if (RecurrenceDescriptor::isReductionPHI(Phi, &L, RD)) {
+               LLVM_DEBUG(errs() << "Reduction phi node: " << &I << "\n");
+               errs() << "Reduction phi node: " << &I << "\n\n\n";
+               ReductionPHIList.push_back(&I);
+             } else {
+               // llvm_unreachable(
+               //     "Neither induction nor reduction phi node -- no support");
+               LLVM_DEBUG(errs() << "Neither Induction nor Reduction phi node: "
+                                 << *Phi << "\n");
+               errs() << "Neither Induction nor Reduction phi node: " << *Phi
+                      << "\n";
+             }
+           }
+         } */
+      }
+    }
+  }
+  DDGBuilder(*this, D, BBList, ReductionPHIList).populate();
 }
 
 DataDependenceGraph::~DataDependenceGraph() {
@@ -225,15 +270,20 @@ bool DataDependenceGraph::addNode(DDGNode &N) {
   // always reachable by the root, because they represent components that are
   // already reachable by root.
   auto *Pi = dyn_cast<PiBlockDDGNode>(&N);
+  //  if (!Pi)
   assert((!Root || Pi) &&
          "Root node is already added. No more nodes can be added.");
 
   if (isa<RootDDGNode>(N))
     Root = &N;
 
-  if (Pi)
-    for (DDGNode *NI : Pi->getNodes())
+  if (Pi) {
+    for (DDGNode *NI : Pi->getNodes()) {
+      LLVM_DEBUG(errs() << "Pi Block Node\n");
       PiBlockMap.insert(std::make_pair(NI, Pi));
+      LLVM_DEBUG(errs() << "Pi-block Node: " << *NI << " : " << Pi << "\n");
+    }
+  }
 
   return true;
 }
@@ -257,9 +307,46 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const DataDependenceGraph &G) {
   return OS;
 }
 
-bool DDGBuilder::shouldCreatePiBlocks() const {
-  return CreatePiBlocks;
+//===--------------------------------------------------------------------===//
+// DDGBuilder implementation
+//===--------------------------------------------------------------------===//
+
+bool DDGBuilder::areNodesMergeable(const DDGNode &Src,
+                                   const DDGNode &Tgt) const {
+  // Only merge two nodes if they are both simple nodes and the consecutive
+  // instructions after merging belong to the same BB.
+  const auto *SimpleSrc = dyn_cast<const SimpleDDGNode>(&Src);
+  const auto *SimpleTgt = dyn_cast<const SimpleDDGNode>(&Tgt);
+  if (!SimpleSrc || !SimpleTgt)
+    return false;
+
+  return SimpleSrc->getLastInstruction()->getParent() ==
+         SimpleTgt->getFirstInstruction()->getParent();
 }
+
+void DDGBuilder::mergeNodes(DDGNode &A, DDGNode &B) {
+  DDGEdge &EdgeToFold = A.back();
+  assert(A.getEdges().size() == 1 && EdgeToFold.getTargetNode() == B &&
+         "Expected A to have a single edge to B.");
+  assert(isa<SimpleDDGNode>(&A) && isa<SimpleDDGNode>(&B) &&
+         "Expected simple nodes");
+
+  // Copy instructions from B to the end of A.
+  cast<SimpleDDGNode>(&A)->appendInstructions(*cast<SimpleDDGNode>(&B));
+
+  // Move to A any outgoing edges from B.
+  for (DDGEdge *BE : B)
+    Graph.connect(A, BE->getTargetNode(), *BE);
+
+  A.removeEdge(EdgeToFold);
+  destroyEdge(EdgeToFold);
+  Graph.removeNode(B);
+  destroyNode(B);
+}
+
+bool DDGBuilder::shouldSimplify() const { return SimplifyDDG; }
+
+bool DDGBuilder::shouldCreatePiBlocks() const { return CreatePiBlocks; }
 
 //===--------------------------------------------------------------------===//
 // DDG Analysis Passes

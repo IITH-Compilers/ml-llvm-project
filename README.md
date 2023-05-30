@@ -1,3 +1,9 @@
+# IR2Vec-Engine -- Added as subtree
+- Added using: `git subtree add --prefix IR2Vec-Engine https://github.com/svkeerthy/IR2Vec-Engine.git master --squash`
+- To pull from `IR2Vec-Engine`: `git subtree pull --prefix IR2Vec-Engine https://github.com/svkeerthy/IR2Vec-Engine.git master --squash`
+- To push to `IR2Vec-Engine`: `git subtree push IR2Vec-Engine https://github.com/svkeerthy/IR2Vec-Engine.git master`
+
+
 # The LLVM Compiler Infrastructure
 
 This directory and its subdirectories contain source code for LLVM,

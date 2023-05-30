@@ -23,6 +23,10 @@ set(LLVM_LINK_COMPONENTS
   TransformUtils
   Vectorize
   Passes
+  IML
+  RDG
+  LoopDistribution
+  custom_loop_distribution
   )
 
 add_llvm_tool(opt
@@ -43,3 +47,7 @@ export_executable_symbols(opt)
 if(LLVM_BUILD_EXAMPLES)
     target_link_libraries(opt PRIVATE ExampleIRTransforms)
 endif(LLVM_BUILD_EXAMPLES)
+    
+set(IR2VEC_INSTALL_DIR "" CACHE PATH "IR2Vec installation directory")
+target_link_libraries(opt PUBLIC ${IR2VEC_INSTALL_DIR}/lib/libIR2Vec.a)
+target_include_directories(opt PUBLIC ${IR2VEC_INSTALL_DIR}/include)
