@@ -11,8 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "grpc/RegisterAllocationInference.h"
-#include "grpc/gRPCUtil.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Pass.h"
@@ -27,24 +25,12 @@ namespace {
 // Hello - The first implementation, without getAnalysisUsage.
 struct Hello : public FunctionPass {
   static char ID; // Pass identification, replacement for typeid
-  Inference::RegisterAllocationInference::Stub *Stub = nullptr;
-  gRPCUtil client;
-  Inference::GraphList request;
-  Inference::ColorData reply;
-  Hello() : FunctionPass(ID) {
-    client.SetStub<Inference::RegisterAllocationInference>();
-    Stub = (Inference::RegisterAllocationInference::Stub *)client.getStub();
-  }
+  Hello() : FunctionPass(ID) {}
 
   bool runOnFunction(Function &F) override {
     ++HelloCounter;
     errs() << "Hello: ";
     errs().write_escaped(F.getName()) << '\n';
-    request.set_payload(F.getName());
-    grpc::ClientContext context;
-    grpc::Status status = Stub->getColouring(&context, request, &reply);
-
-    outs() << reply.payload();
     return false;
   }
 };

@@ -13,9 +13,6 @@ endif()
 add_llvm_library(LLVMHello MODULE BUILDTREE_ONLY
   Hello.cpp
 
-  LINK_COMPONENTS
-  gRPC
-  
   DEPENDS
   intrinsics_gen
   PLUGIN_TOOL
