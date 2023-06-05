@@ -11,8 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "grpc/RegisterAllocationInference/RegisterAllocationInference.grpc.pb.h"
-#include "grpc/gRPCUtil.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Pass.h"
@@ -21,36 +19,18 @@ using namespace llvm;
 
 #define DEBUG_TYPE "hello"
 
-using grpc::Status;
-using grpc::ServerContext;
-using registerallocationinference::GraphList;
-using registerallocationinference::ColorData;
-using registerallocationinference::RegisterAllocationInference;
-
-
 STATISTIC(HelloCounter, "Counts number of functions greeted");
 
 namespace {
 // Hello - The first implementation, without getAnalysisUsage.
-struct Hello : public FunctionPass,gRPCUtil {
+struct Hello : public FunctionPass {
   static char ID; // Pass identification, replacement for typeid
-  RegisterAllocationInference::Stub *Stub = nullptr;
-  GraphList request;
-  ColorData reply;
-  Hello() : FunctionPass(ID) {
-    SetStub<RegisterAllocationInference>();
-    Stub = (RegisterAllocationInference::Stub *)this->getStub();
-  }
+  Hello() : FunctionPass(ID) {}
 
   bool runOnFunction(Function &F) override {
     ++HelloCounter;
     errs() << "Hello: ";
     errs().write_escaped(F.getName()) << '\n';
-    request.set_payload(F.getName());
-    grpc::ClientContext context;
-    grpc::Status status = Stub->getColouring(&context, request, &reply);
-
-    outs() << reply.payload();
     return false;
   }
 };
@@ -79,9 +59,6 @@ struct Hello2 : public FunctionPass {
 };
 } // namespace
 
-
-
 char Hello2::ID = 0;
 static RegisterPass<Hello2>
     Y("hello2", "Hello World Pass (with getAnalysisUsage implemented)");
-
