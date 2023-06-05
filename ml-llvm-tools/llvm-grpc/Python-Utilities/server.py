@@ -1,3 +1,10 @@
+#===----------------------------------------------------------------------===//
+#
+# Part of the ml-llvm-tools Project, under the BSD 4-Clause License.
+# See the LICENSE.txt file under ml-llvm-tools directory for license information.
+#
+#===----------------------------------------------------------------------===//
+
 import RegisterAllocationInference_pb2_grpc, RegisterAllocationInference_pb2
 
 from concurrent import futures
