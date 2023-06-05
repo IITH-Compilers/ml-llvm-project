@@ -1,16 +1,23 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the ml-llvm-tools Project, under the BSD 4-Clause License.
+// See the LICENSE.txt file under ml-llvm-tools directory for license
+// information.
+//
+//===----------------------------------------------------------------------===//
+
 #include "gRPCUtil.h"
 #include <string>
 
 using namespace grpc;
 
+int gRPCUtil::RunService(Service *s, std::string server_address) {
 
-int gRPCUtil::RunService(Service *s,std::string server_address) {
-
-  exit_requested=new std::promise<void>();
+  exit_requested = new std::promise<void>();
 
   ServerBuilder builder;
 
-  //std::string server_address("0.0.0.0:50051");
+  // std::string server_address("0.0.0.0:50051");
 
   builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
 
@@ -20,13 +27,11 @@ int gRPCUtil::RunService(Service *s,std::string server_address) {
 
   std::cout << "Server Listening on " << server_address << std::endl;
 
-  auto serveFn=[&](){
-    server->Wait();
-  };
+  auto serveFn = [&]() { server->Wait(); };
   std::thread serving_thread(serveFn);
-  
-  auto f=exit_requested->get_future();
-  
+
+  auto f = exit_requested->get_future();
+
   f.wait();
 
   server->Shutdown();
@@ -35,5 +40,3 @@ int gRPCUtil::RunService(Service *s,std::string server_address) {
 
   return 0;
 }
-
-
