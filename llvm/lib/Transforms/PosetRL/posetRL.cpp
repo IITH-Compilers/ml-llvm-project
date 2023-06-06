@@ -1,6 +1,7 @@
 #include "llvm/Transforms/PosetRL/PosetRL.h"
 #include "MLInferenceEngine/agent.h"
 #include "MLInferenceEngine/driver.h"
+#include "grpcpp/impl/codegen/status.h"
 #include "inference/poset_rl_env.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
@@ -8,37 +9,58 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/PassSupport.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
+// gRPC includes
+#include "grpc/example/example.grpc.pb.h"
+#include "grpc/gRPCUtil.h"
+#include <google/protobuf/text_format.h>
+#include <grpcpp/grpcpp.h>
 
 using namespace llvm;
 
+static cl::opt<bool> training("training", cl::Hidden,
+                              cl::desc("whether it is training or inference"),
+                              cl::init(false));
+
+static cl::opt<std::string> server_address(
+    "server_address", cl::Hidden,
+    cl::desc("Starts the server in the given address, format <ip>:<port>"),
+    cl::init("0.0.0.0:50051"));
+
 namespace {
-struct PosetRL : public ModulePass, public PosetRLEnv {
+struct PosetRL : public ModulePass,
+                 public PosetRLEnv,
+                 public posetrl::PosetRL::Service,
+                 public gRPCUtil {
   static char ID;
   PosetRL() : ModulePass(ID) {}
   bool runOnModule(Module &M) override {
-    // M.print(errs(), nullptr);
     this->M = &M;
-    runInference();
-    errs() << "Sequence: ";
-    for (auto a : Sequence)
-      errs() << a << " ";
-    errs() << "\n";
+    if (training) {
+      RunService(this, server_address);
+    } else {
+      runInference();
+      errs() << "Sequence: ";
+      for (auto a : Sequence)
+        errs() << a << " ";
+      errs() << "\n";
+    }
     return true;
   }
   Embedding getEmbeddings() override {
-    
-    //redirecting the module to a file
-    std::error_code EC;
-    static int count = 0;
-    std::string path = to_string(count++)+".ll";
-    llvm::raw_fd_ostream os(path.c_str(),EC,llvm::sys::fs::OF_None);
-    M->print(os, nullptr);
-    os.close();
+
+    // redirecting the module to a file
+    // std::error_code EC;
+    // static int count = 0;
+    // std::string path = to_string(count++) + ".ll";
+    // llvm::raw_fd_ostream os(path.c_str(), EC, llvm::sys::fs::OF_None);
+    // M->print(os, nullptr);
+    // os.close();
 
     auto Ir2vec = IR2Vec::Embeddings(
         *M, IR2Vec::IR2VecMode::FlowAware,
@@ -76,6 +98,37 @@ struct PosetRL : public ModulePass, public PosetRLEnv {
     driver.computeAction(Obs);
   }
 
+  grpc::Status
+  applyActionGetEmbeddings(grpc::ServerContext *context,
+                           const ::posetrl::ActionRequest *request,
+                           ::posetrl::EmbeddingResponse *response) {
+    errs() << "Action requested: " << request->action() << "\n";
+    if (request->action() == -1) {
+      errs() << "server exit requested\n";
+      exit_requested->set_value();
+      return grpc::Status::OK;
+    }
+    applySeq(request->action());
+    Embedding emb = getEmbeddings();
+
+    for (unsigned long i = 0; i < emb.size(); i++) {
+      response->add_embedding(emb[i]);
+    }
+
+    return grpc::Status::OK;
+  }
+  ::grpc::Status getEmbedding(::grpc::ServerContext *context,
+                              const ::google::protobuf::Empty *request,
+                              ::posetrl::EmbeddingResponse *response) {
+    Embedding emb = getEmbeddings();
+
+    for (unsigned long i = 0; i < emb.size(); i++) {
+      response->add_embedding(emb[i]);
+    }
+    return grpc::Status::OK;
+  }
+
+  
 private:
   Module *M;
 };
