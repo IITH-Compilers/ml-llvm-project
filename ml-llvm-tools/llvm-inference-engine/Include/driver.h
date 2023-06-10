@@ -1,46 +1,53 @@
 #ifndef LLVM_INFERENCE_ENGINE_DRIVER_H
 #define LLVM_INFERENCE_ENGINE_DRIVER_H
 
+#include "agent.h"
+#include "environment.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/Support/raw_ostream.h"
+
 #include <iostream>
 #include <map>
 #include <string>
 
-#include "MLInferenceEngine/agent.h"
-#include "MLInferenceEngine/environment.h"
 
 class InferenceEngine {
   Environment *env;
 
 public:
-  std::map<std::string, Agent *> agents;
+  llvm::StringMap<Agent *> agents;
 
   void addAgent(Agent *agent, std::string name) {
     if (agents.find(name) == agents.end()) {
       agents[name] = agent;
     } else {
       // throw error
-      std::cout << "ERROR: Agent with the name " << name
-                << " already exists. Please give a different name!\n";
+      LLVM_DEBUG(llvm::errs() << "ERROR: Agent with the name " << name
+                << " already exists. Please give a different name!\n");
     }
   }
 
-  void setEnvironment(Environment *_env) { env = _env; }
+  void setEnvironment(Environment *_env) {
+    assert(_env && "Invalid Environment!");
+    env = _env;
+  }
+
   Environment *getEnvironment() { return env; }
 
   // virtual void getInfo() = 0;
 
-  void computeAction(Observation obs) {
+  void computeAction() {
     while (true) {
       Action action;
 
       // current agent
       auto current_agent = this->agents[this->env->getNextAgent()];
 
+      auto obs = this->env->getCurrentObservation(this->env->getNextAgent());
       action = current_agent->computeAction(obs);
-      obs = this->env->step(action);
-
+      this->env->step(action);
       if (this->env->checkDone()) {
-        std::cout << "Done🎉\n";
+        LLVM_DEBUG(llvm::outs() << "Done🎉\n");
         break;
       }
     }

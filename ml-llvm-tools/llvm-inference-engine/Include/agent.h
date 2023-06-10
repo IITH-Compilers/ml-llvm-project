@@ -1,18 +1,18 @@
 #ifndef LLVM_INFERENCE_ENGINE_AGENT_H
 #define LLVM_INFERENCE_ENGINE_AGENT_H
 
-#include "MLInferenceEngine/onnx.h"
-#include "MLInferenceEngine/utils.h"
-#include "llvm/ADT/SmallVector.h"
-#include <stdio.h>
+#include "onnx.h"
+#include "utils.h"
 #include <string>
+
+#define DEBUG_TYPE "rl-inference-engine"
 
 class Agent {
 public:
   ONNXModel *model;
   int input_size;
   Agent(std::string model_path, int input_size);
-  unsigned computeAction(Observation obs);
+  unsigned computeAction(Observation &obs);
 };
 
 // class NodeSelectionAgent : public Agent {
