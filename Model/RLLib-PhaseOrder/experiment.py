@@ -39,6 +39,7 @@ from ray.rllib.models import ModelCatalog
 from model import CustomPhaseOrderModel
 
 from Filesystem import *
+import pprint
 
 import logging
 import utils
@@ -136,7 +137,7 @@ if __name__ == '__main__':
                 "mca_reward_thresh": args.mca_reward_thresh,
                 "action_space_size": 34,
             },
-            # "batch_size": 128,
+            "train_batch_size": 512,
             "exploration_config": {
                 "type": "EpsilonGreedy",
                 "initial_epsilon": 1.0,
@@ -148,9 +149,9 @@ if __name__ == '__main__':
             "train-iterations": args.train_iterations,
             "batch_mode": "truncate_episodes",
             "seed": 1,
-            "num_gpus": 1,
-            # "num_rollout_workers": 2,
-            # "num_gpus_per_worker": 0.2
+            "num_gpus": 0.5,
+            "num_workers": 1,
+            "num_gpus_per_worker": 0.2
         },
         **cfg)
     # config = dict(config,**default_config)

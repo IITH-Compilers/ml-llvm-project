@@ -243,6 +243,9 @@ class PhaseOrder(gym.Env):
             # Get Oz MCA Throughput
             self.OzMcaThroughtput = self.getMCACost(
                 self.Curr_Dir + "/" + fileName + "_Oz")
+            
+            self.lastMcaThroughtput = None 
+            
             print("base {}".format(self.OzMcaThroughtput))
             logging.info("base {}".format(self.OzMcaThroughtput))
 
@@ -471,6 +474,8 @@ class PhaseOrder(gym.Env):
 
         self.lastMcaThroughtput = currMcaThroughtput
 
+        print("Thr-debug:{}".format(mca_cost))
+        print("Size-debug:{}".format(reward_binarySize))
         logging.info("Thr-debug:{}".format(mca_cost))
         logging.info("Size-debug:{}".format(reward_binarySize))
 
