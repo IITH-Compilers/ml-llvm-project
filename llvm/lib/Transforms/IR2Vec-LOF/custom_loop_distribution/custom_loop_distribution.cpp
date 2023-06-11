@@ -1,17 +1,14 @@
 #include "llvm/Transforms/IR2Vec-LOF/custom_loop_distribution.h"
-#include "llvm/Transforms/IR2Vec-LOF/Config.h"
-#include "llvm/Transforms/IR2Vec-LOF/IR2Vec-SCC.h"
-#include "llvm/Transforms/IR2Vec-LOF/RDG.h"
-
-#include "llvm/Analysis/DDG.h"
-#include "llvm/Analysis/DependenceGraphBuilder.h"
-
 #include "Python.h"
+#include "inference/include/driver.h"
+#include "inference/include/multi_agent_env.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/DDG.h"
 #include "llvm/Analysis/DependenceAnalysis.h"
+#include "llvm/Analysis/DependenceGraphBuilder.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -19,12 +16,15 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/PassSupport.h"
+#include "llvm/Transforms/IR2Vec-LOF/Config.h"
+#include "llvm/Transforms/IR2Vec-LOF/IR2Vec-SCC.h"
+#include "llvm/Transforms/IR2Vec-LOF/RDG.h"
 #include <algorithm>
 #include <string>
 // #include <ray/api.h>
@@ -39,7 +39,7 @@ custom_loop_distribution::custom_loop_distribution() : FunctionPass(ID) {
 
 custom_loop_distribution::~custom_loop_distribution() { Py_Finalize(); }
 
-void custom_loop_distribution::canonicalizeLoopsWithLoads(){ 
+void custom_loop_distribution::canonicalizeLoopsWithLoads() {
   auto LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   auto DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
 
@@ -69,10 +69,17 @@ void custom_loop_distribution::canonicalizeLoopsWithLoads(){
                 // errs() << "Processing use:";
                 // use->dump();
                 auto inst = dyn_cast<Instruction>(use);
-                if (inst && inst->getOpcode()!=Instruction::Store && inst->getOpcode() != Instruction::PHI && DT->dominates(st, inst))                     
-  //               // (isPotentiallyReachable(st, inst) && isPotentiallyReachable(inst, st) && !isPotentiallyReachable(inst, src_inst)) // => cyclic cases to add load
-  //               // (isPotentiallyReachable(st, inst) && isPotentiallyReachable(inst, st))
-                // if (inst && inst->getOpcode()!=Instruction::Store && isPotentiallyReachable(src_inst, inst)) 
+                if (inst && inst->getOpcode() != Instruction::Store &&
+                    inst->getOpcode() != Instruction::PHI &&
+                    DT->dominates(st, inst))
+                //               // (isPotentiallyReachable(st, inst) &&
+                //               isPotentiallyReachable(inst, st) &&
+                //               !isPotentiallyReachable(inst, src_inst)) // =>
+                //               cyclic cases to add load
+                //               // (isPotentiallyReachable(st, inst) &&
+                //               isPotentiallyReachable(inst, st))
+                // if (inst && inst->getOpcode()!=Instruction::Store &&
+                // isPotentiallyReachable(src_inst, inst))
                 {
                   SmallVector<Value *, 3> tuples;
                   tuples.push_back(src);
@@ -87,7 +94,7 @@ void custom_loop_distribution::canonicalizeLoopsWithLoads(){
       }
     }
   }
-  for (auto tuples : loadWorkList){
+  for (auto tuples : loadWorkList) {
     auto src = tuples[0];
     auto dest = tuples[1];
     auto insv = tuples[2];
@@ -97,7 +104,7 @@ void custom_loop_distribution::canonicalizeLoopsWithLoads(){
     auto ldInst = new LoadInst(dest, "");
     ldInst->insertBefore(inst);
     for (unsigned i = 0; i < inst->getNumOperands(); i++) {
-      if(inst->getOperand(i) == src){
+      if (inst->getOperand(i) == src) {
         inst->setOperand(i, ldInst);
         // errs() << "Operand set successfully - ";
         // inst->dump();
@@ -153,6 +160,13 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
   SmallVector<std::string, 5> distributed_seqs;
   SmallVector<std::string, 5> vf_seqs;
 
+  /******************************************************/
+  MultiAgentEnv *Env = new MultiAgentEnv();
+  DriverService *DriverInference = new DriverService(Env);
+
+  DriverInference->getInfo(RDG_List, distributed_seqs);
+  /******************************************************/
+
   PyObject *pName, *pModule, *pFunc, *presult;
 
   // PySys_SetArgv(argc, argv);
@@ -207,9 +221,8 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
         PyObject *distModelPath = PyUnicode_FromString(DIST_INFERENCE_MODEL);
         // PyObject *vfModelPath = PyUnicode_FromString(VF_INFERENCE_MODEL);
 
-        PyObject *arglist =
-            PyTuple_Pack(2, my_list, distModelPath);
-            // PyTuple_Pack(3, my_list, distModelPath, vfModelPath);
+        PyObject *arglist = PyTuple_Pack(2, my_list, distModelPath);
+        // PyTuple_Pack(3, my_list, distModelPath, vfModelPath);
 
         if (!arglist) {
           errs() << "no arglist\n";
@@ -268,7 +281,7 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
       Py_DECREF(pName);
     }
   }
-  
+
   LLVM_DEBUG(errs() << "Call to runwihAnalysis...\n");
   auto AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
   auto SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
@@ -281,12 +294,12 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
 
   DependenceInfo DI = DependenceInfo(&F, AA, SE, LI);
   LLVM_DEBUG(errs() << "Function name=" << F.getName() << "\n");
-  bool isdis =
-      dist_helper.runwithAnalysis(SCCGraphs, loops, distributed_seqs,
-                                  SE, LI, DT, AA, ORE, GetLAA, DI);
+  bool isdis = dist_helper.runwithAnalysis(SCCGraphs, loops, distributed_seqs,
+                                           SE, LI, DT, AA, ORE, GetLAA, DI);
 
   // bool isdis =
-  //     dist_helper.runwithAnalysis(SCCGraphs, loops, distributed_seqs, vf_seqs,
+  //     dist_helper.runwithAnalysis(SCCGraphs, loops, distributed_seqs,
+  //     vf_seqs,
   //                                 SE, LI, DT, AA, ORE, GetLAA, DI);
 
   LLVM_DEBUG(if (isdis) { errs() << "Code is distributed..\n"; });

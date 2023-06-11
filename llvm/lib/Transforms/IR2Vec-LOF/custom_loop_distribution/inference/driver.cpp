@@ -9,5 +9,8 @@ DriverService::DriverService(MultiAgentEnv *Env) {
   addAgent(new Agent(LD_MODEL_PATH, LD_OBS_SIZE), "");
 }
 
-void DriverService::getInfo(SmallVector<std::string, 5> RDGList,
-                            SmallVector<std::string, 5> &DistributedSeqs) {}
+void DriverService::getInfo(SmallVector<std::string, 5> &RDGList,
+                            SmallVector<std::string, 5> &DistributedSeqs) {
+  static_cast<MultiAgentEnv *>(this->getEnvironment())->reset(RDGList);
+  this->computeAction();
+}
