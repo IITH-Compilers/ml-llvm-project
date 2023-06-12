@@ -8,6 +8,7 @@
 #include "SpillPlacement.h"
 #include "Spiller.h"
 #include "SplitKit.h"
+#include "driver.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
@@ -64,6 +65,8 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 
+#include "MLInferenceEngine/onnx.h"
+#include "multi_agent_env.h"
 // gRPC includes
 #include "grpc/RegisterAllocation/RegisterAllocation.grpc.pb.h"
 #include "grpc/RegisterAllocationInference/RegisterAllocationInference.grpc.pb.h"
@@ -91,7 +94,8 @@ namespace llvm {
 
 class MLRA : public RegAllocBase,
              public registerallocation::RegisterAllocation::Service,
-             public gRPCUtil {
+             public gRPCUtil,
+             public MultiAgentEnv {
 
   // context
   SlotIndexes *Indexes;
@@ -134,6 +138,7 @@ protected:
   static cl::opt<unsigned> funcID;
   static cl::opt<std::string> mlra_server_address;
   static cl::opt<bool> enable_random_alloc;
+  static cl::opt<bool> enable_rl_inference_engine;
   void MLRegAlloc(MachineFunction &MF, SlotIndexes &Indexes,
                   MachineBlockFrequencyInfo &MBFI,
                   MachineDominatorTree &DomTree, MachineLoopInfo &Loops,
@@ -141,21 +146,57 @@ protected:
                   SpillPlacement &SpillPlacer,
                   MachineOptimizationRemarkEmitter &ORE);
 
+  void read_input(std::vector<float> &input) {
+    // float* newInput = new float[153601]();
+    // memset(newInput, 10, first_input->bytes / 4);
+
+    std::ifstream data("/Pramana/RL4Real/temp/node_select_input.csv");
+    std::string line;
+    // int count = 0;
+    // std::cout <<
+    // "----------------------------------------------------------------"
+    //           "--\n";
+    while (std::getline(data, line)) {
+      std::stringstream lineStream(line);
+      std::string cell;
+      // std::vector<std::string> parsedRow;
+      while (std::getline(lineStream, cell, ',')) {
+        // std::cout << std::stof(cell) << ",";
+        // input.push_back(std::stof(cell));
+        //   parsedRow.push_back(cell);
+        // input[count] = std::stof(cell);
+        // std::cout << cell << "\n";
+        // std::cout << std::stof(cell) << "\n";
+        input.push_back(std::stof(cell));
+        // std::cout << input[count] << "; " << count << "\n";
+        // count++;
+      }
+    }
+    // std::cout <<
+    // "============================================================ =
+    // "
+    //        << count << "\n";
+
+    // for (unsigned i = 0; i < 153601; i++) std::cout << input[i] << ",";
+    // std::cout << "\n";
+  }
+
 private:
-  struct RegisterProfile {
-    StringRef cls;
-    float spillWeight;
-    unsigned color;
-    SmallVector<float, 8> spillWeights;
-    SmallVector<int, 8> useDistances;
-    SmallSetVector<unsigned, 8> interferences;
-    SmallSetVector<unsigned, 8> frwdInterferences;
-    SmallVector<IR2Vec::Vector, 12> vecRep;
-    SmallVector<unsigned, 8> splitSlots;
-    // SmallMapVector<unsigned, SmallVector<SlotIndex, 8>, 8> overlapsStart;
-    // SmallMapVector<unsigned, SmallVector<SlotIndex, 8>, 8> overlapsEnd;
-  };
-  SmallMapVector<unsigned, RegisterProfile, 16> regProfMap;
+  // struct RegisterProfile {
+  //   StringRef cls;
+  //   float spillWeight;
+  //   unsigned color;
+  //   SmallVector<float, 8> spillWeights;
+  //   SmallVector<int, 8> useDistances;
+  //   SmallSetVector<unsigned, 8> interferences;
+  //   SmallSetVector<unsigned, 8> frwdInterferences;
+  //   SmallVector<IR2Vec::Vector, 12> vecRep;
+  //   SmallVector<unsigned, 8> splitSlots;
+  //   // SmallMapVector<unsigned, SmallVector<SlotIndex, 8>, 8> overlapsStart;
+  //   // SmallMapVector<unsigned, SmallVector<SlotIndex, 8>, 8> overlapsEnd;
+  // };
+  // SmallMapVector<unsigned, RegisterProfile, 16> regProfMap;
+  RegisterProfileMap regProfMap;
 
   unsigned numUnsupportedRegs = 0;
   unsigned numSplits = 0;
@@ -216,6 +257,8 @@ private:
   //
   unsigned getPhyRegForColor(LiveInterval &VirtReg, unsigned color,
                              SmallVector<unsigned, 4> &SplitVRegs);
+            
+  Observation& split_node_step(unsigned action) override;
 
   // std::map<std::string, std::map<std::string, int64_t>>
   // parsePredictionJson(std::string jsonString) {

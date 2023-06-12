@@ -45,7 +45,7 @@ add_llvm_external_project(mlir)
 add_llvm_implicit_projects()
 
 add_llvm_external_project(polly)
-add_llvm_external_project(llvm-grpc)
+add_llvm_external_project(ml-llvm-tools)
 
 # Add subprojects specified using LLVM_EXTERNAL_PROJECTS
 foreach(p ${LLVM_EXTERNAL_PROJECTS})

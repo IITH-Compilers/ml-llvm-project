@@ -1,3 +1,5 @@
+link_directories("${ONNXRUNTIME_ROOTDIR}/lib")
+
 set( LLVM_LINK_COMPONENTS
   ${LLVM_TARGETS_TO_BUILD}
   Analysis
