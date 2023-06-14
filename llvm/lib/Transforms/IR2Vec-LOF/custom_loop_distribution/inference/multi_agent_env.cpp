@@ -2,7 +2,9 @@
 #include "MLInferenceEngine/environment.h"
 #include "llvm/ADT/SmallVector.h"
 
-void MultiAgentEnv::reset(llvm::SmallVector<std::string, 5> &RDGList) {}
+void MultiAgentEnv::reset(llvm::SmallVector<std::string, 5> &RDGList) {
+  Observation Obs(SELECT_NODE_OBS_SIZE);
+}
 
 void MultiAgentEnv::step(Action Action) {
   if (this->getNextAgent() == SELECT_NODE_AGENT)
@@ -30,14 +32,56 @@ void MultiAgentEnv::select_node_step(Action Action) {
   this->PrevNode = this->CurrentNode;
   this->CurrentNode = Action;
   this->GraphTopology.updateVisitList(this->CurrentNode);
+
   Observation Obs(SELECT_NODE_OBS_SIZE);
+
+  int CurrIdx = 0;
+
+  // fill the Obs vector
   if (!this->PrevNode) {
+    // Action mask
     SmallVector<int, 8> ActionMask(MAX_NODES_COUNT, 0);
     this->create_node_select_mask(ActionMask);
-    
-    // fill the Obs vector
+    for(auto e : ActionMask) {
+      Obs[CurrIdx++] = e;
+    }
+
+    // state
+    for(auto V : this->NodeRepresentation) {
+      for(auto e : V) {
+        Obs[CurrIdx++] = e;
+      }
+    }
+    setCurrentObservation(Obs, SELECT_NODE_AGENT);
   }
-  setCurrentObservation(Obs, DISTRIBUTION_AGENT);
+  else {
+    // Action mask
+    Obs[CurrIdx++] = 1;
+    Obs[CurrIdx++] = 1;
+
+    // CurrentNode 
+    for(auto e : this->NodeRepresentation[this->CurrentNode]) {
+      Obs[CurrIdx++] = e;
+    }
+    
+    // dist_flag
+    Obs[CurrIdx++] = 0;
+
+    // PrevNode
+    for(auto e : this->NodeRepresentation[this->PrevNode]) {
+      Obs[CurrIdx++] = e;
+    }
+    setCurrentObservation(Obs, DISTRIBUTION_AGENT);
+  }
 }
 
-void MultiAgentEnv::select_distribution_step(Action Action) {}
+void MultiAgentEnv::select_distribution_step(Action Action) {
+  if(Action == 0) {
+    // do not distribute => merge
+
+  }
+  SmallVector<int, 8> ActionMask(MAX_NODES_COUNT, 0);
+  this->create_node_select_mask(ActionMask);
+
+
+}

@@ -7,6 +7,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/IR2Vec.h"
 #include <cassert>
 
 #define DISTRIBUTION_AGENT "distribution_agent"
@@ -24,6 +25,7 @@ private:
   unsigned CurrentNode;
   unsigned PrevNode = 0;
   Graph GraphTopology;
+  SmallVector<IR2Vec::Vector, 12> NodeRepresentation;
 
 public:
   MultiAgentEnv() {}
