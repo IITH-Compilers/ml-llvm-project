@@ -15,3 +15,11 @@ void Graph::updateVisitList(unsigned int NodeIdx) {
     assert(false && "Node idx is already visited.\n");
   }
 }
+
+bool Graph::allDiscovered() {
+  for (auto e : Discovered) {
+    if (!e)
+      return false;
+  }
+  return true;
+}
