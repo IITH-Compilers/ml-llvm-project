@@ -1,15 +1,17 @@
 #ifndef __IR2Vec_SCC_H__
 #define __IR2Vec_SCC_H__
 
-#include "llvm/IR2Vec.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/DDG.h"
 #include "llvm/Analysis/DependenceGraphBuilder.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR2Vec.h"
 #include "llvm/Pass.h"
 // #include "llvm/InitializePasses.h"
+#include "DOTData.h"
 #include "llvm/Support/CommandLine.h"
 
 #define DIM 300
@@ -19,7 +21,7 @@ namespace llvm {
 struct RDGData {
   SmallVector<DataDependenceGraph *, 5> SCCGraphs;
   SmallVector<Loop *, 5> loops;
-  SmallVector<std::string, 5> input_rdgs;
+  SmallVector<DOTData, 8> input_rdgs;
 };
 
 class RDGWrapperPass : public FunctionPass {
@@ -48,14 +50,15 @@ private:
   void addMCACalls(Loop *L, int loopID) const;
 
   RDGData computeRDGForFunction(Function &F);
-  void canonicalizeLoopsWithLoads(SmallVector<SmallVector<Value *, 3>, 6> &loadWorkList);
+  void canonicalizeLoopsWithLoads(
+      SmallVector<SmallVector<Value *, 3>, 6> &loadWorkList);
   RDGData rdgInfo;
 
   using IR2VecInstMap =
       llvm::SmallMapVector<const llvm::Instruction *, IR2Vec::Vector, 128>;
   IR2VecInstMap instVecMap;
 
-  LoopInfo* LI;
+  LoopInfo *LI;
   DominatorTree *DT;
 
 public:
@@ -69,8 +72,11 @@ public:
   RDGData getRDGInfo() { return rdgInfo; }
   void Print_IR2Vec_File(DataDependenceGraph &G, std::string Filename,
                          std::string ll_name, int loopid);
+  void populateDOTData(DataDependenceGraph &G, const std::string &FileName,
+                       const std::string &LLName, unsigned LoopID,
+                       DOTData &rdg);
 };
-  
+
 // RDGWrapperPass *createRDGWrapperPass();
 
 } // namespace llvm

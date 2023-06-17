@@ -1,12 +1,22 @@
 #include "include/multi_agent_env.h"
-#include "MLInferenceEngine/environment.h"
-#include "MLInferenceEngine/utils.h"
+#include "utils.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/ScopedPrinter.h"
 
-void MultiAgentEnv::reset(std::string &Rdg) {
-  Observation Obs(SELECT_NODE_OBS_SIZE);
+void MultiAgentEnv::reset(DOTData &Rdg) {
   this->DistributionSeq = "";
+  int idx = 0;
+  for (auto &E : Rdg.NodeRepresentations) {
+    this->NodeRepresentation.push_back(E.second);
+
+    this->nid_idx[E.first] = idx;
+    this->idx_nid[idx] = E.first;
+  }
+  this->resetDone();
+  this->GraphTopology = new Graph(Rdg.AdjList);
+
+  Observation Obs(SELECT_NODE_OBS_SIZE);
+  this->setNextAgent(SELECT_NODE_AGENT);
+  this->setCurrentObservation(Obs, SELECT_NODE_AGENT);
 }
 
 void MultiAgentEnv::step(Action Action) {
@@ -15,7 +25,7 @@ void MultiAgentEnv::step(Action Action) {
   else if (this->getNextAgent() == DISTRIBUTION_AGENT) {
     this->select_distribution_step(Action);
   }
-  if (this->GraphTopology.allDiscovered() &&
+  if (this->GraphTopology->allDiscovered() &&
       this->getNextAgent() == SELECT_NODE_AGENT) {
     this->setDone();
   }
@@ -24,7 +34,7 @@ void MultiAgentEnv::step(Action Action) {
 void MultiAgentEnv::create_node_select_mask(SmallVector<int, 8> &Mask) {
   std::fill(Mask.begin(), Mask.end(), 0);
   SmallVector<int, 8> EligibleNodes;
-  this->GraphTopology.getEligibleNodes(EligibleNodes);
+  this->GraphTopology->getEligibleNodes(EligibleNodes);
 
   for (auto Node : EligibleNodes) {
     if (Node >= MAX_NODES_COUNT) {
@@ -38,7 +48,7 @@ void MultiAgentEnv::create_node_select_mask(SmallVector<int, 8> &Mask) {
 void MultiAgentEnv::select_node_step(Action Action) {
   this->PrevNode = this->CurrentNode;
   this->CurrentNode = Action;
-  this->GraphTopology.updateVisitList(this->CurrentNode);
+  this->GraphTopology->updateVisitList(this->CurrentNode);
 
   int CurrIdx = 0;
 
@@ -85,10 +95,10 @@ void MultiAgentEnv::select_distribution_step(Action Action) {
   if (Action == 0) {
     // do not distribute => merge
     this->DistributionSeq =
-        this->DistributionSeq + "," + to_string(this->CurrentNode);
+        this->DistributionSeq + "," + std::to_string(this->CurrentNode);
   } else {
     this->DistributionSeq =
-        this->DistributionSeq + "|" + to_string(this->CurrentNode);
+        this->DistributionSeq + "|" + std::to_string(this->CurrentNode);
   }
   Observation Obs(SELECT_NODE_OBS_SIZE);
   // Action mask

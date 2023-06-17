@@ -10,7 +10,7 @@
 class DriverService : public InferenceEngine {
 public:
   DriverService(MultiAgentEnv *Env);
-  void getInfo(llvm::SmallVector<std::string, 5> &RDGList,
+  void getInfo(llvm::SmallVector<DOTData, 5> &RDGList,
                llvm::SmallVector<std::string, 5> &DistributedSeqs);
 };
 

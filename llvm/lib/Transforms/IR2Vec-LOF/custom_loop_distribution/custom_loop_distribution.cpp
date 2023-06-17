@@ -22,6 +22,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/PassSupport.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Transforms/IR2Vec-LOF/Config.h"
 #include "llvm/Transforms/IR2Vec-LOF/IR2Vec-SCC.h"
 #include "llvm/Transforms/IR2Vec-LOF/RDG.h"
@@ -122,7 +123,7 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
   // errs()<<"After canonicolization: \n";
   // F.dump();
   // RDG_List: Contains list of all the string wrt to RDG
-  SmallVector<std::string, 5> RDG_List;
+  SmallVector<DOTData, 5> RDG_List;
 
   SmallVector<DataDependenceGraph *, 5> SCCGraphs;
   SmallVector<Loop *, 5> loops;
@@ -132,6 +133,7 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
   // legacy::FunctionPassManager FPM(F.getParent());
   // FPM.add(R);
   // FPM.run(F);
+  errs() << "*********************BEFORE compute RDG starts*****************************\n";
   R.computeRDG(F);
   RDGData data = R.getRDGInfo();
 
@@ -148,7 +150,7 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
   });
 
   if (RDG_List.size() == 0) {
-    LLVM_DEBUG(errs() << "No RDGs\n");
+    errs() << "No RDGs\n";
     return false;
   }
 
@@ -166,121 +168,6 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
 
   DriverInference->getInfo(RDG_List, distributed_seqs);
   /******************************************************/
-
-  PyObject *pName, *pModule, *pFunc, *presult;
-
-  // PySys_SetArgv(argc, argv);
-
-  PyRun_SimpleString("import sys");
-  PyRun_SimpleString("import os");
-
-  // errs() << "sys.path: " << MODEL_SRC << "\n";
-
-  PyRun_SimpleString(std::string("sys.path.append(\"")
-                         .append(MODEL_SRC)
-                         .append("\")")
-                         .c_str());
-  // Build the name object
-  pName = PyUnicode_FromString("inference");
-
-  LLVM_DEBUG(errs() << "pName: " << pName << "............"
-                    << "\n");
-
-  // Load the module object
-  pModule = PyImport_Import(pName);
-
-  PyErr_Print();
-
-  if (pModule == NULL) {
-    printf("ERROR importing module\n");
-    PyErr_Print();
-    exit(-1);
-  } else {
-    LLVM_DEBUG(errs() << "pModule: " << pModule << "............"
-                      << "\n");
-    Py_INCREF(pModule);
-
-    pFunc = PyObject_GetAttrString(pModule, "predict_loop_distribution");
-
-    if (pFunc == NULL) {
-      errs() << "ERROR getting function attribute";
-      PyErr_Print();
-    } else {
-
-      Py_INCREF(pFunc);
-
-      if (PyCallable_Check(pFunc)) {
-        PyObject *my_list = PyList_New(0);
-        Py_INCREF(my_list);
-        for (auto rdg : RDG_List) {
-          PyObject *py_rdg = PyUnicode_FromString(rdg.c_str());
-          PyList_Append(my_list, py_rdg);
-          Py_INCREF(py_rdg);
-        }
-
-        PyObject *distModelPath = PyUnicode_FromString(DIST_INFERENCE_MODEL);
-        // PyObject *vfModelPath = PyUnicode_FromString(VF_INFERENCE_MODEL);
-
-        PyObject *arglist = PyTuple_Pack(2, my_list, distModelPath);
-        // PyTuple_Pack(3, my_list, distModelPath, vfModelPath);
-
-        if (!arglist) {
-          errs() << "no arglist\n";
-          PyErr_Print();
-        }
-
-        Py_INCREF(arglist);
-        presult = PyObject_CallObject(pFunc, arglist);
-
-        if (!presult) {
-          errs() << "no presult\n";
-          PyErr_Print();
-        }
-        Py_INCREF(presult);
-
-        if (!PyList_Check(presult)) {
-          errs() << "Result is not list";
-          PyErr_BadArgument();
-          return false;
-        }
-
-        int size = PyList_Size(presult);
-        // assert(size == 2);
-        // LLVM_DEBUG(errs() << size << " is the size of result list.\n");
-
-        for (int j = 0; j < size; j++) {
-          PyObject *plobj = PyList_GetItem(presult, j);
-          if (!PyList_Check(plobj)) {
-            errs() << "Result is not list";
-            PyErr_BadArgument();
-            assert(false);
-          }
-          int objSize = PyList_Size(plobj);
-          for (int k = 0; k < objSize; k++) {
-            PyObject *seq = PyList_GetItem(plobj, k);
-            const char *char_seq = PyUnicode_AsUTF8(seq);
-            LLVM_DEBUG(errs() << char_seq << "\n");
-            // errs() << j << "\n";
-            if (j == 0)
-              distributed_seqs.push_back(char_seq);
-
-            // errs() << char_seq << "\n";
-            // else if (j == 1)
-            //   vf_seqs.push_back(char_seq);
-          }
-        }
-        Py_DECREF(presult);
-        Py_DECREF(my_list);
-        Py_DECREF(arglist);
-      } else {
-        PyErr_Print();
-      }
-
-      // Clean up
-      Py_DECREF(pModule);
-      Py_DECREF(pName);
-    }
-  }
 
   LLVM_DEBUG(errs() << "Call to runwihAnalysis...\n");
   auto AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();

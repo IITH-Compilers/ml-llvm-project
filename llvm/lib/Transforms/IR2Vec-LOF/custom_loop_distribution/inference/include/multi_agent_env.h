@@ -8,6 +8,7 @@
 #include "llvm/IR2Vec.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/IR2Vec-LOF/IR2Vec-SCC.h"
 #include <cassert>
 
 #define DISTRIBUTION_AGENT "distribution_agent"
@@ -24,13 +25,15 @@ class MultiAgentEnv : public Environment {
 private:
   unsigned CurrentNode;
   unsigned PrevNode = 0;
-  Graph GraphTopology;
+  Graph* GraphTopology;
   SmallVector<IR2Vec::Vector, 12> NodeRepresentation;
   std::string DistributionSeq;
+  std::map<int, int> nid_idx;
+  std::map<int, int> idx_nid;
 
 public:
   MultiAgentEnv() {}
-  void reset(std::string &RDGList);
+  void reset(DOTData &RDGList);
   void step(Action Action) override;
   void select_node_step(Action Action);
   void select_distribution_step(Action Action);
