@@ -433,7 +433,11 @@ void initializeLoopDistributionWrapperPassPass(PassRegistry&);
 
 void initializecustom_loop_distributionPass(PassRegistry&);
 
-void initializeInnerMostLoopPassPass(PassRegistry&);
+void initializeInnerMostLoopPassPass(PassRegistry &);
+
+void initializeLoopDistributionServerPassPass(PassRegistry &);
+
+void initializeLoopCostPass(PassRegistry &);
 } // end namespace llvm
 
 #endif // LLVM_INITIALIZEPASSES_H

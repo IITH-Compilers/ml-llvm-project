@@ -70,6 +70,10 @@ public:
     this->partition = partition;
     distributed = false;
   }
+  void setFname(std::string fname) { this->fname = fname; }
+  void setLid(unsigned int lid) { this->lid = lid; }
+  void setPartition(std::string partition) { this->partition = partition; }
+  
   void computeDistribution(SmallVector<DataDependenceGraph *, 5> &SCCGraphs,
                            SmallVector<Loop *, 5> &loops,
                            SmallVector<std::string, 5> &dis_seqs);

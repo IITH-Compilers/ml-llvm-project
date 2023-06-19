@@ -1,0 +1,8 @@
+
+
+add_llvm_library(LLVMLoopDistributionServer STATIC LoopDistributionServer.cpp
+LINK_COMPONENTS
+gRPC
+DEPENDS
+intrinsics_gen
+)

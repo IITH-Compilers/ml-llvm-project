@@ -1,3 +1,7 @@
+#ifndef LLVM_TRANSFORMS_IR2VEC_LOF_LOCALITY_H
+#define LLVM_TRANSFORMS_IR2VEC_LOF_LOCALITY_H
+
+
 #include "llvm/Analysis/DDG.h"
 #include "llvm/Analysis/LoopCacheAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -63,3 +67,4 @@ public:
 };
 
 } // namespace llvm
+#endif

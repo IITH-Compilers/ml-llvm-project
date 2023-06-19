@@ -564,7 +564,8 @@ int main(int argc, char **argv) {
   initializeTypePromotionPass(Registry);
   initializecustom_loop_distributionPass(Registry);
   initializeLoopDistributionWrapperPassPass(Registry);
-
+  initializeLoopDistributionServerPassPass(Registry);
+  initializeLoopCostPass(Registry);
 
 #ifdef BUILD_EXAMPLES
   initializeExampleIRTransforms(Registry);

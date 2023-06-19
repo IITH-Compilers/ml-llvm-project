@@ -14,10 +14,12 @@ import pandas as pd
 import logging
 
 logger = logging.getLogger('utils.py') 
+# logger.addHandler(logging.StreamHandler(sys.stdout))
 # error_runtime=100000000
 
-LLVM_BUILD = '/home/shalini/LOF_test/LD_VF/IR2Vec-LoopOptimizationFramework/build_release/'
+# LLVM_BUILD = '/home/shalini/LOF_test/LD_VF/IR2Vec-LoopOptimizationFramework/build_release/'
 # LLVM_BUILD = '/home/shalini/LOF_test/LD_VF/IR2Vec-LoopOptimizationFramework/debug_build/'
+LLVM_BUILD = '/home/cs20btech11018/repos/ML-Loop-Distribution/build_release/'
 llvm = LLVM_BUILD
 opt = '{}bin/opt'.format(LLVM_BUILD)
 CLANG = '{}bin/clang'.format(LLVM_BUILD)
@@ -35,8 +37,9 @@ SSA_LL_DIR_CONST='{}/ssa'.format(LL_DIR_CONST)
 META_SSA_LL_DIR_CONST='{}/meta_ssa'.format(LL_DIR_CONST)
 
 # TrainingGraphs = "/home/shalini/LOF_test/LD_VF/IR2Vec-LoopOptimizationFramework/data/Opt_cld_O3_individualfile/mutation/tsvc_train/GIF_train_v4/graphs/loops/json/"
-TrainingGraphs = "/home/shalini/LOF_test/LD_VF/IR2Vec-LoopOptimizationFramework/data/Opt_cld_O3_individualfile/mutation/spec_train/GIF_train_v4/graphs/loops/json/"
+# TrainingGraphs = "/home/shalini/LOF_test/LD_VF/IR2Vec-LoopOptimizationFramework/data/Opt_cld_O3_individualfile/mutation/spec_train/GIF_train_v4/graphs/loops/json/"
 # TrainingGraphs = "/home/shalini/LOF_test/LD_VF/IR2Vec-LoopOptimizationFramework/data/Opt_cld_O3_individualfile/mutation/temp/GIF_train_v4/graphs/loops/json/"
+TrainingGraphs = "/home/cs20btech11018/data/tsvc_train/generated_final/graphs/loops/json/"
 TrainingGraphList = []
 
 # test_dir = "/home/shalini/LOF_test/LD_VF/IR2Vec-LoopOptimizationFramework/data/Opt_cld_O3_individualfile/mutation/tsvc_train/GIF_train_v4/graphs/loops/json/"
@@ -96,7 +99,9 @@ def getllFileAttributes(file):
     return record
 
 def call_distributionPass(filename, distributeSeq, method_name, loop_id, hfun_id, hloop_id, distributed_data):
+    print("call_distributionPass")
     try:
+
         task = 'Distribute'
         # vecfactorflag=""
         # if vecfactor is not None :
@@ -120,7 +125,7 @@ def call_distributionPass(filename, distributeSeq, method_name, loop_id, hfun_id
         logging.info("{} --------------------------> {}".format(parts[1],distributeSeq))
         
         # print(opt)
-        cmd = opt + " -LoopDistribution -lID=" + loop_id + " -function " + method_name + ' --partition=\"' + distributeSeq + '\" ' + "-S " + filename + " -o " + dist_llfile
+        cmd = opt + " -LoopDistribution -lID " + loop_id + " -function " + method_name + ' --partition=\"' + distributeSeq + '\" ' + "-S " + filename + " -o " + dist_llfile
         # ".format(opt=os.environ['OPT'], LLVM=os.environ['LLVM'], dseq=distributeSeq ,input_file=filename, dist_llfile=dist_llfile, method_name=method_name, loop_id=loop_id, vecfactorflag=vecfactorflag)
 ## Use for replicate the O3
         # print("cmd: {}".format(cmd))
@@ -128,11 +133,12 @@ def call_distributionPass(filename, distributeSeq, method_name, loop_id, hfun_id
         logging.info('Call to LoopDistribute pass thru command line {} \n: '.format(cmd))
 
         response = os.system(cmd)
-        
+        print("distribution pass command:",cmd)
         if response != 0:
             # os.system('mv {path}/*{filename}.ll* {distribute_error}'.format(path=os.path.join(parts[0],'../../graphs/train/'), filename=parts[1][:-3], distribute_error=os.path.join(parts[0],'../../graphs/distribute_error/')))
             raise Exception('Distribution Pass error')
     except Exception as err:
+        print("Error in call_distributionPass", err)
         dist_llfile=None
         logging.critical(sys.exc_info())
         logging.critical('CallLoopDistribute: Exception ocurred : {}'.format(err))
@@ -213,6 +219,7 @@ def getLoopCost(filepath, loopId, fname):
         # analysedInfo = subprocess.Popen(cmd, executable='/bin/bash', shell=True, stdout=subprocess.PIPE).stdout.read()
         # print("LoopCost cmd: {}".format(cmd))
         logging.info(cmd)
+        print("loop cost cmd:",cmd)
         # print("Loopcost cmd: {}".format(cmd))
 
         pro = subprocess.Popen(cmd, executable='/bin/bash', shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)

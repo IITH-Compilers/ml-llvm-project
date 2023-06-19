@@ -27,6 +27,8 @@ set(LLVM_LINK_COMPONENTS
   RDG
   LoopDistribution
   custom_loop_distribution
+  LoopDistributionServer
+  LoopCost
   )
 
 add_llvm_tool(opt
@@ -49,6 +51,7 @@ if(LLVM_BUILD_EXAMPLES)
 endif(LLVM_BUILD_EXAMPLES)
    
 target_link_libraries(opt PUBLIC LLVMIR2Vec)
+# target_link_libraries(opt PUBLIC LLVMgRPC)
 # set(IR2VEC_INSTALL_DIR "" CACHE PATH "IR2Vec installation directory")
 # target_link_libraries(opt PUBLIC ${IR2VEC_INSTALL_DIR}/lib/libIR2Vec.a)
 # target_include_directories(opt PUBLIC ${IR2VEC_INSTALL_DIR}/include)

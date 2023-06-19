@@ -1,3 +1,3 @@
-add_llvm_library(LoopCost MODULE BUILDTREE_ONLY
+add_llvm_library(LLVMLoopCost STATIC
 	LoopCost.cpp)
-add_dependencies(LoopCost intrinsics_gen)
+add_dependencies(LLVMLoopCost intrinsics_gen)

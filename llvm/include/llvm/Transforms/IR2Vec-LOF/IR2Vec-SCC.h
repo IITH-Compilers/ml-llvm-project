@@ -1,7 +1,7 @@
 #ifndef __IR2Vec_SCC_H__
 #define __IR2Vec_SCC_H__
 
-#include "IR2Vec.h"
+#include "llvm/IR2Vec.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Analysis/DDG.h"
 #include "llvm/Analysis/DependenceGraphBuilder.h"

@@ -1,5 +1,7 @@
+#include "llvm/Transforms/IR2Vec-LOF/LoopCost.h"
 #include "llvm/Analysis/LoopCacheAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/PassSupport.h"
 #include "llvm/Transforms/IR2Vec-LOF/Locality.h"
 #include "llvm/Transforms/IR2Vec-LOF/RDG.h"
 
@@ -42,11 +44,11 @@ static cl::opt<unsigned>
     SpatialThreshold("cache-spatial-threshold-byte", cl::init(512), cl::Hidden,
                      cl::desc("Spatial cache locality distance"));
 
-static cl::opt<std::string> funcName("lc-function", cl::Hidden, cl::Required,
+static cl::opt<std::string> funcName("lc-function", cl::Hidden, cl::Optional,
                                      cl::desc("Name of the function"));
 
 static cl::opt<unsigned int>
-    loopID("lc-lID", cl::Hidden, cl::Required,
+    loopID("lc-lID", cl::Hidden, cl::Optional,
            cl::desc("ID of the loop set by RDG/loop distribution pass"));
 
 static cl::opt<unsigned> CLS("cache-line-size", cl::init(64), cl::Hidden,
@@ -54,216 +56,189 @@ static cl::opt<unsigned> CLS("cache-line-size", cl::init(64), cl::Hidden,
 
 #define DEBUG_TYPE "locality"
 
-class LoopCost : public ModulePass {
-  DenseMap<Loop *, Loop *> ScalarToVecLoop;
-  void collectScalarVectorLoops(SmallVectorImpl<Loop *> &);
-  void GetInnerLoops(Loop *, SmallVectorImpl<Loop *> &);
-  uint64_t RecursivelyComputeInstructionCost(Function *,
-                                             SmallSet<Function *, 20> &);
+MDNode * LoopCost::getValueFromMD(Loop *L, StringRef kind) const {
+  MDNode *ID = nullptr;
 
-public:
-  static char ID;
-  ScalarEvolution *SE;
+  // Go through the latch blocks and check the terminator for the metadata.
+  SmallVector<BasicBlock *, 4> LatchesBlocks;
+  L->getLoopLatches(LatchesBlocks);
+  for (BasicBlock *BB : LatchesBlocks) {
+    Instruction *TI = BB->getTerminator();
+    MDNode *MD = TI->getMetadata(kind);
 
-  LoopCost() : ModulePass(ID) {}
-
-  Loop *getVectorLoop(Loop *L) {
-    if (ScalarToVecLoop.find(L) != ScalarToVecLoop.end())
-      return ScalarToVecLoop[L];
-
-    return nullptr;
-  }
-
-  MDNode *getValueFromMD(Loop *L, StringRef kind) const {
-    MDNode *ID = nullptr;
-
-    // Go through the latch blocks and check the terminator for the metadata.
-    SmallVector<BasicBlock *, 4> LatchesBlocks;
-    L->getLoopLatches(LatchesBlocks);
-    for (BasicBlock *BB : LatchesBlocks) {
-      Instruction *TI = BB->getTerminator();
-      MDNode *MD = TI->getMetadata(kind);
-
-      if (!MD)
-        return nullptr;
-
-      if (!ID)
-        ID = MD;
-      else if (MD != ID)
-        return nullptr;
-    }
-    if (!ID || ID->getNumOperands() == 0)
+    if (!MD)
       return nullptr;
 
-    return ID;
+    if (!ID)
+      ID = MD;
+    else if (MD != ID)
+      return nullptr;
   }
+  if (!ID || ID->getNumOperands() == 0)
+    return nullptr;
 
-  bool runOnModule(Module &M) override {
-    for (Module::iterator FI = M.begin(), E = M.end(); FI != E; FI++) {
-      Function &F = *FI;
-      if (!F.isDeclaration())
-        runOnFunction(F);
-    }
+  return ID;
+}
+
+bool LoopCost::runOnModule(Module &M) {
+  for (Module::iterator FI = M.begin(), E = M.end(); FI != E; FI++) {
+    Function &F = *FI;
+    if (!F.isDeclaration())
+      runOnFunction(F);
+  }
+  return false;
+}
+
+bool LoopCost::runOnFunction(Function &F) {
+  if (F.getName() != funcName)
     return false;
-  }
 
-  bool runOnFunction(Function &F) {
-    if (F.getName() != funcName)
-      return false;
+  errs() << "Function Name: " << F.getName() << "\n";
+  // auto *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
+  auto *LI = &getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo();
+  auto *LAA = &getAnalysis<LoopAccessLegacyAnalysis>(F);
+  auto *TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
+  SE = &getAnalysis<ScalarEvolutionWrapperPass>(F).getSE();
+  // AAResults *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
+  auto *DI = &getAnalysis<DependenceAnalysisWrapperPass>(F).getDI();
 
-    // auto *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
-    auto *LI = &getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo();
-    auto *LAA = &getAnalysis<LoopAccessLegacyAnalysis>(F);
-    auto *TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-    SE = &getAnalysis<ScalarEvolutionWrapperPass>(F).getSE();
-    // AAResults *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
-    auto *DI = &getAnalysis<DependenceAnalysisWrapperPass>(F).getDI();
+  SmallVector<Loop *, 32> InnerLoops;
+  for (Loop *L : *LI)
+    GetInnerLoops(L, InnerLoops);
 
-    SmallVector<Loop *, 32> InnerLoops;
-    for (Loop *L : *LI)
-      GetInnerLoops(L, InnerLoops);
+  collectScalarVectorLoops(InnerLoops);
 
-    collectScalarVectorLoops(InnerLoops);
+  for (Loop *L : InnerLoops) {
+    uint64_t LoopCost = 0;
+    auto Latch = L->getLoopLatch();
 
-    for (Loop *L : InnerLoops) {
-      uint64_t LoopCost = 0;
-      auto Latch = L->getLoopLatch();
-      
-      MDNode *MD1 =
-          Latch->getTerminator()->getMetadata("IR2Vec-Distributed-LoopID");
-      MDNode *MD2 = Latch->getTerminator()->getMetadata("IR2Vec-SCC-LoopID");
-      if (!MD1 && !MD2)
+    MDNode *MD1 =
+        Latch->getTerminator()->getMetadata("IR2Vec-Distributed-LoopID");
+    MDNode *MD2 = Latch->getTerminator()->getMetadata("IR2Vec-SCC-LoopID");
+    if (!MD1 && !MD2)
+      continue;
+
+    if (MD1) {
+      auto constVal =
+          dyn_cast<ConstantAsMetadata>(MD1->getOperand(0))->getValue();
+      if (loopID != dyn_cast<ConstantInt>(constVal)->getZExtValue())
         continue;
-
-      if (MD1) {
-        auto constVal =
-            dyn_cast<ConstantAsMetadata>(MD1->getOperand(0))->getValue();
-        if (loopID != dyn_cast<ConstantInt>(constVal)->getZExtValue())
-          continue;
-      }
-
-      else if (MD2) {
-        auto constVal =
-            dyn_cast<ConstantAsMetadata>(MD2->getOperand(0))->getValue();
-        if (loopID != dyn_cast<ConstantInt>(constVal)->getZExtValue())
-          continue;
-      }
-
-      unsigned VF = 1;
-      auto VF_MD = getValueFromMD(L, "VF");
-      if (VF_MD) {
-        auto constVal =
-            dyn_cast<ConstantAsMetadata>(VF_MD->getOperand(0))->getValue();
-        VF = dyn_cast<ConstantInt>(constVal)->getZExtValue();
-      }
-
-      unsigned IF = 1;
-      auto IF_MD = getValueFromMD(L, "IF");
-      if (IF_MD) {
-        auto constVal =
-            dyn_cast<ConstantAsMetadata>(IF_MD->getOperand(0))->getValue();
-        IF = dyn_cast<ConstantInt>(constVal)->getZExtValue();
-      }
-
-      unsigned TripCount = SE->getSmallConstantTripCount(L);
-      if (VF == 1) {
-        if (TripCount == 0)
-          TripCount = 1000;
-      } else {
-        auto TC_MD = getValueFromMD(L, "TC");
-        assert(TC_MD && "TC_MD should exist");
-        if (TC_MD) {
-          auto constVal =
-              dyn_cast<ConstantAsMetadata>(TC_MD->getOperand(0))->getValue();
-          TripCount = dyn_cast<ConstantInt>(constVal)->getZExtValue();
-        }
-      }
-
-      Loop *VecLoop = nullptr;
-      if (VF != 1) {
-        VecLoop = getVectorLoop(L);
-        assert(VecLoop && "Could not find vector loop for a vectorized loop");
-        if (MDNode *UF_MD =
-                VecLoop->getLoopLatch()->getTerminator()->getMetadata("UF")) {
-          auto constVal =
-              dyn_cast<ConstantAsMetadata>(UF_MD->getOperand(0))->getValue();
-          unsigned UF = dyn_cast<ConstantInt>(constVal)->getZExtValue();
-
-          if (IF == 1 && UF != 1)
-            IF = UF;
-          else if (IF != 1 && UF != 1)
-            IF += UF;
-          else if (IF != 1 && UF == 1)
-            IF = IF;
-          else if (IF == 1 && UF == 1)
-            IF = IF;
-        }
-      }
-
-      dbgs() << "VF: " << VF << "\n";
-      dbgs() << "IF: " << IF << "\n";
-      dbgs() << "TC: " << TripCount << "\n";
-
-      Loop *InstCostLoop = nullptr;
-      if (VecLoop)
-        InstCostLoop = VecLoop;
-      else
-        InstCostLoop = L;
-
-      unsigned NumMemInsts = 0;
-      for (auto BB : InstCostLoop->getBlocks()) {
-        for (auto &I : *BB) {
-          if (!I.mayReadOrWriteMemory()) {
-            LoopCost +=
-                TTI->getInstructionCost(&I, TargetTransformInfo::TCK_Latency);
-          }
-        }
-      }
-
-      LoopCost = LoopCost * (TripCount / (VF * IF));
-      dbgs() << "Loop cost with only instructions: " << LoopCost << "\n";
-
-      for (auto BB : L->getBlocks()) {
-        for (auto &I : *BB) {
-          if (I.mayReadOrWriteMemory()) {
-            NumMemInsts++;
-          }
-        }
-      }
-
-      // const LoopAccessInfo &LAI_WR = LAA->getInfo(L);
-      // const LoopAccessInfo &LAI_RAR = LAA->getInfo(L, 1);
-
-      errs() << "aaaaaaaaaaaaaaaaaaaaa\n";
-
-      Locality CL(TTI);
-      int64_t CacheMisses = CL.computeLocalityCost(L, TripCount, SE, DI);
-      LoopCost = LoopCost * (TripCount / (VF * IF));
-      dbgs() << "Loop cost with only instructions: " << LoopCost << "\n";
-      uint64_t TotalMemAccess =
-          NumMemInsts *
-          ((TripCount == 1000) ? TripCount : TripCount * (VF * IF));
-      dbgs() << "Total memory accesses : " << NumMemInsts << " * " << TripCount
-             << " = " << TotalMemAccess << "\n";
-      uint64_t CacheCost =
-          CacheMisses * (0.7 * MemoryInstCost) +
-          (TotalMemAccess - CacheMisses) * (0.3 * MemoryInstCost);
-      dbgs() << "Cache cost: " << CacheCost << "\n";
-      uint64_t TotalLoopCost = LoopCost + CacheCost;
-      dbgs() << "TotalLoopCost for Loop: " << TotalLoopCost << "\n";
     }
-    return false;
-  }
 
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<ScalarEvolutionWrapperPass>();
-    AU.addRequired<LoopInfoWrapperPass>();
-    AU.addRequired<TargetTransformInfoWrapperPass>();
-    AU.addRequired<LoopAccessLegacyAnalysis>();
-    AU.addRequired<DependenceAnalysisWrapperPass>();
-    AU.setPreservesAll();
+    else if (MD2) {
+      auto constVal =
+          dyn_cast<ConstantAsMetadata>(MD2->getOperand(0))->getValue();
+      if (loopID != dyn_cast<ConstantInt>(constVal)->getZExtValue())
+        continue;
+    }
+
+    unsigned VF = 1;
+    auto VF_MD = getValueFromMD(L, "VF");
+    if (VF_MD) {
+      auto constVal =
+          dyn_cast<ConstantAsMetadata>(VF_MD->getOperand(0))->getValue();
+      VF = dyn_cast<ConstantInt>(constVal)->getZExtValue();
+    }
+
+    unsigned IF = 1;
+    auto IF_MD = getValueFromMD(L, "IF");
+    if (IF_MD) {
+      auto constVal =
+          dyn_cast<ConstantAsMetadata>(IF_MD->getOperand(0))->getValue();
+      IF = dyn_cast<ConstantInt>(constVal)->getZExtValue();
+    }
+
+    unsigned TripCount = SE->getSmallConstantTripCount(L);
+    if (VF == 1) {
+      if (TripCount == 0)
+        TripCount = 1000;
+    } else {
+      auto TC_MD = getValueFromMD(L, "TC");
+      assert(TC_MD && "TC_MD should exist");
+      if (TC_MD) {
+        auto constVal =
+            dyn_cast<ConstantAsMetadata>(TC_MD->getOperand(0))->getValue();
+        TripCount = dyn_cast<ConstantInt>(constVal)->getZExtValue();
+      }
+    }
+
+    Loop *VecLoop = nullptr;
+    if (VF != 1) {
+      VecLoop = getVectorLoop(L);
+      assert(VecLoop && "Could not find vector loop for a vectorized loop");
+      if (MDNode *UF_MD =
+              VecLoop->getLoopLatch()->getTerminator()->getMetadata("UF")) {
+        auto constVal =
+            dyn_cast<ConstantAsMetadata>(UF_MD->getOperand(0))->getValue();
+        unsigned UF = dyn_cast<ConstantInt>(constVal)->getZExtValue();
+
+        if (IF == 1 && UF != 1)
+          IF = UF;
+        else if (IF != 1 && UF != 1)
+          IF += UF;
+        else if (IF != 1 && UF == 1)
+          IF = IF;
+        else if (IF == 1 && UF == 1)
+          IF = IF;
+      }
+    }
+
+    errs() << "loop ID: " << L->getLoopID() << "\n";
+    L->dump();
+    dbgs() << "VF: " << VF << "\n";
+    dbgs() << "IF: " << IF << "\n";
+    dbgs() << "TC: " << TripCount << "\n";
+
+    Loop *InstCostLoop = nullptr;
+    if (VecLoop)
+      InstCostLoop = VecLoop;
+    else
+      InstCostLoop = L;
+
+    unsigned NumMemInsts = 0;
+    for (auto BB : InstCostLoop->getBlocks()) {
+      for (auto &I : *BB) {
+        if (!I.mayReadOrWriteMemory()) {
+          LoopCost +=
+              TTI->getInstructionCost(&I, TargetTransformInfo::TCK_Latency);
+        }
+      }
+    }
+
+    LoopCost = LoopCost * (TripCount / (VF * IF));
+    dbgs() << "Loop cost with only instructions: " << LoopCost << "\n";
+
+    for (auto BB : L->getBlocks()) {
+      for (auto &I : *BB) {
+        if (I.mayReadOrWriteMemory()) {
+          NumMemInsts++;
+        }
+      }
+    }
+
+    // const LoopAccessInfo &LAI_WR = LAA->getInfo(L);
+    // const LoopAccessInfo &LAI_RAR = LAA->getInfo(L, 1);
+
+    errs() << "aaaaaaaaaaaaaaaaaaaaa\n";
+    Locality CL(TTI);
+    int64_t CacheMisses = CL.computeLocalityCost(L, TripCount, SE, DI);
+    LoopCost = LoopCost * (TripCount / (VF * IF));
+    dbgs() << "Loop cost with only instructions: " << LoopCost << "\n";
+    uint64_t TotalMemAccess =
+        NumMemInsts * ((TripCount == 1000) ? TripCount : TripCount * (VF * IF));
+    dbgs() << "Total memory accesses : " << NumMemInsts << " * " << TripCount
+           << " = " << TotalMemAccess << "\n";
+    uint64_t CacheCost =
+        CacheMisses * (0.7 * MemoryInstCost) +
+        (TotalMemAccess - CacheMisses) * (0.3 * MemoryInstCost);
+    dbgs() << "Cache cost: " << CacheCost << "\n";
+    uint64_t TotalLoopCost = LoopCost + CacheCost;
+    dbgs() << "TotalLoopCost for Loop: " << TotalLoopCost << "\n";
+
+    this->loop_cost= TotalLoopCost;
   }
-};
+  return false;
+}
 
 uint64_t
 LoopCost::RecursivelyComputeInstructionCost(Function *F,
@@ -321,9 +296,25 @@ void LoopCost::GetInnerLoops(Loop *L, SmallVectorImpl<Loop *> &InnerLoops) {
   return;
 }
 
+uint64_t LoopCost::getLoopCost() {
+  errs() << "function Name: " << funcName << " loop ID: " << loopID << " loop Cost: " << this->loop_cost << "\n";
+  return this->loop_cost;
+}
 // Registering the pass
 char LoopCost::ID = 0;
-static RegisterPass<LoopCost> X("LoopCost", "LoopCost");
+// static RegisterPass<LoopCost> X("LoopCost", "LoopCost");
+
+INITIALIZE_PASS_BEGIN(LoopCost, "LoopCost",
+                      "calculates loopCost", false,
+                      true)
+INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(LoopAccessLegacyAnalysis)
+INITIALIZE_PASS_DEPENDENCY(DependenceAnalysisWrapperPass)
+INITIALIZE_PASS_END(LoopCost, "LoopCost",
+                    "calculates loopCost", false,
+                    true)
 
 void Locality::clearDS() {
   Mem_InstList.clear();
@@ -493,3 +484,6 @@ Locality::findVertexCover(MemroyInstructionGraph &MemGraph) {
   }
   return VertexCover;
 }
+
+// create loop cost pass
+ModulePass *llvm::createLoopCostPass() { return new LoopCost(); }

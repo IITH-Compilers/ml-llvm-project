@@ -42,6 +42,14 @@ from tqdm import tqdm
 import traceback
 import random
 import sys
+import subprocess
+import time
+
+#import grpc related modules
+from google.protobuf.json_format import MessageToJson
+import grpc
+import LoopDistribution_pb2_grpc, LoopDistribution_pb2
+
 
 sys.path.append('../../../../../llvm-grpc/Python-Utilities/')
 # from client import *
@@ -102,6 +110,7 @@ class DistributeLoopEnv(MultiAgentEnv):
 
             self.GraphList = []
             self.doneList = []
+            self.grpc_rtt = 0
 
         self.speedup = 0
     
@@ -147,6 +156,9 @@ class DistributeLoopEnv(MultiAgentEnv):
                 logging.info('ll_filename|OriginalLoopCost|distributedLoopCost|reward|distributeSeq|task {} {} {} {} {} {}'.format(ll_file_name, OriginalLoopCost, distributedLoopCost, reward, self.distribution, 'Distribution'))
                 logging.info('******Cache Found the data point******')
                 isFound=True
+                print('calling grpc exit in cache code')
+                self.stable_grpc("Exit")
+                self.killServer()
         except:
             logging.warning('Index not found in the cache.. key={}'.format(key))
         
@@ -169,18 +181,20 @@ class DistributeLoopEnv(MultiAgentEnv):
             # if isVectorizationtask: 
             #     vectorfactor = action
             # distributed_llfile = utils.call_distributionPass( input_file_path, self.distribution, method_name, loop_id, fun_id, loop_id, self.distributed_data, vecfactor=vectorfactor)
+            OriginalLoopCost,distributedLoopCost = self.doLoopDistributionGetLoopCost(self.distribution)
+            # distributed_llfile = input_file_path
             distributed_llfile = utils.call_distributionPass( input_file_path, self.distribution, method_name, loop_id, fun_id, loop_id, self.distributed_data)
             print("distribution pattern: {}".format(self.distribution))
-            
             # self.speedup=0
             if distributed_llfile is None:
                 logging.warning('distributed file  not generated...., reward={}'.format(reward))
             else:
                 if self.config["loop_cost"]:
-                    logging.info('Get the loop_cost metric for original loop')
-                    OriginalLoopCost = utils.getLoopCost(meta_ssa_file_path, loop_id, method_name)
-                    logging.info('Get the loop_cost metric for distributed loop')
-                    distributedLoopCost = utils.getLoopCost(distributed_llfile, loop_id, method_name)
+                    pass
+                    # logging.info('Get the loop_cost metric for original loop')
+                    # OriginalLoopCost = utils.getLoopCost(meta_ssa_file_path, loop_id, method_name)
+                    # logging.info('Get the loop_cost metric for distributed loop')
+                    # distributedLoopCost = utils.getLoopCost(distributed_llfile, loop_id, method_name)
                     # print("bbbbbbbb: {}".format(OriginalLoopCost))
                     # print("bbbbbbbb: {}".format(distributedLoopCost))
                 else:
@@ -520,6 +534,17 @@ class DistributeLoopEnv(MultiAgentEnv):
         self.num_nodes = len(self.graph['nodes'])
         self.obs = get_observations(self.graph)
 
+        #start server here
+        if self.mode != "inference":
+            meta_ssa_dir = os.path.join(self.home_dir, 'llfiles/meta_ssa')
+            input_file_path = os.path.join(meta_ssa_dir, self.fileName)
+            self.serverAddress = "127.0.0.1:5005"
+            print("loopId: ",self.loopId," loop_id: ",self.loop_id)
+            self.process = self.startServer(input_file_path,self.functionName,self.loop_id,self.serverAddress)
+            self.channel = grpc.insecure_channel(
+                    self.serverAddress)
+            self.stub = LoopDistribution_pb2_grpc.LoopDistributionStub(self.channel)
+
     def step(self, action_dict):
         # assert(self.ggnn is not None, 'ggnn is None')
         print("3333333333333333333333333")
@@ -539,5 +564,82 @@ class DistributeLoopEnv(MultiAgentEnv):
         # else:
         #     assert(False, 'Not valid task selected')
 
+    def startServer(self,filePath, functionName, loopId, serverAddress):
+        optPath = "/home/cs20btech11018/repos/ML-Loop-Distribution/build_release/bin/opt"
+        clangPath = "/home/cs20btech11018/repos/ML-Loop-Distribution/build_release/bin/clang"
+
+        cmd = optPath + " -LoopDistributionServer -loopID " + loopId + " -funcName " + functionName + " -lc-function " + functionName + " -lc-lID " + loopId + " -server_address "+ serverAddress + " -S " + filePath + " -o /dev/null"
+
+        print("server start command: ",cmd)
+        pid = subprocess.Popen(cmd, executable='/bin/bash', shell=True, preexec_fn= os.setsid)
+
+        return pid
+
+    def doLoopDistributionGetLoopCost(self,partition: str):
+        print("Partition Sequence: ",partition)
+        response = self.stable_grpc(partition)
+        jsonObj = MessageToJson(response)
+        response = json.loads(jsonObj)
+        print("gRPC response: ",response)
+        self.stable_grpc("Exit")
+        self.killServer()
+        return int(response['OrignialloopCost']),int(response['distributedLoopCost'])
     
+    def killServer(self):
+    
+        #print(self.process.pid) 
+        # self.process.kill()
+        # self.process.communicate()
+        os.killpg(os.getpgid(self.process.pid), signal.SIGKILL)
+        if self.process.poll() is not None:
+            print("Server Closed Sucessfully")
+
+    def stable_grpc(self, pattern):
+        attempt = 0
+        max_retries = 5
+        retry_wait_seconds = 0.1
+        retry_wait_backoff_exponent = 1.5
+
+        request = LoopDistribution_pb2.LoopDistributionRequest(partitionPattern=pattern)
+        result = None
+        while True:
+            try:
+                print("LLVM grpc called")
+                t1 = time.time()
+                if pattern != "Exit":
+                    result = self.stub.distributeLoopAndGetLoopCost(request)
+                t2 = time.time()
+                print("LLVM grpc response came in {} sec".format(t2 - t1))
+                self.grpc_rtt += t2-t1
+                # time.sleep(.1)
+                break
+            # except ValueError as e:
+            except grpc.RpcError as e:
+
+                if e.code() == grpc.StatusCode.UNAVAILABLE:
+                    # print("Error in grpc")
+                    # if op == 'Exit' and self.last_task_done == 0:
+                    # raise
+                    attempt += 1
+                    if attempt > max_retries:
+                        print("Maximum attempts completed")
+                        return None
+                        # raise #ServiceTransportError( f"{self.url} {e.details()} ({max_retries} retries)") from None
+                    remaining = max_retries - attempt
+                    # logging.warning(
+                    #     "%s %s (%d %s remaining)",
+                    #     self.url,
+                    #     e.details(),
+                    #     remaining,
+                    #     plural(remaining, "attempt", "attempts"),
+                    # )
+                    time.sleep(retry_wait_seconds)
+                    retry_wait_seconds *= retry_wait_backoff_exponent
+                else:
+                    if self.mode != 'inference':
+                        print("Unknown error", e.code())
+                        return None
+                    else:
+                        raise
+        return result
     
