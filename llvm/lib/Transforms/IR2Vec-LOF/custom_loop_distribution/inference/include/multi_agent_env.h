@@ -14,17 +14,17 @@
 #define DISTRIBUTION_AGENT "distribution_agent"
 #define SELECT_NODE_AGENT "select_node_agent"
 
-#define LD_OBS_SIZE int(10)
-#define SELECT_NODE_OBS_SIZE int(10)
+#define LD_OBS_SIZE int(603)
+#define SELECT_NODE_OBS_SIZE int(301000)
 
-#define MAX_NODES_COUNT int(20)
+#define MAX_NODES_COUNT int(1000)
 
 using namespace llvm;
 
 class MultiAgentEnv : public Environment {
 private:
-  unsigned CurrentNode;
-  unsigned PrevNode = 0;
+  int CurrentNode;
+  int PrevNode;
   Graph* GraphTopology;
   SmallVector<IR2Vec::Vector, 12> NodeRepresentation;
   std::string DistributionSeq;
@@ -37,6 +37,8 @@ public:
   void step(Action Action) override;
   void select_node_step(Action Action);
   void select_distribution_step(Action Action);
+
+  void select_node_obs_constructor(Observation& Obs);
 
   void create_node_select_mask(SmallVector<int, 8> &Mask);
   const std::string &getDistributionSeq() const { return DistributionSeq; }

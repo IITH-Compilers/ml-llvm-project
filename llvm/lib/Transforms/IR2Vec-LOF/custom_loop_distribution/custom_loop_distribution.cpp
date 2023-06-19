@@ -23,6 +23,7 @@
 #include "llvm/Pass.h"
 #include "llvm/PassSupport.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IR2Vec-LOF/Config.h"
 #include "llvm/Transforms/IR2Vec-LOF/IR2Vec-SCC.h"
 #include "llvm/Transforms/IR2Vec-LOF/RDG.h"
@@ -118,6 +119,8 @@ void custom_loop_distribution::canonicalizeLoopsWithLoads() {
 }
 
 bool custom_loop_distribution::runOnFunction(Function &F) {
+  // if (F.getName() != "s222")
+  //   return false;
   // F.dump();
   canonicalizeLoopsWithLoads();
   // errs()<<"After canonicolization: \n";
@@ -133,7 +136,8 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
   // legacy::FunctionPassManager FPM(F.getParent());
   // FPM.add(R);
   // FPM.run(F);
-  errs() << "*********************BEFORE compute RDG starts*****************************\n";
+  errs() << "*********************BEFORE compute RDG "
+            "starts*****************************\n";
   R.computeRDG(F);
   RDGData data = R.getRDGInfo();
 
@@ -149,15 +153,15 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
     errs() << l << "\n";
   });
 
-  if (RDG_List.size() == 0) {
-    errs() << "No RDGs\n";
-    return false;
-  }
-
+  // F.dump();
   assert(RDG_List.size() == SCCGraphs.size() &&
          RDG_List.size() == loops.size() &&
          "RDG_List, SCCgraphs and loops list should of same size.");
 
+  if (RDG_List.size() == 0) {
+    errs() << "No RDGs\n";
+    return false;
+  }
   LLVM_DEBUG(errs() << "Number rdg generated : " << RDG_List.size() << "\n");
   SmallVector<std::string, 5> distributed_seqs;
   SmallVector<std::string, 5> vf_seqs;
@@ -167,6 +171,10 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
   DriverService *DriverInference = new DriverService(Env);
 
   DriverInference->getInfo(RDG_List, distributed_seqs);
+  errs() << "***DISTRIBUTED SEQS:";
+  for (auto seq : distributed_seqs)
+    errs() << seq << " ";
+  errs() << "\n";
   /******************************************************/
 
   LLVM_DEBUG(errs() << "Call to runwihAnalysis...\n");

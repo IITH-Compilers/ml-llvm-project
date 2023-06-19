@@ -3,6 +3,7 @@
 
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
@@ -13,8 +14,18 @@ private:
   SmallVector<bool, 8> Discovered;
 
 public:
-  Graph(SmallMapVector<unsigned, SmallVector<unsigned, 8>, 16> &AdjacencyList)
-      : AdjacencyList(AdjacencyList) {}
+  Graph(SmallMapVector<unsigned, SmallVector<unsigned, 8>, 16> &AdjacencyList, unsigned Size)
+      : AdjacencyList(AdjacencyList) {
+    Discovered.resize(Size, false);
+    errs() << "Adj list size = " << AdjacencyList.size() << "\n";
+    errs() << "Discoved.size() = " << Discovered.size() << "\n";
+    for (auto l : AdjacencyList) {
+      errs() << l.first << ": ";
+      for (auto n : l.second)
+        errs() << n << " ";
+      errs() << "\n";
+    }
+  }
   void getEligibleNodes(SmallVector<int, 8> &EligibleNodes);
   bool allDiscovered();
   void updateVisitList(unsigned NodeIdx);
