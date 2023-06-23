@@ -18,7 +18,7 @@ if(NOT ONNXRUNTIME_ROOTDIR)
   message( FATAL_ERROR "Set path to Onnx runtime in -DONNXRUNTIME_ROOTDIR variable" )
 endif()
 
-include_directories("${ONNXRUNTIME_ROOTDIR}/include" "${ONNXRUNTIME_ROOTDIR}/include/onnxruntime/core/session")
+include_directories("${ONNXRUNTIME_ROOTDIR}/include" "${ONNXRUNTIME_ROOTDIR}/include/onnxruntime/core/session" ${CMAKE_CURRENT_SOURCE_DIR}/Include)
 link_directories("${ONNXRUNTIME_ROOTDIR}/lib")
 
 if(onnxruntime_USE_CUDA)
@@ -51,11 +51,11 @@ onnx.cpp
 agent.cpp
 )
 
-target_link_libraries(LLVMInferenceEngine PUBLIC onnxruntime)
-
 add_custom_command(
-  TARGET LLVMInferenceEngine POST_BUILD 
+        TARGET LLVMInferenceEngine 
   COMMAND ${CMAKE_COMMAND} -E copy 
  ${CMAKE_CURRENT_SOURCE_DIR}/Include/*.h ${LLVM_INCLUDE_DIR}/MLInferenceEngine)
+
+target_link_libraries(LLVMInferenceEngine PUBLIC onnxruntime)
 
 target_include_directories(LLVMInferenceEngine PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/Include)
