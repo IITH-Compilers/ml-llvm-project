@@ -10,70 +10,105 @@
 // in docs/WritingAnLLVMPass.html
 //
 //===----------------------------------------------------------------------===//
-
-//grpc includes
 #include "grpc/demoPass/demoPass.grpc.pb.h"
 #include "grpc/gRPCUtil.h"
+#include "llvm/IR/LegacyPassManager.h"
+#include "llvm/Passes/PassBuilder.h"
+#include "llvm/Passes/PassPlugin.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include "llvm/ADT/Statistic.h"
-#include "llvm/IR/Function.h"
-#include "llvm/Pass.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/PassManager.h"
+#include "llvm/Pass.h"
+#include "llvm/Passes/PassBuilder.h"
+#include "llvm/Passes/PassPlugin.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
-//grpc types
+// grpc types
 
 using demopass::Command;
-using demopass::loopInfo;
-using grpc::Status;
-using grpc::ServerContext;
 using demopass::demoPass;
+using demopass::loopInfo;
+using grpc::ServerContext;
+using grpc::Status;
+using namespace llvm;
 
-#define DEBUG_TYPE "hello"
-
-STATISTIC(HelloCounter, "Counts number of functions greeted");
-
+//-----------------------------------------------------------------------------
+// HelloWorld implementation
+//-----------------------------------------------------------------------------
+// No need to expose the internals of the pass to the outside world - keep
+// everything in an anonymous namespace.
 namespace {
-// Hello - The first implementation, without getAnalysisUsage.
-struct Hello : public FunctionPass,demoPass::Service,gRPCUtil {
-  static char ID; // Pass identification, replacement for typeid
-  Hello() : FunctionPass(ID) {}
-  
+
+// New PM implementation
+struct HelloWorld : public PassInfoMixin<HelloWorld>,
+                    demoPass::Service,
+                    gRPCUtil {
   LoopInfo *LI;
   Function *F;
-
-  void getAnalysisUsage(AnalysisUsage &AU) const {
-        AU.addRequired<LoopInfoWrapperPass>();
+  // Main entry point, takes IR unit to run the pass on (&F) and the
+  // corresponding pass manager (to be queried if need be)
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM) {
+    errs() << "Hello from: " << F.getName() << "\n";
+    // LI = &FAM.getResult<LoopAnalysis>(F);
+    // this->F = &F;
+    // RunService(this, "0.0.0.0:50051");
+    // if (exit_requested)
+    //   free(exit_requested);
+    return PreservedAnalyses::all();
   }
 
-  grpc::Status getLoopInfo(grpc::ServerContext* context, const Command* request, loopInfo* response){
-     errs()<<"Command received:"<<request->command()<<"\n";
-     errs()<<"Processing Function: "<<F->getName()<<"\n";
+  //   grpc::Status getLoopInfo(grpc::ServerContext *context, const Command
+  //   *request,
+  //                            loopInfo *response) override {
+  //     errs() << "Command received:" << request->command() << "\n";
+  //     errs() << "Processing Function: " << F->getName() << "\n";
 
-     for(Loop *L:*LI){
-       response->set_numbasicblock(L->getNumBlocks()); 
-     }
+  //     for (Loop *L : *LI) {
+  //       response->set_numbasicblock(L->getNumBlocks());
+  //     }
 
-     if(request->command()=="Exit")
-        exit_requested->set_value();
+  //     if (request->command() == "Exit")
+  //       exit_requested->set_value();
 
-     return Status::OK;  
-  }
+  //     return Status::OK;
+  //   }
 
-  bool runOnFunction(Function &F) override {
-    LI=&getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-    this->F=&F;
-    RunService(this,"0.0.0.0:50051");
-    if(exit_requested)
-      free(exit_requested);
-    return false;
-  }
+  // Without isRequired returning true, this pass will be skipped for
+  // functions decorated with the optnone LLVM attribute. Note that clang -O0
+  // decorates all functions with optnone.
+  static bool isRequired() { return true; }
 };
+
 } // namespace
 
-char Hello::ID = 0;
-static RegisterPass<Hello> X("hellogrpc", "Hello World grpc Pass");
+//-----------------------------------------------------------------------------
+// New PM Registration
+//-----------------------------------------------------------------------------
+llvm::PassPluginLibraryInfo getHelloWorldPluginInfo() {
+  return {LLVM_PLUGIN_API_VERSION, "HelloWorld", LLVM_VERSION_STRING,
+          [](PassBuilder &PB) {
+            PB.registerPipelineParsingCallback(
+                [](StringRef Name, FunctionPassManager &FPM,
+                   ArrayRef<PassBuilder::PipelineElement>) {
+                  if (Name == "hello-world") {
+                    FPM.addPass(HelloWorld());
+                    return true;
+                  }
+                  return false;
+                });
+          }};
+}
 
+// This is the core interface for pass plugins. It guarantees that 'opt' will
+// be able to recognize HelloWorld when added to the pass pipeline on the
+// command line, i.e. via '-passes=hello-world'
+extern "C" LLVM_ATTRIBUTE_WEAK ::llvm::PassPluginLibraryInfo
+llvmGetPassPluginInfo() {
+  return getHelloWorldPluginInfo();
+}

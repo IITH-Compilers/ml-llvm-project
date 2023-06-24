@@ -1,16 +1,16 @@
-# If we don't need RTTI or EH, there's no reason to export anything
-# from the hello plugin.
-if( NOT LLVM_REQUIRES_RTTI )
-  if( NOT LLVM_REQUIRES_EH )
-    set(LLVM_EXPORTED_SYMBOL_FILE ${CMAKE_CURRENT_SOURCE_DIR}/Hello.exports)
-  endif()
-endif()
+# # If we don't need RTTI or EH, there's no reason to export anything
+# # from the hello plugin.
+# if( NOT LLVM_REQUIRES_RTTI )
+#   if( NOT LLVM_REQUIRES_EH )
+#     set(LLVM_EXPORTED_SYMBOL_FILE ${CMAKE_CURRENT_SOURCE_DIR}/Hello.exports)
+#   endif()
+# endif()
 
-if(WIN32 OR CYGWIN)
-  set(LLVM_LINK_COMPONENTS Core Support)
-endif()
+# if(WIN32 OR CYGWIN)
+#   set(LLVM_LINK_COMPONENTS Core Support)
+# endif()
 
-add_llvm_library(LLVMHelloGRPC MODULE BUILDTREE_ONLY
+add_llvm_library(HelloWorld MODULE BUILDTREE_ONLY
   Hello.cpp
 
   LINK_COMPONENTS
@@ -22,3 +22,4 @@ add_llvm_library(LLVMHelloGRPC MODULE BUILDTREE_ONLY
   opt
   )
 
+# add_llvm_library(HelloWorld MODULE Hello.cpp)
