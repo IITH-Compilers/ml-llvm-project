@@ -51,33 +51,45 @@ struct HelloWorld : public PassInfoMixin<HelloWorld>,
                     gRPCUtil {
   LoopInfo *LI;
   Function *F;
+
+  explicit HelloWorld() : demoPass::Service() {}
+
+  HelloWorld(const HelloWorld &) = delete;
+  
+  HelloWorld(HelloWorld &&X) {
+    LI = X.LI;
+    X.LI = nullptr;
+
+    F = X.F;
+    X.F = nullptr;
+  }
+
   // Main entry point, takes IR unit to run the pass on (&F) and the
   // corresponding pass manager (to be queried if need be)
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM) {
     errs() << "Hello from: " << F.getName() << "\n";
-    // LI = &FAM.getResult<LoopAnalysis>(F);
-    // this->F = &F;
-    // RunService(this, "0.0.0.0:50051");
-    // if (exit_requested)
-    //   free(exit_requested);
+    LI = &FAM.getResult<LoopAnalysis>(F);
+    this->F = &F;
+    RunService(this, "0.0.0.0:50051");
+    if (exit_requested)
+      free(exit_requested);
     return PreservedAnalyses::all();
   }
 
-  //   grpc::Status getLoopInfo(grpc::ServerContext *context, const Command
-  //   *request,
-  //                            loopInfo *response) override {
-  //     errs() << "Command received:" << request->command() << "\n";
-  //     errs() << "Processing Function: " << F->getName() << "\n";
+  grpc::Status getLoopInfo(grpc::ServerContext *context, const Command *request,
+                           loopInfo *response) override {
+    errs() << "Command received:" << request->command() << "\n";
+    errs() << "Processing Function: " << F->getName() << "\n";
 
-  //     for (Loop *L : *LI) {
-  //       response->set_numbasicblock(L->getNumBlocks());
-  //     }
+    for (Loop *L : *LI) {
+      response->set_numbasicblock(L->getNumBlocks());
+    }
 
-  //     if (request->command() == "Exit")
-  //       exit_requested->set_value();
+    if (request->command() == "Exit")
+      exit_requested->set_value();
 
-  //     return Status::OK;
-  //   }
+    return Status::OK;
+  }
 
   // Without isRequired returning true, this pass will be skipped for
   // functions decorated with the optnone LLVM attribute. Note that clang -O0
