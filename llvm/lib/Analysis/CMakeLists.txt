@@ -1,3 +1,5 @@
+# set_property(TARGET LLVMAnalysis PROPERTY CXX_STANDARD 17)
+
 add_llvm_component_library(LLVMAnalysis
   AliasAnalysis.cpp
   AliasAnalysisEvaluator.cpp
@@ -41,6 +43,7 @@ add_llvm_component_library(LLVMAnalysis
   InstCount.cpp
   InstructionPrecedenceTracking.cpp
   InstructionSimplify.cpp
+  InteractiveModelRunner.cpp
   Interval.cpp
   IntervalPartition.cpp
   LazyBranchProbabilityInfo.cpp
@@ -89,7 +92,9 @@ add_llvm_component_library(LLVMAnalysis
   SyntheticCountsUtils.cpp
   TargetLibraryInfo.cpp
   TargetTransformInfo.cpp
+  TensorSpec.cpp
   Trace.cpp
+  TrainingLogger.cpp
   TypeBasedAliasAnalysis.cpp
   TypeMetadataUtils.cpp
   ScopedNoAliasAA.cpp
