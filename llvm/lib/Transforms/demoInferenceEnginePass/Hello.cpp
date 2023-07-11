@@ -10,8 +10,6 @@
 // in docs/WritingAnLLVMPass.html
 //
 //===----------------------------------------------------------------------===//
-#include "grpc/demoPass/demoPass.grpc.pb.h"
-#include "grpc/gRPCUtil.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/PassPlugin.h"
@@ -26,18 +24,16 @@
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/PassPlugin.h"
 #include "llvm/Support/raw_ostream.h"
+// #include "llvm/IR2Vec.h"
+
+#include "MLInferenceEngine/environment.h"
+#include "HelloWorldDriver.h"
+
 
 using namespace llvm;
 
-// grpc types
-
-using demopass::Command;
-using demopass::demoPass;
-using demopass::loopInfo;
-using grpc::ServerContext;
-using grpc::Status;
-using namespace llvm;
-
+// static cl::opt<std::string>
+//     embeddings("vocab", cl::desc("<embedding vocab file>"), cl::Required);
 //-----------------------------------------------------------------------------
 // HelloWorld implementation
 //-----------------------------------------------------------------------------
@@ -46,23 +42,13 @@ using namespace llvm;
 namespace {
 
 // New PM implementation
-struct HelloWorld : public PassInfoMixin<HelloWorld>,
-                    demoPass::Service,
-                    gRPCUtil {
+// struct HelloWorld : public Environment {
+struct HelloWorld: public PassInfoMixin<HelloWorld>,
+                   public Environment {
   LoopInfo *LI;
   Function *F;
 
-  explicit HelloWorld() : demoPass::Service() {}
-
-  HelloWorld(const HelloWorld &) = delete;
-  
-  HelloWorld(HelloWorld &&X) {
-    LI = X.LI;
-    X.LI = nullptr;
-
-    F = X.F;
-    X.F = nullptr;
-  }
+  HelloWorld() {}
 
   // Main entry point, takes IR unit to run the pass on (&F) and the
   // corresponding pass manager (to be queried if need be)
@@ -70,41 +56,33 @@ struct HelloWorld : public PassInfoMixin<HelloWorld>,
     errs() << "Hello from: " << F.getName() << "\n";
     LI = &FAM.getResult<LoopAnalysis>(F);
     this->F = &F;
-    RunService(this, "0.0.0.0:50051");
-    if (exit_requested)
-      free(exit_requested);
+
+    std::vector<float> inputVec(agentObsSize, 1);
+    unsigned prediction = 5;
+
+    // use srand() for different outputs
+    std::srand(time(0));
+  
+    // Generate value using generate
+    // function
+    std::generate(inputVec.begin(), inputVec.end(), rand);
+
+    HelloWordDriver *inference_driver = new HelloWordDriver(this);
+    inference_driver->getPrediction(inputVec, prediction);
+    errs() << "Predicted Value: " << prediction << "\n";
     return PreservedAnalyses::all();
   }
 
-  grpc::Status getLoopInfo(grpc::ServerContext *context, const Command *request,
-                           loopInfo *response) override {
-    if(F->getName() == request->command()) {
-      errs() << "Counting basic block for function: " << request->command() << "\n"; 
-      unsigned basicBlockCount = 0;
-      for (BasicBlock &BB : *F) {
-        basicBlockCount++;
-      }
-      response->set_numbasicblock(basicBlockCount);
-    }
-    else {
-      errs() << "Unknown function: " << request->command() << "\n";
-      response->set_numbasicblock(-1);
-    }
-
-    if (request->command() == "Exit") {
-      exit_requested->set_value();
-      errs() << "Exiting server\n";
-    }
-      
-
-    return Status::OK;
-  }
-
-  // Without isRequired returning true, this pass will be skipped for
-  // functions decorated with the optnone LLVM attribute. Note that clang -O0
-  // decorates all functions with optnone.
   static bool isRequired() { return true; }
+
+  Observation step(Action action) {
+    std::vector<float> tempVec(agentObsSize, 1);
+    Observation agentObs = &tempVec[0];
+    return agentObs;
+  }
 };
+
+
 
 } // namespace
 
@@ -117,7 +95,7 @@ llvm::PassPluginLibraryInfo getHelloWorldPluginInfo() {
             PB.registerPipelineParsingCallback(
                 [](StringRef Name, FunctionPassManager &FPM,
                    ArrayRef<PassBuilder::PipelineElement>) {
-                  if (Name == "hello-world") {
+                  if (Name == "hello-world-inf") {
                     FPM.addPass(HelloWorld());
                     return true;
                   }
