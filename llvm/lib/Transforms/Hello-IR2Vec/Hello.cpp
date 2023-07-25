@@ -1,13 +1,7 @@
 //===- Hello.cpp - Example code from "Writing an LLVM Pass" ---------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//===----------------------------------------------------------------------===//
-//
-// This file implements two versions of the LLVM "Hello World" pass described
-// in docs/WritingAnLLVMPass.html
+// This is a modified version of LLVM's Hello World program to demonstrate 
+// how to query IR2Vec.
 //
 //===----------------------------------------------------------------------===//
 
@@ -15,26 +9,30 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR2Vec.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
+
 using namespace llvm;
 
 #define DEBUG_TYPE "hello_module"
 
 STATISTIC(hellomodule, "Counts number of functions greeted");
 
-std::string embeddings = "/home/cs20btech11018/repos/ML-Phase-Ordering/IR2Vec/"
-                         "vocabulary/seedEmbeddingVocab-300-llvm10.txt";
+// std::string embeddings = "/home/cs20btech11018/repos/ML-Phase-Ordering/IR2Vec/"
+//                          "vocabulary/seedEmbeddingVocab-300-llvm10.txt";
+static cl::opt<std::string>
+    embeddings("vocab", cl::desc("<embedding vocab file>"), cl::Required);
 
 namespace {
 // Hello2 - The second implementation with getAnalysisUsage implemented.
-struct HelloModule : public ModulePass {
+struct HelloIR2Vec : public ModulePass {
   static char ID; // Pass identification, replacement for typeid
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
   }
 
-  HelloModule() : ModulePass(ID) {}
+  HelloIR2Vec() : ModulePass(ID) {}
 
   bool runOnModule(Module &M) override {
     outs() << "Hello";
@@ -52,6 +50,6 @@ struct HelloModule : public ModulePass {
 
 } // namespace
 
-char HelloModule::ID = 0;
-static RegisterPass<HelloModule>
-    Z("hello3", "Hello World Pass (with getAnalysisUsage implemented)");
+char HelloIR2Vec::ID = 0;
+static RegisterPass<HelloIR2Vec> Z("hello-IR2Vec",
+                                   "Hello World Pass (with IR2Vec)");

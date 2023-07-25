@@ -129,7 +129,7 @@ static json::Object createArtifactLocation(const FileEntry &FE,
   auto I = llvm::find_if(Artifacts, [&](const json::Value &File) {
     if (const json::Object *Obj = File.getAsObject()) {
       if (const json::Object *FileLoc = Obj->getObject("location")) {
-        Optional<StringRef> URI = FileLoc->getString("uri");
+        std::optional<StringRef> URI = FileLoc->getString("uri");
         return URI && URI->equals(FileURI);
       }
     }
