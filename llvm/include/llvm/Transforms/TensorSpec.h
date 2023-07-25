@@ -56,7 +56,7 @@ public:
   template <typename T>
   static TensorSpec createSpec(const std::string &Name,
                                const std::vector<int64_t> &Shape,
-                               int Port = 0) {
+                               int Port = 6020) {
     return TensorSpec(Name, Port, getDataType<T>(), sizeof(T), Shape);
   }
 

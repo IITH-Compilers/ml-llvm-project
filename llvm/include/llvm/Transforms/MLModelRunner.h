@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 //
 
-#ifndef LLVM_ANALYSIS_MLMODELRUNNER_H
-#define LLVM_ANALYSIS_MLMODELRUNNER_H
+#ifndef LLVM_TRANSFORMS_MLMODELRUNNER_H
+#define LLVM_TRANSFORMS_MLMODELRUNNER_H
 
-#include "llvm/Analysis/TensorSpec.h"
+#include "llvm/Transforms/TensorSpec.h"
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {

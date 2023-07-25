@@ -11,11 +11,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_ANALYSIS_RELEASEMODEMODELRUNNER_H
-#define LLVM_ANALYSIS_RELEASEMODEMODELRUNNER_H
+#ifndef LLVM_TRANSFORMS_RELEASEMODEMODELRUNNER_H
+#define LLVM_TRANSFORMS_RELEASEMODEMODELRUNNER_H
 
-#include "llvm/Analysis/MLModelRunner.h"
-#include "llvm/Analysis/TensorSpec.h"
+#include "llvm/Transforms/MLModelRunner.h"
+#include "llvm/Transforms/TensorSpec.h"
 #include "llvm/Support/ErrorHandling.h"
 
 #include <memory>

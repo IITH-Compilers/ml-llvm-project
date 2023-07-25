@@ -10,11 +10,11 @@
 // rewards for mlgo policy training.
 //
 //===----------------------------------------------------------------------===//
-#include "llvm/Analysis/TensorSpec.h"
+#include "llvm/Transforms/TensorSpec.h"
 #include "llvm/Config/config.h"
 
 #include "llvm/ADT/Twine.h"
-#include "llvm/Analysis/Utils/TrainingLogger.h"
+#include "llvm/Transforms/Utils/TrainingLogger.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/JSON.h"
@@ -44,7 +44,7 @@ void Logger::writeHeader(std::optional<TensorSpec> AdviceSpec) {
       RewardSpec.toJSON(JOS);
       JOS.attributeEnd();
     }
-    if (AdviceSpec.has_value()) {
+  if (AdviceSpec.has_value()) {
       JOS.attributeBegin("advice");
       AdviceSpec->toJSON(JOS);
       JOS.attributeEnd();

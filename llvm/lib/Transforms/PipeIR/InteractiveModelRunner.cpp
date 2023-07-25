@@ -8,9 +8,9 @@
 //
 // A runner that communicates with an external agent via 2 file descriptors.
 //===----------------------------------------------------------------------===//
-#include "llvm/Analysis/InteractiveModelRunner.h"
-#include "llvm/Analysis/MLModelRunner.h"
-#include "llvm/Analysis/TensorSpec.h"
+#include "llvm/Transforms/InteractiveModelRunner.h"
+#include "llvm/Transforms/MLModelRunner.h"
+#include "llvm/Transforms/TensorSpec.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
@@ -45,8 +45,12 @@ InteractiveModelRunner::InteractiveModelRunner(
   }
   // Just like in the no inference case, this will allocate an appropriately
   // sized buffer.
+  std::vector<int64_t> trial_buffer(10,0);  
+  for(int i=0; i<10; i++){
+    trial_buffer[i] = ((int64_t) (i+1));
+  }
   for (size_t I = 0; I < InputSpecs.size(); ++I)
-    setUpBufferForTensor(I, InputSpecs[I], nullptr);
+    setUpBufferForTensor(I, InputSpecs[I], (void*) &trial_buffer[I+2]);
   Log->flush();
 }
 
