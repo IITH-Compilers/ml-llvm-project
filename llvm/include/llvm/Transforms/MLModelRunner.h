@@ -51,6 +51,13 @@ public:
   Kind getKind() const { return Type; }
   virtual void switchContext(StringRef Name) {}
 
+  // void feedInputBuffers(std::vector<void*> Buffers);
+  void feedInputBuffers(std::vector<void*> Buffers){
+    for(size_t I = 0; I < Buffers.size(); ++I){
+      InputBuffers[I] = Buffers[I];
+    }
+  }
+
 protected:
   MLModelRunner(LLVMContext &Ctx, Kind Type, size_t NrInputs)
       : Ctx(Ctx), Type(Type), InputBuffers(NrInputs) {

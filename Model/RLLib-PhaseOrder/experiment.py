@@ -35,7 +35,7 @@ from ray.rllib.agents import dqn
 from ray.rllib.agents.dqn import DQNTrainer, DEFAULT_CONFIG
 from ray.rllib.policy.torch_policy import TorchPolicy
 #from Environment_1 import PhaseOrder
-from Environment_1 import PhaseOrder
+from Environment_pipe import PhaseOrder
 from ray.rllib.models import ModelCatalog
 from model import CustomPhaseOrderModel
 

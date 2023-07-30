@@ -21,6 +21,8 @@
 #include <google/protobuf/text_format.h>
 #include <grpcpp/grpcpp.h>
 
+#include "llvm/Transforms/InteractiveModelRunner.h"
+
 using namespace llvm;
 
 static cl::opt<bool> training("training", cl::Hidden,
@@ -42,7 +44,8 @@ struct PosetRL : public ModulePass,
   bool runOnModule(Module &M) override {
     this->M = &M;
     if (training) {
-      RunService(this, server_address);
+      initPipeCommunication();
+      // RunService(this, server_address);      
     } else {
       runInference();
       errs() << "Sequence: ";
@@ -52,6 +55,59 @@ struct PosetRL : public ModulePass,
     }
     return true;
   }
+
+  void initPipeCommunication() {
+    const char *const DecisionName = "advisor_decision";
+    const TensorSpec DecisionSpec =
+        TensorSpec::createSpec<int64_t>(DecisionName, {1});
+
+    const char *const DefaultFeatureName = "feature_default";
+    const TensorSpec DefaultFeatureSpec =
+        TensorSpec::createSpec<float_t>(DefaultFeatureName, {300});
+
+    std::vector<float_t> feature_data;  
+    for(size_t i=0; i<DefaultFeatureSpec.getElementCount(); i++) 
+        feature_data.push_back((float_t) (i+0.5));
+
+    std::string basename = "temppipe";
+    std::vector<TensorSpec> Features;
+    // std::vector<void*> InputBuffers;
+
+
+    // if (InteractiveIncludeDefault){
+    Features.push_back(DefaultFeatureSpec);
+    // Features.push_back(DefaultFeatureSpec2);
+
+    // InputBuffers.push_back(feature_data.data());
+
+    std::cout << "DEBUG1\n" << std::endl;
+
+    AOTRunner = std::make_unique<InteractiveModelRunner>(
+      M->getContext(), Features, DecisionSpec,
+      basename + ".out",
+      basename + ".in");
+    errs() << "DEBUG2\n";
+    
+    
+    int passSequence = 0;
+    while(passSequence != -1) {
+      std::vector<void*> InputBuffers;
+      auto embedding = getEmbeddings();
+      // errs() << "Embedding size:" << embedding.size() << "\n";
+      InputBuffers.push_back(embedding.data());
+      AOTRunner->feedInputBuffers(InputBuffers);
+      int res = static_cast<int>(AOTRunner->evaluate<int64_t>());
+      errs() << "Runner result: " << res <<'\n';
+      applySeq(res);
+      passSequence = res;
+    }
+    errs() << "Episode completed\n";
+    // AOTRunner->feedInputBuffers(InputBuffers);
+    // int res = static_cast<int>(AOTRunner->evaluate<int64_t>());
+    // errs() << "Runner result: " << res <<'\n';
+  }
+
+
   Embedding getEmbeddings() override {
 
     // redirecting the module to a file
@@ -64,8 +120,7 @@ struct PosetRL : public ModulePass,
 
     auto Ir2vec = IR2Vec::Embeddings(
         *M, IR2Vec::IR2VecMode::FlowAware,
-        "/home/cs20btech11018/repos/ML-Phase-Ordering/IR2Vec/"
-        "vocabulary/seedEmbeddingVocab-300-llvm10.txt");
+        "/home/cs20mtech12003/ML-Phase-Ordering/IR2Vec/vocabulary/seedEmbeddingVocab-300-llvm10.txt");
 
     auto ProgVector = Ir2vec.getProgramVector();
     Embedding Vector(ProgVector.begin(), ProgVector.end());
@@ -131,6 +186,7 @@ struct PosetRL : public ModulePass,
   
 private:
   Module *M;
+  std::unique_ptr<MLModelRunner> AOTRunner;
 };
 } // namespace
 char PosetRL::ID = 0;

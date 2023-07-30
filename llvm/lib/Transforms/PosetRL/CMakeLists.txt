@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 3.13)
 
 # include(AddLLVM)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_BUILD_TYPE RelWithDebInfo)
 
 set(protobuf_MODULE_COMPATIBLE TRUE)
@@ -21,6 +21,9 @@ message(STATUS "Using protobuf ${Protobuf_INCLUDE_DIRS}")
 include_directories(${Protobuf_INCLUDE_DIRS})
 
 add_llvm_component_library(LLVMPosetRL posetRL.cpp
+TrainingLogger.cpp
+InteractiveModelRunner.cpp
+TensorSpec.cpp
 
 LINK_COMPONENTS
 IR2Vec
