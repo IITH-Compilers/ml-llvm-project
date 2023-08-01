@@ -91,7 +91,10 @@ class PhaseOrder(gym.Env):
 
         self.mode = config["mode"]
         self.grpc_rtt = 0
-        self.worker_index = config.worker_index
+        if "worker_index" in config.keys():
+            self.worker_index = config.worker_index
+        else:
+            self.worker_index = 0
 
 #quiet#        print(f"Worker Index: {self.worker_index}")
 
@@ -122,6 +125,10 @@ class PhaseOrder(gym.Env):
         from_compiler = self.temp_rootname + ".out"
         # print("to_compiler", to_compiler)
         # print("from_compiler", from_compiler)
+        if os.path.exists(to_compiler):
+            os.remove(to_compiler)
+        if os.path.exists(from_compiler):
+            os.remove(from_compiler)
         os.mkfifo(to_compiler, 0o666)
         os.mkfifo(from_compiler, 0o666)
         self.tc = None
@@ -206,19 +213,7 @@ class PhaseOrder(gym.Env):
                     self.Obs[index], "127.0.0.1:50051")
                 # self.channel = grpc.insecure_channel(
                 #     '{}:{}'.format("127.0.0.1", "50051"))
-                # self.stub = example_pb2_grpc.PosetRLStub(self.channel)                                
-
-                # Opening pipe files
-                to_compiler = self.temp_rootname + ".in"
-                from_compiler = self.temp_rootname + ".out"
-                self.tc = io.BufferedWriter(io.FileIO(to_compiler, "wb"))
-                print("Opened the write pipe")
-                self.fc = io.BufferedReader(io.FileIO(from_compiler, "rb"))
-                print("Opened the read pipe")
-                self.tensor_specs, _, self.advice_spec = log_reader.read_header(self.fc)
-                print("Tensor and Advice spec", self.tensor_specs, self.advice_spec)                
-                result = self.readObservation()
-                # print("Returned obs value is", result[0]._view)
+                # self.stub = example_pb2_grpc.PosetRLStub(self.channel)                                                
                 
                 self.createEnv(self.Obs[index])
                 self.doneList.append(self.Obs[index])
@@ -229,16 +224,37 @@ class PhaseOrder(gym.Env):
                 self.iteration_counter += 1
                 self.rename_Dir = True
 
-        else:
-            self.Obs = test_file
-            print("test_file {}".format(test_file))
-            logging.info("test_file {}".format(test_file))
-            index = np.random.random_integers(0, len(self.Obs) - 1)
-            print("Obs {}".format(index))
-            logging.info("Obs {}".format(index))
-            self.createEnv(test_file)
+        # else:
+        #     self.Obs = test_file
+        #     print("test_file {}".format(test_file))
+        #     logging.info("test_file {}".format(test_file))
+        #     index = np.random.random_integers(0, len(self.Obs) - 1)
+        #     print("Obs {}".format(index))
+        #     logging.info("Obs {}".format(index))
+        #     self.createEnv(test_file)
 
-        self.embedding = self.getEmbedding(self.BaseIR)
+        # Opening pipe files
+        to_compiler = self.temp_rootname + ".in"
+        from_compiler = self.temp_rootname + ".out"
+        print("Creating pipe files", to_compiler, from_compiler)
+        self.tc = io.BufferedWriter(io.FileIO(to_compiler, "wb"))
+        print("Opened the write pipe")
+        self.fc = io.BufferedReader(io.FileIO(from_compiler, "rb"))
+        print("Opened the read pipe")
+        self.tensor_specs, _, self.advice_spec = log_reader.read_header(self.fc)
+        print("Tensor and Advice spec", self.tensor_specs, self.advice_spec)                
+        result = self.readObservation()
+        # print("Returned obs value is", result[0]._view)
+        if result is None:
+#quiet#            print("result is None")
+            raise
+        else:
+            self.embedding = np.empty([300])
+            for i in range(result[0].__len__()):
+                element = result[0].__getitem__(i)
+                self.embedding[i] = element
+        
+        # self.embedding = self.getEmbedding(self.BaseIR)
 
         action_mask = [1] * self.action_space_size
         next_observation = {'action_mask': np.array(
@@ -374,12 +390,11 @@ class PhaseOrder(gym.Env):
                     actionfile.write('] ')
 
             if self.mode != 'inference':
-                # self.stable_grpc("Exit", None)
-                self.sendResponse(self.tc, -1, self.advice_spec)
-                self.fc.close()
-                self.tc.close()
-                
+                # self.stable_grpc("Exit", None)                                
                 Reward = self.getReward(self.assembly_file_path)
+            self.sendResponse(self.tc, -1, self.advice_spec)
+            self.fc.close()
+            self.tc.close()
             self.action_count = 0
             self.cur_action_seq = []
 

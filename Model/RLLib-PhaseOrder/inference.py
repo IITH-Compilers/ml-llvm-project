@@ -26,7 +26,7 @@ import argparse
 from argparse import Namespace
 import os
 import shutil
-import utils
+# import utils
 import logging
 import time
 
@@ -35,7 +35,7 @@ from ray import tune
 from ray.rllib.agents import ppo
 from ray.rllib.agents import dqn
 from ray.rllib.agents.dqn import DQNTrainer, DEFAULT_CONFIG
-from Environment import PhaseOrder
+from Environment_pipe import PhaseOrder
 from ray.rllib.models import ModelCatalog
 from model import CustomPhaseOrderModel
 from ray.tune.registry import register_env
@@ -54,7 +54,7 @@ import pydot
 parser = argparse.ArgumentParser()
 parser.add_argument("--llvm_dir", help = "path to llvm-build directory")
 parser.add_argument("--ir2vec_dir", help = "path to IR2vec directory which has seed embedding and IR2Vec binary files")
-parser.add_argument("--test_dir", help = "Path to test directory")
+parser.add_argument("--test_dir", help = "Path to test directory", required=False, default="./")
 parser.add_argument("--model", help = "Path to saved checkpoint")
 parser.add_argument("-a", "--isAArch", required=False, default=False, action='store_true')
 parser.add_argument("-alpha", "--alpha", required=False, type=float, default=10)
@@ -125,7 +125,7 @@ class PhaseOrderInference:
 
         self.config = config
         
-        self.train_agent.export_policy_model("/home/cs20btech11018/repos/ML-Phase-Ordering/Model/RLLib-PhaseOrder/poset-RL-onnx-model", onnx=int(os.getenv("ONNX_OPSET", "11")))
+        # self.train_agent.export_policy_model("/home/cs20btech11018/repos/ML-Phase-Ordering/Model/RLLib-PhaseOrder/poset-RL-onnx-model", onnx=int(os.getenv("ONNX_OPSET", "11")))
         
         
 
@@ -136,7 +136,7 @@ class PhaseOrderInference:
         return graph_json
 
     # Predict best optimization sequence for the given LLVM IR
-    def run_predict(self, test_file):
+    def run_predict(self, test_file=None):
         env = PhaseOrder(self.config["env_config"])
 
         print("test_file {}".format(test_file))
@@ -169,9 +169,12 @@ if __name__ == '__main__':
 
     inference_obj = PhaseOrderInference(args.model, args.llvm_dir, args.ir2vec_dir)
 
-    f = open("timetaken.txt", "w")
-    for file in os.listdir(args.test_dir):
-        start = time.time()
-        reward, response = inference_obj.run_predict(file)
-        end = time.time()
-        f.write("Time taken for {} is {}\n".format(file, end-start))
+    while(True):
+        reward, response = inference_obj.run_predict()
+    
+    # f = open("timetaken.txt", "w")
+    # for file in os.listdir(args.test_dir):
+    #     start = time.time()
+    #     reward, response = inference_obj.run_predict(file)
+    #     end = time.time()
+    #     f.write("Time taken for {} is {}\n".format(file, end-start))

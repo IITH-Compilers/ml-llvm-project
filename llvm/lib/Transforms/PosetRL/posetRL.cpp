@@ -29,6 +29,10 @@ static cl::opt<bool> training("training", cl::Hidden,
                               cl::desc("whether it is training or inference"),
                               cl::init(false));
 
+static cl::opt<bool> usePipe("use-pipe", cl::Hidden,
+                              cl::desc("Use pipe based interation with python model"),
+                              cl::init(true));
+
 static cl::opt<std::string> server_address(
     "server_address", cl::Hidden,
     cl::desc("Starts the server in the given address, format <ip>:<port>"),
@@ -43,16 +47,21 @@ struct PosetRL : public ModulePass,
   PosetRL() : ModulePass(ID) {}
   bool runOnModule(Module &M) override {
     this->M = &M;
-    if (training) {
+    // Establish pipe communication
+    if(usePipe)
       initPipeCommunication();
-      // RunService(this, server_address);      
-    } else {
-      runInference();
-      errs() << "Sequence: ";
-      for (auto a : Sequence)
-        errs() << a << " ";
-      errs() << "\n";
+    else {
+      if (training) {
+        RunService(this, server_address);      
+      } else {
+        runInference();
+        errs() << "Sequence: ";
+        for (auto a : Sequence)
+          errs() << a << " ";
+        errs() << "\n";
+      }  
     }
+    
     return true;
   }
 
