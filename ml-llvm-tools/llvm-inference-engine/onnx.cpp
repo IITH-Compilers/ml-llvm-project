@@ -1,3 +1,11 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the ml-llvm-tools Project, under the BSD 4-Clause License.
+// See the LICENSE.txt file under ml-llvm-tools directory for license
+// information.
+//
+//===----------------------------------------------------------------------===//
+
 #include "onnx.h"
 #include "onnxruntime_cxx_api.h"
 

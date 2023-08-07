@@ -1,7 +1,18 @@
-# IR2Vec-Engine -- Added as subtree
-- Added using: `git subtree add --prefix IR2Vec-Engine https://github.com/svkeerthy/IR2Vec-Engine.git master --squash`
-- To pull from `IR2Vec-Engine`: `git subtree pull --prefix IR2Vec-Engine https://github.com/svkeerthy/IR2Vec-Engine.git master --squash`
-- To push to `IR2Vec-Engine`: `git subtree push IR2Vec-Engine https://github.com/svkeerthy/IR2Vec-Engine.git master`
+# ML-LLVM-Project
+
+This is a fork of LLVM repository with IR2Vec and other "tools" to facilitate training and inferencing Machine Learning models for compiler optimizations.
+
+## Cloning with IR2Vec
+
+Please use `--recursive` flag while cloning the repo to clone the IR2Vec submodule. And please see the `README` of IR2Vec and ml-llvm-tools for prerequisites.
+
+## Building and Usage
+
+`IR2Vec` and the related `"tools"` for training and inference can be built along with LLVM by setting `-DLLVM_ENABLE_PROJECTS=IR2Vec;ml-llvm-tools`.
+
+An example HelloWorld pass that interacts with IR2Vec is given in [`llvm/lib/Transforms/Hello-IR2Vec`](llvm/lib/Transforms/Hello-IR2Vec)
+
+*To-Do: Examples for using LLVM-gRPC and Inference Engine*
 
 
 # The LLVM Compiler Infrastructure

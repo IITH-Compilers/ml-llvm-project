@@ -1,3 +1,5 @@
+# set_property(TARGET LLVMAnalysis PROPERTY CXX_STANDARD 16)
+
 add_llvm_component_library(LLVMAnalysis
   AliasAnalysis.cpp
   AliasAnalysisEvaluator.cpp
