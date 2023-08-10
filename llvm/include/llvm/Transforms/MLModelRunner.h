@@ -28,8 +28,8 @@ public:
   MLModelRunner &operator=(const MLModelRunner &) = delete;
   virtual ~MLModelRunner() = default;
 
-  template <typename T> T evaluate() {
-    return *reinterpret_cast<T *>(evaluateUntyped());
+  template <typename T> T* evaluate() {
+    return reinterpret_cast<T *>(evaluateUntyped());
   }
 
   template <typename T, typename I> T *getTensor(I FeatureID) {
@@ -50,6 +50,13 @@ public:
   enum class Kind : int { Unknown, Release, Development, NoOp, Interactive };
   Kind getKind() const { return Type; }
   virtual void switchContext(StringRef Name) {}
+
+   // void feedInputBuffers(std::vector<void*> Buffers);
+  void feedInputBuffers(std::vector<void*> Buffers){
+    for(size_t I = 0; I < Buffers.size(); ++I){
+      InputBuffers[I] = Buffers[I];
+    }
+  }
 
 protected:
   MLModelRunner(LLVMContext &Ctx, Kind Type, size_t NrInputs)

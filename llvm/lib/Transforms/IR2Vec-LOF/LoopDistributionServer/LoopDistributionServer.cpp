@@ -14,12 +14,15 @@
 // grpc includes
 #include "grpc/LoopDistribution/LoopDistribution.grpc.pb.h"
 #include "grpc/gRPCUtil.h"
+#include <bits/stdint-intn.h>
 #include <cstdint>
 #include <google/protobuf/text_format.h>
 #include <grpcpp/grpcpp.h>
 
 // temporary includes
 #include "llvm/Transforms/Vectorize.h"
+
+#include "llvm/Transforms/InteractiveModelRunner.h"
 
 using namespace llvm;
 
@@ -30,6 +33,9 @@ static cl::opt<std::string> funcName("funcName", cl::desc("Function name"),
 static cl::opt<unsigned int> loopID("loopID", cl::desc("Loop ID"),
                                     cl::value_desc("Loop ID"), cl::Hidden,
                                     cl::Optional, cl::init(0));
+
+static cl::opt<unsigned int> usePipe("use-pipe", cl::desc("Use pipe for inference"), cl::Hidden,
+                                    cl::Optional, cl::init(false));
 
 static cl::opt<std::string> server_address(
     "server_address", cl::Hidden,
@@ -74,8 +80,10 @@ struct LoopDistributionServerPass
     auto DI = DependenceInfo(&F, AA, SE, LI);
     this->DI = &DI;
     FileModified = false;
-
-    RunService(this, server_address);
+    if(usePipe)
+      initPipeCommunication();
+    else
+      RunService(this, server_address);
 
     return FileModified;
   }
@@ -92,6 +100,16 @@ struct LoopDistributionServerPass
       return grpc::Status::OK;
     }
     errs() << "distribution request received for pattern " << partition << "\n";
+
+    DistributedLoopCost = this->distributeLoopAndGetLoopCostHelper(partition);
+
+    response->set_orignialloopcost(OriginalLoopCost);
+    response->set_distributedloopcost(DistributedLoopCost);
+
+    return grpc::Status::OK;
+  }
+
+  uint64_t distributeLoopAndGetLoopCostHelper(std::string partition) {
 
     dist_helper.setPartition(partition);
 
@@ -112,14 +130,78 @@ struct LoopDistributionServerPass
     for(auto &F : *M) {
       FPM.run(F);
     }
-    DistributedLoopCost = static_cast<LoopCost*>(SecondLoopCostPass)->getLoopCost();
+    DistributedLoopCost =
+        static_cast<LoopCost *>(SecondLoopCostPass)->getLoopCost();
+    return DistributedLoopCost;
+  }
 
-    
+  void initPipeCommunication() {
+    const char *const DecisionName = "advisor_decision";
+    const TensorSpec DecisionSpec =
+        TensorSpec::createSpec<int64_t>(DecisionName, {100});
 
-    response->set_orignialloopcost(OriginalLoopCost);
-    response->set_distributedloopcost(DistributedLoopCost);
+    const char *const DefaultFeatureName = "feature_default";
+    const TensorSpec DefaultFeatureSpec =
+        TensorSpec::createSpec<int64_t>(DefaultFeatureName, {2});
 
-    return grpc::Status::OK;
+    std::vector<uint64_t> feature_data;  
+    for(size_t i=0; i<DefaultFeatureSpec.getElementCount(); i++) 
+        feature_data.push_back((uint64_t) (1));
+
+    std::string basename = "loopdistppipe";
+    std::vector<TensorSpec> Features;
+    // std::vector<void*> InputBuffers;
+
+
+    // if (InteractiveIncludeDefault){
+    Features.push_back(DefaultFeatureSpec);
+    // Features.push_back(DefaultFeatureSpec2);
+
+    // InputBuffers.push_back(feature_data.data());
+
+    std::cout << "DEBUG1\n" << std::endl;
+
+    AOTRunner = std::make_unique<InteractiveModelRunner>(
+      M->getContext(), Features, DecisionSpec,
+      basename + ".out",
+      basename + ".in");
+    errs() << "DEBUG2\n";
+              
+    std::vector<void*> InputBuffers;
+    // auto embedding = getEmbeddings();
+    // errs() << "Embedding size:" << embedding.size() << "\n";
+    InputBuffers.push_back(feature_data.data());
+    AOTRunner->feedInputBuffers(InputBuffers);
+    // int res = static_cast<int>(AOTRunner->evaluate<int64_t>());
+    auto res = AOTRunner->evaluate<int64_t>();
+    errs() << "Runner result:\n";
+    std::vector<int64_t> distSequence(res, res + 100);
+    std::string partition;
+    for (int i = 0; i < 100; i++) {
+      int64_t element = distSequence[i];
+      if (element == -1)
+        break;
+      else if (element == 101)
+        partition.append(",");
+      else if (element == 102)
+        partition.append("|");
+      else
+        partition.append("S" + std::to_string(element));      
+    }
+
+    DistributedLoopCost = this->distributeLoopAndGetLoopCostHelper(partition);
+    errs() << "Orignal and Distributed Loop costs are: " << OriginalLoopCost << " " << DistributedLoopCost << "\n";
+
+    feature_data[0] = OriginalLoopCost;
+    feature_data[1] = DistributedLoopCost;
+    InputBuffers[0] = feature_data.data();
+    AOTRunner->feedInputBuffers(InputBuffers);
+    auto res2 = AOTRunner->evaluate<int64_t>();
+
+    errs() << "Episode completed: " << *res2 << "\n";
+    // AOTRunner->feedInputBuffers(InputBuffers);
+    // int res = static_cast<int>(AOTRunner->evaluate<int64_t>());
+    // errs() << "Runner result: " << res <<'\n';
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -147,6 +229,7 @@ private:
   Module *M;
   uint64_t OriginalLoopCost;
   uint64_t DistributedLoopCost;
+  std::unique_ptr<MLModelRunner> AOTRunner;
 };
 } // namespace
 char LoopDistributionServerPass::ID = 0;

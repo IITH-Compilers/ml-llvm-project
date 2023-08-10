@@ -50,6 +50,14 @@ from google.protobuf.json_format import MessageToJson
 import grpc
 import LoopDistribution_pb2_grpc, LoopDistribution_pb2
 
+# pipe related imports
+import io
+import re
+import log_reader
+import ctypes
+from functools import reduce
+import operator
+
 
 sys.path.append('../../../../../llvm-grpc/Python-Utilities/')
 # from client import *
@@ -112,7 +120,27 @@ class DistributeLoopEnv(MultiAgentEnv):
             self.doneList = []
             self.grpc_rtt = 0
 
-        self.speedup = 0
+        self.speedup = 0        
+        self.use_grpc = False
+        self.use_pipe = not self.use_grpc
+        
+        if self.use_pipe:
+            # pipes opening
+            self.temp_rootname = "loopdistppipe"
+            to_compiler = self.temp_rootname + ".in"
+            from_compiler = self.temp_rootname + ".out"
+            # print("to_compiler", to_compiler)
+            # print("from_compiler", from_compiler)
+            if os.path.exists(to_compiler):
+                os.remove(to_compiler)
+            if os.path.exists(from_compiler):
+                os.remove(from_compiler)
+            os.mkfifo(to_compiler, 0o666)
+            os.mkfifo(from_compiler, 0o666)
+            self.tc = None
+            self.fc = None
+            self.tensor_specs = None
+            self.advice_spec =  None
     
     def reward_formula(self, distributedLoopCost, OriginalLoopCost):
         reward = 0
@@ -157,7 +185,8 @@ class DistributeLoopEnv(MultiAgentEnv):
                 logging.info('******Cache Found the data point******')
                 isFound=True
                 print('calling grpc exit in cache code')
-                self.stable_grpc("Exit")
+                if self.use_grpc:
+                    self.stable_grpc("Exit")
                 self.killServer()
         except:
             logging.warning('Index not found in the cache.. key={}'.format(key))
@@ -533,7 +562,7 @@ class DistributeLoopEnv(MultiAgentEnv):
         self.loopId = graph['graph'][1][1]['LoopID'].strip('\"')
         self.num_nodes = len(self.graph['nodes'])
         self.obs = get_observations(self.graph)
-
+            
         #start server here
         if self.mode != "inference":
             meta_ssa_dir = os.path.join(self.home_dir, 'llfiles/meta_ssa')
@@ -541,9 +570,56 @@ class DistributeLoopEnv(MultiAgentEnv):
             self.serverAddress = "127.0.0.1:5005"
             print("loopId: ",self.loopId," loop_id: ",self.loop_id)
             self.process = self.startServer(input_file_path,self.functionName,self.loop_id,self.serverAddress)
-            self.channel = grpc.insecure_channel(
-                    self.serverAddress)
-            self.stub = LoopDistribution_pb2_grpc.LoopDistributionStub(self.channel)
+            if self.use_grpc:
+                self.channel = grpc.insecure_channel(
+                        self.serverAddress)
+                self.stub = LoopDistribution_pb2_grpc.LoopDistributionStub(self.channel)
+            
+        if self.use_pipe:
+            # Opening pipe files
+            to_compiler = self.temp_rootname + ".in"
+            from_compiler = self.temp_rootname + ".out"
+            print("Creating pipe files", to_compiler, from_compiler)
+            self.tc = io.BufferedWriter(io.FileIO(to_compiler, "wb"))
+            print("Opened the write pipe")
+            self.fc = io.BufferedReader(io.FileIO(from_compiler, "rb"))
+            print("Opened the read pipe")
+            self.tensor_specs, _, self.advice_spec = log_reader.read_header(self.fc)
+            print("Tensor and Advice spec", self.tensor_specs, self.advice_spec)                
+            result = self.readObservation()
+            element = result[0].__getitem__(0)
+            print("Pipe init result:", element)
+        
+    def readObservation(self):
+        next_event = self.fc.readline()
+        # if not next_event:
+        #     break
+        context = None
+        last_context, observation_id, features,_ = log_reader.read_one_observation(
+            context, next_event, self.fc, self.tensor_specs, None
+        )
+        if last_context != context:
+            print(f"context: {last_context}")
+        context = last_context
+        # print(f"observation: {observation_id}")
+        tensor_values = []
+        for fv in features:
+            # log_reader.pretty_print_tensor_value(fv)
+            tensor_values.append(fv)
+        return tensor_values
+    
+    def sendResponse(self, f: io.BufferedWriter, value, spec: log_reader.TensorSpec):
+        """Send the `value` - currently just a scalar - formatted as per `spec`."""
+        # just int64 for now
+        assert spec.element_type == ctypes.c_int64
+        # to_send = ctypes.c_int64(int(value))
+        to_send = (ctypes.c_int64 * len(value))(*value)
+        # print("to_send", f.write(bytes(to_send)), ctypes.sizeof(spec.element_type) * reduce(operator.mul, spec.shape, 1))
+        assert f.write(bytes(to_send)) == ctypes.sizeof(spec.element_type) * reduce(operator.mul, spec.shape, 1)
+        # assert f.write(bytes(to_send)) == ctypes.sizeof(spec.element_type) * math.prod(
+        #     spec.shape
+        # )
+        f.flush()
 
     def step(self, action_dict):
         # assert(self.ggnn is not None, 'ggnn is None')
@@ -565,8 +641,8 @@ class DistributeLoopEnv(MultiAgentEnv):
         #     assert(False, 'Not valid task selected')
 
     def startServer(self,filePath, functionName, loopId, serverAddress):
-        optPath = "/home/cs20btech11018/repos/ML-Loop-Distribution/build_release/bin/opt"
-        clangPath = "/home/cs20btech11018/repos/ML-Loop-Distribution/build_release/bin/clang"
+        optPath = "/home/cs20mtech12003/ML-Loop-Distribution/build_release/bin/opt"
+        clangPath = "/home/cs20mtech12003/ML-Loop-Distribution/build_release/bin/clang"
 
         cmd = optPath + " -LoopDistributionServer -loopID " + loopId + " -funcName " + functionName + " -lc-function " + functionName + " -lc-lID " + loopId + " -server_address "+ serverAddress + " -S " + filePath + " -o /dev/null"
 
@@ -576,14 +652,39 @@ class DistributeLoopEnv(MultiAgentEnv):
         return pid
 
     def doLoopDistributionGetLoopCost(self,partition: str):
-        print("Partition Sequence: ",partition)
-        response = self.stable_grpc(partition)
-        jsonObj = MessageToJson(response)
-        response = json.loads(jsonObj)
-        print("gRPC response: ",response)
-        self.stable_grpc("Exit")
-        self.killServer()
-        return int(response['OrignialloopCost']),int(response['distributedLoopCost'])
+        if self.use_grpc:
+            response = self.stable_grpc(partition)
+            jsonObj = MessageToJson(response)
+            response = json.loads(jsonObj)
+            print("gRPC response: ",response)
+            self.stable_grpc("Exit")
+            OrignialloopCost = int(response['OrignialloopCost'])
+            distributedLoopCost = int(response['distributedLoopCost'])            
+        elif self.use_pipe:
+            seq = partition.replace('|', '-')
+            # seq = re.split(r',|-', seq)
+            seq = re.split('(\W)', seq)
+            print("Partition Sequence before: ",partition)
+            partition_seq = [-1]*100
+            for i in range(len(seq)):
+                if 'S' in seq[i]:
+                    element = int((seq[i])[1:])
+                    partition_seq[i] = element
+                elif ',' in seq[i]:
+                    partition_seq[i] = 101
+                else:
+                    partition_seq[i] = 102
+                    
+            print("Partition Sequence after: ",partition, partition_seq)
+            self.sendResponse(self.tc, partition_seq, self.advice_spec)
+            result = self.readObservation()
+            OrignialloopCost = result[0].__getitem__(0)
+            distributedLoopCost = result[0].__getitem__(1)
+            print("Partition Sequence send", OrignialloopCost, distributedLoopCost)
+            self.sendResponse(self.tc, [-1]*100, self.advice_spec)                
+        
+        self.killServer()        
+        return OrignialloopCost, distributedLoopCost
     
     def killServer(self):
     
