@@ -23,11 +23,12 @@ unsigned Agent::computeAction(Observation &input) {
                               model_output.end()); // [2, 4)
   int argmaxVal = std::distance(model_output.begin(), max);
 
-  LLVM_DEBUG(llvm::errs() << "---------------MODEL OUTPUT VECTOR:----------------\n");
-  for (auto e : model_output) {
-    LLVM_DEBUG(llvm::errs() << e << " ");
-  }
+  // (llvm::errs() << "---------------MODEL OUTPUT VECTOR:----------------\n");
+  // for (auto e : model_output) {
+  //   (llvm::errs() << e << " ");
+  // }
   LLVM_DEBUG(llvm::errs() << "\nmax value and index are " << *max << " " << argmaxVal
                << "\n");
+  llvm::errs() << "action: " << argmaxVal << "\n";
   return argmaxVal;
 }

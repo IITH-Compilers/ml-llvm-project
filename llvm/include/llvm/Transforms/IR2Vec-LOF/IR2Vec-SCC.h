@@ -1,6 +1,7 @@
 #ifndef __IR2Vec_SCC_H__
 #define __IR2Vec_SCC_H__
 
+#include "llvm/IR2Vec.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/DDG.h"
@@ -13,6 +14,7 @@
 // #include "llvm/InitializePasses.h"
 #include "DOTData.h"
 #include "llvm/Support/CommandLine.h"
+#include <string>
 
 #define DIM 300
 

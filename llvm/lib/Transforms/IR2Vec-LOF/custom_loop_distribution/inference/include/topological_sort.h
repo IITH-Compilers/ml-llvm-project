@@ -14,17 +14,35 @@ private:
   SmallVector<bool, 8> Discovered;
 
 public:
-  Graph(SmallMapVector<unsigned, SmallVector<unsigned, 8>, 16> &AdjacencyList, unsigned Size)
+  Graph(SmallMapVector<unsigned, SmallVector<unsigned, 8>, 16> &AdjacencyList,
+        unsigned Size)
       : AdjacencyList(AdjacencyList) {
     Discovered.resize(Size, false);
-    errs() << "Adj list size = " << AdjacencyList.size() << "\n";
-    errs() << "Discoved.size() = " << Discovered.size() << "\n";
-    for (auto l : AdjacencyList) {
-      errs() << l.first << ": ";
-      for (auto n : l.second)
+    InDegree.resize(Size, 0);
+    // print adjacency list
+    errs() << "Adjacency list:\n";
+    int Idx = 0;
+    for(auto l : this->AdjacencyList) {
+      errs() << Idx++ << ", " <<l.first << ": ";
+      for(auto n : l.second)
         errs() << n << " ";
       errs() << "\n";
     }
+
+    // compute in-degree
+    for (auto l : AdjacencyList) {
+      for (auto n : l.second) {
+        InDegree[n - 1]++;
+      }
+    }
+    // LLVM_DEBUG(errs() << "Adj list size = " << AdjacencyList.size() << "\n");
+    // LLVM_DEBUG(errs() << "Discoved.size() = " << Discovered.size() << "\n");
+    // for (auto l : AdjacencyList) {
+    //   LLVM_DEBUG(errs() << l.first << ": ");
+    //   for (auto n : l.second)
+    //     LLVM_DEBUG(errs() << n << " ");
+    //   LLVM_DEBUG(errs() << "\n");
+    // }
   }
   void getEligibleNodes(SmallVector<int, 8> &EligibleNodes);
   bool allDiscovered();

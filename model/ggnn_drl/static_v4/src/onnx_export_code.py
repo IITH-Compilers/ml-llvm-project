@@ -142,12 +142,14 @@ DISTRIBUTION_MODEL_PATH = "/home/cs20btech11024/onnx/distribution/model.onnx"
 SELECT_NODE_MODEL_PATH = "/home/cs20btech11024/onnx/select_node/model.onnx"
 
 
-torch.onnx.export(
-  SelectNodeNetwork(),
-  torch.randn(301000),
-  SELECT_NODE_MODEL_PATH
-)
+# torch.onnx.export(
+#   SelectNodeNetwork(),
+#   torch.randn(301000),
+#   SELECT_NODE_MODEL_PATH
+# )
 
+arr = torch.randn(10)
+print(type(arr))
 # torch.onnx.export(
 #   DistributionTask(),
 #   torch.randn(603),

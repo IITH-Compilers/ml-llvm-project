@@ -86,7 +86,7 @@ void RDGWrapperPass::Print_IR2Vec_File(DataDependenceGraph &G,
               if (instVecMap.find(II) != instVecMap.end()) instVecMap.find(II)
                   ->first->dump();
               else {
-                errs() << "Not in Map\n";
+                LLVM_DEBUG(errs() << "Not in Map\n");
                 II->dump();
               });
 
@@ -272,9 +272,9 @@ bool RDGWrapperPass::computeRDG(Function &F) {
   });
 
   rdgInfo = computeRDGForFunction(F);
-  errs() << "rdgInfo.SCCGraph size: " << rdgInfo.SCCGraphs.size() << "\n";
-  errs() << "rdgInfo.loops size: " << rdgInfo.loops.size() << "\n";
-  errs() << "rdgInfo.input_rdgs size: " << rdgInfo.input_rdgs.size() << "\n";
+  LLVM_DEBUG(errs() << "rdgInfo.SCCGraph size: " << rdgInfo.SCCGraphs.size() << "\n");
+  LLVM_DEBUG(errs() << "rdgInfo.loops size: " << rdgInfo.loops.size() << "\n");
+  LLVM_DEBUG(errs() << "rdgInfo.input_rdgs size: " << rdgInfo.input_rdgs.size() << "\n");
   return false;
 }
 
@@ -314,46 +314,76 @@ void RDGWrapperPass::populateDOTData(DataDependenceGraph &G,
   rdg.FuncName = G.GetFunctionName();
   rdg.LoopID = LoopID;
 
+  int NumNodes = 0;
+  for(auto* N : G) {
+    if(N->NodeLabel != "") {
+      NumNodes++;
+    }
+  }
+  errs() << "NumNodes = " << NumNodes << "\n";
+  // rdg.NodeRepresentations.resize(NumNodes);
   // filling IR2Vec vectors
   for (auto *N : G) {
     if (N->NodeLabel == "")
       continue;
     InstructionListType IList;
     N->collectInstructions([](const Instruction *I) { return true; }, IList);
-    auto &NodeVec = rdg.NodeRepresentations[stoi(N->NodeLabel.substr(1))];
-    errs() << "line 324\n";
+    auto &NodeVec = rdg.NodeRepresentations[stoi(N->NodeLabel.substr(1)) - 1];
+    // SmallVector<double, DIM> NodeVec;
+    LLVM_DEBUG(errs() << "line 324\n");
     NodeVec.resize(DIM, 0.0);
-
+    bool Found = false;
     for (Instruction *II : IList) {
       if (instVecMap.find(II) == instVecMap.end())
         continue;
 
-      auto &Vec = instVecMap.find(II)->second;
-      for (unsigned I = 0; I < DIM; ++I)
-        NodeVec[I] += Vec[I];
+      auto Vec = instVecMap.find(II)->second;
+      // errs() << "Vec[" << II << "] = ";
+      // for (unsigned I = 0; I < DIM; ++I)
+      //   errs() << Vec[I] << " ";
+      // errs() << "\n";
+      // errs() << "End\n";
+      if(!Found) {
+        NodeVec = Vec;
+        Found = true;
+      }
+      else {
+        for (unsigned I = 0; I < DIM; ++I)
+          NodeVec[I] += Vec[I];
+      }
+      
     }
+    // rdg.NodeRepresentations[stoi(N->NodeLabel.substr(1)) - 1] = NodeVec;
+    // errs() << "Nodevecd : ---\n";
+    // for(unsigned I = 0; I < DIM; ++I)
+    // {
+    //   errs() << NodeVec[I] << " ";
+    // }
+    // errs() << "\n";
+    // errs() << "End\n";
     NodeNumber.insert(std::make_pair(N, N->NodeLabel));
   }
-  errs() << "**before adjlist filling\n";
+  LLVM_DEBUG(errs() << "**before adjlist filling\n");
   // filling AdjList
   for (auto *N : G) {
     if (N->NodeLabel == "")
       continue;
 
     for (auto &E : N->getEdges()) {
-      errs() << "IR2Vec-SCC.cpp: line 348\n";
+      LLVM_DEBUG(errs() << "IR2Vec-SCC.cpp: line 348\n");
       if ((&E->getTargetNode())->NodeLabel == "") {
-        errs() << "IR2Vec-SCC.cpp: line 353\n";
+        LLVM_DEBUG(errs() << "IR2Vec-SCC.cpp: line 353\n");
         continue;
       }
       auto SrcNode = stoi(NodeNumber.find(N)->second.substr(1));
-      errs() << "IR2Vec-SCC.cpp: line 358\n";
+      LLVM_DEBUG(errs() << "IR2Vec-SCC.cpp: line 358\n");
       auto DestNode =
           stoi(NodeNumber.find(&E->getTargetNode())->second.substr(1));
-      rdg.AdjList[SrcNode].push_back(DestNode);
+      if(SrcNode != DestNode)
+        rdg.AdjList[SrcNode].push_back(DestNode);
     }
   }
-  errs() << "rdg.AdjList size = " << rdg.AdjList.size() << "\n";
+  LLVM_DEBUG(errs() << "rdg.AdjList size = " << rdg.AdjList.size() << "\n");
 }
 
 RDGData RDGWrapperPass::computeRDGForFunction(Function &F) {
@@ -403,7 +433,7 @@ RDGData RDGWrapperPass::computeRDGForFunction(Function &F) {
       auto SCC_Graph = RDGraph.computeRDGForInnerLoop(**il);
 
       if (SCC_Graph == nullptr) {
-        errs() << "IR2Vec-SCC.cpp : line 394\n";
+        LLVM_DEBUG(errs() << "IR2Vec-SCC.cpp : line 394\n");
         continue;
       }
       DataDependenceGraph &SCCGraph = *SCC_Graph;
@@ -447,8 +477,8 @@ RDGData RDGWrapperPass::computeRDGForFunction(Function &F) {
       LLVM_DEBUG(errs() << "Writing " + Input_Filename + "\n");
       Print_IR2Vec_File(SCCGraph, Input_Filename, s2, loopNum);
 
-      errs() << "FileName: " << F.getParent()->getName() << "\n";
-      errs() << "Writing " + Input_Filename + "\n";
+      LLVM_DEBUG(errs() << "FileName: " << F.getParent()->getName() << "\n");
+      LLVM_DEBUG(errs() << "Writing " + Input_Filename + "\n");
 
       std::ifstream ifs_inputfile(Input_Filename);
       std::string content_input;
@@ -473,13 +503,13 @@ RDGData RDGWrapperPass::computeRDGForFunction(Function &F) {
           File << SCC_Filename << " : " << SCCGraph.totalSCCNodes << "\n";
         }
       } else {
-        errs() << "error opening file for writing! \n";
+        LLVM_DEBUG(errs() << "error opening file for writing! \n");
       }
     }
   }
-  errs() << "data.SCCGraph size: " << data.SCCGraphs.size() << "\n";
-  errs() << "data.loops size: " << data.loops.size() << "\n";
-  errs() << "data.input_rdgs size: " << data.input_rdgs.size() << "\n";
+  LLVM_DEBUG(errs() << "data.SCCGraph size: " << data.SCCGraphs.size() << "\n");
+  LLVM_DEBUG(errs() << "data.loops size: " << data.loops.size() << "\n");
+  LLVM_DEBUG(errs() << "data.input_rdgs size: " << data.input_rdgs.size() << "\n");
   return data;
 }
 

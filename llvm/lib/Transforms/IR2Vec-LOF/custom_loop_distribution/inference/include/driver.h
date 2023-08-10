@@ -5,8 +5,8 @@
 #include "multi_agent_env.h"
 #include "llvm/ADT/SmallVector.h"
 
-#define LD_MODEL_PATH "/home/cs20btech11024/onnx/distribution/model.onnx"
-#define SELECT_NODE_MODEL_PATH "/home/cs20btech11024/onnx/select_node/model.onnx"
+#define LD_MODEL_PATH "/home/cs20btech11024/onnx/distribution/model-1.onnx"
+#define SELECT_NODE_MODEL_PATH "/home/cs20btech11024/onnx/select_node/model-1.onnx"
 
 class DriverService : public InferenceEngine {
 public:

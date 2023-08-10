@@ -10,6 +10,9 @@ void MultiAgentEnv::reset(DOTData &Rdg) {
   this->PrevNode = -1;
   this->CurrentNode = -1;
   int idx = 0;
+  errs() << "NodeRepresentation size = " << Rdg.NodeRepresentations.size()
+         << "\n";
+  this->NodeRepresentation.clear();
   for (auto &E : Rdg.NodeRepresentations) {
     this->NodeRepresentation.push_back(E.second);
 
@@ -18,6 +21,8 @@ void MultiAgentEnv::reset(DOTData &Rdg) {
     idx++;
   }
   this->resetDone();
+
+  // delete this->GraphTopology;
   this->GraphTopology = new Graph(Rdg.AdjList, Rdg.NodeRepresentations.size());
 
   Observation Obs(SELECT_NODE_OBS_SIZE);
@@ -27,7 +32,7 @@ void MultiAgentEnv::reset(DOTData &Rdg) {
 }
 
 void MultiAgentEnv::step(Action Action) {
-  errs() << "this->next agnt = " << this->getNextAgent() << "\n";
+  LLVM_DEBUG(errs() << "this->next agnt = " << this->getNextAgent() << "\n");
   if (this->getNextAgent() == SELECT_NODE_AGENT)
     this->select_node_step(Action);
   else if (this->getNextAgent() == DISTRIBUTION_AGENT) {
@@ -36,7 +41,7 @@ void MultiAgentEnv::step(Action Action) {
   if (this->GraphTopology->allDiscovered() &&
       this->getNextAgent() == SELECT_NODE_AGENT) {
     this->setDone();
-    errs() << "************ALL NODES DISCOVERED***************\n";
+    LLVM_DEBUG(errs() << "************ALL NODES DISCOVERED***************\n");
   }
 }
 
@@ -45,14 +50,15 @@ void MultiAgentEnv::create_node_select_mask(SmallVector<int, 8> &Mask) {
   SmallVector<int, 8> EligibleNodes;
   this->GraphTopology->getEligibleNodes(EligibleNodes);
 
-  errs() << "EligibleNodes = ";
+  (errs() << "EligibleNodes = ");
   for (auto Node : EligibleNodes) {
-    errs() << Node << " ";
+    (errs() << Node << " ");
   }
-  errs() << "\n";
+  (errs() << "\n");
+  LLVM_DEBUG(errs() << "\n");
   for (auto Node : EligibleNodes) {
     if (Node >= MAX_NODES_COUNT) {
-      errs() << "Eligible node: " << Node << "\n";
+      LLVM_DEBUG(errs() << "Eligible node: " << Node << "\n");
     }
     assert(Node < MAX_NODES_COUNT && "Eligible node >= MAX_NODES_COUNT");
     Mask[Node] = 1;
@@ -68,6 +74,15 @@ void MultiAgentEnv::select_node_obs_constructor(Observation &Obs) {
   }
 
   // state
+  LLVM_DEBUG(errs() << "Initial node rep: ----------\n";
+  for(auto V : this->NodeRepresentation) {
+    errs() << "[ ";
+    for(auto e : V) {
+      errs() << e << " ";
+    }
+    errs() << "]\n\n";
+  });
+  errs() << "\n\n";
   for (auto V : this->NodeRepresentation) {
     for (auto e : V) {
       Obs[CurrIdx++] = e;
@@ -78,14 +93,15 @@ void MultiAgentEnv::select_node_obs_constructor(Observation &Obs) {
 void MultiAgentEnv::select_node_step(Action Action) {
   this->PrevNode = this->CurrentNode;
   this->CurrentNode = Action;
+  errs() << "current node: " << this->CurrentNode << "\n";
   this->GraphTopology->updateVisitList(this->CurrentNode);
-  errs() << "select_node_step: line: " << 53 << "\n";
+  LLVM_DEBUG(errs() << "select_node_step: line: " << 53 << "\n");
   int CurrIdx = 0;
   auto printIdx = [&](int line) {
-    errs() << "line: " << line << " --- curridx = " << CurrIdx << "\n";
+    LLVM_DEBUG(errs() << "line: " << line << " --- curridx = " << CurrIdx << "\n");
   };
   // fill the Obs vector
-  errs() << "prevnode = " << this->PrevNode << "\n";
+  LLVM_DEBUG(errs() << "prevnode = " << this->PrevNode << "\n");
   if (this->PrevNode < 0) {
     printIdx(59);
     Observation Obs(SELECT_NODE_OBS_SIZE);
@@ -119,7 +135,7 @@ void MultiAgentEnv::select_node_step(Action Action) {
 }
 
 void MultiAgentEnv::select_distribution_step(Action Action) {
-  errs() << "****ENTERED select_distribution_step******\n";
+  LLVM_DEBUG(errs() << "****ENTERED select_distribution_step******\n");
   if (Action == 0) {
     // do not distribute => merge
     this->DistributionSeq =
@@ -128,12 +144,14 @@ void MultiAgentEnv::select_distribution_step(Action Action) {
     this->DistributionSeq =
         this->DistributionSeq + "|S" + std::to_string(this->CurrentNode + 1);
   }
+  errs() << "previous node: " << this->PrevNode << " and current node: "
+         << this->CurrentNode << "\n";
   Observation Obs(SELECT_NODE_OBS_SIZE);
   // Action mask
   SmallVector<int, 8> ActionMask(MAX_NODES_COUNT, 0);
   int CurrIdx = 0;
   auto printIdx = [&](int line) {
-    errs() << "line: " << line << " --- curridx = " << CurrIdx << "\n";
+    LLVM_DEBUG(errs() << "line: " << line << " --- curridx = " << CurrIdx << "\n");
   };
   this->create_node_select_mask(ActionMask);
   printIdx(138);

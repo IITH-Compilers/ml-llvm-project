@@ -9,6 +9,7 @@ from tqdm import tqdm
 import os
 import json 
 import glob
+import sys
 
 # import sys
 # sys.path.append('/home/shalini/LOF_test/LD_VF/IR2Vec-LoopOptimizationFramework/model/ggnn_drl/static_v4/src')
@@ -153,6 +154,7 @@ class DistributionInference:
         # train_agent = DQNTrainer(config=config)
         # print('Hi 2')
         checkpoint = model_path
+        checkpoint = "/home/cs20btech11024/repos/ML-Loop-Distribution/model/ggnn_drl/static_v4/model/dist-checkpoint-final.pth"
         self.trained_agent.restore(checkpoint)
 
         self.config = config
@@ -234,8 +236,8 @@ class DistributionInference:
 
 def predict_loop_distribution(rdgs : list, trained_dist_model : str):
     print("trained_dist_model: {}".format(trained_dist_model))
-    # sys.argv.append("")
-    # sys.path.insert(0, "/home/shalini/LOF_test/LD_VF/IR2Vec-LoopOptimizationFramework/model/ggnn_drl/static_v4/src")
+    sys.argv.append("")
+    sys.path.insert(0, "/home/cs20btech11024/repos/ML-Loop-Distribution/model/ggnn_drl/static_v4/src")
     ray.init()
 
     inference_obj = DistributionInference(trained_dist_model)
@@ -257,7 +259,8 @@ if __name__ == "__main__":
     logging.info('Start the inference....')
 
     # model_path = "/home/shalini/ray_results/experiment_2022-02-14_23-08-28/experiment_DistributeLoopEnv_eb75c_00000_0_2022-02-14_23-08-28/checkpoint_000001/checkpoint-1"
-    model_path = "/home/shalini/ray_results/experiment_2022-03-22_11-06-19/experiment_DistributeLoopEnv_003b1_00000_0_2022-03-22_11-06-19/checkpoint_008568/checkpoint-8568"
+    model_path = "/home/cs20btech11024/ray_results/experiment_2023-08-08_12-48-36/experiment_DistributeLoopEnv_ca581_00000_0_2023-08-08_12-48-36/checkpoint_000001/checkpoint-1"
+
     test_dir = "/home/shalini/LOF_test/LD_VF/IR2Vec-LoopOptimizationFramework/data/Opt_cld_O3_individualfile/mutation/tsvc_train/GIF_train_v4/graphs/loops/json/"
     args = {'no_render' : True, 'checkpoint' : model_path, 'run' : 'SimpleQ' , 'env' : '' , 'config' : {}, 'video_dir' : '', 'steps' : 0, 'episodes' : 0, 'arch' : 'X86'}
     args = Namespace(**args)   

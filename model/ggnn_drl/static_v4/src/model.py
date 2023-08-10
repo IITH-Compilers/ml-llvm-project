@@ -50,12 +50,16 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
         x = F.relu(x)
         # print("ccccccccccccccccccccc{}".format(x))
 
-        for i in range(input_dict["obs"]["action_mask"].shape[0]):
-            action_mask = input_dict["obs"]["action_mask"][i, :]
+        mask = input_dict["obs"]["action_mask"]
+        inf_mask = torch.clamp(torch.log(mask), min=FLOAT_MIN)
+        x = x + inf_mask
 
-            for j in range(action_mask.shape[0]):
-                if action_mask[j] == 0:
-                    x[i, j] = FLOAT_MIN
+        # for i in range(input_dict["obs"]["action_mask"].shape[0]):
+        #     action_mask = input_dict["obs"]["action_mask"][i, :]
+
+        #     for j in range(action_mask.shape[0]):
+        #         if action_mask[j] == 0:
+        #             x[i, j] = FLOAT_MIN
 
         return x, state
 
@@ -113,14 +117,17 @@ class DistributionTask(TorchModelV2, nn.Module):
         # 32*600
         # print("x1: {}".format(x))
 
-        for i in range(input_dict["obs"]["action_mask"].shape[0]):
-            action_mask = input_dict["obs"]["action_mask"][i, :]
-            # print("aaaaaaaaaaaaaaaaaaaa {}".format(action_mask.shape))
-            # 1000
+        mask = input_dict["obs"]["action_mask"]
+        inf_mask = torch.clamp(torch.log(mask), min=FLOAT_MIN)
+        x = x + inf_mask
+        # for i in range(input_dict["obs"]["action_mask"].shape[0]):
+        #     action_mask = input_dict["obs"]["action_mask"][i, :]
+        #     # print("aaaaaaaaaaaaaaaaaaaa {}".format(action_mask.shape))
+        #     # 1000
 
-            for j in range(action_mask.shape[0]):
-                if action_mask[j] == 0:
-                    x[i, j] = FLOAT_MIN
+        #     for j in range(action_mask.shape[0]):
+        #         if action_mask[j] == 0:
+        #             x[i, j] = FLOAT_MIN
 
         # print("x2: {}".format(x))
 

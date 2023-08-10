@@ -367,7 +367,7 @@ class DistributeLoopEnv(MultiAgentEnv):
             select_node_mask = self.createNodeSelectMask()
             state = self.obs
             print("************************FROM MULTIAGENTENV.py***********************************************")
-            print(state.shape)
+            # print(state.shape)
             self.hidden_state =  self.ggnn(initial_node_representation=state.
             initial_node_representation, annotations=state.annotations, adjacency_lists=state.adjacency_lists)
             print(self.hidden_state.shape)

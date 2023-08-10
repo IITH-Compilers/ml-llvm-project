@@ -2,6 +2,10 @@
 #include "MLInferenceEngine/agent.h"
 #include "include/multi_agent_env.h"
 #include "llvm/Support/raw_ostream.h"
+#include <fstream>
+#include <iostream>
+#include <sstream>
+#include <string>
 
 using namespace llvm;
 
@@ -25,4 +29,14 @@ void DriverService::getInfo(llvm::SmallVector<DOTData, 5> &RDGList,
 
     DistributedSeqs.push_back(Env->getDistributionSeq());
   }
+
+  // write distribution seqs to file in append mode
+
+  std::ofstream OutFile;
+  OutFile.open("onnx_flow.txt", std::ios_base::app);
+  for (auto &Seq : DistributedSeqs) {
+    OutFile << Seq << "\n";
+  }
+  OutFile.close();
+
 }

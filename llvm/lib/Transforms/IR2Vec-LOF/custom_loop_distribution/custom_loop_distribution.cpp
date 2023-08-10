@@ -136,8 +136,8 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
   // legacy::FunctionPassManager FPM(F.getParent());
   // FPM.add(R);
   // FPM.run(F);
-  errs() << "*********************BEFORE compute RDG "
-            "starts*****************************\n";
+  // errs() << "*********************BEFORE compute RDG "
+            // "starts*****************************\n";
   R.computeRDG(F);
   RDGData data = R.getRDGInfo();
 
