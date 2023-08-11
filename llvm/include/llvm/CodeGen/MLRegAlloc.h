@@ -327,12 +327,14 @@ private:
 
               if (json::Value *target = O->get("name")) {
                 std::string targetName;
-                json::fromJSON(*target, targetName);
+                json::Path::Root root_1;
+                json::fromJSON(*target, targetName, root_1);
 
                 if (json::Array *registerClasses = O->getArray("regclasses")) {
                   for (auto regClass : *registerClasses) {
                     std::string regClassName;
-                    json::fromJSON(regClass, regClassName);
+                    json::Path::Root root_2;
+                    json::fromJSON(regClass, regClassName, root_2);
 
                     LLVM_DEBUG(errs() << "regClass " << regClassName << "\n");
                     this->regClassSupported4_MLRA.insert(regClassName);
@@ -346,11 +348,13 @@ private:
                     if (json::Object *regObj = regEntry.getAsObject()) {
                       int64_t color;
                       if (json::Value *color_val = regObj->get("color")) {
-                        json::fromJSON(*color_val, color);
+                        json::Path::Root root_3;
+                        json::fromJSON(*color_val, color, root_3);
                       }
                       int64_t phyReg;
                       if (json::Value *phyReg_val = regObj->get("phyReg")) {
-                        json::fromJSON(*phyReg_val, phyReg);
+                        json::Path::Root root_4;
+                        json::fromJSON(*phyReg_val, phyReg, root_4);
                       }
                       color2PhyRegmap[color] = phyReg;
                       PhyReg2Colormap[phyReg] = color;

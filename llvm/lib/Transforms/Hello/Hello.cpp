@@ -22,14 +22,13 @@ using namespace llvm;
 
 #define DEBUG_TYPE "hello"
 
-// using grpc::Status;
-// using grpc::ServerContext;
-// using registerallocationinference::GraphList;
-// using registerallocationinference::ColorData;
-// using registerallocationinference::RegisterAllocationInference;
-
 STATISTIC(HelloCounter, "Counts number of functions greeted");
 
+namespace {
+// Hello - The first implementation, without getAnalysisUsage.
+struct Hello : public FunctionPass {
+  static char ID; // Pass identification, replacement for typeid
+  Hello() : FunctionPass(ID) {}
 // namespace {
 // // Hello - The first implementation, without getAnalysisUsage.
 // struct Hello : public FunctionPass,gRPCUtil {
@@ -42,6 +41,14 @@ STATISTIC(HelloCounter, "Counts number of functions greeted");
 //     Stub = (RegisterAllocationInference::Stub *)this->getStub();
 //   }
 
+  bool runOnFunction(Function &F) override {
+    ++HelloCounter;
+    errs() << "Hello: ";
+    errs().write_escaped(F.getName()) << '\n';
+    return false;
+  }
+};
+} // namespace
 //   bool runOnFunction(Function &F) override {
 //     ++HelloCounter;
 //     errs() << "Hello: ";
