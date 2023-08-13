@@ -31,7 +31,7 @@ static cl::opt<bool> training("training", cl::Hidden,
 
 static cl::opt<bool> usePipe("use-pipe", cl::Hidden,
                               cl::desc("Use pipe based interation with python model"),
-                              cl::init(true));
+                              cl::init(false));
 
 static cl::opt<std::string> server_address(
     "server_address", cl::Hidden,
@@ -78,7 +78,7 @@ struct PosetRL : public ModulePass,
     for(size_t i=0; i<DefaultFeatureSpec.getElementCount(); i++) 
         feature_data.push_back((float_t) (i+0.5));
 
-    std::string basename = "temppipe";
+    std::string basename = "/home/cs20mtech12003/ML-Phase-Ordering/Model/RLLib-PhaseOrder/temppipe";
     std::vector<TensorSpec> Features;
     // std::vector<void*> InputBuffers;
 

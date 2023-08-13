@@ -61,10 +61,11 @@ parser.add_argument("-alpha", "--alpha", required=False, type=float, default=10)
 parser.add_argument("-beta", "--beta", required=False, type=float, default=5)
 parser.add_argument("-size_reward_thresh", "--size_reward_thresh", required=False, type=float, default=0.2)
 parser.add_argument("-mca_reward_thresh", "--mca_reward_thresh", required=False, type=float, default=0.2)
+parser.add_argument("--use_pipe", action='store_true', help = "Use pipe communication", required=False, default=False)
 
 
 class PhaseOrderInference:
-    def __init__(self, model_path, llvm_dir, ir2vec_dir):
+    def __init__(self, model_path, llvm_dir, ir2vec_dir, use_pipe=False):
         logdir='/tmp'
         logger = logging.getLogger(__file__)
         logging.basicConfig(filename='running.log', format='%(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
@@ -103,6 +104,7 @@ class PhaseOrderInference:
                     "size_reward_thresh": args.size_reward_thresh,
                     "mca_reward_thresh": args.mca_reward_thresh,
                     "action_space_size": 34,
+                    "use_pipe": use_pipe,
                 },
                 "framework": "torch",
                 "explore": False,
@@ -110,6 +112,7 @@ class PhaseOrderInference:
                 "train_batch_size": 1,
             },
             **cfg)
+        
         
         def env_creator(env_config):
             return PhaseOrder(env_config)
@@ -167,14 +170,14 @@ if __name__ == '__main__':
 
     ray.init()
 
-    inference_obj = PhaseOrderInference(args.model, args.llvm_dir, args.ir2vec_dir)
-
-    while(True):
-        reward, response = inference_obj.run_predict()
-    
-    # f = open("timetaken.txt", "w")
-    # for file in os.listdir(args.test_dir):
-    #     start = time.time()
-    #     reward, response = inference_obj.run_predict(file)
-    #     end = time.time()
-    #     f.write("Time taken for {} is {}\n".format(file, end-start))
+    inference_obj = PhaseOrderInference(args.model, args.llvm_dir, args.ir2vec_dir, args.use_pipe)
+    if args.use_pipe:
+        while(True):
+            reward, response = inference_obj.run_predict()
+    else:
+        f = open("timetaken.txt", "w")
+        for file in os.listdir(args.test_dir):
+            start = time.time()
+            reward, response = inference_obj.run_predict(file)
+            end = time.time()
+            f.write("Time taken for {} is {}\n".format(file, end-start))

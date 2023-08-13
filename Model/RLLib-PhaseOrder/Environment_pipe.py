@@ -120,25 +120,21 @@ class PhaseOrder(gym.Env):
             filename='env.log', format='%(levelname)s - %(filename)s - %(message)s', level=log_level)
         
         # pipes opening
+        self.use_pipe = config["use_pipe"]
         self.temp_rootname = "temppipe"
         to_compiler = self.temp_rootname + ".in"
         from_compiler = self.temp_rootname + ".out"
-        # print("to_compiler", to_compiler)
-        # print("from_compiler", from_compiler)
-        if os.path.exists(to_compiler):
-            os.remove(to_compiler)
-        if os.path.exists(from_compiler):
-            os.remove(from_compiler)
-        os.mkfifo(to_compiler, 0o666)
-        os.mkfifo(from_compiler, 0o666)
         self.tc = None
         self.fc = None
         self.tensor_specs = None
         self.advice_spec =  None
-        # self.tc = io.BufferedWriter(io.FileIO(to_compiler, "wb"))
-        # print("Opened the write pipe")
-        # self.fc = io.BufferedReader(io.FileIO(from_compiler, "rb"))
-        # print("Opened the read pipe")
+        if self.use_pipe:
+            if os.path.exists(to_compiler):
+                os.remove(to_compiler)
+            if os.path.exists(from_compiler):
+                os.remove(from_compiler)
+            os.mkfifo(to_compiler, 0o666)
+            os.mkfifo(from_compiler, 0o666)    
 
     def make(self, TrainingPath):
         self.FileSys_Obj.generateTrainingData(TrainingPath)
@@ -211,9 +207,9 @@ class PhaseOrder(gym.Env):
 
                 self.serverId = self.startServer(
                     self.Obs[index], "127.0.0.1:50051")
-                # self.channel = grpc.insecure_channel(
-                #     '{}:{}'.format("127.0.0.1", "50051"))
-                # self.stub = example_pb2_grpc.PosetRLStub(self.channel)                                                
+                self.channel = grpc.insecure_channel(
+                    '{}:{}'.format("127.0.0.1", "50051"))
+                self.stub = example_pb2_grpc.PosetRLStub(self.channel)                                                
                 
                 self.createEnv(self.Obs[index])
                 self.doneList.append(self.Obs[index])
@@ -224,37 +220,40 @@ class PhaseOrder(gym.Env):
                 self.iteration_counter += 1
                 self.rename_Dir = True
 
-        # else:
-        #     self.Obs = test_file
-        #     print("test_file {}".format(test_file))
-        #     logging.info("test_file {}".format(test_file))
-        #     index = np.random.random_integers(0, len(self.Obs) - 1)
-        #     print("Obs {}".format(index))
-        #     logging.info("Obs {}".format(index))
-        #     self.createEnv(test_file)
+        else:
+            if not self.use_pipe:
+                self.Obs = test_file
+                print("test_file {}".format(test_file))
+                logging.info("test_file {}".format(test_file))
+                index = np.random.random_integers(0, len(self.Obs) - 1)
+                print("Obs {}".format(index))
+                logging.info("Obs {}".format(index))
+                self.createEnv(test_file)
 
         # Opening pipe files
-        to_compiler = self.temp_rootname + ".in"
-        from_compiler = self.temp_rootname + ".out"
-        print("Creating pipe files", to_compiler, from_compiler)
-        self.tc = io.BufferedWriter(io.FileIO(to_compiler, "wb"))
-        print("Opened the write pipe")
-        self.fc = io.BufferedReader(io.FileIO(from_compiler, "rb"))
-        print("Opened the read pipe")
-        self.tensor_specs, _, self.advice_spec = log_reader.read_header(self.fc)
-        print("Tensor and Advice spec", self.tensor_specs, self.advice_spec)                
-        result = self.readObservation()
-        # print("Returned obs value is", result[0]._view)
-        if result is None:
-#quiet#            print("result is None")
-            raise
-        else:
-            self.embedding = np.empty([300])
-            for i in range(result[0].__len__()):
-                element = result[0].__getitem__(i)
-                self.embedding[i] = element
+        if self.use_pipe:
+            to_compiler = self.temp_rootname + ".in"
+            from_compiler = self.temp_rootname + ".out"
+            print("Creating pipe files", to_compiler, from_compiler)
+            self.tc = io.BufferedWriter(io.FileIO(to_compiler, "wb"))
+            print("Opened the write pipe")
+            self.fc = io.BufferedReader(io.FileIO(from_compiler, "rb"))
+            print("Opened the read pipe")
+            self.tensor_specs, _, self.advice_spec = log_reader.read_header(self.fc)
+            print("Tensor and Advice spec", self.tensor_specs, self.advice_spec)                
+            result = self.readObservation()
+            # print("Returned obs value is", result[0]._view)
+            if result is None:
+    #quiet#            print("result is None")
+                raise
+            else:
+                self.embedding = np.empty([300])
+                for i in range(result[0].__len__()):
+                    element = result[0].__getitem__(i)
+                    self.embedding[i] = element
         
-        # self.embedding = self.getEmbedding(self.BaseIR)
+        else:
+            self.embedding = self.getEmbedding(self.BaseIR)
 
         action_mask = [1] * self.action_space_size
         next_observation = {'action_mask': np.array(
@@ -304,7 +303,6 @@ class PhaseOrder(gym.Env):
                 self.Curr_Dir + "/" + fileName + ".ll -o " + \
                 self.Curr_Dir + "/" + "base_binary.o"
 # quiet#            print("O0 binary object compile command: "+command)
-            print("O0 binary object compile command: "+command)
             os.system(command)
             baseBinarySize = os.path.getsize(self.Curr_Dir + "/base_binary.o")
 #quiet#            print("base {}".format(baseBinarySize))
@@ -345,22 +343,23 @@ class PhaseOrder(gym.Env):
         # self.embedding = self.applyActionGetEmbeddings(action=action_index)
         
         # make call to compiler to get the updated embedding
-        #result = self.stable_grpc("Action", action_index) # LLVMgRPC way
-        self.sendResponse(self.tc, action_index, self.advice_spec)
-        result = self.readObservation()
+        if self.use_pipe:
+            self.sendResponse(self.tc, action_index, self.advice_spec)
+            result = self.readObservation()
+        else:
+            result = self.stable_grpc("Action", action_index) # LLVMgRPC way
         
         if result is None:
 #quiet#            print("result is None")
             raise
         else:
-            self.embedding = np.empty([300])
-            for i in range(result[0].__len__()):
-                element = result[0].__getitem__(i)
-                self.embedding[i] = element
-                
-            # self.embedding = result[0]
-        # print("Returned Embedding:", self.embedding)
-        
+            if self.use_pipe:
+                self.embedding = np.empty([300])
+                for i in range(result[0].__len__()):
+                    element = result[0].__getitem__(i)
+                    self.embedding[i] = element
+            else:
+                self.embedding = result                    
         # self.embedding = self.getEmbedding(NextStateIR)
         # self.CurrIR = NextStateIR
         self.cur_action_mask[action_index] = 0
@@ -390,13 +389,15 @@ class PhaseOrder(gym.Env):
                     actionfile.write('] ')
 
             if self.mode != 'inference':
-                # self.stable_grpc("Exit", None)                                
+                if not self.use_pipe:
+                    self.stable_grpc("Exit", None)                                
                 Reward = self.getReward(self.assembly_file_path)
-            self.sendResponse(self.tc, -1, self.advice_spec)
-            self.fc.close()
-            self.tc.close()
-            self.action_count = 0
-            self.cur_action_seq = []
+            if self.use_pipe:
+                self.sendResponse(self.tc, -1, self.advice_spec)
+                self.fc.close()
+                self.tc.close()
+                self.action_count = 0
+                self.cur_action_seq = []
 
 #quiet#        print("Reward {}".format(Reward))
         logging.info("Reward {}".format(Reward))
@@ -422,7 +423,8 @@ class PhaseOrder(gym.Env):
         if pro.stderr is not None:
             logging.critical('Error : {}'.format(pro.stderr))
 
-        currMcaThroughtput = 0
+        if self.use_pipe:
+            currMcaThroughtput = 0
         while line:
             pair = line.split(':')
             if pair[0] == 'Block RThroughput':
@@ -605,9 +607,10 @@ class PhaseOrder(gym.Env):
 
         cmd = f"{clangPath} -S -mllvm --OPosetRL -mllvm --training -mllvm --server_address={ip} {filepath}  -o {newfilepath}"
 #quiet#        print("Server starting command: "+cmd)
+        if self.use_pipe:
+            cmd = cmd + " -mllvm -use-pipe"
         pid = subprocess.Popen(cmd, executable='/bin/bash',
                                shell=True, preexec_fn=os.setsid)
-        print('Server comand:',pid,  cmd)
         # pid = os.system(cmd)
         return pid
 

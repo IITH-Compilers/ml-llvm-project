@@ -55,6 +55,7 @@ parser.add_argument("-alpha", "--alpha", required=False, type=float, default=10)
 parser.add_argument("-beta", "--beta", required=False, type=float, default=5)
 parser.add_argument("-size_reward_thresh", "--size_reward_thresh", required=False, type=float, default=0.2)
 parser.add_argument("-mca_reward_thresh", "--mca_reward_thresh", required=False, type=float, default=0.2)
+parser.add_argument("--use_pipe", action='store_true', help = "Use pipe communication", required=False, default=False)
 
 # Use for resuming training from checkpoint
 # checkpoint = "/home/cs20btech11018/ray_results/0.2thresh-10alpha-5beta-aarch/experiment_PhaseOrder_54b91_00000_0_2023-02-04_18-33-34/checkpoint_000010/checkpoint-10"
@@ -136,6 +137,7 @@ if __name__ == '__main__':
                 "size_reward_thresh": args.size_reward_thresh,
                 "mca_reward_thresh": args.mca_reward_thresh,
                 "action_space_size": 34,
+                "use_pipe": args.use_pipe,
             },
             # "batch_size": 128,
             "exploration_config": {
