@@ -345,7 +345,7 @@ class DistributeLoopEnv(MultiAgentEnv):
                 self.select_node_agent_id: True,
                 self.distribution_agent_id: True,
                 "__all__": True
-            }
+            }            
         # else:
         #     self.agent_count += 1
         #     self.select_node_agent_id += "select_node_agent_{}".format(self.agent_count)
@@ -363,6 +363,8 @@ class DistributeLoopEnv(MultiAgentEnv):
         if self.mode != 'inference':
             return obs, reward, done, {}
         else:
+            if self.use_pipe:
+                self.parseSequenceAndSend(self.distribution)
             return obs, reward, done, self.distribution
     
     # def step_via_vectorization(self, action):
@@ -575,20 +577,20 @@ class DistributeLoopEnv(MultiAgentEnv):
                         self.serverAddress)
                 self.stub = LoopDistribution_pb2_grpc.LoopDistributionStub(self.channel)
             
-        if self.use_pipe:
-            # Opening pipe files
-            to_compiler = self.temp_rootname + ".in"
-            from_compiler = self.temp_rootname + ".out"
-            print("Creating pipe files", to_compiler, from_compiler)
-            self.tc = io.BufferedWriter(io.FileIO(to_compiler, "wb"))
-            print("Opened the write pipe")
-            self.fc = io.BufferedReader(io.FileIO(from_compiler, "rb"))
-            print("Opened the read pipe")
-            self.tensor_specs, _, self.advice_spec = log_reader.read_header(self.fc)
-            print("Tensor and Advice spec", self.tensor_specs, self.advice_spec)                
-            result = self.readObservation()
-            element = result[0].__getitem__(0)
-            print("Pipe init result:", element)
+            if self.use_pipe:
+                # Opening pipe files
+                to_compiler = self.temp_rootname + ".in"
+                from_compiler = self.temp_rootname + ".out"
+                print("Creating pipe files", to_compiler, from_compiler)
+                self.tc = io.BufferedWriter(io.FileIO(to_compiler, "wb"))
+                print("Opened the write pipe")
+                self.fc = io.BufferedReader(io.FileIO(from_compiler, "rb"))
+                print("Opened the read pipe")
+                self.tensor_specs, _, self.advice_spec = log_reader.read_header(self.fc)
+                print("Tensor and Advice spec", self.tensor_specs, self.advice_spec)                
+                result = self.readObservation()
+                element = result[0].__getitem__(0)
+                print("Pipe init result:", element)
         
     def readObservation(self):
         next_event = self.fc.readline()
@@ -609,19 +611,23 @@ class DistributeLoopEnv(MultiAgentEnv):
         return tensor_values
     
     def sendResponse(self, f: io.BufferedWriter, value, spec: log_reader.TensorSpec):
-        """Send the `value` - currently just a scalar - formatted as per `spec`."""
-        # just int64 for now
-        assert spec.element_type == ctypes.c_int64
-        # to_send = ctypes.c_int64(int(value))
-        to_send = (ctypes.c_int64 * len(value))(*value)
-        # print("to_send", f.write(bytes(to_send)), ctypes.sizeof(spec.element_type) * reduce(operator.mul, spec.shape, 1))
-        assert f.write(bytes(to_send)) == ctypes.sizeof(spec.element_type) * reduce(operator.mul, spec.shape, 1)
-        # assert f.write(bytes(to_send)) == ctypes.sizeof(spec.element_type) * math.prod(
-        #     spec.shape
-        # )
-        f.flush()
+        try:
+            """Send the `value` - currently just a scalar - formatted as per `spec`."""
+            # just int64 for now
+            assert spec.element_type == ctypes.c_int64
+            # to_send = ctypes.c_int64(int(value))
+            to_send = (ctypes.c_int64 * len(value))(*value)
+            # print("to_send", f.write(bytes(to_send)), ctypes.sizeof(spec.element_type) * reduce(operator.mul, spec.shape, 1))
+            assert f.write(bytes(to_send)) == ctypes.sizeof(spec.element_type) * reduce(operator.mul, spec.shape, 1)
+            # assert f.write(bytes(to_send)) == ctypes.sizeof(spec.element_type) * math.prod(
+            #     spec.shape
+            # )
+            f.flush()
+        except (BrokenPipeError, IOError):
+            pass
 
     def step(self, action_dict):
+        
         # assert(self.ggnn is not None, 'ggnn is None')
         print("3333333333333333333333333")
         # print(self.select_node_agent_id)
@@ -632,7 +638,6 @@ class DistributeLoopEnv(MultiAgentEnv):
         if self.distribution_agent_id in action_dict:
             return self._select_distribution_step(action_dict[self.distribution_agent_id])
         
-
         # if task == 'Distribution':
         #     return self.step_via_distribution(action)
         # elif task == 'Vectorization':
@@ -661,22 +666,23 @@ class DistributeLoopEnv(MultiAgentEnv):
             OrignialloopCost = int(response['OrignialloopCost'])
             distributedLoopCost = int(response['distributedLoopCost'])            
         elif self.use_pipe:
-            seq = partition.replace('|', '-')
-            # seq = re.split(r',|-', seq)
-            seq = re.split('(\W)', seq)
-            print("Partition Sequence before: ",partition)
-            partition_seq = [-1]*100
-            for i in range(len(seq)):
-                if 'S' in seq[i]:
-                    element = int((seq[i])[1:])
-                    partition_seq[i] = element
-                elif ',' in seq[i]:
-                    partition_seq[i] = 101
-                else:
-                    partition_seq[i] = 102
+            # seq = partition.replace('|', '-')
+            # # seq = re.split(r',|-', seq)
+            # seq = re.split('(\W)', seq)
+            # print("Partition Sequence before: ",partition)
+            # partition_seq = [-1]*100
+            # for i in range(len(seq)):
+            #     if 'S' in seq[i]:
+            #         element = int((seq[i])[1:])
+            #         partition_seq[i] = element
+            #     elif ',' in seq[i]:
+            #         partition_seq[i] = 101
+            #     else:
+            #         partition_seq[i] = 102
                     
-            print("Partition Sequence after: ",partition, partition_seq)
-            self.sendResponse(self.tc, partition_seq, self.advice_spec)
+            # print("Partition Sequence after: ",partition, partition_seq)
+            # self.sendResponse(self.tc, partition_seq, self.advice_spec)
+            self.parseSequenceAndSend(partition)
             result = self.readObservation()
             OrignialloopCost = result[0].__getitem__(0)
             distributedLoopCost = result[0].__getitem__(1)
@@ -685,6 +691,24 @@ class DistributeLoopEnv(MultiAgentEnv):
         
         self.killServer()        
         return OrignialloopCost, distributedLoopCost
+    
+    def parseSequenceAndSend(self, partition):
+        seq = partition.replace('|', '-')
+        # seq = re.split(r',|-', seq)
+        seq = re.split('(\W)', seq)
+        print("Partition Sequence before: ",partition)
+        partition_seq = [-1]*100
+        for i in range(len(seq)):
+            if 'S' in seq[i]:
+                element = int((seq[i])[1:])
+                partition_seq[i] = element
+            elif ',' in seq[i]:
+                partition_seq[i] = 101
+            else:
+                partition_seq[i] = 102
+                
+        print("Partition Sequence after: ",partition, partition_seq)
+        self.sendResponse(self.tc, partition_seq, self.advice_spec)
     
     def killServer(self):
     

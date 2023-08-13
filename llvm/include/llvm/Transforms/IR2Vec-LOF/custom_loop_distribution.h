@@ -12,12 +12,18 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IR2Vec-LOF/LoopDistribution.h"
 #include "llvm/Support/CommandLine.h"
+
+#include "llvm/Transforms/InteractiveModelRunner.h"
 namespace llvm {
 
 class custom_loop_distribution : public FunctionPass {
 
 public:
   static char ID;
+
+  Module *M;
+
+  SmallVector<std::string, 5> distributed_seqs;
 
   // LoopDistributionWrapperPass distwp_helper;
   LoopDistribution dist_helper;
@@ -32,6 +38,8 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 private:
   void canonicalizeLoopsWithLoads();
+
+  void initPipeCommunication(std::vector<std::string> RDG_List);
 };
 
 FunctionPass *createcustom_loop_distributionPass();

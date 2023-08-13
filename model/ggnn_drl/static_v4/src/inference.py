@@ -47,6 +47,15 @@ import pydot
 from networkx.readwrite import json_graph
 from ray.rllib.agents.dqn.simple_q_torch_policy import SimpleQTorchPolicy
 
+from typing import Callable, List, Union, Optional
+import io
+import math
+import ctypes
+import log_reader
+from log_reader import TensorSpec
+from functools import reduce
+import operator
+
 # parser = argparse.ArgumentParser()
 
 class DistributionInference:
@@ -156,6 +165,12 @@ class DistributionInference:
         self.trained_agent.restore(checkpoint)
 
         self.config = config
+        
+        self.temp_rootname = "loopdistppipe"
+        self.tc = None
+        self.fc = None
+        self.tensor_specs = None
+        self.advice_spec =  None
      
         # config =  config["env_config"]
         # self.env = DistributeLoopEnv(env_config)
@@ -171,9 +186,13 @@ class DistributionInference:
 
         # Use for running with custom_loop_distribution
         graph = self.dot_to_json(test_file)
-        print("test_file {}".format(graph))
+        # print("test_file {}".format(graph))
         obs = env.reset(graph)
 
+        env.advice_spec = self.advice_spec
+        env.tc = self.tc
+        env.fc = self.fc
+        env.temp_rootname = self.temp_rootname
         # Use for running directly inference.py
         # obs = env.reset(test_file)
 
@@ -256,32 +275,76 @@ if __name__ == "__main__":
     # parser.add_argument("--test_dir", help = "Path to test directory")
     logging.info('Start the inference....')
 
-    # model_path = "/home/shalini/ray_results/experiment_2022-02-14_23-08-28/experiment_DistributeLoopEnv_eb75c_00000_0_2022-02-14_23-08-28/checkpoint_000001/checkpoint-1"
-    model_path = "/home/shalini/ray_results/experiment_2022-03-22_11-06-19/experiment_DistributeLoopEnv_003b1_00000_0_2022-03-22_11-06-19/checkpoint_008568/checkpoint-8568"
-    test_dir = "/home/shalini/LOF_test/LD_VF/IR2Vec-LoopOptimizationFramework/data/Opt_cld_O3_individualfile/mutation/tsvc_train/GIF_train_v4/graphs/loops/json/"
-    args = {'no_render' : True, 'checkpoint' : model_path, 'run' : 'SimpleQ' , 'env' : '' , 'config' : {}, 'video_dir' : '', 'steps' : 0, 'episodes' : 0, 'arch' : 'X86'}
-    args = Namespace(**args)   
+    use_pipe = True
+    if not use_pipe:
+        # model_path = "/home/shalini/ray_results/experiment_2022-02-14_23-08-28/experiment_DistributeLoopEnv_eb75c_00000_0_2022-02-14_23-08-28/checkpoint_000001/checkpoint-1"
+        model_path = "/home/shalini/ray_results/experiment_2022-03-22_11-06-19/experiment_DistributeLoopEnv_003b1_00000_0_2022-03-22_11-06-19/checkpoint_008568/checkpoint-8568"
+        test_dir = "/home/shalini/LOF_test/LD_VF/IR2Vec-LoopOptimizationFramework/data/Opt_cld_O3_individualfile/mutation/tsvc_train/GIF_train_v4/graphs/loops/json/"
+        args = {'no_render' : True, 'checkpoint' : model_path, 'run' : 'SimpleQ' , 'env' : '' , 'config' : {}, 'video_dir' : '', 'steps' : 0, 'episodes' : 0, 'arch' : 'X86'}
+        args = Namespace(**args)   
 
-    # ray.init()
+        # ray.init()
 
-    # inference_obj = DistributionInference(args, model_path)
+        # inference_obj = DistributionInference(args, model_path)
 
-    rdgs = []
-    for path in glob.glob(os.path.join(test_dir, '*.json')):
-        print(path)
-        with open(path) as f:
-            # print(json.dumps(json.load(f)))
-            rdgs.append(json.load(f))
-            # rdgs.append(json.dumps(json.load(f)))
+        rdgs = []
+        for path in glob.glob(os.path.join(test_dir, '*.json')):
+            print(path)
+            with open(path) as f:
+                # print(json.dumps(json.load(f)))
+                rdgs.append(json.load(f))
+                # rdgs.append(json.dumps(json.load(f)))
 
-    predict_loop_distribution(rdgs, model_path)
+        predict_loop_distribution(rdgs, model_path)
 
-    # for file in os.listdir(test_dir):
-    #     reward, count = inference_obj.run_predict(file)
-    #     # action, count = inference_obj.compute_action(file)
+        # for file in os.listdir(test_dir):
+        #     reward, count = inference_obj.run_predict(file)
+        #     # action, count = inference_obj.compute_action(file)
 
-    select_node_agent = "select_node_agent_{}".format(count)
-    distribution_agent = "distribution_agent_{}".format(count)
+        select_node_agent = "select_node_agent_{}".format(count)
+        distribution_agent = "distribution_agent_{}".format(count)
+    
+    else:
+        # pipes opening
+        temp_rootname = "loopdistppipe"
+        to_compiler = temp_rootname + ".in"
+        from_compiler = temp_rootname + ".out"
+        # print("to_compiler", to_compiler)
+        # print("from_compiler", from_compiler)
+        if os.path.exists(to_compiler):
+            os.remove(to_compiler)
+        if os.path.exists(from_compiler):
+            os.remove(from_compiler)
+        os.mkfifo(to_compiler, 0o666)
+        os.mkfifo(from_compiler, 0o666)
+        tc = None
+        fc = None
+        tensor_specs = None
+        advice_spec =  None
+        ray.init()
+        trained_dist_model = "/home/cs20mtech12003/ray_results/experiment_2023-08-10_22-08-07/experiment_DistributeLoopEnv_491f4_00000_0_2023-08-10_22-08-07/checkpoint_000002/checkpoint-2"
+        inference_obj = DistributionInference(trained_dist_model)
+        
+        while(True):
+            print("Creating pipe files", to_compiler, from_compiler)
+            tc = io.BufferedWriter(io.FileIO(to_compiler, "wb"))
+            print("Opened the write pipe")
+            fc = io.BufferedReader(io.FileIO(from_compiler, "rb"))
+            print("Opened the read pipe")
+            tensor_specs, _, advice_spec = log_reader.read_header(fc)
+            # print("Tensor and Advice spec", self.tensor_specs, self.advice_spec)
+            # result = readObservation(fc)
+            
+            inference_obj.advice_spec = advice_spec
+            inference_obj.tc = tc
+            inference_obj.fc = fc
+            inference_obj.temp_rootname = temp_rootname                        
+            next_event = fc.readline()
+            rdgs = (json.loads(next_event))["RDGs"]
+            # seqs = inference_obj.run_predict_multiple_loops(rdgs)[0]
+            seqs = inference_obj.run_predict(rdgs)
+            seqs = json.dumps(seqs)
+            # print("Predicted seqs", seqs, type(seqs))        
         
 
 

@@ -1,7 +1,10 @@
 find_package (Python3 REQUIRED COMPONENTS Interpreter Development)
 
 add_llvm_component_library(LLVMcustom_loop_distribution STATIC BUILDTREE_ONLY
-        custom_loop_distribution.cpp)
+        custom_loop_distribution.cpp
+        ../LoopDistributionServer/TrainingLogger.cpp
+        ../LoopDistributionServer/InteractiveModelRunner.cpp
+        ../LoopDistributionServer/TensorSpec.cpp)
         
 # add_dependencies(custom_loop_distribution intrinsics_gen)
 # target_link_libraries(python3.7m crypt pthread dl  util rt m)

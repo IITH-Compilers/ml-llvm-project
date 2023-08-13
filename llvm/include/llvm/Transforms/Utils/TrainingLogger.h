@@ -119,6 +119,8 @@ public:
   void endObservation();
   void flush() { OS->flush(); }
 
+  void addRDGs(std::string RDG_List);
+
   const std::string &currentContext() const { return CurrentContext; }
 
   /// Check if there is at least an observation for `currentContext()`.

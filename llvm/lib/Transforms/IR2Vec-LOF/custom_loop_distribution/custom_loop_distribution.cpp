@@ -25,13 +25,19 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/PassSupport.h"
+#include "llvm/Support/CommandLine.h"
 #include <algorithm>
+#include <bits/stdint-intn.h>
 #include <string>
 // #include <ray/api.h>
 
 #define DEBUG_TYPE "custom_loop_distribution"
 
 using namespace llvm;
+
+static cl::opt<bool> usePipe("use-pipe-inf", cl::desc("Use pipe for inference"), cl::Hidden,
+                                    cl::Optional, cl::init(false));
+
 custom_loop_distribution::custom_loop_distribution() : FunctionPass(ID) {
   initializecustom_loop_distributionPass(*PassRegistry::getPassRegistry());
   Py_Initialize();
@@ -109,13 +115,60 @@ void custom_loop_distribution::canonicalizeLoopsWithLoads(){
   }
 }
 
+void custom_loop_distribution::initPipeCommunication(std::vector<std::string> RDG_List) {
+    const char *const DecisionName = "advisor_decision";
+    const TensorSpec DecisionSpec =
+        TensorSpec::createSpec<int64_t>(DecisionName, {100});
+
+    const char *const DefaultFeatureName = "feature_default";
+    const TensorSpec DefaultFeatureSpec =
+        TensorSpec::createSpec<int64_t>(DefaultFeatureName, {2});
+
+    std::vector<uint64_t> feature_data;  
+    for(size_t i=0; i<DefaultFeatureSpec.getElementCount(); i++) 
+        feature_data.push_back((uint64_t) (1));
+    
+    // std::string basename = "../../../../../model/ggnn_drl/static_v4/src/loopdistppipe";
+    std::string basename = "/home/cs20mtech12003/ML-Loop-Distribution/model/ggnn_drl/static_v4/src/loopdistppipe";
+    std::vector<TensorSpec> Features;
+    Features.push_back(DefaultFeatureSpec);
+    std::unique_ptr<InteractiveModelRunner> AOTRunner;
+    AOTRunner = std::make_unique<InteractiveModelRunner>(
+      this->M->getContext(), Features, DecisionSpec,
+      basename + ".out",
+      basename + ".in");
+    errs() << "DEBUG2\n";
+
+    for(auto rdg: RDG_List) {
+      auto res = AOTRunner->communicateData<int64_t>(rdg);
+      errs() << "Runner result:\n";
+      std::vector<int64_t> distSequence(res, res + 100);
+      std::string partition;
+      for (int i = 0; i < 100; i++) {
+        int64_t element = distSequence[i];
+        if (element == -1)
+          break;
+        else if (element == 101)
+          partition.append(",");
+        else if (element == 102)
+          partition.append("|");
+        else
+          partition.append("S" + std::to_string(element));      
+      }
+      errs() << "Reseved partition:\n";
+      distributed_seqs.push_back(partition);
+    }
+  }
+
 bool custom_loop_distribution::runOnFunction(Function &F) {
   // F.dump();
+  this->M = F.getParent();
   canonicalizeLoopsWithLoads();
   // errs()<<"After canonicolization: \n";
   // F.dump();
   // RDG_List: Contains list of all the string wrt to RDG
-  SmallVector<std::string, 5> RDG_List;
+  // SmallVector<std::string, 5> RDG_List;
+  std::vector<std::string> RDG_List;
 
   SmallVector<DataDependenceGraph *, 5> SCCGraphs;
   SmallVector<Loop *, 5> loops;
@@ -150,122 +203,125 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
          "RDG_List, SCCgraphs and loops list should of same size.");
 
   LLVM_DEBUG(errs() << "Number rdg generated : " << RDG_List.size() << "\n");
-  SmallVector<std::string, 5> distributed_seqs;
   SmallVector<std::string, 5> vf_seqs;
 
-  PyObject *pName, *pModule, *pFunc, *presult;
+  if(usePipe)
+    initPipeCommunication(RDG_List);
+  else{
+    PyObject *pName, *pModule, *pFunc, *presult;
 
-  // PySys_SetArgv(argc, argv);
+    // PySys_SetArgv(argc, argv);
 
-  PyRun_SimpleString("import sys");
-  PyRun_SimpleString("import os");
+    PyRun_SimpleString("import sys");
+    PyRun_SimpleString("import os");
 
-  // errs() << "sys.path: " << MODEL_SRC << "\n";
+    // errs() << "sys.path: " << MODEL_SRC << "\n";
 
-  PyRun_SimpleString(std::string("sys.path.append(\"")
-                         .append(MODEL_SRC)
-                         .append("\")")
-                         .c_str());
-  // Build the name object
-  pName = PyUnicode_FromString("inference");
+    PyRun_SimpleString(std::string("sys.path.append(\"")
+                          .append(MODEL_SRC)
+                          .append("\")")
+                          .c_str());
+    // Build the name object
+    pName = PyUnicode_FromString("inference");
 
-  LLVM_DEBUG(errs() << "pName: " << pName << "............"
-                    << "\n");
-
-  // Load the module object
-  pModule = PyImport_Import(pName);
-
-  PyErr_Print();
-
-  if (pModule == NULL) {
-    printf("ERROR importing module\n");
-    PyErr_Print();
-    exit(-1);
-  } else {
-    LLVM_DEBUG(errs() << "pModule: " << pModule << "............"
+    LLVM_DEBUG(errs() << "pName: " << pName << "............"
                       << "\n");
-    Py_INCREF(pModule);
 
-    pFunc = PyObject_GetAttrString(pModule, "predict_loop_distribution");
+    // Load the module object
+    pModule = PyImport_Import(pName);
 
-    if (pFunc == NULL) {
-      errs() << "ERROR getting function attribute";
+    PyErr_Print();
+
+    if (pModule == NULL) {
+      printf("ERROR importing module\n");
       PyErr_Print();
+      exit(-1);
     } else {
+      LLVM_DEBUG(errs() << "pModule: " << pModule << "............"
+                        << "\n");
+      Py_INCREF(pModule);
 
-      Py_INCREF(pFunc);
+      pFunc = PyObject_GetAttrString(pModule, "predict_loop_distribution");
 
-      if (PyCallable_Check(pFunc)) {
-        PyObject *my_list = PyList_New(0);
-        Py_INCREF(my_list);
-        for (auto rdg : RDG_List) {
-          PyObject *py_rdg = PyUnicode_FromString(rdg.c_str());
-          PyList_Append(my_list, py_rdg);
-          Py_INCREF(py_rdg);
-        }
+      if (pFunc == NULL) {
+        errs() << "ERROR getting function attribute";
+        PyErr_Print();
+      } else {
 
-        PyObject *distModelPath = PyUnicode_FromString(DIST_INFERENCE_MODEL);
-        // PyObject *vfModelPath = PyUnicode_FromString(VF_INFERENCE_MODEL);
+        Py_INCREF(pFunc);
 
-        PyObject *arglist =
-            PyTuple_Pack(2, my_list, distModelPath);
-            // PyTuple_Pack(3, my_list, distModelPath, vfModelPath);
+        if (PyCallable_Check(pFunc)) {
+          PyObject *my_list = PyList_New(0);
+          Py_INCREF(my_list);
+          for (auto rdg : RDG_List) {
+            PyObject *py_rdg = PyUnicode_FromString(rdg.c_str());
+            PyList_Append(my_list, py_rdg);
+            Py_INCREF(py_rdg);
+          }
 
-        if (!arglist) {
-          errs() << "no arglist\n";
-          PyErr_Print();
-        }
+          PyObject *distModelPath = PyUnicode_FromString(DIST_INFERENCE_MODEL);
+          // PyObject *vfModelPath = PyUnicode_FromString(VF_INFERENCE_MODEL);
 
-        Py_INCREF(arglist);
-        presult = PyObject_CallObject(pFunc, arglist);
+          PyObject *arglist =
+              PyTuple_Pack(2, my_list, distModelPath);
+              // PyTuple_Pack(3, my_list, distModelPath, vfModelPath);
 
-        if (!presult) {
-          errs() << "no presult\n";
-          PyErr_Print();
-        }
-        Py_INCREF(presult);
+          if (!arglist) {
+            errs() << "no arglist\n";
+            PyErr_Print();
+          }
 
-        if (!PyList_Check(presult)) {
-          errs() << "Result is not list";
-          PyErr_BadArgument();
-          return false;
-        }
+          Py_INCREF(arglist);
+          presult = PyObject_CallObject(pFunc, arglist);
 
-        int size = PyList_Size(presult);
-        // assert(size == 2);
-        // LLVM_DEBUG(errs() << size << " is the size of result list.\n");
+          if (!presult) {
+            errs() << "no presult\n";
+            PyErr_Print();
+          }
+          Py_INCREF(presult);
 
-        for (int j = 0; j < size; j++) {
-          PyObject *plobj = PyList_GetItem(presult, j);
-          if (!PyList_Check(plobj)) {
+          if (!PyList_Check(presult)) {
             errs() << "Result is not list";
             PyErr_BadArgument();
-            assert(false);
+            return false;
           }
-          int objSize = PyList_Size(plobj);
-          for (int k = 0; k < objSize; k++) {
-            PyObject *seq = PyList_GetItem(plobj, k);
-            const char *char_seq = PyUnicode_AsUTF8(seq);
-            LLVM_DEBUG(errs() << char_seq << "\n");
-            // errs() << j << "\n";
-            if (j == 0)
-              distributed_seqs.push_back(char_seq);
 
-            // errs() << char_seq << "\n";
-            // else if (j == 1)
-            //   vf_seqs.push_back(char_seq);
+          int size = PyList_Size(presult);
+          // assert(size == 2);
+          // LLVM_DEBUG(errs() << size << " is the size of result list.\n");
+
+          for (int j = 0; j < size; j++) {
+            PyObject *plobj = PyList_GetItem(presult, j);
+            if (!PyList_Check(plobj)) {
+              errs() << "Result is not list";
+              PyErr_BadArgument();
+              assert(false);
+            }
+            int objSize = PyList_Size(plobj);
+            for (int k = 0; k < objSize; k++) {
+              PyObject *seq = PyList_GetItem(plobj, k);
+              const char *char_seq = PyUnicode_AsUTF8(seq);
+              LLVM_DEBUG(errs() << char_seq << "\n");
+              // errs() << j << "\n";
+              if (j == 0)
+                distributed_seqs.push_back(char_seq);
+
+              // errs() << char_seq << "\n";
+              // else if (j == 1)
+              //   vf_seqs.push_back(char_seq);
+            }
           }
+          Py_DECREF(presult);
+          Py_DECREF(my_list);
+          Py_DECREF(arglist);
+        } else {
+          PyErr_Print();
         }
-        Py_DECREF(presult);
-        Py_DECREF(my_list);
-        Py_DECREF(arglist);
-      } else {
-        PyErr_Print();
-      }
 
-      // Clean up
-      Py_DECREF(pModule);
-      Py_DECREF(pName);
+        // Clean up
+        Py_DECREF(pModule);
+        Py_DECREF(pName);
+      }
     }
   }
   

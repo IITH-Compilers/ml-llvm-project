@@ -60,6 +60,14 @@ void Logger::switchContext(StringRef Name) {
   *OS << "\n";
 }
 
+void Logger::addRDGs(std::string RDG_List) {
+  json::OStream JOS(*OS);
+  JOS.object([&]() {
+    JOS.attribute("RDGs", RDG_List);
+  });
+  *OS << "\n";
+}
+
 void Logger::startObservation() {
   auto I = ObservationIDs.insert({CurrentContext, 0});
   size_t NewObservationID = I.second ? 0 : ++I.first->second;
