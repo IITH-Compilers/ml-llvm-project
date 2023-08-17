@@ -19,9 +19,12 @@
 #include "grpc/example/example.grpc.pb.h"
 #include "grpc/gRPCUtil.h"
 #include <google/protobuf/text_format.h>
-#include <grpcpp/grpcpp.h>
+// #include <grpcpp/grpcpp.h>
+
+#include "serializer/protobufSerializer.h"
 
 using namespace llvm;
+using namespace google::protobuf;
 
 static cl::opt<bool> training("training", cl::Hidden,
                               cl::desc("whether it is training or inference"),
@@ -40,11 +43,14 @@ struct PosetRL : public ModulePass,
   static char ID;
   PosetRL() : ModulePass(ID) {}
   bool runOnModule(Module &M) override {
+    for (Function &F : M) {
+    }
     this->M = &M;
     if (training) {
       RunService(this, server_address);
     } else {
       runInference();
+      errs() << "with templated protoSerializer\n";
       errs() << "Sequence: ";
       for (auto a : Sequence)
         errs() << a << " ";
@@ -111,9 +117,20 @@ struct PosetRL : public ModulePass,
     applySeq(request->action());
     Embedding emb = getEmbeddings();
 
-    for (unsigned long i = 0; i < emb.size(); i++) {
-      response->add_embedding(emb[i]);
-    }
+    // const Reflection *reflection = response->GetReflection();
+    // const Descriptor *descriptor = response->GetDescriptor();
+    // const FieldDescriptor *fd = descriptor->field(0);
+
+    // for (unsigned long i = 0; i < emb.size(); i++) {
+    //   reflection->AddFloat(response, fd, emb[i]);
+    //   // response->add_embedding(emb[i]);
+    // }
+    ProtobufSerializer serializer(response);
+    // serializer.addField("embedding", 9.2);
+    // for (unsigned long i = 0; i < emb.size(); i++) {
+    //   serializer.addField("embedding", emb[i]);
+    // }
+    serializer.setRepeatedField<float>("embedding", emb);
 
     return grpc::Status::OK;
   }
@@ -128,7 +145,6 @@ struct PosetRL : public ModulePass,
     return grpc::Status::OK;
   }
 
-  
 private:
   Module *M;
 };

@@ -26,6 +26,7 @@ LINK_COMPONENTS
 IR2Vec
 InferenceEngine
 gRPC
+Serializer
 
 ADDITIONAL_HEADER_DIRS
 ${LLVM_MAIN_INCLUDE_DIR}/llvm/Transforms
@@ -36,3 +37,4 @@ DEPENDS
 intrinsics_gen
 )
 target_link_libraries(LLVMPosetRL PUBLIC LLVMgRPC)
+target_link_libraries(LLVMPosetRL PUBLIC LLVMSerializer)
