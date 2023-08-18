@@ -133,13 +133,14 @@ void custom_loop_distribution::initPipeCommunication(std::vector<std::string> RD
     std::vector<TensorSpec> Features;
     Features.push_back(DefaultFeatureSpec);
     std::unique_ptr<InteractiveModelRunner> AOTRunner;
-    AOTRunner = std::make_unique<InteractiveModelRunner>(
-      this->M->getContext(), Features, DecisionSpec,
-      basename + ".out",
-      basename + ".in");
+    
     errs() << "DEBUG2\n";
 
     for(auto rdg: RDG_List) {
+      AOTRunner = std::make_unique<InteractiveModelRunner>(
+        this->M->getContext(), Features, DecisionSpec,
+        basename + ".out",
+        basename + ".in");
       auto res = AOTRunner->communicateData<int64_t>(rdg);
       errs() << "Runner result:\n";
       std::vector<int64_t> distSequence(res, res + 100);
