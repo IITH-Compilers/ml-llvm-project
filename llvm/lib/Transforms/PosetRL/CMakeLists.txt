@@ -21,14 +21,15 @@ message(STATUS "Using protobuf ${Protobuf_INCLUDE_DIRS}")
 include_directories(${Protobuf_INCLUDE_DIRS})
 
 add_llvm_component_library(LLVMPosetRL posetRL.cpp
-TrainingLogger.cpp
-InteractiveModelRunner.cpp
-TensorSpec.cpp
+# TrainingLogger.cpp
+# InteractiveModelRunner.cpp
+# TensorSpec.cpp
 
 LINK_COMPONENTS
 IR2Vec
 InferenceEngine
 gRPC
+MLModelRunner
 
 ADDITIONAL_HEADER_DIRS
 ${LLVM_MAIN_INCLUDE_DIR}/llvm/Transforms
@@ -39,3 +40,4 @@ DEPENDS
 intrinsics_gen
 )
 target_link_libraries(LLVMPosetRL PUBLIC LLVMgRPC)
+target_link_libraries(LLVMPosetRL PUBLIC LLVMMLModelRunner)

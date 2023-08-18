@@ -21,7 +21,10 @@
 #include <google/protobuf/text_format.h>
 #include <grpcpp/grpcpp.h>
 
-#include "llvm/Transforms/InteractiveModelRunner.h"
+// #include "llvm/Transforms/InteractiveModelRunner.h"
+#include "MLModelRunner/MLModelRunner.h"
+#include "MLModelRunner/MLModelRunnerWithTensorSpec.h"
+#include "MLModelRunner/PipeModelRunner.h"
 
 using namespace llvm;
 
@@ -29,9 +32,10 @@ static cl::opt<bool> training("training", cl::Hidden,
                               cl::desc("whether it is training or inference"),
                               cl::init(false));
 
-static cl::opt<bool> usePipe("use-pipe", cl::Hidden,
-                              cl::desc("Use pipe based interation with python model"),
-                              cl::init(false));
+static cl::opt<bool>
+    usePipe("use-pipe", cl::Hidden,
+            cl::desc("Use pipe based interation with python model"),
+            cl::init(false));
 
 static cl::opt<std::string> server_address(
     "server_address", cl::Hidden,
@@ -48,20 +52,20 @@ struct PosetRL : public ModulePass,
   bool runOnModule(Module &M) override {
     this->M = &M;
     // Establish pipe communication
-    if(usePipe)
+    if (usePipe)
       initPipeCommunication();
     else {
       if (training) {
-        RunService(this, server_address);      
+        RunService(this, server_address);
       } else {
         runInference();
         errs() << "Sequence: ";
         for (auto a : Sequence)
           errs() << a << " ";
         errs() << "\n";
-      }  
+      }
     }
-    
+
     return true;
   }
 
@@ -74,14 +78,14 @@ struct PosetRL : public ModulePass,
     const TensorSpec DefaultFeatureSpec =
         TensorSpec::createSpec<float_t>(DefaultFeatureName, {300});
 
-    std::vector<float_t> feature_data;  
-    for(size_t i=0; i<DefaultFeatureSpec.getElementCount(); i++) 
-        feature_data.push_back((float_t) (i+0.5));
+    std::vector<float_t> feature_data;
+    for (size_t i = 0; i < DefaultFeatureSpec.getElementCount(); i++)
+      feature_data.push_back((float_t)(i + 0.5));
 
-    std::string basename = "/home/cs20mtech12003/ML-Phase-Ordering/Model/RLLib-PhaseOrder/temppipe";
+    std::string basename = "/home/cs20mtech12003/ML-Phase-Ordering/Model/"
+                           "RLLib-PhaseOrder/temppipe";
     std::vector<TensorSpec> Features;
     // std::vector<void*> InputBuffers;
-
 
     // if (InteractiveIncludeDefault){
     Features.push_back(DefaultFeatureSpec);
@@ -91,31 +95,28 @@ struct PosetRL : public ModulePass,
 
     std::cout << "DEBUG1\n" << std::endl;
 
-    AOTRunner = std::make_unique<InteractiveModelRunner>(
-      M->getContext(), Features, DecisionSpec,
-      basename + ".out",
-      basename + ".in");
+    MLRunner = std::make_unique<PipeModelRunner>(
+        M->getContext(), Features, DecisionSpec, basename + ".out",
+        basename + ".in");
     errs() << "DEBUG2\n";
-    
-    
+
     int passSequence = 0;
-    while(passSequence != -1) {
-      std::vector<void*> InputBuffers;
+    while (passSequence != -1) {
+      std::vector<void *> InputBuffers;
       auto embedding = getEmbeddings();
       // errs() << "Embedding size:" << embedding.size() << "\n";
       InputBuffers.push_back(embedding.data());
-      AOTRunner->feedInputBuffers(InputBuffers);
-      int res = static_cast<int>(AOTRunner->evaluate<int64_t>());
-      errs() << "Runner result: " << res <<'\n';
+      MLRunner->feedInputBuffers(InputBuffers);
+      int res = static_cast<int>(MLRunner->evaluate<int64_t>());
+      errs() << "Runner result: " << res << '\n';
       applySeq(res);
       passSequence = res;
     }
     errs() << "Episode completed\n";
-    // AOTRunner->feedInputBuffers(InputBuffers);
-    // int res = static_cast<int>(AOTRunner->evaluate<int64_t>());
+    // MLRunner->feedInputBuffers(InputBuffers);
+    // int res = static_cast<int>(MLRunner->evaluate<int64_t>());
     // errs() << "Runner result: " << res <<'\n';
   }
-
 
   Embedding getEmbeddings() override {
 
@@ -127,9 +128,10 @@ struct PosetRL : public ModulePass,
     // M->print(os, nullptr);
     // os.close();
 
-    auto Ir2vec = IR2Vec::Embeddings(
-        *M, IR2Vec::IR2VecMode::FlowAware,
-        "/home/cs20mtech12003/ML-Phase-Ordering/IR2Vec/vocabulary/seedEmbeddingVocab-300-llvm10.txt");
+    auto Ir2vec =
+        IR2Vec::Embeddings(*M, IR2Vec::IR2VecMode::FlowAware,
+                           "/home/cs20mtech12003/ML-Phase-Ordering/IR2Vec/"
+                           "vocabulary/seedEmbeddingVocab-300-llvm10.txt");
 
     auto ProgVector = Ir2vec.getProgramVector();
     Embedding Vector(ProgVector.begin(), ProgVector.end());
@@ -192,10 +194,9 @@ struct PosetRL : public ModulePass,
     return grpc::Status::OK;
   }
 
-  
 private:
   Module *M;
-  std::unique_ptr<MLModelRunner> AOTRunner;
+  std::unique_ptr<MLModelRunnerWithTensorSpec> MLRunner;
 };
 } // namespace
 char PosetRL::ID = 0;
