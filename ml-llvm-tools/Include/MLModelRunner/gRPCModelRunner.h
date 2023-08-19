@@ -12,12 +12,31 @@
 #include <memory>
 
 namespace llvm {
-template <typename Client> class gRPCModelRunner : public MLModelRunner {
+template <class Client, class Stub, class Request, class Response>
+class gRPCModelRunner : public MLModelRunner {
 public:
   gRPCModelRunner(LLVMContext &Ctx, std::string server_address,
+                  grpc::Service *s) // For server mode
+      : MLModelRunner(Ctx, MLModelRunner::Kind::gRPC),
+        server_address(server_address), request(nullptr), response(nullptr),
+        server_mode(true) {
+    RunService(s);
+  }
+
+  gRPCModelRunner(LLVMContext &Ctx, std::string server_address,
+                  Request *request, Response *response) // For client mode
+      : MLModelRunner(Ctx, MLModelRunner::Kind::gRPC),
+        server_address(server_address), request(request), response(response),
+        server_mode(false) {
+    SetStub();
+  }
+
+  gRPCModelRunner(LLVMContext &Ctx, std::string server_address,
+                  Request *request, Response *response,
                   bool server_mode = false, grpc::Service *s = nullptr)
       : MLModelRunner(Ctx, MLModelRunner::Kind::gRPC),
-        server_address(server_address) {
+        server_address(server_address), request(request), response(response),
+        server_mode(server_mode) {
     if (server_mode) {
       assert(s != nullptr && "Service cannot be null in server mode");
       RunService(s);
@@ -25,18 +44,30 @@ public:
       SetStub();
     }
   }
-  
-  void *getStub() { return stub_; }
+
+  // void *getStub() { return stub_; }
   void requestExit() override { exit_requested->set_value(); }
+
   void *evaluateUntyped() override {
-    llvm_unreachable("evaluateUntyped not implemented for gRPCModelRunner; "
-                     "Override gRPC method instead");
+    if (server_mode)
+      llvm_unreachable("evaluateUntyped not implemented for gRPCModelRunner; "
+                       "Override gRPC method instead");
+    assert(request != nullptr && "Request cannot be null");
+    grpc::ClientContext grpcCtx;
+    auto status = stub_->getAdvice(&grpcCtx, *request, response);
+    if (!status.ok())
+      Ctx.emitError("gRPC failed: " + status.error_message());
+    return response;
   }
 
 private:
-  void *stub_;
+  Stub *stub_;
   std::string server_address;
+  Request *request;
+  Response *response;
+  bool server_mode;
   std::promise<void> *exit_requested;
+
   int RunService(grpc::Service *s) {
     exit_requested = new std::promise<void>();
     grpc::ServerBuilder builder;

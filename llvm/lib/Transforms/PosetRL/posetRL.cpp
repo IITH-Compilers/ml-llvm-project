@@ -56,8 +56,10 @@ struct PosetRL : public ModulePass,
       initPipeCommunication();
     else {
       if (training) {
-        MLRunner = std::make_unique<gRPCModelRunner<posetrl::PosetRL>>(
-            M.getContext(), server_address, true, this);
+        MLRunner = std::make_unique<gRPCModelRunner<
+            posetrl::PosetRL::Service, posetrl::PosetRL::Stub,
+            posetrl::EmbeddingResponse, posetrl::ActionRequest>>(
+            M.getContext(), server_address, this);
         // MLRunner->RunService(this);
       } else {
         runInference();
