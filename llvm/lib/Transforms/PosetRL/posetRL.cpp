@@ -71,6 +71,7 @@ struct PosetRL : public ModulePass,
         MLRunner =
             std::make_unique<ONNXModelRunner>(M.getContext(), this, agents);
         // runInference();
+        MLRunner->evaluate<int64_t>();
         errs() << "Sequence: ";
         for (auto a : Sequence)
           errs() << a << " ";
