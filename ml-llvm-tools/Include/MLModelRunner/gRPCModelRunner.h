@@ -25,7 +25,7 @@ public:
       SetStub();
     }
   }
-
+  
   void *getStub() { return stub_; }
   void requestExit() override { exit_requested->set_value(); }
   void *evaluateUntyped() override {
