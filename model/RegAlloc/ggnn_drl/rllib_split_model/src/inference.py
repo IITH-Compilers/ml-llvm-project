@@ -15,11 +15,12 @@ from register_action_space import RegisterActionSpace
 from ray.rllib.models import ModelCatalog
 from model import SelectTaskNetwork, SelectNodeNetwork, ColorNetwork, SplitNodeNetwork  
 import logging
-from ray.rllib.agents.dqn.simple_q_torch_policy import SimpleQTorchPolicy
 
 from gym.spaces import Discrete, Box, Dict
 import numpy as np
 from ray.tune import function
+import io
+import log_reader
 
 logger = logging.getLogger(__file__)
 logging.basicConfig(filename='inference.log', format='%(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
@@ -32,7 +33,6 @@ import torch
 from argparse import Namespace
 import pydot
 from networkx.readwrite import json_graph
-from ray.rllib.agents.dqn.simple_q_torch_policy import SimpleQTorchPolicy
 
 class Inference:
 
@@ -233,8 +233,56 @@ class Inference:
     
         # return allocations
 
+if __name__ == "__main__":
+    logging.info("Start the inference....")
+    use_pipe = True
+    if use_pipe:
+        temp_rootname = "rl4realpipe"
+        to_compiler = temp_rootname + ".in"
+        from_compiler = temp_rootname + ".out"
+
+        if os.path.exists(to_compiler):
+            os.remove(to_compiler)
+        if os.path.exists(from_compiler):
+            os.remove(from_compiler)
+        
+        os.mkfifo(to_compiler, 0o666)
+        os.mkfifo(from_compiler, 0o666)
+        tc = None
+        fc = None
+        tensor_spec = None
+        advice_spec = None
+        ray.init()
+        model_path = "/home/cs20btech11024/ray_results/G_table3/checkpoint-8052"
+
+        inference = Inference(model_path)
+        inference.env.use_pipe = True
+
+        tc = io.BufferedReader(io.FileIO(to_compiler, 'rb'))
+        fc = io.BufferedWriter(io.FileIO(from_compiler, 'wb'))
+        print("Pipe files created....")
+        tensor_spec, _, advice_spec = log_reader.read_header(fc)
+        print("Header read....")
+
+        inference.env.tc = tc
+        inference.env.fc = fc
+        inference.env.advice_spec = advice_spec
+        inference.env.temp_rootname = temp_rootname
+        while True:
+            print("Waiting for the graph from the compiler...")
+            print("Creating pipe files....")
 
 
+            next_event = fc.readline()
+            regProfMap = (json.loads(next_event))["regProfMap"]
+
+            print("Graph received from the compiler....")
+            print("Graph is : ", regProfMap)
+            
+            break
+            action = inference.compute_action()
+            print("Action computed....")
+            print("Action is : ", action)
 
 
 # if __name__ == "__main__":
@@ -283,3 +331,4 @@ class Inference:
 #             episode_reward += reward
 #         print("Reward:", reward)
 #         print("Allocation map info:", info)
+

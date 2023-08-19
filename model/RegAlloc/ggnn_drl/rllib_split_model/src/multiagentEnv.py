@@ -103,7 +103,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.best_allocation_cost = {}
         self.use_costbased_reward = env_config["use_costbased_reward"]
         self.iteration_number = 1
-
+        self.use_pipe = False
         self.curr_file_name = None
 
         print("env_config.worker_index", env_config.worker_index)
@@ -154,7 +154,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         np.random.seed(123)
 
     def reward_formula(self, value, action):
-        if value == float("inf"):
+        if value in [float("inf"), 'inf', "INF"]:
             reward = self.reward_max_value
         elif value > self.reward_max_value:
             reward = self.reward_max_value
@@ -179,7 +179,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         return reward
     
     def formatRewardValue(self, value):
-        if value == float("inf"):
+        if value in [float("inf"), 'inf', "INF"]:
             reward = self.reward_max_value
         elif value > self.reward_max_value:
             reward = self.reward_max_value
@@ -1048,11 +1048,17 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         node_id =  self.obs.idx_nid[nodeChoosen]
         if self.mode != 'inference':
             # self.color_assignment_map[node_id] = int(reg_allocated)
-            self.color_assignment_map.append(RegisterAllocation_pb2.Data.colorData(key=str(node_id), value=int(reg_allocated)))
+            if self.use_pipe:
+                self.color_assignment_map.append({str(node_id): int(reg_allocated)})
+            else: 
+              self.color_assignment_map.append(RegisterAllocation_pb2.Data.colorData(key=str(node_id), value=int(reg_allocated)))
         else:
             # grpccolor = RegisterAllocationInference_pb2.Data.color(key=node_id, value=int(reg_allocated))
             # print()
-            self.color_assignment_map.append(RegisterAllocationInference_pb2.Data.colorData(key=str(node_id), value=int(reg_allocated)))
+            if self.use_pipe:
+                self.color_assignment_map.append({str(node_id): int(reg_allocated)})
+            else: 
+              self.color_assignment_map.append(RegisterAllocationInference_pb2.Data.colorData(key=str(node_id), value=int(reg_allocated)))
 
         logging.debug('Color the node with index={cur_node}, node_id={node_id} with color={action} in RegClass={regclass}'.format(cur_node=nodeChoosen, node_id=node_id, action=reg_allocated, regclass=self.obs.reg_class_list[self.cur_node]))
         

@@ -64,6 +64,7 @@
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/Transforms/InteractiveModelRunner.h"
 
 #include "MLInferenceEngine/onnx.h"
 #include "multi_agent_env.h"
@@ -197,7 +198,8 @@ private:
   // };
   // SmallMapVector<unsigned, RegisterProfile, 16> regProfMap;
   RegisterProfileMap regProfMap;
-
+  std::unique_ptr<MLModelRunner> AOTRunner;
+  json::Object JO;
   unsigned numUnsupportedRegs = 0;
   unsigned numSplits = 0;
   SmallDenseMap<StringRef, unsigned> unsupportedClsFreq;
@@ -244,6 +246,7 @@ private:
   template <class T>
   void sendRegProfData(T *response,
                        SmallSetVector<unsigned, 8> *updatedRegs = nullptr);
+  void sendRegProfDataViaPipes();
   void dumpInterferenceGraph(std::string ID = "");
   void allocatePhysRegsViaRL();
   void allocatePhysRegsViaRandom(int, int);
@@ -259,6 +262,10 @@ private:
                              SmallVector<unsigned, 4> &SplitVRegs);
             
   Observation& split_node_step(unsigned action) override;
+  void serializeRegProfWithPipelining(json::OStream& JOS);
+  void constructJson();
+  void constructJson(SmallSetVector<unsigned, 8> *updatedRegIdxs);
+  void initPipeCommunication();
 
   // std::map<std::string, std::map<std::string, int64_t>>
   // parsePredictionJson(std::string jsonString) {

@@ -10,6 +10,7 @@
 #ifndef LLVM_TRANSFORMS_MLMODELRUNNER_H
 #define LLVM_TRANSFORMS_MLMODELRUNNER_H
 
+#include "llvm/MC/MCExpr.h"
 #include "llvm/Transforms/TensorSpec.h"
 #include "llvm/IR/PassManager.h"
 
@@ -53,9 +54,14 @@ public:
 
 protected:
   MLModelRunner(LLVMContext &Ctx, Kind Type, size_t NrInputs)
-      : Ctx(Ctx), Type(Type), InputBuffers(NrInputs) {
+      : Ctx(&Ctx), Type(Type), InputBuffers(NrInputs) {
     assert(Type != Kind::Unknown);
   }
+  MLModelRunner(MCContext &MCtx, Kind Type, size_t NrInputs)
+      : MCtx(&MCtx), Type(Type), InputBuffers(NrInputs) {
+    assert(Type != Kind::Unknown);
+  }
+
   virtual void *evaluateUntyped() = 0;
 
   void setUpBufferForTensor(size_t Index, const TensorSpec &Spec,
@@ -67,7 +73,8 @@ protected:
     InputBuffers[Index] = Buffer;
   }
 
-  LLVMContext &Ctx;
+  LLVMContext* Ctx;
+  MCContext* MCtx;
   const Kind Type;
 
 private:

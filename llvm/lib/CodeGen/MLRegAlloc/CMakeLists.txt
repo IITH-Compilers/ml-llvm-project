@@ -5,6 +5,9 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2")
 
 add_llvm_component_library(LLVMMLRegAlloc
 MLRegAlloc.cpp
+InteractiveModelRunner.cpp
+TrainingLogger.cpp
+TensorSpec.cpp
 ../MLConfig.cpp
 DEPENDS intrinsics_gen
 )

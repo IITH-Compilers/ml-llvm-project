@@ -53,12 +53,13 @@
 #ifndef LLVM_ANALYSIS_UTILS_TRAININGLOGGER_H
 #define LLVM_ANALYSIS_UTILS_TRAININGLOGGER_H
 
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Config/llvm-config.h"
 
 #include "llvm/ADT/StringMap.h"
-#include "llvm/Transforms/TensorSpec.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Transforms/TensorSpec.h"
 
 #include <memory>
 #include <optional>
@@ -118,6 +119,18 @@ public:
   void startObservation();
   void endObservation();
   void flush() { OS->flush(); }
+
+  void addDataToStream(json::Value& V) {
+    json::OStream(*OS).value(V);
+    *OS << "\n";
+  }
+
+  // add data to stream with a function argument
+  void addDataToStream(std::function<void(json::OStream &)> &F) {
+    json::OStream JOS(*OS);
+    F(JOS);
+    *OS << "\n";
+  }
 
   const std::string &currentContext() const { return CurrentContext; }
 

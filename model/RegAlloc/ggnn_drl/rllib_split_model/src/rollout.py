@@ -11,8 +11,10 @@ from pathlib import Path
 import shelve
 
 import ray
-import ray.cloudpickle as cloudpickle
-from ray.rllib.agents.registry import get_trainer_class
+# import ray.cloudpickle as cloudpickle
+from ray import cloudpickle as cloudpickle
+# from ray.rllib.agents.registry import get_trainer_class
+from ray.rllib.algorithms.registry import get_trainer_class
 from ray.rllib.env import MultiAgentEnv
 from ray.rllib.env.base_env import _DUMMY_AGENT_ID
 from ray.rllib.env.env_context import EnvContext
@@ -30,11 +32,11 @@ from register_action_space import RegisterActionSpace
 from ray.rllib.models import ModelCatalog
 from model import SelectTaskNetwork, SelectNodeNetwork, SplitNodeNetwork, ColorNetwork
 import logging
-from ray.rllib.agents.dqn.simple_q_torch_policy import SimpleQTorchPolicy
+# from ray.rllib.agents.dqn.simple_q_torch_policy import SimpleQTorchPolicy
 
 from gym.spaces import Discrete, Box, Dict, Tuple
 import numpy as np
-from ray.tune import function
+# from ray.tune import function
 
 import networkx
 # import numpy as np
@@ -44,8 +46,8 @@ import torch
 from argparse import Namespace
 import pydot
 from networkx.readwrite import json_graph
-from ray.rllib.agents.dqn.simple_q_torch_policy import SimpleQTorchPolicy
-from ray.rllib.utils.torch_ops import FLOAT_MIN, FLOAT_MAX
+# from ray.rllib.agents.dqn.simple_q_torch_policy import SimpleQTorchPolicy
+from ray.rllib.utils.torch_utils import FLOAT_MIN, FLOAT_MAX
 from ray.rllib.utils.spaces.repeated import Repeated
 
 EXAMPLE_USAGE = """
@@ -321,6 +323,7 @@ class RollOutInference:
             _, config = get_trainer_class(args.run, return_config=True)
     
         # Make sure worker 0 has an Env.
+        # print("Config:", config["evaluation_config"])
         config["create_env_on_driver"] = True
         config["explore"] = False
         config["num_workers"] = 0
@@ -328,16 +331,16 @@ class RollOutInference:
         config["render_env"] = not args.no_render
         # config["record_env"] = args.video_dir
         
-        config["evaluation_config"]["explore"] = False
+        # config["evaluation_config"]["explore"] = False
        
         # print(config)
 
         # Merge with `evaluation_config` (first try from command line, then from
         # pkl file).
-        evaluation_config = copy.deepcopy(
-            args.config.get("evaluation_config", config.get(
-                "evaluation_config", {})))
-        config = merge_dicts(config, evaluation_config)
+        # evaluation_config = copy.deepcopy(
+        #     args.config.get("evaluation_config", config.get(
+        #         "evaluation_config", {})))
+        # config = merge_dicts(config, evaluation_config)
         # Merge with command line `--config` settings (if not already the same
         # anyways).
         config = merge_dicts(config, args.config)
@@ -453,6 +456,8 @@ class RollOutInference:
                 "current_batch": 100,
                 "enable_GGNN": True,
                 "Workers_starting_port": "50001",
+                "disable_spliting": False,
+                "use_costbased_reward": True,
                 "use_local_reward": True,
                 "use_mca_reward": True,
                 "use_mca_self_play_reward": False,
@@ -576,7 +581,8 @@ class RollOutInference:
 
         config["multiagent"] = {
             "policies" : policies,
-            "policy_mapping_fn": function(policy_mapping_fn)
+            # "policy_mapping_fn": function(policy_mapping_fn)
+            "policy_mapping_fn": policy_mapping_fn
         }
 
 
@@ -789,7 +795,7 @@ class RollOutInference:
                     # print(policy_id)
                     p_use_lstm = self.use_lstm[policy_id]
                     if p_use_lstm:
-                        a_action, p_state, _ = self.agent.compute_action(
+                        a_action, p_state, _ = self.agent.compute_single_action(
                         # a_action, p_state, _ = self.agent.compute_single_action(
                             a_obs,
                             state=agent_states[agent_id],
@@ -808,7 +814,7 @@ class RollOutInference:
                         #         if math.isnan(v):
                         #             print('******NAN**** ', v, i)
                             # print('\n')
-                        a_action, extra_info = self.agent.compute_action(
+                        a_action, extra_info = self.agent.compute_single_action(
                         # a_action = self.agent.compute_single_action(
                             a_obs,
                             prev_action=prev_actions[agent_id],

@@ -62,6 +62,7 @@
 #include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/BlockFrequency.h"
@@ -73,8 +74,11 @@
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/Transforms/InteractiveModelRunner.h"
 #include <algorithm>
 #include <cassert>
+#include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <fstream>
 #include <future>
@@ -86,6 +90,7 @@
 #include <random>
 #include <set>
 #include <sstream>
+#include <string>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -158,6 +163,11 @@ cl::opt<bool> MLRA::enable_rl_inference_engine(
     "rl-inference-engine", cl::Hidden,
     cl::desc("Use RL-Inference-Engine for inferecing the model"),
     cl::init(false));
+
+static cl::opt<bool>
+    usePipe("use-pipe", cl::Hidden,
+            cl::desc("Use pipe based interation with python model"),
+            cl::init(false));
 
 registerallocationinference::RegisterAllocationInference::Stub *Stub = nullptr;
 // gRPCUtil client;
@@ -282,6 +292,190 @@ grpc::Status MLRA::codeGen(grpc::ServerContext *context,
   }
 
   return Status::OK;
+}
+
+void MLRA::sendRegProfDataViaPipes() {}
+void MLRA::constructJson() {
+  JO = json::Object();
+  // fill regprofmap
+  json::Array RegArray;
+  assert(regProfMap.size() <= 1000 && "Graph size is greater than expected\n");
+  for (auto rpm : regProfMap) {
+    auto rp = rpm.second;
+    json::Object regprof;
+    regprof["regID"] = rpm.first;
+    regprof["cls"] = rp.cls;
+    regprof["color"] = rp.color;
+    json::Array interferences;
+    for (auto interf : rp.interferences) {
+      interferences.push_back(interf);
+    }
+    regprof["interferences"] = json::Value(std::move(interferences));
+    json::Array splitslots;
+    for (auto splitSlot : rp.splitSlots) {
+      splitslots.push_back(splitSlot);
+    }
+    regprof["splitSlots"] = json::Value(std::move(splitslots));
+    json::Array usedistances;
+    for (auto useDistance : rp.useDistances) {
+      usedistances.push_back(useDistance);
+    }
+    regprof["useDistances"] = json::Value(std::move(usedistances));
+    if (rp.spillWeight == INFINITY)
+      regprof["spillWeight"] = "INF";
+    else
+      regprof["spillWeight"] = rp.spillWeight;
+    json::Array positionalspillweights;
+    for (auto posSpillWeight : rp.spillWeights) {
+      positionalspillweights.push_back(posSpillWeight);
+    }
+    regprof["positionalSpillWeights"] =
+        json::Value(std::move(positionalspillweights));
+    json::Array vectors;
+    for (auto vec : rp.vecRep) {
+      json::Array vector;
+      json::Object vectorObj;
+      for (auto elem : vec) {
+        vector.push_back(elem);
+      }
+      vectorObj["vec"] = json::Value(std::move(vector));
+      vectors.push_back(json::Value(std::move(vectorObj)));
+    }
+    regprof["vectors"] = json::Value(std::move(vectors));
+    RegArray.push_back(json::Value(std::move(regprof)));
+  }
+  JO["regProf"] = json::Value(std::move(RegArray));
+  JO["result"] = true;
+  JO["new"] = true;
+  // Output = json::Value(std::move(JO));
+}
+
+void MLRA::constructJson(SmallSetVector<unsigned, 8> *updatedRegIdxs) {
+  // fill regprofmap
+  SmallSetVector<unsigned, 8> regIdxs;
+  if (!updatedRegIdxs) {
+    for (auto rpm : regProfMap) {
+      regIdxs.insert(rpm.first);
+    }
+  } else
+    regIdxs = *updatedRegIdxs;
+
+  json::Array RegArray;
+  assert(regProfMap.size() <= 1000 && "Graph size is greater than expected\n");
+  for (auto reg : regIdxs) {
+    auto rp = regProfMap[reg];
+    json::Object regprof;
+    regprof["regID"] = reg;
+    regprof["cls"] = rp.cls;
+    regprof["color"] = rp.color;
+    json::Array interferences;
+    for (auto interf : rp.interferences) {
+      interferences.push_back(interf);
+    }
+    regprof["interferences"] = json::Value(std::move(interferences));
+    json::Array splitslots;
+    for (auto splitSlot : rp.splitSlots) {
+      splitslots.push_back(splitSlot);
+    }
+    regprof["splitSlots"] = json::Value(std::move(splitslots));
+    json::Array usedistances;
+    for (auto useDistance : rp.useDistances) {
+      usedistances.push_back(useDistance);
+    }
+    regprof["useDistances"] = json::Value(std::move(usedistances));
+    if (rp.spillWeight == INFINITY)
+      regprof["spillWeight"] = "INF";
+    else
+      regprof["spillWeight"] = rp.spillWeight;
+    json::Array positionalspillweights;
+    for (auto posSpillWeight : rp.spillWeights) {
+      positionalspillweights.push_back(posSpillWeight);
+    }
+    regprof["positionalSpillWeights"] =
+        json::Value(std::move(positionalspillweights));
+    json::Array vectors;
+    for (auto vec : rp.vecRep) {
+      json::Array vector;
+      json::Object vectorObj;
+      for (auto elem : vec) {
+        vector.push_back(elem);
+      }
+      vectorObj["vec"] = json::Value(std::move(vector));
+      vectors.push_back(json::Value(std::move(vectorObj)));
+    }
+    regprof["vectors"] = json::Value(std::move(vectors));
+    RegArray.push_back(json::Value(std::move(regprof)));
+  }
+  JO["regProf"] = json::Value(std::move(RegArray));
+  JO["exited"] = false;
+  if(regIdxs.size() > 0) {
+    numSplits++;
+    JO["result"] = true;
+  }
+  else {
+    JO["result"] = false;
+  }
+}
+
+void MLRA::serializeRegProfWithPipelining(json::OStream &JOS) {
+  // std::unique_ptr<raw_ostream> OS;
+  // json::OStream JOS(*OS);
+  errs() << "called serializeRegProfWithPipelining finally!!!\n";
+
+  // if(JOS) {
+  //   errs() << "JOS is valid\n";
+  // } else {
+  //   errs() << "JOS is invalid\n";
+  // }
+  auto &data = this->regProfMap;
+  JOS.object([&]() {
+    JOS.attributeArray("regProf", [&]() {
+      for (auto rpm : data) {
+        auto rp = rpm.second;
+        errs() << "serializing regprof -- " << rpm.first << " ";
+        JOS.object([&]() {
+          JOS.attribute("regid", rpm.first);
+          JOS.attribute("cls", rp.cls);
+          JOS.attribute("color", rp.color);
+          JOS.attributeArray("interferences", [&]() {
+            for (auto interf : rp.interferences) {
+              JOS.value(interf);
+            }
+          });
+          JOS.attributeArray("splitslots", [&]() {
+            for (auto splitSlot : rp.splitSlots) {
+              JOS.value(splitSlot);
+            }
+          });
+          JOS.attributeArray("usedistances", [&]() {
+            for (auto useDistance : rp.useDistances) {
+              JOS.value(useDistance);
+            }
+          });
+          if (rp.spillWeight == INFINITY)
+            JOS.attribute("spillweight", "INF");
+          else
+            JOS.attribute("spillweight", rp.spillWeight);
+          //   errs() << "spillweight: " << rp.spillWeight << " ";
+          // errs() << "spillweight: " << rp.spillWeight << "\n";
+          JOS.attributeArray("positionalspillweights", [&]() {
+            for (auto posSpillWeight : rp.spillWeights) {
+              JOS.value(posSpillWeight);
+            }
+          });
+          JOS.attributeArray("vectors", [&]() {
+            for (auto vec : rp.vecRep) {
+              JOS.array([&]() {
+                for (auto elem : vec) {
+                  JOS.value(elem);
+                }
+              });
+            }
+          });
+        });
+      }
+    });
+  });
 }
 
 void MLRA::serializeRegProfData(
@@ -2136,6 +2330,175 @@ void MLRA::training_flow() {
   LLVM_DEBUG(errs() << "Done MLRA allocation for : " << MF->getName() << '\n');
 }
 
+void MLRA::initPipeCommunication() {
+  const char *const DecisionName = "advisor_decision";
+  const TensorSpec DecisionSpec =
+      TensorSpec::createSpec<int64_t>(DecisionName, {100});
+
+  const char *const DefaultFeatureName = "feature_default";
+  const TensorSpec DefaultFeatureSpec =
+      TensorSpec::createSpec<float_t>(DefaultFeatureName, {2});
+
+  std::vector<float_t> feature_data;
+  for (size_t i = 0; i < DefaultFeatureSpec.getElementCount(); i++)
+    feature_data.push_back((float_t)(i + 0.5));
+
+
+  std::vector<TensorSpec> Features;
+  Features.push_back(DefaultFeatureSpec);
+  errs() << "DEBUG1\n";
+// //////////////////////////////////////////////////////////////////////////////////////////
+
+
+  std::string basename =
+      "/home/cs20btech11024/repos/ML-Register-Allocation/model/RegAlloc/"
+      "ggnn_drl/rllib_split_model/src/rl4realpipe";
+  // initialize the AOTRunner object
+  AOTRunner = std::make_unique<InteractiveModelRunner>(
+      MF->getContext(), Features, DecisionSpec, basename + ".out",
+      basename + ".in");
+  errs() << "DEBUG2\n";
+  InteractiveModelRunner *I_AOTRunner =
+      static_cast<InteractiveModelRunner *>(AOTRunner.get());
+
+  errs() << "DEBUG3\n";
+
+  // std::function<void(json::OStream & OS)> f = [&](json::OStream &OS) {
+  //   this->serializeRegProfWithPipelining(OS);
+  // };
+
+  // constructJson();
+  // json::Value JsonData((json::Object(JO)));
+
+  // errs() << "\n\n\nJsonStr from initpipecommu : " << JsonData << "\n";
+  // auto reply = I_AOTRunner->communicateData(JsonData);
+
+  // lambda function to get json::Object from reply string
+  auto getJsonObj = [](std::string reply) -> json::Object {
+    Expected<json::Value> valueOrErr = json::parse(reply);
+    if (!valueOrErr) {
+      llvm::errs() << "Error parsing JSON: " << valueOrErr.takeError() << "\n";
+      exit(1);
+    }
+    json::Object jsonObject = *(valueOrErr->getAsObject());
+    return jsonObject;
+  };
+
+  // errs() << "Result : " << reply << "\n";
+
+  // Expected<json::Value> valueOrErr = json::parse(reply);
+  // if (!valueOrErr) {
+  //   llvm::errs() << "Error parsing JSON: " << valueOrErr.takeError() << "\n";
+  //   return;
+  // }
+  // json::Object jsonObject = *(valueOrErr->getAsObject());
+
+  // errs() << "Action : " << jsonObject.getString("action")->str() << "\n";
+  // // print regidx
+  // errs() << "Regidx : " << jsonObject.getInteger("regidx").value() << "\n";
+  // // print payload
+  // errs() << "Payload : " << jsonObject.getInteger("payload").value() << "\n";
+  // errs() << "**********************************\n";
+  // return;
+  bool isGraphSet = false;
+  while (true) {
+    if (!isGraphSet) {
+      constructJson();
+      // json::Value JsonData((json::Object(JO)));
+      errs() << "Call model first time\n";
+
+      for (auto it = MF->begin(); it != MF->end(); it++) {
+        if (it->isEHFuncletEntry() || it->isEHPad() || it->isEHScopeEntry() ||
+            it->isEHScopeReturnBlock()) {
+          return;
+        }
+        for (auto ist = it->begin(); ist != it->end(); ist++) {
+          if (ist->isEHLabel() || ist->isEHScopeReturn()) {
+            return;
+          }
+        }
+      }
+      isGraphSet = true;
+      errs() << "Processing funtion: " << MF->getName() << "\n";
+    } else {
+      JO["new"] = false;
+      errs() << "Call model again\n";
+    }
+    auto TempJO = JO;
+    auto request = json::Value(std::move(TempJO));
+    auto reply = I_AOTRunner->communicateData(request);
+    errs() << "Result : " << reply << "\n";
+    errs() << "After model call\n";
+
+    json::Object res = getJsonObj(reply);
+    if (res["action"].getAsString()->str() == "Color") {
+      errs() << "Received color from model\n";
+      std::string ucf = "";
+      for (auto i : unsupportedClsFreq) {
+        ucf += "\n " + i.first.str() + " - " + std::to_string(i.second);
+      }
+      if (res["color"].getAsArray()->size() == 0) {
+        errs() << "No color returned from model\n";
+        return;
+      }
+
+      errs() << "Before filling color map\n";
+
+      std::map<std::string, int64_t> colorMap;
+      unsigned numSpills = 0;
+      // get res["color"] as object
+      auto colorObj = res["color"].getAsArray();
+      for (auto it = colorObj->begin(); it != colorObj->end(); it++) {
+        auto it2 = it->getAsObject();
+        std::string regName = it2->begin()->first.str();
+        int64_t color = it2->begin()->second.getAsInteger().value();
+        colorMap[regName] = color;
+        errs() << "RegName: " << regName << " color: " << color << "\n";
+        if (color == 0)
+          numSpills++;
+      }
+
+      this->FunctionVirtRegToColorMap[MF->getName()] = colorMap;
+      allocatePhysRegsViaRL();
+      return;
+    }
+    // write if action is Split
+    if (res["action"].getAsString()->str() == "Split" ||
+        res["action"].getAsString()->str() == "SplitAndCapture") {
+      unsigned splitRegIdx = res["regidx"].getAsInteger().value();
+      int splitPoint = res["payload"].getAsInteger().value();
+      SmallVector<unsigned, 2> NewVRegs;
+
+      errs() << "**************STARTING SPLITTING********************\n";
+      errs() << "Splitting regidx: " << splitRegIdx << " at " << splitPoint
+             << "\n";
+
+      if (splitVirtReg(splitRegIdx, splitPoint, NewVRegs)) {
+        SmallSetVector<unsigned, 8> updatedRegIdxs;
+        updateRegisterProfileAfterSplit(splitRegIdx, NewVRegs, updatedRegIdxs);
+        if (enable_dump_ig_dot)
+          dumpInterferenceGraph(std::to_string(SplitCounter));
+        if (enable_mlra_checks)
+          verifyRegisterProfile();
+        errs() << "Splitting done\n";
+        errs() << "**********************************\n";
+        if (res["action"].getAsString()->str() == "Split")
+          constructJson(&updatedRegIdxs);
+        else
+          constructJson(nullptr);
+      } else {
+        JO["result"] = false;
+      }
+    }
+
+    if (res["action"].getAsString()->str() == "Exit") {
+      errs() << "Exit from model\n";
+      JO["exited"] = true;
+      return;
+    }
+  }
+}
+
 void MLRA::inference() {
   assert(enable_mlra_inference && "mlra-inference should be true.");
   assert(regProfMap.size() > 0 && "No profile information present.");
@@ -2168,7 +2531,7 @@ void MLRA::inference() {
     allocatePhysRegsViaRandom(seed, maxTries);
     return;
   }
-
+  // serializeRegProfWithPipelining(regProfMap);
   if (enable_rl_inference_engine) {
     DriverService *inference_driver = new DriverService(this);
     // std::map<unsigned, unsigned> colour_map;
@@ -2229,6 +2592,11 @@ void MLRA::inference() {
     this->FunctionVirtRegToColorMap[MF->getName()] = colorMap;
     // assert(reply->funcname() == MF->getName());
     allocatePhysRegsViaRL();
+    return;
+  }
+
+  if (usePipe) {
+    initPipeCommunication();
     return;
   }
 
