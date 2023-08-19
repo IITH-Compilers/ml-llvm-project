@@ -1,5 +1,5 @@
 include_directories(include)
-
+link_directories("${ONNXRUNTIME_ROOTDIR}/lib")
 set(LLVM_LINK_COMPONENTS
   AllTargetsAsmPrinters
   AllTargetsAsmParsers
@@ -10,6 +10,9 @@ set(LLVM_LINK_COMPONENTS
   MC
   MCParser
   Support
+  PosetRL
+  InferenceEngine
+  IR2Vec
   )
 
 add_llvm_tool(llvm-mca

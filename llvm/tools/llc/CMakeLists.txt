@@ -1,3 +1,5 @@
+link_directories("${ONNXRUNTIME_ROOTDIR}/lib")
+
 set(LLVM_LINK_COMPONENTS
   AllTargetsAsmParsers
   AllTargetsCodeGens
@@ -17,6 +19,10 @@ set(LLVM_LINK_COMPONENTS
   Target
   TransformUtils
   Vectorize
+  IPO
+  PosetRL
+  InferenceEngine
+  IR2Vec
   )
 
 add_llvm_tool(llc

@@ -29,6 +29,7 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ManagedStatic.h"
+#include "llvm/Transforms/AddSizeAttr/AddSizeAttr.h"
 #include "llvm/Transforms/AggressiveInstCombine/AggressiveInstCombine.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/Attributor.h"
@@ -37,6 +38,7 @@
 #include "llvm/Transforms/IPO/InferFunctionAttrs.h"
 #include "llvm/Transforms/InstCombine/InstCombine.h"
 #include "llvm/Transforms/Instrumentation.h"
+#include "llvm/Transforms/PosetRL/PosetRL.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/GVN.h"
 #include "llvm/Transforms/Scalar/InstSimplifyPass.h"
@@ -49,6 +51,11 @@
 #include "llvm/Transforms/Vectorize/SLPVectorizer.h"
 
 using namespace llvm;
+
+
+static cl::opt<bool>
+    OPosetRL("OPosetRL", cl::init(false), cl::Hidden,
+                       cl::desc("poset rl pass sequence"));
 
 static cl::opt<bool>
     RunPartialInlining("enable-partial-inlining", cl::init(false), cl::Hidden,
@@ -154,7 +161,7 @@ static cl::opt<bool>
 
 PassManagerBuilder::PassManagerBuilder() {
     OptLevel = 2;
-    SizeLevel = 0;
+    SizeLevel = 2;
     LibraryInfo = nullptr;
     Inliner = nullptr;
     DisableUnrollLoops = false;
@@ -294,6 +301,46 @@ void PassManagerBuilder::populateFunctionPassManager(
   FPM.add(createLowerExpectIntrinsicPass());
 }
 
+void PassManagerBuilder::customPopulateFunctionPassManager(
+    legacy::FunctionPassManager &FPM, unsigned customSizeLevel, unsigned subSeqNum) {
+  //if (((customSizeLevel==15 || customSizeLevel==17) && subSeqNum == 0) || (customSizeLevel==30 && subSeqNum < 4)) {
+  if (customSizeLevel==15 || customSizeLevel==17 || customSizeLevel==30 || customSizeLevel==34 || customSizeLevel==40) {
+    FPM.add(createEntryExitInstrumenterPass());
+  }
+
+  // Add LibraryInfo if we have some.
+  if (LibraryInfo)
+    FPM.add(new TargetLibraryInfoWrapperPass(*LibraryInfo));
+
+  //if (OptLevel == 0) return;
+
+  addInitialAliasAnalysisPasses(FPM);
+
+  if ((customSizeLevel==15 || customSizeLevel==17) && subSeqNum == 0){
+    FPM.add(createCFGSimplificationPass());
+    FPM.add(createSROAPass());
+    FPM.add(createEarlyCSEPass());
+    FPM.add(createLowerExpectIntrinsicPass());
+  }
+
+  if ((customSizeLevel==34 || customSizeLevel==40) && (subSeqNum == 29 || subSeqNum == 30 || subSeqNum == 31)){
+    FPM.add(createCFGSimplificationPass());
+    FPM.add(createSROAPass());
+    FPM.add(createEarlyCSEPass());
+    FPM.add(createLowerExpectIntrinsicPass());
+  }
+
+  if (customSizeLevel==30 && subSeqNum == 3){
+    FPM.add(createCFGSimplificationPass());
+  }
+
+  if (customSizeLevel==30 && subSeqNum == 29){
+    FPM.add(createSROAPass());
+    FPM.add(createEarlyCSEPass());
+    FPM.add(createLowerExpectIntrinsicPass());
+  }
+}
+
 // Do PGO instrumentation generation or use pass as the option specified.
 void PassManagerBuilder::addPGOInstrPasses(legacy::PassManagerBase &MPM,
                                            bool IsCS = false) {
@@ -345,6 +392,7 @@ void PassManagerBuilder::addPGOInstrPasses(legacy::PassManagerBase &MPM,
     MPM.add(
         createPGOIndirectCallPromotionLegacyPass(false, !PGOSampleUse.empty()));
 }
+
 void PassManagerBuilder::addFunctionSimplificationPasses(
     legacy::PassManagerBase &MPM) {
   // Start of function pass.
@@ -377,6 +425,7 @@ void PassManagerBuilder::addFunctionSimplificationPasses(
   if (SizeLevel == 0 && !DisableLibCallsShrinkWrap)
     MPM.add(createLibCallsShrinkWrapPass());
   addExtensionsToPM(EP_Peephole, MPM);
+
 
   // Optimize memory intrinsic calls based on the profiled size information.
   if (SizeLevel == 0)
@@ -465,12 +514,918 @@ void PassManagerBuilder::addFunctionSimplificationPasses(
     MPM.add(createControlHeightReductionLegacyPass());
 }
 
+void PassManagerBuilder::customPopulateModulePassManager(
+    legacy::PassManagerBase &MPM, unsigned customSizeLevel, unsigned subSeqNum) {
+  
+  // if (customSizeLevel == 0 && subSeqNum == 0){
+  //   MPM.add(createPosetRLPass());
+    
+  // }
+  
+  if (((customSizeLevel == 15 || customSizeLevel == 17) && subSeqNum == 0) || (customSizeLevel == 30 && subSeqNum == 29)){
+    // Allow forcing function attributes as a debugging and tuning aid.
+    MPM.add(createForceFunctionAttrsLegacyPass());
+  }
+
+  if ((customSizeLevel == 34 || customSizeLevel == 40) && (subSeqNum == 29 || subSeqNum == 30 || subSeqNum == 31)) {
+    // Allow forcing function attributes as a debugging and tuning aid.
+    MPM.add(createForceFunctionAttrsLegacyPass());
+  }
+
+  // Add LibraryInfo if we have some.
+  if (LibraryInfo)
+    MPM.add(new TargetLibraryInfoWrapperPass(*LibraryInfo));
+
+  addInitialAliasAnalysisPasses(MPM);
+
+  if (customSizeLevel == 15 && subSeqNum == 0){
+    MPM.add(createInferFunctionAttrsLegacyPass());
+    MPM.add(createPromoteMemoryToRegisterPass());
+  }
+
+  if (customSizeLevel == 15 && subSeqNum == 1){
+    MPM.add(createIPSCCPPass());
+    MPM.add(createCalledValuePropagationPass());
+    MPM.add(createAttributorLegacyPass());
+    MPM.add(createGlobalOptimizerPass());
+  }
+
+  if (customSizeLevel == 15 && subSeqNum == 2){
+    MPM.add(createDeadArgEliminationPass());
+    addInstructionCombiningPass(MPM);
+    MPM.add(createCFGSimplificationPass()); 
+  }
+
+  if (customSizeLevel == 15 && subSeqNum == 3){
+    MPM.add(createPruneEHPass()); // Remove dead EH info
+    bool RunInliner = false;
+    if (Inliner) {
+      MPM.add(Inliner);
+      Inliner = nullptr;
+      RunInliner = true;
+    }
+    MPM.add(createPostOrderFunctionAttrsLegacyPass());
+    MPM.add(createBarrierNoopPass());
+  }
+
+  if (customSizeLevel == 15 && subSeqNum == 4){
+    MPM.add(createSROAPass());
+    MPM.add(createEarlyCSEPass(true /* Enable mem-ssa. */)); // Catch trivial redundancies
+    // Speculative execution if the target has divergent branches; otherwise nop.
+    MPM.add(createSpeculativeExecutionIfHasBranchDivergencePass());
+    MPM.add(createJumpThreadingPass());         // Thread jumps.
+    MPM.add(createCorrelatedValuePropagationPass()); // Propagate conditionals
+  }
+
+  if (customSizeLevel == 15 && subSeqNum == 5){
+    MPM.add(createCFGSimplificationPass());     // Merge & remove BBs
+    addInstructionCombiningPass(MPM);
+    MPM.add(createTailCallEliminationPass()); // Eliminate tail calls
+    MPM.add(createCFGSimplificationPass());      // Merge & remove BBs
+    MPM.add(createReassociatePass());           // Reassociate expressions 
+  }
+
+  if (customSizeLevel == 15 && subSeqNum == 6){
+    // Rotate Loop - disable header duplication at -Oz
+    MPM.add(createLoopRotatePass(SizeLevel == 2 ? 0 : -1));
+    // TODO: Investigate promotion cap for O1.
+    MPM.add(createLICMPass(LicmMssaOptCap, LicmMssaNoAccForPromotionCap));
+    MPM.add(createLoopUnswitchPass(SizeLevel || OptLevel < 3, DivergentTarget));
+    MPM.add(createCFGSimplificationPass());     // Merge & remove BBs
+    addInstructionCombiningPass(MPM);
+  }
+
+  if (customSizeLevel == 15 && subSeqNum == 7){
+    MPM.add(createIndVarSimplifyPass());        // Canonicalize indvars
+    MPM.add(createLoopIdiomPass());             // Recognize idioms like memset.
+    MPM.add(createLoopDeletionPass());          // Delete dead loops
+    MPM.add(createSimpleLoopUnrollPass(OptLevel, DisableUnrollLoops,
+                                     ForgetAllSCEVInLoopUnroll));
+  }
+
+  if (customSizeLevel == 15 && subSeqNum == 8){
+    MPM.add(createMergedLoadStoreMotionPass()); // Merge ld/st in diamonds
+    MPM.add(NewGVN ? createNewGVNPass()
+                      : createGVNPass(DisableGVNLoadPRE)); // Remove redundancies
+    MPM.add(createMemCpyOptPass());             // Remove memcpy / form memset
+    MPM.add(createSCCPPass());                  // Constant prop with SCCP
+    MPM.add(createBitTrackingDCEPass());        // Delete dead bit computations
+    addInstructionCombiningPass(MPM);
+    MPM.add(createJumpThreadingPass());         // Thread jumps.
+    MPM.add(createCorrelatedValuePropagationPass());
+    MPM.add(createDeadStoreEliminationPass());  // Delete dead stores
+  }
+
+  if (customSizeLevel == 15 && subSeqNum == 9){
+    MPM.add(createLICMPass(LicmMssaOptCap, LicmMssaNoAccForPromotionCap));
+    MPM.add(createAggressiveDCEPass());         // Delete dead instructions
+    MPM.add(createCFGSimplificationPass());      // Merge & remove BBs
+    addInstructionCombiningPass(MPM); 
+  }
+
+  if (customSizeLevel == 15 && subSeqNum == 10){
+    MPM.add(createBarrierNoopPass());
+    MPM.add(createEliminateAvailableExternallyPass());
+    MPM.add(createReversePostOrderFunctionAttrsPass());
+    MPM.add(createGlobalOptimizerPass());
+    MPM.add(createGlobalDCEPass());
+    MPM.add(createGlobalsAAWrapperPass());
+    MPM.add(createFloat2IntPass());
+    MPM.add(createLowerConstantIntrinsicsPass());
+  }
+
+  if (customSizeLevel == 15 && subSeqNum == 11){
+    MPM.add(createLoopRotatePass(SizeLevel == 2 ? 0 : -1));
+    MPM.add(createLoopDistributePass());
+    MPM.add(createLoopVectorizePass(!LoopsInterleaved, !LoopVectorize));
+  }
+
+  if (customSizeLevel == 15 && subSeqNum == 12){
+    MPM.add(createLoopLoadEliminationPass());
+    addInstructionCombiningPass(MPM);
+    MPM.add(createCFGSimplificationPass(1, true, true, false, true));
+    addInstructionCombiningPass(MPM);
+  }
+
+  if (customSizeLevel == 15 && subSeqNum == 13){
+    MPM.add(createLoopUnrollPass(OptLevel, DisableUnrollLoops,
+                               ForgetAllSCEVInLoopUnroll));
+    addInstructionCombiningPass(MPM);
+    MPM.add(createLICMPass(LicmMssaOptCap, LicmMssaNoAccForPromotionCap));
+    MPM.add(createAlignmentFromAssumptionsPass()); 
+  }
+
+  if (customSizeLevel == 15 && subSeqNum == 14){
+    MPM.add(createStripDeadPrototypesPass());
+    MPM.add(createGlobalDCEPass());         // Remove dead fns and globals.
+    MPM.add(createConstantMergePass());     // Merge dup global constants
+    MPM.add(createLoopSinkPass());
+    MPM.add(createInstSimplifyLegacyPass());
+    MPM.add(createDivRemPairsPass());
+    MPM.add(createCFGSimplificationPass());
+  }
+
+  if (customSizeLevel == 17 && subSeqNum == 0){
+    MPM.add(createInferFunctionAttrsLegacyPass());
+    MPM.add(createIPSCCPPass());
+    MPM.add(createCalledValuePropagationPass());
+    MPM.add(createAttributorLegacyPass());
+    MPM.add(createGlobalOptimizerPass());
+    MPM.add(createPromoteMemoryToRegisterPass());
+    MPM.add(createDeadArgEliminationPass());
+  }
+
+  if ((customSizeLevel == 34 || customSizeLevel == 40) && (subSeqNum == 29 || subSeqNum == 30 || subSeqNum == 31)){
+    MPM.add(createInferFunctionAttrsLegacyPass());
+    MPM.add(createIPSCCPPass());
+    MPM.add(createCalledValuePropagationPass());
+    MPM.add(createAttributorLegacyPass());
+    MPM.add(createGlobalOptimizerPass());
+  }
+
+  if ((customSizeLevel == 34 || customSizeLevel == 40) && subSeqNum == 31){
+    MPM.add(createPromoteMemoryToRegisterPass());
+    MPM.add(createDeadArgEliminationPass());
+  }
+  // if (OptLevel > 2)
+  //   MPM.add(createCallSiteSplittingPass());
+
+  if (customSizeLevel == 17 && subSeqNum == 1) {
+    addInstructionCombiningPass(MPM);
+  }
+
+  if ((customSizeLevel == 34 || customSizeLevel == 40) && subSeqNum == 5) {
+    addInstructionCombiningPass(MPM);
+  }
+
+  if (customSizeLevel == 40 && (subSeqNum > 6 && subSeqNum < 22)) {
+    MPM.add(createPromoteMemoryToRegisterPass());
+  }
+
+  if (customSizeLevel == 17 && subSeqNum == 2) {
+    MPM.add(createCFGSimplificationPass()); // Clean up after IPCP & DAE
+    MPM.add(createPruneEHPass()); // Remove dead EH info
+    bool RunInliner = false;
+    if (Inliner) {
+      MPM.add(Inliner);
+      Inliner = nullptr;
+      RunInliner = true;
+    }
+    MPM.add(createPostOrderFunctionAttrsLegacyPass());
+    MPM.add(createSROAPass());
+    MPM.add(createEarlyCSEPass(true /* Enable mem-ssa. */)); // Catch trivial redundancies
+    // Speculative execution if the target has divergent branches; otherwise nop.
+    MPM.add(createSpeculativeExecutionIfHasBranchDivergencePass());
+    MPM.add(createJumpThreadingPass());         // Thread jumps.
+    MPM.add(createCorrelatedValuePropagationPass()); // Propagate conditionals
+    MPM.add(createBarrierNoopPass());
+  }
+
+  if ((customSizeLevel == 34 || customSizeLevel == 40) && (subSeqNum == 23 || subSeqNum == 24 || subSeqNum == 25 || subSeqNum == 26 || subSeqNum == 27)) {
+    MPM.add(createCFGSimplificationPass()); // Clean up after IPCP & DAE
+    MPM.add(createPruneEHPass()); // Remove dead EH info
+    bool RunInliner = false;
+    if (Inliner) {
+      MPM.add(Inliner);
+      Inliner = nullptr;
+      RunInliner = true;
+    }
+    MPM.add(createPostOrderFunctionAttrsLegacyPass());
+    MPM.add(createSROAPass());
+  }
+
+  if ((customSizeLevel == 34 || customSizeLevel == 40) && (subSeqNum == 23 || subSeqNum == 24 || subSeqNum == 25)) {
+    MPM.add(createEarlyCSEPass());
+    MPM.add(createLowerExpectIntrinsicPass());
+    MPM.add(createForceFunctionAttrsLegacyPass());
+    MPM.add(createInferFunctionAttrsLegacyPass());
+    MPM.add(createIPSCCPPass());
+    MPM.add(createCalledValuePropagationPass());
+    MPM.add(createAttributorLegacyPass());
+    MPM.add(createGlobalOptimizerPass());
+  }
+
+  if ((customSizeLevel == 34 || customSizeLevel == 40) && subSeqNum == 23) {
+    MPM.add(createGlobalDCEPass());
+    MPM.add(createGlobalsAAWrapperPass());
+    MPM.add(createConstantMergePass());
+  }
+
+  if ((customSizeLevel == 34 || customSizeLevel == 40) && subSeqNum == 24) {
+    MPM.add(createGlobalDCEPass());
+    MPM.add(createGlobalsAAWrapperPass());
+    MPM.add(createFloat2IntPass());
+    MPM.add(createLowerConstantIntrinsicsPass());
+  }
+
+  if ((customSizeLevel == 34 || customSizeLevel == 40) && subSeqNum == 25) {
+    MPM.add(createPromoteMemoryToRegisterPass());
+    MPM.add(createDeadArgEliminationPass());
+  }
+
+  if ((customSizeLevel == 34 || customSizeLevel == 40) && (subSeqNum == 26 || subSeqNum == 27)) {
+    MPM.add(createEarlyCSEPass(true /* Enable mem-ssa. */)); // Catch trivial redundancies
+    // Speculative execution if the target has divergent branches; otherwise nop.
+    MPM.add(createSpeculativeExecutionIfHasBranchDivergencePass());
+    MPM.add(createJumpThreadingPass());         // Thread jumps.
+    MPM.add(createCorrelatedValuePropagationPass()); // Propagate conditionals
+  }
+
+  if ((customSizeLevel == 34 || customSizeLevel == 40) && subSeqNum == 26) {
+    MPM.add(createDeadStoreEliminationPass());
+  }
+
+  if ((customSizeLevel == 34 || customSizeLevel == 40) && (subSeqNum == 23 || subSeqNum == 24 || subSeqNum == 25 || subSeqNum == 26 || subSeqNum == 27)) {
+    MPM.add(createBarrierNoopPass());
+  }
+
+  if ((customSizeLevel == 34 || customSizeLevel == 40) && (subSeqNum == 32 || subSeqNum == 33)) {
+    MPM.add(createCFGSimplificationPass());
+    MPM.add(createSROAPass());
+    MPM.add(createEarlyCSEPass(true /* Enable mem-ssa. */)); // Catch trivial redundancies
+    // Speculative execution if the target has divergent branches; otherwise nop.
+    MPM.add(createSpeculativeExecutionIfHasBranchDivergencePass());
+    MPM.add(createJumpThreadingPass());         // Thread jumps.
+    MPM.add(createCorrelatedValuePropagationPass());
+  }
+
+  if ((customSizeLevel == 34 || customSizeLevel == 40) && subSeqNum == 32) {
+    MPM.add(createDeadStoreEliminationPass());
+  }
+
+  if (customSizeLevel == 17 && subSeqNum == 3) {
+    MPM.add(createCFGSimplificationPass());     // Merge & remove BBs
+  }
+
+  if (customSizeLevel == 17 && subSeqNum == 4) {
+    addInstructionCombiningPass(MPM);
+    MPM.add(createTailCallEliminationPass()); // Eliminate tail calls
+  }
+
+  if ((customSizeLevel == 34 || customSizeLevel == 40) && subSeqNum == 6) {
+    addInstructionCombiningPass(MPM);
+    MPM.add(createTailCallEliminationPass()); // Eliminate tail calls
+  }
+
+  if (customSizeLevel == 17 && subSeqNum == 5) {
+    MPM.add(createCFGSimplificationPass());      // Merge & remove BBs
+    MPM.add(createReassociatePass());           // Reassociate expressions
+  }
+
+  if ((customSizeLevel == 34 || customSizeLevel == 40) && subSeqNum == 28) {
+    MPM.add(createCFGSimplificationPass());      // Merge & remove BBs
+    MPM.add(createReassociatePass());           // Reassociate expressions
+  }
+
+  if (customSizeLevel == 17 && subSeqNum == 6) {
+    // Rotate Loop - disable header duplication at -Oz
+    MPM.add(createLoopRotatePass(SizeLevel == 2 ? 0 : -1));
+    // TODO: Investigate promotion cap for O1.
+    MPM.add(createLICMPass(LicmMssaOptCap, LicmMssaNoAccForPromotionCap));
+    MPM.add(createLoopUnswitchPass(SizeLevel || OptLevel < 3, DivergentTarget));
+  }
+
+  if ((customSizeLevel == 34 || customSizeLevel == 40) && subSeqNum == 12) {
+    MPM.add(createLICMPass(LicmMssaOptCap, LicmMssaNoAccForPromotionCap));
+    MPM.add(createLoopUnswitchPass(SizeLevel || OptLevel < 3, DivergentTarget));
+  }
+
+  if ((customSizeLevel == 34 || customSizeLevel == 40) && (subSeqNum == 14 || subSeqNum == 15)) {
+    MPM.add(createLoopRotatePass(SizeLevel == 2 ? 0 : -1));
+    MPM.add(createLICMPass(LicmMssaOptCap, LicmMssaNoAccForPromotionCap));
+    MPM.add(createAlignmentFromAssumptionsPass());
+    MPM.add(createStripDeadPrototypesPass());
+  }
+
+  if ((customSizeLevel == 34 || customSizeLevel == 40) && subSeqNum == 14) {
+    MPM.add(createGlobalDCEPass());
+    MPM.add(createGlobalsAAWrapperPass());
+    MPM.add(createConstantMergePass());
+  }
+
+  if ((customSizeLevel == 34 || customSizeLevel == 40) && subSeqNum == 15) {
+    MPM.add(createGlobalDCEPass());
+    MPM.add(createGlobalsAAWrapperPass());
+    MPM.add(createFloat2IntPass());
+    MPM.add(createLowerConstantIntrinsicsPass());
+  }
+
+  if ((customSizeLevel == 34 || customSizeLevel == 40) && subSeqNum == 16) {
+    // Rotate Loop - disable header duplication at -Oz
+    MPM.add(createLoopRotatePass(SizeLevel == 2 ? 0 : -1));
+    // TODO: Investigate promotion cap for O1.
+    MPM.add(createLICMPass(LicmMssaOptCap, LicmMssaNoAccForPromotionCap));
+    MPM.add(createLoopUnswitchPass(SizeLevel || OptLevel < 3, DivergentTarget));
+  }
+
+  if (customSizeLevel == 17 && subSeqNum == 7) {
+    MPM.add(createIndVarSimplifyPass());        // Canonicalize indvars
+    MPM.add(createLoopIdiomPass());             // Recognize idioms like memset.
+    MPM.add(createLoopDeletionPass());          // Delete dead loops
+    MPM.add(createSimpleLoopUnrollPass(OptLevel, DisableUnrollLoops,
+                                     ForgetAllSCEVInLoopUnroll));
+    MPM.add(createMergedLoadStoreMotionPass()); // Merge ld/st in diamonds
+    MPM.add(NewGVN ? createNewGVNPass()
+                      : createGVNPass(DisableGVNLoadPRE)); // Remove redundancies
+    MPM.add(createMemCpyOptPass());             // Remove memcpy / form memset
+    MPM.add(createSCCPPass());                  // Constant prop with SCCP
+    MPM.add(createBitTrackingDCEPass());        // Delete dead bit computations
+  }
+
+  if ((customSizeLevel == 34 || customSizeLevel == 40) && ( subSeqNum == 7 || subSeqNum == 8)) {
+    MPM.add(createIndVarSimplifyPass());        // Canonicalize indvars
+    MPM.add(createLoopIdiomPass());             // Recognize idioms like memset.
+    MPM.add(createLoopDeletionPass());          // Delete dead loops
+    MPM.add(createSimpleLoopUnrollPass(OptLevel, DisableUnrollLoops,
+                                     ForgetAllSCEVInLoopUnroll));
+  }
+
+  if ((customSizeLevel == 34 || customSizeLevel == 40) && subSeqNum == 8) {
+    MPM.add(createMergedLoadStoreMotionPass()); // Merge ld/st in diamonds
+    MPM.add(NewGVN ? createNewGVNPass()
+                      : createGVNPass(DisableGVNLoadPRE)); // Remove redundancies
+    MPM.add(createMemCpyOptPass());             // Remove memcpy / form memset
+    MPM.add(createSCCPPass());                  // Constant prop with SCCP
+    MPM.add(createBitTrackingDCEPass());        // Delete dead bit computations
+  }
+
+  if (customSizeLevel == 17 && subSeqNum == 8) {
+    addInstructionCombiningPass(MPM);
+    MPM.add(createJumpThreadingPass());         // Thread jumps.
+    MPM.add(createCorrelatedValuePropagationPass());
+    MPM.add(createDeadStoreEliminationPass());  // Delete dead stores
+  }
+
+  if ((customSizeLevel == 34 || customSizeLevel == 40) && (subSeqNum == 3 || subSeqNum == 4)) {
+    addInstructionCombiningPass(MPM);
+    MPM.add(createJumpThreadingPass());         // Thread jumps.
+    MPM.add(createCorrelatedValuePropagationPass());
+  }
+  if ((customSizeLevel == 34 || customSizeLevel == 40) && subSeqNum == 3) {
+    MPM.add(createDeadStoreEliminationPass());  // Delete dead stores
+  }  
+
+  if (customSizeLevel == 17 && subSeqNum == 9) {
+    MPM.add(createLICMPass(LicmMssaOptCap, LicmMssaNoAccForPromotionCap));
+    MPM.add(createAggressiveDCEPass());         // Delete dead instructions
+  }
+
+  if ((customSizeLevel == 34 || customSizeLevel == 40) && subSeqNum == 9) {
+    MPM.add(createLICMPass(LicmMssaOptCap, LicmMssaNoAccForPromotionCap));
+    MPM.add(createAggressiveDCEPass());         // Delete dead instructions
+  }
+
+  if (customSizeLevel == 17 && subSeqNum == 10) {
+    addInstructionCombiningPass(MPM);
+    MPM.add(createBarrierNoopPass());
+    MPM.add(createEliminateAvailableExternallyPass());
+    MPM.add(createReversePostOrderFunctionAttrsPass());
+    MPM.add(createGlobalOptimizerPass());
+    MPM.add(createGlobalDCEPass());
+    MPM.add(createGlobalsAAWrapperPass());
+    MPM.add(createFloat2IntPass());
+    MPM.add(createLowerConstantIntrinsicsPass());
+  }
+
+  if ((customSizeLevel == 34 || customSizeLevel == 40) && (subSeqNum == 0 || subSeqNum == 1 || subSeqNum == 2)) {
+    addInstructionCombiningPass(MPM);
+    MPM.add(createBarrierNoopPass());
+    MPM.add(createEliminateAvailableExternallyPass());
+    MPM.add(createReversePostOrderFunctionAttrsPass());
+    MPM.add(createGlobalOptimizerPass());
+  }
+
+  if ((customSizeLevel == 34 || customSizeLevel == 40) && subSeqNum == 0) {
+    MPM.add(createGlobalDCEPass());
+    MPM.add(createGlobalsAAWrapperPass());
+    MPM.add(createConstantMergePass());
+  }
+
+  if ((customSizeLevel == 34 || customSizeLevel == 40) && subSeqNum == 1) {
+    MPM.add(createGlobalDCEPass());
+    MPM.add(createGlobalsAAWrapperPass());
+    MPM.add(createFloat2IntPass());
+    MPM.add(createLowerConstantIntrinsicsPass());
+  }
+
+  if ((customSizeLevel == 34 || customSizeLevel == 40) && subSeqNum == 2) {
+    MPM.add(createPromoteMemoryToRegisterPass());
+    MPM.add(createDeadArgEliminationPass());
+  }
+
+  if ((customSizeLevel == 34 || customSizeLevel == 40) && subSeqNum == 29) {
+    MPM.add(createGlobalDCEPass());
+    MPM.add(createGlobalsAAWrapperPass());
+    MPM.add(createConstantMergePass());
+  }
+
+  if ((customSizeLevel == 34 || customSizeLevel == 40) && subSeqNum == 30) {
+    MPM.add(createGlobalDCEPass());
+    MPM.add(createGlobalsAAWrapperPass());
+    MPM.add(createFloat2IntPass());
+    MPM.add(createLowerConstantIntrinsicsPass());
+  }
+
+  if (customSizeLevel == 17 && subSeqNum == 11) {
+    MPM.add(createLoopRotatePass(SizeLevel == 2 ? 0 : -1));
+    MPM.add(createLoopDistributePass());
+    MPM.add(createLoopVectorizePass(!LoopsInterleaved, !LoopVectorize));
+  }
+
+  if ((customSizeLevel == 34 || customSizeLevel == 40) && subSeqNum == 17) {
+    MPM.add(createLoopRotatePass(SizeLevel == 2 ? 0 : -1));
+    MPM.add(createLoopDistributePass());
+    MPM.add(createLoopVectorizePass(!LoopsInterleaved, !LoopVectorize));
+  }
+
+  if (customSizeLevel == 17 && subSeqNum == 12) {
+    MPM.add(createLoopLoadEliminationPass());
+  }
+
+  if ((customSizeLevel == 34 || customSizeLevel == 40) && subSeqNum == 21) {
+    MPM.add(createLoopLoadEliminationPass());
+  }
+
+  if (customSizeLevel == 17 && subSeqNum == 13) {
+    MPM.add(createCFGSimplificationPass(1, true, true, false, true));
+  }
+
+  if ((customSizeLevel == 34 || customSizeLevel == 40) && subSeqNum == 22) {
+    MPM.add(createCFGSimplificationPass(1, true, true, false, true));
+  }
+
+  if (customSizeLevel == 17 && subSeqNum == 14) {
+    MPM.add(createLoopUnrollPass(OptLevel, DisableUnrollLoops,
+                               ForgetAllSCEVInLoopUnroll));
+  }
+
+  if (customSizeLevel == 17 && subSeqNum == 15) {
+    MPM.add(createLICMPass(LicmMssaOptCap, LicmMssaNoAccForPromotionCap));
+    MPM.add(createAlignmentFromAssumptionsPass());
+    MPM.add(createStripDeadPrototypesPass());
+    MPM.add(createGlobalDCEPass());         // Remove dead fns and globals.
+    MPM.add(createConstantMergePass());     // Merge dup global constants
+  }
+
+  if ((customSizeLevel == 34 || customSizeLevel == 40) && (subSeqNum == 10 || subSeqNum == 11)) {
+    MPM.add(createLICMPass(LicmMssaOptCap, LicmMssaNoAccForPromotionCap));
+    MPM.add(createAlignmentFromAssumptionsPass());
+    MPM.add(createStripDeadPrototypesPass());
+    MPM.add(createGlobalDCEPass());         // Remove dead fns and globals.
+  }
+
+  if ((customSizeLevel == 34 || customSizeLevel == 40) && subSeqNum == 10) {
+    MPM.add(createGlobalsAAWrapperPass());
+    MPM.add(createConstantMergePass());
+  }
+
+  if ((customSizeLevel == 34 || customSizeLevel == 40) && subSeqNum == 11) {
+    MPM.add(createGlobalsAAWrapperPass());
+    MPM.add(createFloat2IntPass());
+    MPM.add(createLowerConstantIntrinsicsPass());
+  }
+
+  if ((customSizeLevel == 34 || customSizeLevel == 40) && subSeqNum == 13) {
+    MPM.add(createLoopRotatePass(SizeLevel == 2 ? 0 : -1));
+    MPM.add(createLICMPass(LicmMssaOptCap, LicmMssaNoAccForPromotionCap));
+    MPM.add(createAggressiveDCEPass());         // Delete dead instructions
+  }
+
+  if (customSizeLevel == 17 && subSeqNum == 16) {
+    MPM.add(createLoopSinkPass());
+    MPM.add(createInstSimplifyLegacyPass());
+    MPM.add(createDivRemPairsPass());
+    MPM.add(createCFGSimplificationPass());
+  }
+
+  if ((customSizeLevel == 34 || customSizeLevel == 40) && subSeqNum == 18) {
+    MPM.add(createLoopSinkPass());
+    MPM.add(createInstSimplifyLegacyPass());
+    MPM.add(createDivRemPairsPass());
+    MPM.add(createCFGSimplificationPass());
+  }
+
+  if ((customSizeLevel == 34 || customSizeLevel == 40) && subSeqNum == 19){
+    MPM.add(createLoopUnrollPass(OptLevel, DisableUnrollLoops,
+                               ForgetAllSCEVInLoopUnroll));
+  }
+
+  if ((customSizeLevel == 34 || customSizeLevel == 40) && subSeqNum == 20){
+    MPM.add(createSimpleLoopUnrollPass(OptLevel, DisableUnrollLoops,
+                                     ForgetAllSCEVInLoopUnroll));
+    MPM.add(createMergedLoadStoreMotionPass()); // Merge ld/st in diamonds
+    MPM.add(NewGVN ? createNewGVNPass()
+                      : createGVNPass(DisableGVNLoadPRE)); // Remove redundancies
+    MPM.add(createMemCpyOptPass());             // Remove memcpy / form memset
+    MPM.add(createSCCPPass());                  // Constant prop with SCCP
+    MPM.add(createBitTrackingDCEPass());        // Delete dead bit computations
+  }
+
+  if (customSizeLevel == 30 && subSeqNum == 0){
+    MPM.add(createCFGSimplificationPass());      // Merge & remove BBs
+    MPM.add(createReassociatePass());           // Reassociate expressions
+  }
+
+  if (customSizeLevel == 30 && subSeqNum == 1){
+    MPM.add(createCFGSimplificationPass(1, true, true, false, true));
+  }
+
+  if (customSizeLevel == 30 && subSeqNum == 2){
+    MPM.add(createCFGSimplificationPass()); // Clean up after IPCP & DAE
+    MPM.add(createPruneEHPass()); // Remove dead EH info
+    bool RunInliner = false;
+    if (Inliner) {
+      MPM.add(Inliner);
+      Inliner = nullptr;
+      RunInliner = true;
+    }
+    MPM.add(createPostOrderFunctionAttrsLegacyPass());
+    MPM.add(createBarrierNoopPass());
+  }
+
+  if (customSizeLevel == 30 && subSeqNum == 4){
+    addInstructionCombiningPass(MPM);
+    MPM.add(createBarrierNoopPass());
+    MPM.add(createEliminateAvailableExternallyPass());
+    MPM.add(createReversePostOrderFunctionAttrsPass());
+  }
+
+  if (customSizeLevel == 30 && subSeqNum == 5){
+    addInstructionCombiningPass(MPM);
+    MPM.add(createJumpThreadingPass());         // Thread jumps
+    MPM.add(createCorrelatedValuePropagationPass());
+    MPM.add(createDeadStoreEliminationPass());  // Delete dead stores
+  }
+
+  if (customSizeLevel == 30 && subSeqNum == 6){
+    addInstructionCombiningPass(MPM);
+    MPM.add(createJumpThreadingPass());         // Thread jumps
+    MPM.add(createCorrelatedValuePropagationPass());
+  }
+
+  if (customSizeLevel == 30 && subSeqNum == 7){
+    addInstructionCombiningPass(MPM);
+  }
+
+  if (customSizeLevel == 30 && subSeqNum == 8){
+    addInstructionCombiningPass(MPM);
+    MPM.add(createTailCallEliminationPass()); // Eliminate tail calls
+  }
+
+  if (customSizeLevel == 30 && subSeqNum == 9){ //Check
+    addInstructionCombiningPass(MPM);
+  }
+
+  if (customSizeLevel == 30 && subSeqNum == 10){
+    MPM.add(createLoopLoadEliminationPass());
+  }
+
+  if (customSizeLevel == 30 && subSeqNum == 11){
+    MPM.add(createLoopSinkPass());
+    MPM.add(createInstSimplifyLegacyPass());
+    MPM.add(createDivRemPairsPass());
+    MPM.add(createCFGSimplificationPass());
+  }
+
+  if (customSizeLevel == 30 && subSeqNum == 12){
+    MPM.add(createLoopUnrollPass(OptLevel, DisableUnrollLoops,
+                               ForgetAllSCEVInLoopUnroll));
+  }
+
+
+  if (customSizeLevel == 30 && subSeqNum == 13){
+    MPM.add(createSimpleLoopUnrollPass(OptLevel, DisableUnrollLoops,
+                                     ForgetAllSCEVInLoopUnroll));
+    MPM.add(createMergedLoadStoreMotionPass()); // Merge ld/st in diamonds
+    MPM.add(NewGVN ? createNewGVNPass()
+                      : createGVNPass(DisableGVNLoadPRE)); // Remove redundancies
+    MPM.add(createMemCpyOptPass());             // Remove memcpy / form memset
+    MPM.add(createSCCPPass());                  // Constant prop with SCCP
+    MPM.add(createBitTrackingDCEPass());        // Delete dead bit computations
+  }
+
+
+  if (customSizeLevel == 30 && subSeqNum == 14){
+    MPM.add(createLICMPass(LicmMssaOptCap, LicmMssaNoAccForPromotionCap));
+    MPM.add(createAlignmentFromAssumptionsPass());
+    MPM.add(createStripDeadPrototypesPass());
+  }
+
+  if (customSizeLevel == 30 && subSeqNum == 15){
+    MPM.add(createLICMPass(LicmMssaOptCap, LicmMssaNoAccForPromotionCap));
+    MPM.add(createAggressiveDCEPass());         // Delete dead instructions
+  }
+
+  if (customSizeLevel == 30 && subSeqNum == 16){
+    MPM.add(createLICMPass(LicmMssaOptCap, LicmMssaNoAccForPromotionCap));
+    MPM.add(createLoopUnswitchPass(SizeLevel || OptLevel < 3, DivergentTarget));
+  }
+
+  if (customSizeLevel == 30 && subSeqNum == 17){
+    MPM.add(createIndVarSimplifyPass());        // Canonicalize indvars
+    MPM.add(createLoopIdiomPass());             // Recognize idioms like memset.
+    MPM.add(createLoopDeletionPass());          // Delete dead loops
+    MPM.add(createSimpleLoopUnrollPass(OptLevel, DisableUnrollLoops,
+                                     ForgetAllSCEVInLoopUnroll));
+  }
+
+  if (customSizeLevel == 30 && subSeqNum == 18){
+    MPM.add(createIndVarSimplifyPass());        // Canonicalize indvars
+    MPM.add(createLoopIdiomPass());             // Recognize idioms like memset.
+    MPM.add(createLoopDeletionPass());          // Delete dead loops
+    MPM.add(createSimpleLoopUnrollPass(OptLevel, DisableUnrollLoops,
+                                     ForgetAllSCEVInLoopUnroll));
+    MPM.add(createMergedLoadStoreMotionPass()); // Merge ld/st in diamonds
+    MPM.add(NewGVN ? createNewGVNPass()
+                      : createGVNPass(DisableGVNLoadPRE)); // Remove redundancies
+    MPM.add(createMemCpyOptPass());             // Remove memcpy / form memset
+    MPM.add(createSCCPPass());                  // Constant prop with SCCP
+    MPM.add(createBitTrackingDCEPass());        // Delete dead bit computations
+  }
+
+  if (customSizeLevel == 30 && subSeqNum == 19){
+    MPM.add(createLoopRotatePass(SizeLevel == 2 ? 0 : -1));
+    MPM.add(createLoopDistributePass());
+    MPM.add(createLoopVectorizePass(!LoopsInterleaved, !LoopVectorize));
+  }
+
+  if (customSizeLevel == 30 && subSeqNum == 20){
+    MPM.add(createLoopRotatePass(SizeLevel == 2 ? 0 : -1));
+    MPM.add(createLICMPass(LicmMssaOptCap, LicmMssaNoAccForPromotionCap));
+    MPM.add(createAlignmentFromAssumptionsPass());
+    MPM.add(createStripDeadPrototypesPass());
+  }
+
+  if (customSizeLevel == 30 && subSeqNum == 21){
+    MPM.add(createLoopRotatePass(SizeLevel == 2 ? 0 : -1));
+    MPM.add(createLICMPass(LicmMssaOptCap, LicmMssaNoAccForPromotionCap));
+    MPM.add(createAggressiveDCEPass());         // Delete dead instructions
+  }
+
+  if (customSizeLevel == 30 && subSeqNum == 22){
+    MPM.add(createLoopRotatePass(SizeLevel == 2 ? 0 : -1));
+    MPM.add(createLICMPass(LicmMssaOptCap, LicmMssaNoAccForPromotionCap));
+    MPM.add(createLoopUnswitchPass(SizeLevel || OptLevel < 3, DivergentTarget));
+  }
+
+  if (customSizeLevel == 30 && subSeqNum == 23){
+    MPM.add(createGlobalOptimizerPass()); 
+  }
+
+  if (customSizeLevel == 30 && subSeqNum == 24){
+    MPM.add(createGlobalOptimizerPass()); // Optimize out global vars
+    // Promote any localized global vars.
+    MPM.add(createPromoteMemoryToRegisterPass());
+    MPM.add(createDeadArgEliminationPass()); // Dead argument elimination
+  }
+
+  if (customSizeLevel == 30 && subSeqNum == 25){
+    MPM.add(createGlobalDCEPass());         // Remove dead fns and globals.
+    MPM.add(createConstantMergePass());     // Merge dup global constants
+  }
+
+  if (customSizeLevel == 30 && subSeqNum == 26){
+    MPM.add(createGlobalDCEPass());
+    MPM.add(createGlobalsAAWrapperPass());
+    MPM.add(createFloat2IntPass());
+    MPM.add(createLowerConstantIntrinsicsPass());
+  }
+
+  if (customSizeLevel == 30 && subSeqNum == 27){
+    MPM.add(createSROAPass());
+    MPM.add(createEarlyCSEPass(true /* Enable mem-ssa. */)); // Catch trivial redundancies
+    // Speculative execution if the target has divergent branches; otherwise nop.
+    MPM.add(createSpeculativeExecutionIfHasBranchDivergencePass());
+    MPM.add(createJumpThreadingPass());         // Thread jumps.
+    MPM.add(createCorrelatedValuePropagationPass()); // Propagate conditionals
+  }
+
+  if (customSizeLevel == 30 && subSeqNum == 28){
+    MPM.add(createSROAPass());
+    MPM.add(createEarlyCSEPass(true /* Enable mem-ssa. */)); // Catch trivial redundancies
+    // Speculative execution if the target has divergent branches; otherwise nop.
+    MPM.add(createSpeculativeExecutionIfHasBranchDivergencePass());
+    MPM.add(createJumpThreadingPass());         // Thread jumps.
+    MPM.add(createCorrelatedValuePropagationPass()); // Propagate conditionals
+    MPM.add(createDeadStoreEliminationPass());  // Delete dead stores
+  }
+
+  if (customSizeLevel == 30 && subSeqNum == 29){
+    MPM.add(createInferFunctionAttrsLegacyPass());
+    MPM.add(createIPSCCPPass());
+    MPM.add(createCalledValuePropagationPass());
+    MPM.add(createAttributorLegacyPass());
+  }
+  // We add a module alias analysis pass here. In part due to bugs in the
+  // analysis infrastructure this "works" in that the analysis stays alive
+  // for the entire SCC pass run below.
+  //MPM.add(createGlobalsAAWrapperPass());
+
+  // if (OptLevel > 2)
+  //   MPM.add(createArgumentPromotionPass()); // Scalarize uninlined fn args
+
+  // addFunctionSimplificationPasses(MPM);
+
+  // FIXME: This is a HACK! The inliner pass above implicitly creates a CGSCC
+  // pass manager that we are specifically trying to avoid. To prevent this
+  // we must insert a no-op module pass to reset the pass manager.
+  // MPM.add(createBarrierNoopPass());
+
+  // The inliner performs some kind of dead code elimination as it goes,
+  // but there are cases that are not really caught by it. We might
+  // at some point consider teaching the inliner about them, but it
+  // is OK for now to run GlobalOpt + GlobalDCE in tandem as their
+  // benefits generally outweight the cost, making the whole pipeline
+  // faster.
+  // if (RunInliner) {
+  //   MPM.add(createGlobalOptimizerPass());
+  //   MPM.add(createGlobalDCEPass());
+  // }
+
+
+  // Scheduling LoopVersioningLICM when inlining is over, because after that
+  // we may see more accurate aliasing. Reason to run this late is that too
+  // early versioning may prevent further inlining due to increase of code
+  // size. By placing it just after inlining other optimizations which runs
+  // later might get benefit of no-alias assumption in clone loop.
+  // if (UseLoopVersioningLICM) {
+  //   MPM.add(createLoopVersioningLICMPass());    // Do LoopVersioningLICM
+  //   MPM.add(createLICMPass(LicmMssaOptCap, LicmMssaNoAccForPromotionCap));
+  // }
+
+  // if (EnableMatrix) {
+  //   MPM.add(createLowerMatrixIntrinsicsPass());
+  //   // CSE the pointer arithmetic of the column vectors.  This allows alias
+  //   // analysis to establish no-aliasing between loads and stores of different
+  //   // columns of the same matrix.
+  //   MPM.add(createEarlyCSEPass(false));
+  // }
+
+  // Re-rotate loops in all our loop nests. These may have fallout out of
+  // rotated form due to GVN or other transformations, and the vectorizer relies
+  // on the rotated form. Disable header duplication at -Oz.
+  // MPM.add(createLoopRotatePass(SizeLevel == 2 ? 0 : -1));
+
+  // Distribute loops to allow partial vectorization.  I.e. isolate dependences
+  // into separate loop that would otherwise inhibit vectorization.  This is
+  // currently only performed for loops marked with the metadata
+  // llvm.loop.distribute=true or when -enable-loop-distribute is specified.
+  // MPM.add(createLoopDistributePass());
+
+  // Eliminate loads by forwarding stores from the previous iteration to loads
+  // of the current iteration.
+  // MPM.add(createLoopLoadEliminationPass());
+
+  // FIXME: Because of #pragma vectorize enable, the passes below are always
+  // inserted in the pipeline, even when the vectorizer doesn't run (ex. when
+  // on -O1 and no #pragma is found). Would be good to have these two passes
+  // as function calls, so that we can only pass them when the vectorizer
+  // changed the code.
+  // if (OptLevel > 1 && ExtraVectorizerPasses) {
+  //   // At higher optimization levels, try to clean up any runtime overlap and
+  //   // alignment checks inserted by the vectorizer. We want to track correllated
+  //   // runtime checks for two inner loops in the same outer loop, fold any
+  //   // common computations, hoist loop-invariant aspects out of any outer loop,
+  //   // and unswitch the runtime checks if possible. Once hoisted, we may have
+  //   // dead (or speculatable) control flows or more combining opportunities.
+  //   MPM.add(createEarlyCSEPass());
+  //   MPM.add(createCorrelatedValuePropagationPass());
+  //   addInstructionCombiningPass(MPM);
+  //   MPM.add(createLICMPass(LicmMssaOptCap, LicmMssaNoAccForPromotionCap));
+  //   MPM.add(createLoopUnswitchPass(SizeLevel || OptLevel < 3, DivergentTarget));
+  //   MPM.add(createCFGSimplificationPass());
+  //   addInstructionCombiningPass(MPM);
+  // }
+
+  // Cleanup after loop vectorization, etc. Simplification passes like CVP and
+  // GVN, loop transforms, and others have already run, so it's now better to
+  // convert to more optimized IR using more aggressive simplify CFG options.
+  // The extra sinking transform can create larger basic blocks, so do this
+  // before SLP vectorization.
+  // MPM.add(createCFGSimplificationPass(1, true, true, false, true));
+
+  // if (SLPVectorize) {
+  //   MPM.add(createSLPVectorizerPass()); // Vectorize parallel scalar chains.
+  //   if (OptLevel > 1 && ExtraVectorizerPasses) {
+  //     MPM.add(createEarlyCSEPass());
+  //   }
+  // }
+
+  // if (EnableUnrollAndJam && !DisableUnrollLoops) {
+  //   // Unroll and Jam. We do this before unroll but need to be in a separate
+  //   // loop pass manager in order for the outer loop to be processed by
+  //   // unroll and jam before the inner loop is unrolled.
+  //   MPM.add(createLoopUnrollAndJamPass(OptLevel));
+  // }
+
+  // Unroll small loops
+  // MPM.add(createLoopUnrollPass(OptLevel, DisableUnrollLoops,
+  //                              ForgetAllSCEVInLoopUnroll));
+
+  // if (!DisableUnrollLoops) {
+  //   // LoopUnroll may generate some redundency to cleanup.
+  //   addInstructionCombiningPass(MPM);
+
+  //   // Runtime unrolling will introduce runtime check in loop prologue. If the
+  //   // unrolled loop is a inner loop, then the prologue will be inside the
+  //   // outer loop. LICM pass can help to promote the runtime check out if the
+  //   // checked value is loop invariant.
+  //   MPM.add(createLICMPass(LicmMssaOptCap, LicmMssaNoAccForPromotionCap));
+  // }
+
+  // MPM.add(createWarnMissedTransformationsPass());
+
+  // After vectorization and unrolling, assume intrinsics may tell us more
+  // about pointer alignments.
+  // MPM.add(createAlignmentFromAssumptionsPass());
+
+  // FIXME: We shouldn't bother with this anymore.
+  // MPM.add(createStripDeadPrototypesPass()); // Get rid of dead prototypes
+
+  // GlobalOpt already deletes dead functions and globals, at -O2 try a
+  // late pass of GlobalDCE.  It is capable of deleting dead cycles.
+  // if (OptLevel > 1) {
+  //   MPM.add(createGlobalDCEPass());         // Remove dead fns and globals.
+  //   MPM.add(createConstantMergePass());     // Merge dup global constants
+  // }
+
+  // See comment in the new PM for justification of scheduling splitting at
+  // this stage (\ref buildModuleSimplificationPipeline).
+  // if (EnableHotColdSplit && !(PrepareForLTO || PrepareForThinLTO))
+  //   MPM.add(createHotColdSplittingPass());
+
+  // if (MergeFunctions)
+  //   MPM.add(createMergeFunctionsPass());
+
+  // LoopSink pass sinks instructions hoisted by LICM, which serves as a
+  // canonicalization pass that enables other optimizations. As a result,
+  // LoopSink pass needs to be a very late IR pass to avoid undoing LICM
+  // result too early.
+  // MPM.add(createLoopSinkPass());
+  // Get rid of LCSSA nodes.
+  // MPM.add(createInstSimplifyLegacyPass());
+
+  // This hoists/decomposes div/rem ops. It should run after other sink/hoist
+  // passes to avoid re-sinking, but before SimplifyCFG because it can allow
+  // flattening of blocks.
+  // MPM.add(createDivRemPairsPass());
+
+  // LoopSink (and other loop passes since the last simplifyCFG) might have
+  // resulted in single-entry-single-exit or empty blocks. Clean up the CFG.
+  // MPM.add(createCFGSimplificationPass());
+}
+
 void PassManagerBuilder::populateModulePassManager(
     legacy::PassManagerBase &MPM) {
   // Whether this is a default or *LTO pre-link pipeline. The FullLTO post-link
   // is handled separately, so just check this is not the ThinLTO post-link.
   bool DefaultOrPreLinkPipeline = !PerformThinLTO;
 
+  if (OPosetRL){
+      errs() << "opt level "<< OptLevel << " SizeLevel " << SizeLevel << "\n";
+      MPM.add(createPosetRLPass());
+      return;
+  }
   if (!PGOSampleUse.empty()) {
     MPM.add(createPruneEHPass());
     // In ThinLTO mode, when flattened profile is used, all the available

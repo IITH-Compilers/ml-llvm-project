@@ -1,3 +1,10 @@
+link_directories("${ONNXRUNTIME_ROOTDIR}/lib")
+
+# set(protobuf_MODULE_COMPATIBLE TRUE)
+
+# find_package(Protobuf CONFIG REQUIRED)
+# include_directories(${Protobuf_INCLUDE_DIRS})
+
 set(LLVM_LINK_COMPONENTS
   AllTargetsAsmParsers
   AllTargetsCodeGens
@@ -23,6 +30,11 @@ set(LLVM_LINK_COMPONENTS
   TransformUtils
   Vectorize
   Passes
+  gRPC
+  PosetRL
+  AddSizeAttr
+  InferenceEngine
+  IR2Vec
   )
 
 add_llvm_tool(opt

@@ -1,8 +1,16 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the ml-llvm-tools Project, under the BSD 4-Clause License.
+// See the LICENSE.txt file under ml-llvm-tools directory for license
+// information.
+//
+//===----------------------------------------------------------------------===//
+
 #ifndef LLVM_INFERENCE_ENGINE_AGENT_H
 #define LLVM_INFERENCE_ENGINE_AGENT_H
 
-#include "MLInferenceEngine/onnx.h"
-#include "MLInferenceEngine/utils.h"
+#include "onnx.h"
+#include "utils.h"
 #include "llvm/ADT/SmallVector.h"
 #include <stdio.h>
 #include <string>

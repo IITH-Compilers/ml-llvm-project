@@ -64,8 +64,8 @@ using namespace opt_tool;
 // The OptimizationList is automatically populated with registered Passes by the
 // PassNameParser.
 //
-static cl::list<const PassInfo*, bool, PassNameParser>
-PassList(cl::desc("Optimizations available:"));
+static cl::list<const PassInfo *, bool, PassNameParser>
+    PassList(cl::desc("Optimizations available:"));
 
 // This flag specifies a textual description of the optimization pass pipeline
 // to run over the module. This flag switches opt to use the new pass manager
@@ -78,26 +78,26 @@ static cl::opt<std::string> PassPipeline(
 
 // Other command line options...
 //
-static cl::opt<std::string>
-InputFilename(cl::Positional, cl::desc("<input bitcode file>"),
-    cl::init("-"), cl::value_desc("filename"));
+static cl::opt<std::string> InputFilename(cl::Positional,
+                                          cl::desc("<input bitcode file>"),
+                                          cl::init("-"),
+                                          cl::value_desc("filename"));
 
-static cl::opt<std::string>
-OutputFilename("o", cl::desc("Override output filename"),
-               cl::value_desc("filename"));
+static cl::opt<std::string> OutputFilename("o",
+                                           cl::desc("Override output filename"),
+                                           cl::value_desc("filename"));
 
-static cl::opt<bool>
-Force("f", cl::desc("Enable binary output on terminals"));
-
-static cl::opt<bool>
-PrintEachXForm("p", cl::desc("Print module after each transformation"));
+static cl::opt<bool> Force("f", cl::desc("Enable binary output on terminals"));
 
 static cl::opt<bool>
-NoOutput("disable-output",
-         cl::desc("Do not write result bitcode file"), cl::Hidden);
+    PrintEachXForm("p", cl::desc("Print module after each transformation"));
 
-static cl::opt<bool>
-OutputAssembly("S", cl::desc("Write output as LLVM assembly"));
+static cl::opt<bool> NoOutput("disable-output",
+                              cl::desc("Do not write result bitcode file"),
+                              cl::Hidden);
+
+static cl::opt<bool> OutputAssembly("S",
+                                    cl::desc("Write output as LLVM assembly"));
 
 static cl::opt<bool>
     OutputThinLTOBC("thinlto-bc",
@@ -112,19 +112,19 @@ static cl::opt<std::string> ThinLinkBitcodeFile(
     cl::desc(
         "A file in which to write minimized bitcode for the thin link only"));
 
-static cl::opt<bool>
-NoVerify("disable-verify", cl::desc("Do not run the verifier"), cl::Hidden);
+static cl::opt<bool> NoVerify("disable-verify",
+                              cl::desc("Do not run the verifier"), cl::Hidden);
 
-static cl::opt<bool>
-VerifyEach("verify-each", cl::desc("Verify after each transform"));
+static cl::opt<bool> VerifyEach("verify-each",
+                                cl::desc("Verify after each transform"));
 
 static cl::opt<bool>
     DisableDITypeMap("disable-debug-info-type-map",
                      cl::desc("Don't use a uniquing type map for debug info"));
 
 static cl::opt<bool>
-StripDebug("strip-debug",
-           cl::desc("Strip debugger symbol info from translation unit"));
+    StripDebug("strip-debug",
+               cl::desc("Strip debugger symbol info from translation unit"));
 
 static cl::opt<bool>
     StripNamedMetadata("strip-named-metadata",
@@ -134,53 +134,73 @@ static cl::opt<bool> DisableInline("disable-inlining",
                                    cl::desc("Do not run the inliner pass"));
 
 static cl::opt<bool>
-DisableOptimizations("disable-opt",
-                     cl::desc("Do not run any optimization passes"));
+    DisableOptimizations("disable-opt",
+                         cl::desc("Do not run any optimization passes"));
 
 static cl::opt<bool>
-StandardLinkOpts("std-link-opts",
-                 cl::desc("Include the standard link time optimizations"));
+    StandardLinkOpts("std-link-opts",
+                     cl::desc("Include the standard link time optimizations"));
 
 static cl::opt<bool>
-OptLevelO0("O0",
-  cl::desc("Optimization level 0. Similar to clang -O0"));
+    OptLevelO0("O0", cl::desc("Optimization level 0. Similar to clang -O0"));
 
 static cl::opt<bool>
-OptLevelO1("O1",
-           cl::desc("Optimization level 1. Similar to clang -O1"));
+    OptLevelO1("O1", cl::desc("Optimization level 1. Similar to clang -O1"));
 
 static cl::opt<bool>
-OptLevelO2("O2",
-           cl::desc("Optimization level 2. Similar to clang -O2"));
+    OptLevelO2("O2", cl::desc("Optimization level 2. Similar to clang -O2"));
+
+static cl::opt<bool> OptLevelOs(
+    "Os",
+    cl::desc(
+        "Like -O2 with extra optimizations for size. Similar to clang -Os"));
+
+static cl::opt<bool> OptLevelOz(
+    "Oz",
+    cl::desc("Like -Os but reduces code size further. Similar to clang -Oz"));
 
 static cl::opt<bool>
-OptLevelOs("Os",
-           cl::desc("Like -O2 with extra optimizations for size. Similar to clang -Os"));
+    OptLevelO3("O3", cl::desc("Optimization level 3. Similar to clang -O3"));
 
 static cl::opt<bool>
-OptLevelOz("Oz",
-           cl::desc("Like -Os but reduces code size further. Similar to clang -Oz"));
+    OptLevelOPosetRL("OposetRL", cl::init(true) ,cl::Hidden, cl::desc("Optimization level for PosetRL."));
+
+static cl::opt<bool> OptLevelO15("O15",
+                                 cl::desc("15 optimization subsequences."));
+
+static cl::opt<bool> OptLevelO17("O17",
+                                 cl::desc("17 optimization subsequences."));
+
+static cl::opt<bool> OptLevelO30("O30",
+                                 cl::desc("30 optimization subsequences."));
+
+static cl::opt<bool> OptLevelO34("O34",
+                                 cl::desc("34 optimization subsequences."));
 
 static cl::opt<bool>
-OptLevelO3("O3",
-           cl::desc("Optimization level 3. Similar to clang -O3"));
+    OptLevelO34M("O34M",
+                 cl::desc("34 optimization subsequences with mem2reg."));
 
 static cl::opt<unsigned>
-CodeGenOptLevel("codegen-opt-level",
-                cl::desc("Override optimization level for codegen hooks"));
+    SubSeqNum("SubNum", cl::desc("Optimization subsequence number."));
+
+static cl::opt<bool> OptLevelONone("ONone", cl::desc("No optimization."));
+
+static cl::opt<unsigned>
+    CodeGenOptLevel("codegen-opt-level",
+                    cl::desc("Override optimization level for codegen hooks"));
 
 static cl::opt<std::string>
-TargetTriple("mtriple", cl::desc("Override target triple for module"));
+    TargetTriple("mtriple", cl::desc("Override target triple for module"));
+
+static cl::opt<bool> DisableLoopUnrolling(
+    "disable-loop-unrolling",
+    cl::desc("Disable loop unrolling in all relevant passes"), cl::init(false));
 
 static cl::opt<bool>
-DisableLoopUnrolling("disable-loop-unrolling",
-                     cl::desc("Disable loop unrolling in all relevant passes"),
-                     cl::init(false));
-
-static cl::opt<bool>
-DisableSLPVectorization("disable-slp-vectorization",
-                        cl::desc("Disable the slp vectorization pass"),
-                        cl::init(false));
+    DisableSLPVectorization("disable-slp-vectorization",
+                            cl::desc("Disable the slp vectorization pass"),
+                            cl::init(false));
 
 static cl::opt<bool> EmitSummaryIndex("module-summary",
                                       cl::desc("Emit module summary index"),
@@ -190,23 +210,20 @@ static cl::opt<bool> EmitModuleHash("module-hash", cl::desc("Emit module hash"),
                                     cl::init(false));
 
 static cl::opt<bool>
-DisableSimplifyLibCalls("disable-simplify-libcalls",
-                        cl::desc("Disable simplify-libcalls"));
+    DisableSimplifyLibCalls("disable-simplify-libcalls",
+                            cl::desc("Disable simplify-libcalls"));
 
-static cl::list<std::string>
-DisableBuiltins("disable-builtin",
-                cl::desc("Disable specific target library builtin function"),
-                cl::ZeroOrMore);
+static cl::list<std::string> DisableBuiltins(
+    "disable-builtin",
+    cl::desc("Disable specific target library builtin function"),
+    cl::ZeroOrMore);
 
+static cl::opt<bool> Quiet("q", cl::desc("Obsolete option"), cl::Hidden);
 
-static cl::opt<bool>
-Quiet("q", cl::desc("Obsolete option"), cl::Hidden);
-
-static cl::alias
-QuietA("quiet", cl::desc("Alias for -q"), cl::aliasopt(Quiet));
+static cl::alias QuietA("quiet", cl::desc("Alias for -q"), cl::aliasopt(Quiet));
 
 static cl::opt<bool>
-AnalyzeOnly("analyze", cl::desc("Only perform analysis, no optimization"));
+    AnalyzeOnly("analyze", cl::desc("Only perform analysis, no optimization"));
 
 static cl::opt<bool> EnableDebugify(
     "enable-debugify",
@@ -215,8 +232,7 @@ static cl::opt<bool> EnableDebugify(
 
 static cl::opt<bool> DebugifyEach(
     "debugify-each",
-    cl::desc(
-        "Start each pass with debugify and end it with check-debugify"));
+    cl::desc("Start each pass with debugify and end it with check-debugify"));
 
 static cl::opt<std::string>
     DebugifyExport("debugify-export",
@@ -224,8 +240,8 @@ static cl::opt<std::string>
                    cl::value_desc("filename"), cl::init(""));
 
 static cl::opt<bool>
-PrintBreakpoints("print-breakpoints-for-testing",
-                 cl::desc("Print select breakpoints location for testing"));
+    PrintBreakpoints("print-breakpoints-for-testing",
+                     cl::desc("Print select breakpoints location for testing"));
 
 static cl::opt<std::string> ClDataLayout("data-layout",
                                          cl::desc("data layout string to use"),
@@ -252,10 +268,9 @@ static cl::opt<bool> DiscardValueNames(
     cl::desc("Discard names from Value (other than GlobalValue)."),
     cl::init(false), cl::Hidden);
 
-static cl::opt<bool> Coroutines(
-  "enable-coroutines",
-  cl::desc("Enable coroutine passes."),
-  cl::init(false), cl::Hidden);
+static cl::opt<bool> Coroutines("enable-coroutines",
+                                cl::desc("Enable coroutine passes."),
+                                cl::init(false), cl::Hidden);
 
 static cl::opt<bool> RemarksWithHotness(
     "pass-remarks-with-hotness",
@@ -336,19 +351,19 @@ public:
 
     // TODO: Implement Debugify for LoopPass.
     switch (Kind) {
-      case PT_Function:
-        super::add(createDebugifyFunctionPass());
-        super::add(P);
-        super::add(createCheckDebugifyFunctionPass(true, Name, &DIStatsMap));
-        break;
-      case PT_Module:
-        super::add(createDebugifyModulePass());
-        super::add(P);
-        super::add(createCheckDebugifyModulePass(true, Name, &DIStatsMap));
-        break;
-      default:
-        super::add(P);
-        break;
+    case PT_Function:
+      super::add(createDebugifyFunctionPass());
+      super::add(P);
+      super::add(createCheckDebugifyFunctionPass(true, Name, &DIStatsMap));
+      break;
+    case PT_Module:
+      super::add(createDebugifyModulePass());
+      super::add(P);
+      super::add(createCheckDebugifyModulePass(true, Name, &DIStatsMap));
+      break;
+    default:
+      super::add(P);
+      break;
     }
   }
 
@@ -377,7 +392,11 @@ static void AddOptimizationPasses(legacy::PassManagerBase &MPM,
 
   PassManagerBuilder Builder;
   Builder.OptLevel = OptLevel;
-  Builder.SizeLevel = SizeLevel;
+  if (SizeLevel > 2) {
+    Builder.SizeLevel = 2;
+  } else {
+    Builder.SizeLevel = SizeLevel;
+  }
 
   if (DisableInline) {
     // No inlining pass
@@ -386,8 +405,9 @@ static void AddOptimizationPasses(legacy::PassManagerBase &MPM,
   } else {
     Builder.Inliner = createAlwaysInlinerLegacyPass();
   }
-  Builder.DisableUnrollLoops = (DisableLoopUnrolling.getNumOccurrences() > 0) ?
-                               DisableLoopUnrolling : OptLevel == 0;
+  Builder.DisableUnrollLoops = (DisableLoopUnrolling.getNumOccurrences() > 0)
+                                   ? DisableLoopUnrolling
+                                   : OptLevel == 0;
 
   // Check if vectorization is explicitly disabled via -vectorize-loops=false.
   // The flag enables vectorization in the LoopVectorize pass, it is on by
@@ -433,9 +453,22 @@ static void AddOptimizationPasses(legacy::PassManagerBase &MPM,
   default:
     break;
   }
-
-  Builder.populateFunctionPassManager(FPM);
-  Builder.populateModulePassManager(MPM);
+  if(SizeLevel == 0){
+    Builder.customPopulateFunctionPassManager(FPM, SizeLevel, 0);
+    Builder.customPopulateModulePassManager(MPM, SizeLevel, 0);
+  }
+  if (SizeLevel < 3) {
+    Builder.populateFunctionPassManager(FPM);
+    Builder.populateModulePassManager(MPM);
+  } else if (SizeLevel == 3) {
+    Builder.customPopulateFunctionPassManager(FPM, SizeLevel, 0);
+    Builder.customPopulateModulePassManager(MPM, SizeLevel, 0);
+  } else if (SizeLevel >= 4) {
+    Builder.customPopulateFunctionPassManager(FPM, SizeLevel,
+                                              unsigned(SubSeqNum));
+    Builder.customPopulateModulePassManager(MPM, SizeLevel,
+                                            unsigned(SubSeqNum));
+  }
 }
 
 static void AddStandardLinkPasses(legacy::PassManagerBase &PM) {
@@ -466,12 +499,12 @@ static CodeGenOpt::Level GetCodeGenOptLevel() {
 }
 
 // Returns the TargetMachine instance or zero if no triple is provided.
-static TargetMachine* GetTargetMachine(Triple TheTriple, StringRef CPUStr,
+static TargetMachine *GetTargetMachine(Triple TheTriple, StringRef CPUStr,
                                        StringRef FeaturesStr,
                                        const TargetOptions &Options) {
   std::string Error;
-  const Target *TheTarget = TargetRegistry::lookupTarget(MArch, TheTriple,
-                                                         Error);
+  const Target *TheTarget =
+      TargetRegistry::lookupTarget(MArch, TheTriple, Error);
   // Some modules don't specify a triple, and this is okay.
   if (!TheTarget) {
     return nullptr;
@@ -485,7 +518,6 @@ static TargetMachine* GetTargetMachine(Triple TheTriple, StringRef CPUStr,
 #ifdef BUILD_EXAMPLES
 void initializeExampleIRTransforms(llvm::PassRegistry &Registry);
 #endif
-
 
 void exportDebugifyStats(llvm::StringRef Path, const DebugifyStatsMap &Map) {
   std::error_code EC;
@@ -538,6 +570,8 @@ int main(int argc, char **argv) {
   initializeAggressiveInstCombine(Registry);
   initializeInstrumentation(Registry);
   initializeTarget(Registry);
+  initializePosetRLPass(Registry);
+  initializeAddSizeAttrPassPass(Registry);
   // For codegen passes, only passes that do IR to IR transformation are
   // supported.
   initializeExpandMemCmpPassPass(Registry);
@@ -567,8 +601,8 @@ int main(int argc, char **argv) {
   initializeExampleIRTransforms(Registry);
 #endif
 
-  cl::ParseCommandLineOptions(argc, argv,
-    "llvm .bc -> .bc modular optimizer and analysis printer\n");
+  cl::ParseCommandLineOptions(
+      argc, argv, "llvm .bc -> .bc modular optimizer and analysis printer\n");
 
   if (AnalyzeOnly && NoOutput) {
     errs() << argv[0] << ": analyze mode conflicts with no-output mode.\n";
@@ -600,7 +634,7 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  // Strip debug info before running the verifier.
+  // Strip debug info before running the verifier.addPass
   if (StripDebug)
     StripDebugInfo(*M);
 
@@ -638,8 +672,8 @@ int main(int argc, char **argv) {
       OutputFilename = "-";
 
     std::error_code EC;
-    sys::fs::OpenFlags Flags = OutputAssembly ? sys::fs::OF_Text
-                                              : sys::fs::OF_None;
+    sys::fs::OpenFlags Flags =
+        OutputAssembly ? sys::fs::OF_Text : sys::fs::OF_None;
     Out.reset(new ToolOutputFile(OutputFilename, EC, Flags));
     if (EC) {
       errs() << EC.message() << '\n';
@@ -736,7 +770,6 @@ int main(int argc, char **argv) {
         return 1;
       }
   }
-
   Passes.add(new TargetLibraryInfoWrapperPass(TLII));
 
   // Add internal analysis passes from the target machine.
@@ -748,7 +781,8 @@ int main(int argc, char **argv) {
 
   std::unique_ptr<legacy::FunctionPassManager> FPasses;
   if (OptLevelO0 || OptLevelO1 || OptLevelO2 || OptLevelOs || OptLevelOz ||
-      OptLevelO3) {
+      OptLevelO3 || OptLevelOPosetRL || OptLevelO15 || OptLevelO17 ||
+      OptLevelO30 || OptLevelO34 || OptLevelO34M) {
     FPasses.reset(new legacy::FunctionPassManager(M.get()));
     FPasses->add(createTargetTransformInfoWrapperPass(
         TM ? TM->getTargetIRAnalysis() : TargetIRAnalysis()));
@@ -762,7 +796,7 @@ int main(int argc, char **argv) {
 
       std::error_code EC;
       Out = std::make_unique<ToolOutputFile>(OutputFilename, EC,
-                                              sys::fs::OF_None);
+                                             sys::fs::OF_None);
       if (EC) {
         errs() << EC.message() << '\n';
         return 1;
@@ -816,14 +850,38 @@ int main(int argc, char **argv) {
       AddOptimizationPasses(Passes, *FPasses, TM.get(), 3, 0);
       OptLevelO3 = false;
     }
+    if (OptLevelO15 && OptLevelO15.getPosition() < PassList.getPosition(i)) {
+      AddOptimizationPasses(Passes, *FPasses, TM.get(), 2, 15);
+      OptLevelO15 = false;
+    }
+
+    if (OptLevelO17 && OptLevelO17.getPosition() < PassList.getPosition(i)) {
+      AddOptimizationPasses(Passes, *FPasses, TM.get(), 2, 17);
+      OptLevelO17 = false;
+    }
+
+    if (OptLevelO30 && OptLevelO30.getPosition() < PassList.getPosition(i)) {
+      AddOptimizationPasses(Passes, *FPasses, TM.get(), 2, 30);
+      OptLevelO30 = false;
+    }
+
+    if (OptLevelO34 && OptLevelO34.getPosition() < PassList.getPosition(i)) {
+      AddOptimizationPasses(Passes, *FPasses, TM.get(), 2, 34);
+      OptLevelO34 = false;
+    }
+
+    if (OptLevelO34M && OptLevelO34M.getPosition() < PassList.getPosition(i)) {
+      AddOptimizationPasses(Passes, *FPasses, TM.get(), 2, 40);
+      OptLevelO34M = false;
+    }
 
     const PassInfo *PassInf = PassList[i];
     Pass *P = nullptr;
     if (PassInf->getNormalCtor())
       P = PassInf->getNormalCtor()();
     else
-      errs() << argv[0] << ": cannot create pass: "
-             << PassInf->getPassName() << "\n";
+      errs() << argv[0] << ": cannot create pass: " << PassInf->getPassName()
+             << "\n";
     if (P) {
       PassKind Kind = P->getPassKind();
       addPass(Passes, P);
@@ -876,6 +934,24 @@ int main(int argc, char **argv) {
 
   if (OptLevelO3)
     AddOptimizationPasses(Passes, *FPasses, TM.get(), 3, 0);
+
+  if (OptLevelO15)
+    AddOptimizationPasses(Passes, *FPasses, TM.get(), 2, 15);
+
+  if (OptLevelO17)
+    AddOptimizationPasses(Passes, *FPasses, TM.get(), 2, 17);
+
+  if (OptLevelO30)
+    AddOptimizationPasses(Passes, *FPasses, TM.get(), 2, 30);
+
+  if (OptLevelO34)
+    AddOptimizationPasses(Passes, *FPasses, TM.get(), 2, 34);
+
+  if (OptLevelO34M)
+    AddOptimizationPasses(Passes, *FPasses, TM.get(), 2, 40);
+
+  if (OptLevelOPosetRL)
+    AddOptimizationPasses(Passes, *FPasses, TM.get(), 0, 0);
 
   if (FPasses) {
     FPasses->doInitialization();

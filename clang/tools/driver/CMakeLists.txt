@@ -1,3 +1,5 @@
+link_directories("${ONNXRUNTIME_ROOTDIR}/lib")
+
 set( LLVM_LINK_COMPONENTS
   ${LLVM_TARGETS_TO_BUILD}
   Analysis
@@ -15,6 +17,10 @@ set( LLVM_LINK_COMPONENTS
   Support
   TransformUtils
   Vectorize
+  PosetRL
+  AddSizeAttr
+  InferenceEngine
+  IR2Vec
   )
 
 option(CLANG_PLUGIN_SUPPORT "Build clang with plugin support" ON)

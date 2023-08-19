@@ -1,0 +1,22 @@
+syntax = "proto3";
+import "google/protobuf/empty.proto";
+
+package posetrl;
+
+service PosetRL{
+
+    rpc getEmbedding (google.protobuf.Empty) returns (EmbeddingResponse) {}
+    rpc applyAction (ActionRequest) returns (google.protobuf.Empty) {}
+    rpc applyActionGetEmbeddings (ActionRequest) returns (EmbeddingResponse) {}
+}
+
+message EmbeddingResponse {
+    repeated float embedding = 1;
+}
+
+message ActionRequest {
+    int32 action = 1;
+}
+
+
+

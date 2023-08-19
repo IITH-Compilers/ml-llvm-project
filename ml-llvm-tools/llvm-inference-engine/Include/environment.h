@@ -1,7 +1,15 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the ml-llvm-tools Project, under the BSD 4-Clause License.
+// See the LICENSE.txt file under ml-llvm-tools directory for license
+// information.
+//
+//===----------------------------------------------------------------------===//
+
 #ifndef LLVM_INFERENCE_ENGINE_ENVIRONMENT_H
 #define LLVM_INFERENCE_ENGINE_ENVIRONMENT_H
 
-#include "MLInferenceEngine/agent.h"
+#include "agent.h"
 
 typedef signed Action;
 

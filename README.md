@@ -5,11 +5,13 @@ POSET-RL is a framework that predicts the optimal optimization sequence for a pr
 The details of this framework can be found in our [paper]() [(arXiv)](https://arxiv.org/abs/2208.04238) and on our [page](https://compilers.cse.iith.ac.in/projects/posetrl/).
 
 ## Table of Contents
-* [Requirements](#requirements)
-* [Oz Dependence Graph](#oz-dependence-graphodg)
-* [Experiments](#experiments)
-    * [Training](#training)
-    * [Inference](#inference)
+- [POSET-RL](#poset-rl)
+  - [Table of Contents](#table-of-contents)
+  - [Requirements](#requirements)
+  - [Oz Dependence Graph](#oz-dependence-graph)
+  - [Experiments](#experiments)
+    - [Training](#training)
+    - [Inference](#inference)
 
 
 ## Requirements

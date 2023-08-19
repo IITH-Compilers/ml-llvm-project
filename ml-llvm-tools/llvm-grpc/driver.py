@@ -1,3 +1,10 @@
+#===----------------------------------------------------------------------===//
+#
+# Part of the ml-llvm-tools Project, under the BSD 4-Clause License.
+# See the LICENSE.txt file under ml-llvm-tools directory for license information.
+#
+#===----------------------------------------------------------------------===//
+
 import sys
 
 sys.path.append("./Python-Utilities/")

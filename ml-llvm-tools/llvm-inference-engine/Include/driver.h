@@ -1,3 +1,11 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the ml-llvm-tools Project, under the BSD 4-Clause License.
+// See the LICENSE.txt file under ml-llvm-tools directory for license
+// information.
+//
+//===----------------------------------------------------------------------===//
+
 #ifndef LLVM_INFERENCE_ENGINE_DRIVER_H
 #define LLVM_INFERENCE_ENGINE_DRIVER_H
 
@@ -5,8 +13,8 @@
 #include <map>
 #include <string>
 
-#include "MLInferenceEngine/agent.h"
-#include "MLInferenceEngine/environment.h"
+#include "agent.h"
+#include "environment.h"
 
 class InferenceEngine {
   Environment *env;
