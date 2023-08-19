@@ -14,11 +14,13 @@
 namespace llvm {
 template <typename Client> class gRPCModelRunner : public MLModelRunner {
 public:
-  gRPCModelRunner(std::string server_address, bool server_mode = false)
-      : MLModelRunner(MLModelRunner::Kind::gRPC),
+  gRPCModelRunner(LLVMContext &Ctx, std::string server_address,
+                  bool server_mode = false, grpc::Service *s = nullptr)
+      : MLModelRunner(Ctx, MLModelRunner::Kind::gRPC),
         server_address(server_address) {
     if (server_mode) {
-      RunService(this);
+      assert(s != nullptr && "Service cannot be null in server mode");
+      RunService(s);
     } else {
       SetStub();
     }
@@ -26,6 +28,10 @@ public:
 
   void *getStub() { return stub_; }
   void requestExit() override { exit_requested->set_value(); }
+  void *evaluateUntyped() override {
+    llvm_unreachable("evaluateUntyped not implemented for gRPCModelRunner; "
+                     "Override gRPC method instead");
+  }
 
 private:
   void *stub_;
