@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef GRPC_MODELRUNNER_H
+#define GRPC_MODELRUNNER_H
+
 #include "MLModelRunner/MLModelRunner.h"
 #include <future>
 #include <grpcpp/grpcpp.h>
@@ -93,3 +96,5 @@ private:
   }
 };
 } // namespace llvm
+
+#endif // GRPC_MODELRUNNER_H

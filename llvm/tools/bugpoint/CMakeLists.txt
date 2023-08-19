@@ -21,7 +21,6 @@ set(LLVM_LINK_COMPONENTS
   TransformUtils
   Vectorize
   PosetRL
-  InferenceEngine
   IR2Vec
   )
 

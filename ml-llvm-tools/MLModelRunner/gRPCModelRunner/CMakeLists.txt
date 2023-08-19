@@ -123,5 +123,4 @@ target_link_libraries(LLVMgRPCModelRunner
 target_include_directories(LLVMgRPCModelRunner PRIVATE ${LLVM_INCLUDE_DIR}/Service)
 # target_include_directories(LLVMgRPCModelRunner PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../Include)
 # target_include_directories(LLVMgRPCModelRunner PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/Include)
-message(${CMAKE_CURRENT_SOURCE_DIR}/../../Include)
 target_include_directories(LLVMgRPCModelRunner PUBLIC ${Protobuf_INCLUDE_DIRS})

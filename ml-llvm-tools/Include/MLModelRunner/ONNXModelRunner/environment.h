@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_INFERENCE_ENGINE_ENVIRONMENT_H
-#define LLVM_INFERENCE_ENGINE_ENVIRONMENT_H
+#ifndef ONNX_MODELRUNNER_ENVIRONMENT_H
+#define ONNX_MODELRUNNER_ENVIRONMENT_H
 
-#include "agent.h"
+#include "MLModelRunner/ONNXModelRunner/agent.h"
 
 typedef signed Action;
 
@@ -19,14 +19,11 @@ class Environment {
 
 public:
   bool checkDone() { return done == true; };
-
   void setDone() { done = true; }
-
   std::string getNextAgent() { return next_agent; };
-
   void setNextAgent(std::string name) { next_agent = name; }
-
   virtual Observation step(Action action) = 0;
+  virtual Observation reset() = 0;
 };
 
-#endif
+#endif // ONNX_MODELRUNNER_ENVIRONMENT_H

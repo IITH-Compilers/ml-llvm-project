@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_INFERENCE_ENGINE_UTILS_H
-#define LLVM_INFERENCE_ENGINE_UTILS_H
+#ifndef ONNX_MODELRUNNER_UTILS_H
+#define ONNX_MODELRUNNER_UTILS_H
 #include <vector>
 
 typedef std::vector<float> Observation;
 
-#endif
+#endif // ONNX_MODELRUNNER_UTILS_H

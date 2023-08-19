@@ -27,7 +27,6 @@ add_llvm_component_library(LLVMPosetRL posetRL.cpp
 
 LINK_COMPONENTS
 IR2Vec
-InferenceEngine
 MLModelRunner
 
 ADDITIONAL_HEADER_DIRS

@@ -1,6 +1,6 @@
 #include "llvm/Transforms/PosetRL/PosetRL.h"
-#include "MLInferenceEngine/agent.h"
-#include "MLInferenceEngine/driver.h"
+// #include "MLInferenceEngine/agent.h"
+// #include "MLInferenceEngine/driver.h"
 #include "grpcpp/impl/codegen/status.h"
 #include "inference/poset_rl_env.h"
 #include "llvm/IR/LegacyPassManager.h"
@@ -24,6 +24,7 @@
 // #include "llvm/Transforms/InteractiveModelRunner.h"
 #include "MLModelRunner/MLModelRunner.h"
 #include "MLModelRunner/MLModelRunnerWithTensorSpec.h"
+#include "MLModelRunner/ONNXModelRunner/ONNXModelRunner.h"
 #include "MLModelRunner/PipeModelRunner.h"
 
 using namespace llvm;
@@ -62,7 +63,14 @@ struct PosetRL : public ModulePass,
             M.getContext(), server_address, this);
         // MLRunner->RunService(this);
       } else {
-        runInference();
+        Agent agent("/home/cs20btech11018/repos/ML-Phase-Ordering/Model/"
+                    "RLLib-PhaseOrder/poset-RL-onnx-model/model.onnx",
+                    ActionMaskSize + EmbeddingSize);
+        std::map<std::string, Agent *> agents;
+        agents["agent"] = &agent;
+        MLRunner =
+            std::make_unique<ONNXModelRunner>(M.getContext(), this, agents);
+        // runInference();
         errs() << "Sequence: ";
         for (auto a : Sequence)
           errs() << a << " ";
@@ -161,16 +169,16 @@ struct PosetRL : public ModulePass,
     }
   }
 
-  void runInference() {
-    InferenceEngine driver;
-    driver.setEnvironment(this);
-    Observation Obs = reset();
-    Agent agent("/home/cs20btech11018/repos/ML-Phase-Ordering/Model/"
-                "RLLib-PhaseOrder/poset-RL-onnx-model/model.onnx",
-                ActionMaskSize + EmbeddingSize);
-    driver.addAgent(&agent, "agent");
-    driver.computeAction(Obs);
-  }
+  // void runInference() {
+  //   InferenceEngine driver;
+  //   driver.setEnvironment(this);
+  //   Observation Obs = reset();
+  //   Agent agent("/home/cs20btech11018/repos/ML-Phase-Ordering/Model/"
+  //               "RLLib-PhaseOrder/poset-RL-onnx-model/model.onnx",
+  //               ActionMaskSize + EmbeddingSize);
+  //   driver.addAgent(&agent, "agent");
+  //   driver.computeAction(Obs);
+  // }
 
   grpc::Status
   applyActionGetEmbeddings(grpc::ServerContext *context,
