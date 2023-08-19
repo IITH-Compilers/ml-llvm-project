@@ -52,8 +52,10 @@ public:
     Log->switchContext(Name);
     Log->flush();
   }
-
+  void requestExit() override {}
   virtual ~PipeModelRunner();
+
+
 
 private:
   void *evaluateUntyped() override;

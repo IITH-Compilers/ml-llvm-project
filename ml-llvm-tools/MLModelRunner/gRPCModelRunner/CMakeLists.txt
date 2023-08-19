@@ -1,16 +1,16 @@
-project(llvm-gRPC)
-cmake_minimum_required(VERSION 3.13)
+# project(llvm-gRPC)
+# cmake_minimum_required(VERSION 3.13)
 
 include(AddLLVM)
 
-set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_BUILD_TYPE RelWithDebInfo)
+# set(CMAKE_CXX_STANDARD 14)
+# set(CMAKE_BUILD_TYPE RelWithDebInfo)
 
 set(protobuf_MODULE_COMPATIBLE TRUE)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -fno-rtti")
+# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -fno-rtti")
  
 
 find_package(Protobuf CONFIG REQUIRED)
@@ -97,34 +97,31 @@ endforeach()
 #file(GLOB inference_src ${CMAKE_CURRENT_SOURCE_DIR}/Service/RegisterAllocationInference/*.cc)
 
 # Building the library
-add_llvm_library(LLVMgRPC
+add_llvm_component_library(LLVMgRPCModelRunner
 	  ${cc_files}
-	  ${CMAKE_CURRENT_SOURCE_DIR}/src/gRPCUtil.cc
 	  ${proto_srcs_list}
 	  ${grpc_srcs_list}
- ${proto_python_srcs_list}
+    ${proto_python_srcs_list}
 )
 
-target_link_libraries(LLVMgRPC 
+target_link_libraries(LLVMgRPCModelRunner 
 	  PRIVATE ${_REFLECTION} 
 	          ${_GRPC_GRPCPP} 
 	          ${_PROTOBUF_LIBPROTOBUF}
 )
 
-file(GLOB publicHeaders ${CMAKE_CURRENT_SOURCE_DIR}/Include/*.h)
+# file(GLOB publicHeaders ${CMAKE_CURRENT_SOURCE_DIR}/Include/*.h)
 
-add_custom_command(
-   TARGET LLVMgRPC POST_BUILD
-   COMMAND ${CMAKE_COMMAND} -E copy
-           ${publicHeaders}
-           ${LLVM_INCLUDE_DIR}/grpc)
-
-
-
-target_include_directories(LLVMgRPC PRIVATE ${LLVM_INCLUDE_DIR}/Service)
-target_include_directories(LLVMgRPC PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_include_directories(LLVMgRPC PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/Include)
-# target_include_directories(LLVMgRPC PUBLIC /home/cs18mtech11030/project/grpc_llvm/grpc_install/include)
+# add_custom_command(
+#    TARGET LLVMgRPCModelRunner POST_BUILD
+#    COMMAND ${CMAKE_COMMAND} -E copy
+#            ${publicHeaders}
+#            ${LLVM_INCLUDE_DIR}/grpc)
 
 
-target_include_directories(LLVMgRPC PUBLIC ${Protobuf_INCLUDE_DIRS})
+# target_include_directories(LLVMgRPCModelRunner PRIVATE ${LLVM_INCLUDE_DIR})
+target_include_directories(LLVMgRPCModelRunner PRIVATE ${LLVM_INCLUDE_DIR}/Service)
+# target_include_directories(LLVMgRPCModelRunner PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../Include)
+# target_include_directories(LLVMgRPCModelRunner PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/Include)
+message(${CMAKE_CURRENT_SOURCE_DIR}/../../Include)
+target_include_directories(LLVMgRPCModelRunner PUBLIC ${Protobuf_INCLUDE_DIRS})

@@ -55,12 +55,8 @@ public:
   virtual void switchContext(StringRef Name) {}
 
   // void feedInputBuffers(std::vector<void*> Buffers);
-  void feedInputBuffers(std::vector<void *> Buffers) {
-    for (size_t I = 0; I < Buffers.size(); ++I) {
-      InputBuffers[I] = Buffers[I];
-    }
-  }
-
+  virtual void requestExit() = 0;
+  
 protected:
   MLModelRunnerWithTensorSpec(LLVMContext &Ctx, Kind Type, size_t NrInputs)
       : MLModelRunner(Ctx, Type), InputBuffers(NrInputs) {
@@ -77,7 +73,7 @@ protected:
     InputBuffers[Index] = Buffer;
   }
 
-  //   LLVMContext &Ctx;
+  // LLVMContext &Ctx;
   //   const Kind Type;
 
 private:

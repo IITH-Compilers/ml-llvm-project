@@ -39,6 +39,9 @@ public:
   };
   Kind getKind() const { return Type; }
 
+  void feedInputBuffers(std::vector<void *> Buffers) { InputBuffers = Buffers; }
+  virtual void requestExit() = 0;
+
 protected:
   MLModelRunner(LLVMContext &Ctx, Kind Type) : Ctx(Ctx), Type(Type) {
     assert(Type != Kind::Unknown);
@@ -48,8 +51,8 @@ protected:
   LLVMContext &Ctx;
   const Kind Type;
 
-  // private:
-  //   std::vector<void *> InputBuffers;
+private:
+  std::vector<void *> InputBuffers;
   //   std::vector<std::vector<char *>> OwnedBuffers;
 };
 } // namespace llvm

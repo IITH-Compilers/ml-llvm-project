@@ -5,8 +5,8 @@ import os
 import signal
 import time
 
-import example_pb2_grpc
-import example_pb2
+import posetRL_pb2_grpc
+import posetRL_pb2
 
 from google.protobuf.json_format import MessageToJson
 import json

@@ -16,8 +16,8 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 // gRPC includes
-#include "grpc/example/example.grpc.pb.h"
-#include "grpc/gRPCUtil.h"
+#include "MLModelRunner/gRPCModelRunner.h"
+#include "grpc/posetRL/posetRL.grpc.pb.h"
 #include <google/protobuf/text_format.h>
 #include <grpcpp/grpcpp.h>
 
@@ -27,6 +27,7 @@
 #include "MLModelRunner/PipeModelRunner.h"
 
 using namespace llvm;
+using namespace grpc;
 
 static cl::opt<bool> training("training", cl::Hidden,
                               cl::desc("whether it is training or inference"),
@@ -45,8 +46,7 @@ static cl::opt<std::string> server_address(
 namespace {
 struct PosetRL : public ModulePass,
                  public PosetRLEnv,
-                 public posetrl::PosetRL::Service,
-                 public gRPCUtil {
+                 public posetrl::PosetRL::Service {
   static char ID;
   PosetRL() : ModulePass(ID) {}
   bool runOnModule(Module &M) override {
@@ -56,7 +56,9 @@ struct PosetRL : public ModulePass,
       initPipeCommunication();
     else {
       if (training) {
-        RunService(this, server_address);
+        MLRunner = std::make_unique<gRPCModelRunner<posetrl::PosetRL>>(
+            server_address, true);
+        // MLRunner->RunService(this);
       } else {
         runInference();
         errs() << "Sequence: ";
@@ -67,6 +69,18 @@ struct PosetRL : public ModulePass,
     }
 
     return true;
+  }
+
+  void processMLInputs() {
+    std::vector<void *> InputBuffers;
+    auto embedding = getEmbeddings();
+    InputBuffers.push_back(embedding.data());
+    MLRunner->feedInputBuffers(InputBuffers);
+  }
+
+  void processMLAdvice(int advice) {
+    errs() << "Runner result: " << advice << '\n';
+    applySeq(advice);
   }
 
   void initPipeCommunication() {
@@ -102,20 +116,12 @@ struct PosetRL : public ModulePass,
 
     int passSequence = 0;
     while (passSequence != -1) {
-      std::vector<void *> InputBuffers;
-      auto embedding = getEmbeddings();
-      // errs() << "Embedding size:" << embedding.size() << "\n";
-      InputBuffers.push_back(embedding.data());
-      MLRunner->feedInputBuffers(InputBuffers);
+      processMLInputs();
       int res = static_cast<int>(MLRunner->evaluate<int64_t>());
-      errs() << "Runner result: " << res << '\n';
-      applySeq(res);
+      processMLAdvice(res);
       passSequence = res;
     }
     errs() << "Episode completed\n";
-    // MLRunner->feedInputBuffers(InputBuffers);
-    // int res = static_cast<int>(MLRunner->evaluate<int64_t>());
-    // errs() << "Runner result: " << res <<'\n';
   }
 
   Embedding getEmbeddings() override {
@@ -171,12 +177,13 @@ struct PosetRL : public ModulePass,
     errs() << "Action requested: " << request->action() << "\n";
     if (request->action() == -1) {
       errs() << "server exit requested\n";
-      exit_requested->set_value();
+      MLRunner->requestExit();
       return grpc::Status::OK;
     }
-    applySeq(request->action());
-    Embedding emb = getEmbeddings();
 
+    processMLAdvice(request->action());
+
+    Embedding emb = getEmbeddings();
     for (unsigned long i = 0; i < emb.size(); i++) {
       response->add_embedding(emb[i]);
     }
@@ -196,7 +203,7 @@ struct PosetRL : public ModulePass,
 
 private:
   Module *M;
-  std::unique_ptr<MLModelRunnerWithTensorSpec> MLRunner;
+  std::unique_ptr<MLModelRunner> MLRunner;
 };
 } // namespace
 char PosetRL::ID = 0;

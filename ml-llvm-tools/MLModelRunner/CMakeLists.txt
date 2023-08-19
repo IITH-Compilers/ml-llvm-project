@@ -3,8 +3,12 @@ PipeModelRunner.cpp
 )
 
 add_subdirectory(Utils)
+add_subdirectory(gRPCModelRunner)
 
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../Include/MLModelRunner DESTINATION ${LLVM_INCLUDE_DIR})
 
 # target_include_directories(LLVMMLModelRunner PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../Include)
-target_link_libraries(LLVMMLModelRunner PRIVATE LLVMMLModelRunnerUtils)
+target_link_libraries(LLVMMLModelRunner 
+    PRIVATE LLVMMLModelRunnerUtils
+            LLVMgRPCModelRunner
+)
