@@ -22,6 +22,7 @@
 #include <grpcpp/grpcpp.h>
 
 #include "llvm/Transforms/InteractiveModelRunner.h"
+#include "serializer/bitstreamSerializer.h"
 
 using namespace llvm;
 
@@ -49,7 +50,7 @@ struct PosetRL : public ModulePass,
     this->M = &M;
     // Establish pipe communication
     if(usePipe)
-      initPipeCommunication();
+      initPipeCommunication1();
     else {
       if (training) {
         RunService(this, server_address);      
@@ -64,7 +65,29 @@ struct PosetRL : public ModulePass,
     
     return true;
   }
+  void initPipeCommunication1() {
+    BitstreamSerializer serializer;
 
+    int i = 1;
+    float f = 1.0f;
+    double d = 1.0;
+    std::string s = "test";
+    bool b = true;
+    std::vector<int> v{1, 2, 3};
+    serializer.setFeature("test_int",i);
+    serializer.setFeature("test_float", f);
+    serializer.setFeature("test_double", d);
+    serializer.setFeature("test_string", s);
+    serializer.setFeature("test_bool", b);
+    serializer.setFeature<int>("test_vector", v);
+
+    error_code EC;
+    raw_fd_ostream pipe("pipe", EC);
+    // auto pipe_stream = std::make_unique<raw_fd_ostream>(OutboundName, OutEC);
+    serializer.getSerializedData(pipe);
+    pipe.flush();
+    pipe.close();
+  }
   void initPipeCommunication() {
     const char *const DecisionName = "advisor_decision";
     const TensorSpec DecisionSpec =

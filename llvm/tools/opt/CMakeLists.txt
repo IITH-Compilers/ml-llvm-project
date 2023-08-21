@@ -35,6 +35,7 @@ set(LLVM_LINK_COMPONENTS
   AddSizeAttr
   InferenceEngine
   IR2Vec
+  Serializer
   )
 
 add_llvm_tool(opt

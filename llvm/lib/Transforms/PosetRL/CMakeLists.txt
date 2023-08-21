@@ -29,6 +29,7 @@ LINK_COMPONENTS
 IR2Vec
 InferenceEngine
 gRPC
+Serializer
 
 ADDITIONAL_HEADER_DIRS
 ${LLVM_MAIN_INCLUDE_DIR}/llvm/Transforms
