@@ -10,9 +10,9 @@
 #ifndef LLVM_TRANSFORMS_MLMODELRUNNER_H
 #define LLVM_TRANSFORMS_MLMODELRUNNER_H
 
+#include "llvm/IR/PassManager.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/Transforms/TensorSpec.h"
-#include "llvm/IR/PassManager.h"
 
 namespace llvm {
 class LLVMContext;
@@ -43,7 +43,14 @@ public:
         getTensorUntyped(static_cast<size_t>(FeatureID)));
   }
 
-  void *getTensorUntyped(size_t Index) { return InputBuffers[Index]; }
+  void *getTensorUntyped(size_t Index) {
+    static int i = 0;
+    if (i == 0) {
+      errs() << "InputBuffers.size() = " << InputBuffers.size() << "\n";
+      i++;
+    }
+    return InputBuffers[Index];
+  }
   const void *getTensorUntyped(size_t Index) const {
     return (const_cast<MLModelRunner *>(this))->getTensorUntyped(Index);
   }
@@ -51,6 +58,14 @@ public:
   enum class Kind : int { Unknown, Release, Development, NoOp, Interactive };
   Kind getKind() const { return Type; }
   virtual void switchContext(StringRef Name) {}
+
+  void feedInputBuffers(std::vector<void *> &Buffers) {
+    InputBuffers.clear();
+    InputBuffers.resize(Buffers.size());
+    for (size_t I = 0; I < Buffers.size(); ++I) {
+      InputBuffers[I] = Buffers[I];
+    }
+  }
 
 protected:
   MLModelRunner(LLVMContext &Ctx, Kind Type, size_t NrInputs)
@@ -73,8 +88,8 @@ protected:
     InputBuffers[Index] = Buffer;
   }
 
-  LLVMContext* Ctx;
-  MCContext* MCtx;
+  LLVMContext *Ctx;
+  MCContext *MCtx;
   const Kind Type;
 
 private:

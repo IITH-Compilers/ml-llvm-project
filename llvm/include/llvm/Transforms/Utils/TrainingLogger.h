@@ -59,6 +59,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/TensorSpec.h"
 
 #include <memory>
@@ -91,14 +92,25 @@ namespace llvm {
 /// log{Float|Int32|Int64}FinalReward at the end.
 class Logger final {
   std::unique_ptr<raw_ostream> OS;
-  const std::vector<TensorSpec> FeatureSpecs;
+  std::vector<TensorSpec> FeatureSpecs;
   const TensorSpec RewardSpec;
   const bool IncludeReward;
   StringMap<size_t> ObservationIDs;
   std::string CurrentContext;
 
-  void writeHeader(std::optional<TensorSpec> AdviceSpec);
   void writeTensor(const TensorSpec &Spec, const char *RawData) {
+    // print shape of Spec
+    // errs() << "shape: ";
+    // for(int i = 0; i < Spec.shape().size(); i++) {
+    //   errs() << Spec.shape()[i] << " ";
+    // }
+    // errs() << "\n";
+    // if(Spec.name() == "regID")
+    //   errs() << "regID: ";
+    // for(int i = 0; i < Spec.getTotalTensorBufferSize(); i++) {
+    //   errs() << RawData[i];
+    // }
+    // errs() << "\n";
     OS->write(RawData, Spec.getTotalTensorBufferSize());
   }
   void logRewardImpl(const char *RawData);
@@ -115,6 +127,7 @@ public:
          const TensorSpec &RewardSpec, bool IncludeReward,
          std::optional<TensorSpec> AdviceSpec = std::nullopt);
 
+  void writeHeader(std::optional<TensorSpec> AdviceSpec, std::vector<TensorSpec>& FeatureSpecs);
   void switchContext(StringRef Name);
   void startObservation();
   void endObservation();
@@ -122,7 +135,6 @@ public:
 
   void addDataToStream(json::Value& V) {
     json::OStream(*OS).value(V);
-    *OS << "\n";
   }
 
   // add data to stream with a function argument

@@ -65,6 +65,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/InteractiveModelRunner.h"
+#include "llvm/Transforms/TensorSpec.h"
 
 #include "MLInferenceEngine/onnx.h"
 #include "multi_agent_env.h"
@@ -200,6 +201,13 @@ private:
   RegisterProfileMap regProfMap;
   std::unique_ptr<MLModelRunner> AOTRunner;
   json::Object JO;
+  std::vector<TensorSpec> FeatureSpecs;
+  std::vector<void*> InputBuffers;
+  SmallSetVector<unsigned, 8> regIdxs;
+
+  // TensorSpec AdviceSpec;
+  bool CommuResult;
+  bool IsNew;
   unsigned numUnsupportedRegs = 0;
   unsigned numSplits = 0;
   SmallDenseMap<StringRef, unsigned> unsupportedClsFreq;
@@ -246,7 +254,6 @@ private:
   template <class T>
   void sendRegProfData(T *response,
                        SmallSetVector<unsigned, 8> *updatedRegs = nullptr);
-  void sendRegProfDataViaPipes();
   void dumpInterferenceGraph(std::string ID = "");
   void allocatePhysRegsViaRL();
   void allocatePhysRegsViaRandom(int, int);
@@ -262,9 +269,9 @@ private:
                              SmallVector<unsigned, 4> &SplitVRegs);
             
   Observation& split_node_step(unsigned action) override;
-  void serializeRegProfWithPipelining(json::OStream& JOS);
-  void constructJson();
-  void constructJson(SmallSetVector<unsigned, 8> *updatedRegIdxs);
+  void constructData(SmallSetVector<unsigned, 8> *updatedRegIdxs, bool IsStart = false);
+  void constructTensorSpecs(SmallSetVector<unsigned, 8>* updatedRegIdxs, bool IsStart = false);
+  void constructJson(SmallSetVector<unsigned, 8> *updatedRegIdxs, bool IsStart = false);
   void initPipeCommunication();
 
   // std::map<std::string, std::map<std::string, int64_t>>

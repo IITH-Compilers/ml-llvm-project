@@ -11,17 +11,17 @@
 #define LLVM_ANALYSIS_INTERACTIVEMODELRUNNER_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/ObjectYAML/ELFYAML.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/MLModelRunner.h"
 #include "llvm/Transforms/TensorSpec.h"
 #include "llvm/Transforms/Utils/TrainingLogger.h"
-#include "llvm/Config/llvm-config.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/raw_ostream.h"
-#include <system_error>
 #include <fstream>
+#include <system_error>
 
 namespace llvm {
 
@@ -49,7 +49,7 @@ public:
                          const std::vector<TensorSpec> &Inputs,
                          const TensorSpec &Advice, StringRef OutboundName,
                          StringRef InboundName);
-  
+
   InteractiveModelRunner(MCContext &Ctx, const std::vector<TensorSpec> &Inputs,
                          const TensorSpec &Advice, StringRef OutboundName,
                          StringRef InboundName);
@@ -62,7 +62,8 @@ public:
     Log->flush();
   }
 
-  // template <typename T> T *communicateData(std::function<void(json::OStream& OS)>& AddAttributes){
+  // template <typename T> T *communicateData(std::function<void(json::OStream&
+  // OS)>& AddAttributes){
   //   Log->addDataToStream(AddAttributes);
   //   // Log->endObservation();
 
@@ -88,22 +89,13 @@ public:
   //   return reinterpret_cast<T *>(OutputBuffer.data());
   // }
 
-  std::string communicateData(json::Value& Data){
+  std::string communicateData(json::Value &Data) {
     Log->addDataToStream(Data);
-    // Log->endObservation();
-    errs() << "About to flush\n";
+    Log->endObservation();
     Log->flush();
-
-    size_t InsPoint = 0;
-    char *Buff = OutputBuffer.data();
-    const size_t Limit = OutputBuffer.size();
-    errs() << "communicateData: Limit = " << Limit << "\n";
-    errs() << "OutputBuffer.data(): " << OutputBuffer.data() << "\n";
-
 
     std::string line;
     std::ifstream Infile;
-    // std::getline(infile, line);
     Infile.open(InboundName);
     if (Infile.is_open()) {
       while (std::getline(Infile, line)) {
@@ -113,13 +105,47 @@ public:
         }
       }
       Infile.close();
-    }
-    else {
+    } else {
       errs() << "Unable to open file\n";
     }
     return line;
   }
 
+  std::string communicateData() {
+    Log->startObservation();
+    for (size_t I = 0; I < InputSpecs.size(); ++I) {
+      if(InputSpecs[I].name() == "regID"){
+      int x = *(int*)getTensorUntyped(I);
+      errs() << "regID from communicateData = " << x << "\n";
+      }
+      Log->logTensorValue(I,
+                          reinterpret_cast<const char *>(getTensorUntyped(I)));
+    }
+    Log->endObservation();
+    Log->flush();
+
+    std::string line;
+    std::ifstream Infile;
+    Infile.open(InboundName);
+    if (Infile.is_open()) {
+      while (std::getline(Infile, line)) {
+        errs() << "line: " << line << "\n";
+        if (line.size() > 0) {
+          break;
+        }
+      }
+      Infile.close();
+    } else {
+      errs() << "Unable to open file\n";
+    }
+    return line;
+  }
+  // getter for Logger
+  Logger *getLogger() { return Log.get(); }
+  // setter for InputSpecs
+  void setInputSpecs(std::vector<TensorSpec> &InputSpecs) {
+    this->InputSpecs = InputSpecs;
+  }
   virtual ~InteractiveModelRunner();
 
 private:
@@ -128,7 +154,7 @@ private:
   // ctor initializer list.
   int Inbound = -1;
   std::string InboundName;
-  const std::vector<TensorSpec> InputSpecs;
+  std::vector<TensorSpec> InputSpecs;
   const TensorSpec OutputSpec;
   std::error_code OutEC;
   std::error_code InEC;
