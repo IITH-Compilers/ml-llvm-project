@@ -19,7 +19,6 @@ set( LLVM_LINK_COMPONENTS
   Vectorize
   PosetRL
   AddSizeAttr
-  InferenceEngine
   IR2Vec
   )
 

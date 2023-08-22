@@ -25,3 +25,4 @@ add_custom_command(
 
 target_link_libraries(LLVMSerializer PUBLIC protobuf::libprotobuf)
 target_include_directories(LLVMSerializer PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+

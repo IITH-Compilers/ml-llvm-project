@@ -4,10 +4,10 @@ import "google/protobuf/empty.proto";
 package posetrl;
 
 service PosetRL{
-
     rpc getEmbedding (google.protobuf.Empty) returns (EmbeddingResponse) {}
     rpc applyAction (ActionRequest) returns (google.protobuf.Empty) {}
     rpc applyActionGetEmbeddings (ActionRequest) returns (EmbeddingResponse) {}
+    rpc getAdvice(EmbeddingResponse) returns (ActionRequest) {}
 }
 
 message EmbeddingResponse {

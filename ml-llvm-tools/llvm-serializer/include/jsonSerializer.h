@@ -34,7 +34,16 @@ public:
     J.flush();
     return Buffer;
   }
-  static json::Object deserialize(std::string data);
+protected:
+  void *deserializeUntyped(std::string data) override {
+    Expected<json::Value> valueOrErr = json::parse(data);
+    if (!valueOrErr) {
+      llvm::errs() << "Error parsing JSON: " << valueOrErr.takeError() << "\n";
+      exit(1);
+    }
+    json::Object* jsonObject = valueOrErr->getAsObject();
+    return jsonObject;
+  }
 
 private:
   string Buffer;

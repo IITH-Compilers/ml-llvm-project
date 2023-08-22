@@ -1,7 +1,7 @@
 #ifndef BITSTREAM_SERIALIZER_H
 #define BITSTREAM_SERIALIZER_H
 
-#include "TensorSpec.h"
+#include "llvm/Transforms/TensorSpec.h"
 #include "baseSerializer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <string>
@@ -30,6 +30,11 @@ public:
   }
 
   std::string getSerializedData() override;
+
+protected:
+  void *deserializeUntyped(std::string data) override {
+    return nullptr;
+  }
 
 private:
   vector<TensorSpec> tensorSpecs;

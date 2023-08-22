@@ -11,7 +11,6 @@ set(LLVM_LINK_COMPONENTS
   MCParser
   Support
   PosetRL
-  InferenceEngine
   IR2Vec
   )
 

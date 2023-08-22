@@ -1,8 +1,8 @@
 #include "llvm/Transforms/PosetRL/PosetRL.h"
-#include "MLInferenceEngine/agent.h"
-#include "MLInferenceEngine/driver.h"
-#include "grpc/example/example.pb.h"
-#include "grpcpp/impl/codegen/status.h"
+// #include "MLInferenceEngine/agent.h"
+// #include "MLInferenceEngine/driver.h"
+// #include "grpc/example/example.pb.h"
+// #include "grpcpp/impl/codegen/status.h"
 #include "inference/poset_rl_env.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
@@ -16,19 +16,25 @@
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
-// gRPC includes
-#include "grpc/example/example.grpc.pb.h"
-#include "grpc/gRPCUtil.h"
 #include "serializer/bitstreamSerializer.h"
 #include "serializer/deserializer.h"
 #include "serializer/jsonSerializer.h"
 #include "serializer/protobufSerializer.h"
-#include "llvm/Transforms/InteractiveModelRunner.h"
+#include <cstdlib>
 #include <fstream>
+// gRPC includes
+#include "MLModelRunner/gRPCModelRunner.h"
+#include "grpc/posetRL/posetRL.grpc.pb.h"
 #include <google/protobuf/text_format.h>
 #include <grpcpp/grpcpp.h>
 
+#include "MLModelRunner/MLModelRunner.h"
+#include "MLModelRunner/MLModelRunnerWithTensorSpec.h"
+#include "MLModelRunner/ONNXModelRunner/ONNXModelRunner.h"
+#include "MLModelRunner/PipeModelRunner.h"
+
 using namespace llvm;
+using namespace grpc;
 
 static cl::opt<bool> training("training", cl::Hidden,
                               cl::desc("whether it is training or inference"),
@@ -51,8 +57,7 @@ static cl::opt<std::string> server_address(
 namespace {
 struct PosetRL : public ModulePass,
                  public PosetRLEnv,
-                 public posetrl::PosetRL::Service,
-                 public gRPCUtil {
+                 public posetrl::PosetRL::Service {
   static char ID;
   PosetRL() : ModulePass(ID) {}
   bool runOnModule(Module &M) override {
@@ -74,9 +79,20 @@ struct PosetRL : public ModulePass,
 
     } else {
       if (training) {
-        RunService(this, server_address);
+        MLRunner = std::make_unique<gRPCModelRunner<
+            posetrl::PosetRL::Service, posetrl::PosetRL::Stub,
+            posetrl::EmbeddingResponse, posetrl::ActionRequest>>(
+            M.getContext(), server_address, this);
       } else {
-        runInference();
+        Agent agent("/home/cs20btech11018/repos/ML-Phase-Ordering/Model/"
+                    "RLLib-PhaseOrder/poset-RL-onnx-model/model.onnx",
+                    ActionMaskSize + EmbeddingSize);
+        std::map<std::string, Agent *> agents;
+        agents["agent"] = &agent;
+        MLRunner =
+            std::make_unique<ONNXModelRunner>(M.getContext(), this, agents);
+        // runInference();
+        MLRunner->evaluate<int64_t>();
         errs() << "Sequence: ";
         for (auto a : Sequence)
           errs() << a << " ";
@@ -114,66 +130,71 @@ struct PosetRL : public ModulePass,
 
   void initPipeCommunication2() {
     errs() << "Entering JSON pipe communication...\n";
-    JsonSerializer serializer;
-
-    int i = 1;
-    float f = 1.0f;
-    double d = 1.0;
-    std::string s = "test";
-    bool b = true;
-    std::vector<int> v{1, 2, 3};
-    serializer.setFeature("test_int", i);
-    serializer.setFeature("test_float", f);
-    serializer.setFeature("test_double", d);
-    serializer.setFeature("test_string", s);
-    serializer.setFeature("test_bool", b);
-    serializer.setFeature<int>("test_vector", v);
-
-    error_code EC;
-    raw_fd_ostream pipe("pipe", EC);
-    errs() << "Starting serialization...\n";
-    pipe << serializer.getSerializedData();
-    pipe.flush();
-    pipe.close();
-
-    // open the pipe for reading and deserialize the data using deserialize
-    // function
-    std::string line;
-    std::ifstream Infile;
-    Infile.open("pipe");
-    if (Infile.is_open()) {
-      while (std::getline(Infile, line)) {
-        errs() << "line: " << line << "\n";
-        if (line.size() > 0) {
-          break;
-        }
-      }
-      Infile.close();
-    } else {
-      errs() << "Unable to open file\n";
-    }
-    errs() << "Starting deserialization...\n";
-    auto obj = JsonSerializer::deserialize(line);
-    // print the deserialized data
-    errs() << "Printing Deserialized data:\n";
-    for (auto &it : obj) {
-      errs() << it.first << ": ";
-      if (it.second.kind() == json::Value::Number) {
-        errs() << it.second.getAsNumber().value() << "\n";
-      } else if (it.second.kind() == json::Value::String) {
-        errs() << it.second.getAsString().value() << "\n";
-      } else if (it.second.kind() == json::Value::Boolean) {
-        errs() << it.second.getAsBoolean().value() << "\n";
-      } else if (it.second.kind() == json::Value::Array) {
-        errs() << "[";
-        auto arr = it.second.getAsArray();
-        for (auto it2 = arr->begin(); it2 != arr->end(); it2++) {
-          errs() << it2->getAsNumber().value() << " ";
-        }
-        errs() << "]\n";
-      }
-    }
+    errs() << "Deserialize testing...\n";
+    auto out = MLRunner->evaluate<std::string>();
+    errs() << "Deserialized data: " << out << "\n";
     exit(0);
+    // errs() << "Entering JSON pipe communication...\n";
+    // JsonSerializer serializer;
+
+    // int i = 1;
+    // float f = 1.0f;
+    // double d = 1.0;
+    // std::string s = "test";
+    // bool b = true;
+    // std::vector<int> v{1, 2, 3};
+    // serializer.setFeature("test_int", i);
+    // serializer.setFeature("test_float", f);
+    // serializer.setFeature("test_double", d);
+    // serializer.setFeature("test_string", s);
+    // serializer.setFeature("test_bool", b);
+    // serializer.setFeature<int>("test_vector", v);
+
+    // error_code EC;
+    // raw_fd_ostream pipe("pipe", EC);
+    // errs() << "Starting serialization...\n";
+    // pipe << serializer.getSerializedData();
+    // pipe.flush();
+    // pipe.close();
+
+    // // open the pipe for reading and deserialize the data using deserialize
+    // // function
+    // std::string line;
+    // std::ifstream Infile;
+    // Infile.open("pipe");
+    // if (Infile.is_open()) {
+    //   while (std::getline(Infile, line)) {
+    //     errs() << "line: " << line << "\n";
+    //     if (line.size() > 0) {
+    //       break;
+    //     }
+    //   }
+    //   Infile.close();
+    // } else {
+    //   errs() << "Unable to open file\n";
+    // }
+    // errs() << "Starting deserialization...\n";
+    // auto obj = MLRunner->evaluate<std::string>();
+    // // print the deserialized data
+    // errs() << "Printing Deserialized data:\n";
+    // for (auto &it : obj) {
+    //   errs() << it.first << ": ";
+    //   if (it.second.kind() == json::Value::Number) {
+    //     errs() << it.second.getAsNumber().value() << "\n";
+    //   } else if (it.second.kind() == json::Value::String) {
+    //     errs() << it.second.getAsString().value() << "\n";
+    //   } else if (it.second.kind() == json::Value::Boolean) {
+    //     errs() << it.second.getAsBoolean().value() << "\n";
+    //   } else if (it.second.kind() == json::Value::Array) {
+    //     errs() << "[";
+    //     auto arr = it.second.getAsArray();
+    //     for (auto it2 = arr->begin(); it2 != arr->end(); it2++) {
+    //       errs() << it2->getAsNumber().value() << " ";
+    //     }
+    //     errs() << "]\n";
+    //   }
+    // }
+    // exit(0);
   }
 
   void initPipeCommunication3() {
@@ -190,6 +211,18 @@ struct PosetRL : public ModulePass,
     pipe.flush();
     pipe.close();
   }
+  void processMLInputs() {
+    std::vector<void *> InputBuffers;
+    auto embedding = getEmbeddings();
+    InputBuffers.push_back(embedding.data());
+    MLRunner->feedInputBuffers(InputBuffers);
+  }
+
+  void processMLAdvice(int advice) {
+    errs() << "Runner result: " << advice << '\n';
+    applySeq(advice);
+  }
+
   void initPipeCommunication() {
     const char *const DecisionName = "advisor_decision";
     const TensorSpec DecisionSpec =
@@ -216,27 +249,19 @@ struct PosetRL : public ModulePass,
 
     std::cout << "DEBUG1\n" << std::endl;
 
-    AOTRunner = std::make_unique<InteractiveModelRunner>(
+    MLRunner = std::make_unique<PipeModelRunner>(
         M->getContext(), Features, DecisionSpec, basename + ".out",
         basename + ".in");
     errs() << "DEBUG2\n";
 
     int passSequence = 0;
     while (passSequence != -1) {
-      std::vector<void *> InputBuffers;
-      auto embedding = getEmbeddings();
-      // errs() << "Embedding size:" << embedding.size() << "\n";
-      InputBuffers.push_back(embedding.data());
-      AOTRunner->feedInputBuffers(InputBuffers);
-      int res = static_cast<int>(AOTRunner->evaluate<int64_t>());
-      errs() << "Runner result: " << res << '\n';
-      applySeq(res);
+      processMLInputs();
+      int res = static_cast<int>(MLRunner->evaluate<int64_t>());
+      processMLAdvice(res);
       passSequence = res;
     }
     errs() << "Episode completed\n";
-    // AOTRunner->feedInputBuffers(InputBuffers);
-    // int res = static_cast<int>(AOTRunner->evaluate<int64_t>());
-    // errs() << "Runner result: " << res <<'\n';
   }
 
   Embedding getEmbeddings() override {
@@ -274,16 +299,16 @@ struct PosetRL : public ModulePass,
     }
   }
 
-  void runInference() {
-    InferenceEngine driver;
-    driver.setEnvironment(this);
-    Observation Obs = reset();
-    Agent agent("/home/cs20btech11018/repos/ML-Phase-Ordering/Model/"
-                "RLLib-PhaseOrder/poset-RL-onnx-model/model.onnx",
-                ActionMaskSize + EmbeddingSize);
-    driver.addAgent(&agent, "agent");
-    driver.computeAction(Obs);
-  }
+  // void runInference() {
+  //   InferenceEngine driver;
+  //   driver.setEnvironment(this);
+  //   Observation Obs = reset();
+  //   Agent agent("/home/cs20btech11018/repos/ML-Phase-Ordering/Model/"
+  //               "RLLib-PhaseOrder/poset-RL-onnx-model/model.onnx",
+  //               ActionMaskSize + EmbeddingSize);
+  //   driver.addAgent(&agent, "agent");
+  //   driver.computeAction(Obs);
+  // }
 
   grpc::Status
   applyActionGetEmbeddings(grpc::ServerContext *context,
@@ -292,12 +317,13 @@ struct PosetRL : public ModulePass,
     errs() << "Action requested: " << request->action() << "\n";
     if (request->action() == -1) {
       errs() << "server exit requested\n";
-      exit_requested->set_value();
+      MLRunner->requestExit();
       return grpc::Status::OK;
     }
-    applySeq(request->action());
-    Embedding emb = getEmbeddings();
 
+    processMLAdvice(request->action());
+
+    Embedding emb = getEmbeddings();
     for (unsigned long i = 0; i < emb.size(); i++) {
       response->add_embedding(emb[i]);
     }
@@ -317,7 +343,7 @@ struct PosetRL : public ModulePass,
 
 private:
   Module *M;
-  std::unique_ptr<MLModelRunner> AOTRunner;
+  std::unique_ptr<MLModelRunner> MLRunner;
 };
 } // namespace
 char PosetRL::ID = 0;

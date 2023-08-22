@@ -30,10 +30,8 @@ set(LLVM_LINK_COMPONENTS
   TransformUtils
   Vectorize
   Passes
-  gRPC
   PosetRL
   AddSizeAttr
-  InferenceEngine
   IR2Vec
   Serializer
   )

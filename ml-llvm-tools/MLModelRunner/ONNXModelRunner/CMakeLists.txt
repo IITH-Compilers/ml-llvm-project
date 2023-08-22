@@ -1,7 +1,7 @@
-cmake_minimum_required(VERSION 3.16)
-project(llvm-inference-engine C CXX)
+# cmake_minimum_required(VERSION 3.16)
+# project(llvm-inference-engine C CXX)
 
-set(CMAKE_CXX_STANDARD 17)
+# set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -DORT_NO_EXCEPTIONS")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra")
 
@@ -44,18 +44,20 @@ if(onnxruntime_USE_DML)
   add_definitions(-DUSE_DML)
 endif()
 
-file(MAKE_DIRECTORY ${LLVM_INCLUDE_DIR}/MLInferenceEngine)
+# file(MAKE_DIRECTORY ${LLVM_INCLUDE_DIR}/MLInferenceEngine)
 
-add_llvm_library(LLVMInferenceEngine
+add_llvm_component_library(LLVMONNXModelRunner
 onnx.cpp
 agent.cpp
+ONNXModelRunner.cpp
 )
 
-target_link_libraries(LLVMInferenceEngine PUBLIC onnxruntime)
+target_link_libraries(LLVMONNXModelRunner PUBLIC onnxruntime)
+# target_include_directories(LLVMONNXModelRunner PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../Include)
 
-add_custom_command(
-  TARGET LLVMInferenceEngine POST_BUILD 
-  COMMAND ${CMAKE_COMMAND} -E copy 
- ${CMAKE_CURRENT_SOURCE_DIR}/Include/*.h ${LLVM_INCLUDE_DIR}/MLInferenceEngine)
+# add_custom_command(
+#   TARGET ONNXModelRunner POST_BUILD 
+#   COMMAND ${CMAKE_COMMAND} -E copy 
+#  ${CMAKE_CURRENT_SOURCE_DIR}/Include/*.h ${LLVM_INCLUDE_DIR}/MLInferenceEngine)
 
-target_include_directories(LLVMInferenceEngine PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/Include)
+# target_include_directories(ONNXModelRunner PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/Include)

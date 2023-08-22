@@ -20,5 +20,12 @@ public:
 
   template <class T> void setFeature(std::string, std::vector<T>);
 
+  template<typename T> T deserialize(std::string data) {
+    return *reinterpret_cast<T*>(deserializeUntyped(data));
+  }
+
+protected:
+  virtual void* deserializeUntyped(std::string data) = 0;
+
 };
 #endif

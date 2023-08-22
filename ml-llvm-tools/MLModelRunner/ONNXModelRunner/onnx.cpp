@@ -6,15 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "onnx.h"
-
-#include <assert.h>
+#include "MLModelRunner/ONNXModelRunner/onnx.h"
+#include "onnxruntime_cxx_api.h"
 
 #include <algorithm>
-// #include <iostream>
+#include <assert.h>
 #include <numeric>
-
-#include "onnxruntime_cxx_api.h"
 
 ONNXModel::ONNXModel(const char *model_path) : model_path(model_path) {
   env = new Ort::Env(ORT_LOGGING_LEVEL_WARNING, "test");

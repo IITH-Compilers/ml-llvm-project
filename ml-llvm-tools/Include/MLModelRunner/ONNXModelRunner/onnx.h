@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_INFERENCE_ENGINE_ONNX_H
-#define LLVM_INFERENCE_ENGINE_ONNX_H
+#ifndef ONNX_MODELRUNNER_ONNX_H
+#define ONNX_MODELRUNNER_ONNX_H
 
 #include <cstdint>
 #include <vector>
@@ -29,4 +29,4 @@ public:
   float *run(std::vector<float> &input, std::vector<int64_t> &outputDims);
 };
 
-#endif
+#endif // ONNX_MODELRUNNER_ONNX_H

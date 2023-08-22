@@ -33,6 +33,11 @@ public:
   std::string getSerializedData() override;
 
   Message* getMessage() { return message; };
+  
+protected:
+  void *deserializeUntyped(std::string data) override {
+    return nullptr;
+  }
 private:
   Message *message;
 };
