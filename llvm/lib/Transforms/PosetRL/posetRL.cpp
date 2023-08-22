@@ -202,6 +202,12 @@ struct PosetRL : public ModulePass,
     posetrl::EmbeddingResponse response;
     ProtobufSerializer serializer(&response);
     Embedding emb = getEmbeddings();
+
+    for (unsigned long i = 0; i < emb.size(); i++) {
+      errs() << emb[i] << " ";
+    }
+    errs() << "\n";
+
     serializer.setFeature("embedding", emb);
 
     error_code EC;
