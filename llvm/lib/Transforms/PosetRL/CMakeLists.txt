@@ -21,9 +21,6 @@ message(STATUS "Using protobuf ${Protobuf_INCLUDE_DIRS}")
 include_directories(${Protobuf_INCLUDE_DIRS})
 
 add_llvm_component_library(LLVMPosetRL posetRL.cpp
-# TrainingLogger.cpp
-# InteractiveModelRunner.cpp
-# TensorSpec.cpp
 
 LINK_COMPONENTS
 IR2Vec
