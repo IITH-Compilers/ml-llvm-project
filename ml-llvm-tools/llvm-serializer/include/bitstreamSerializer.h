@@ -4,6 +4,7 @@
 #include "TensorSpec.h"
 #include "baseSerializer.h"
 #include "llvm/Support/raw_ostream.h"
+#include <string>
 #include <vector>
 
 using namespace llvm;
@@ -11,7 +12,7 @@ using namespace std;
 
 class BitstreamSerializer : public BaseSerializer {
 public:
-  BitstreamSerializer() {
+  BitstreamSerializer() : Buffer(string()), OS(Buffer), J(OS) {
     tensorSpecs = vector<TensorSpec>();
     rawData = vector<void *>();
   };
@@ -28,11 +29,14 @@ public:
     rawData.push_back(value.data());
   }
 
-  void getSerializedData(raw_ostream &OS);
+  std::string getSerializedData() override;
 
 private:
   vector<TensorSpec> tensorSpecs;
   vector<void *> rawData;
+  string Buffer;
+  raw_string_ostream OS;
+  json::OStream J;
   Expected<json::Value> tensorSpecToJSON(const TensorSpec &Spec);
 };
 #endif

@@ -40,3 +40,4 @@ DEPENDS
 intrinsics_gen
 )
 target_link_libraries(LLVMPosetRL PUBLIC LLVMgRPC)
+target_link_libraries(LLVMPosetRL PUBLIC LLVMSerializer)

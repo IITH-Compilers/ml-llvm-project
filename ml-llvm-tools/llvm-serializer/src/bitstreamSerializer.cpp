@@ -34,7 +34,7 @@ void BitstreamSerializer::setFeature(std::string name, bool& value) {
   rawData.push_back(&value);
 }
 
-void BitstreamSerializer::getSerializedData(raw_ostream &OS) {
+std::string BitstreamSerializer::getSerializedData() {
   json::OStream J(OS);
 
   J.object([&]() {
@@ -44,12 +44,13 @@ void BitstreamSerializer::getSerializedData(raw_ostream &OS) {
       }
     });
   });
+  J.flush();
   OS.write("\n", 1);
 
   for (size_t I = 0; I < rawData.size(); ++I) {
     OS.write(reinterpret_cast<const char*>(rawData[I]), tensorSpecs[I].getTotalTensorBufferSize());
   }
-
+  return Buffer;
 }
 
 Expected<json::Value> BitstreamSerializer::tensorSpecToJSON(const TensorSpec &Spec) {

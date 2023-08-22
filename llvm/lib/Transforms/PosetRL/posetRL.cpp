@@ -1,6 +1,7 @@
 #include "llvm/Transforms/PosetRL/PosetRL.h"
 #include "MLInferenceEngine/agent.h"
 #include "MLInferenceEngine/driver.h"
+#include "grpc/example/example.pb.h"
 #include "grpcpp/impl/codegen/status.h"
 #include "inference/poset_rl_env.h"
 #include "llvm/IR/LegacyPassManager.h"
@@ -23,6 +24,8 @@
 
 #include "llvm/Transforms/InteractiveModelRunner.h"
 #include "serializer/bitstreamSerializer.h"
+#include "serializer/jsonSerializer.h"
+#include "serializer/protobufSerializer.h"
 
 using namespace llvm;
 
@@ -50,7 +53,7 @@ struct PosetRL : public ModulePass,
     this->M = &M;
     // Establish pipe communication
     if(usePipe)
-      initPipeCommunication1();
+      initPipeCommunication3();
     else {
       if (training) {
         RunService(this, server_address);      
@@ -83,8 +86,47 @@ struct PosetRL : public ModulePass,
 
     error_code EC;
     raw_fd_ostream pipe("pipe", EC);
-    // auto pipe_stream = std::make_unique<raw_fd_ostream>(OutboundName, OutEC);
-    serializer.getSerializedData(pipe);
+
+    pipe << serializer.getSerializedData();
+    pipe.flush();
+    pipe.close();
+  }
+
+  void initPipeCommunication2() {
+
+    JsonSerializer serializer;
+
+    int i = 1;
+    float f = 1.0f;
+    double d = 1.0;
+    std::string s = "test";
+    bool b = true;
+    std::vector<int> v{1, 2, 3};
+    serializer.setFeature("test_int", i);
+    serializer.setFeature("test_float", f);
+    serializer.setFeature("test_double", d);
+    serializer.setFeature("test_string", s);
+    serializer.setFeature("test_bool", b);
+    serializer.setFeature<int>("test_vector", v);
+
+    error_code EC;
+    raw_fd_ostream pipe("pipe", EC);
+
+    pipe << serializer.getSerializedData();
+    pipe.flush();
+    pipe.close();
+  }
+
+  void initPipeCommunication3() {
+    posetrl::EmbeddingResponse response;
+    ProtobufSerializer serializer(&response);
+    Embedding emb = getEmbeddings();
+    serializer.setFeature("embedding", emb);
+
+    error_code EC;
+    raw_fd_ostream pipe("pipe", EC);
+
+    pipe << serializer.getSerializedData();
     pipe.flush();
     pipe.close();
   }
@@ -139,7 +181,7 @@ struct PosetRL : public ModulePass,
     // errs() << "Runner result: " << res <<'\n';
   }
 
-
+  
   Embedding getEmbeddings() override {
 
     // redirecting the module to a file
@@ -150,9 +192,10 @@ struct PosetRL : public ModulePass,
     // M->print(os, nullptr);
     // os.close();
 
-    auto Ir2vec = IR2Vec::Embeddings(
-        *M, IR2Vec::IR2VecMode::FlowAware,
-        "/home/cs20mtech12003/ML-Phase-Ordering/IR2Vec/vocabulary/seedEmbeddingVocab-300-llvm10.txt");
+    auto Ir2vec =
+        IR2Vec::Embeddings(*M, IR2Vec::IR2VecMode::FlowAware,
+                           "/home/cs20btech11018/repos/POSET-RL/IR2Vec/"
+                           "seedEmbeddingVocab-300-llvm10.txt");
 
     auto ProgVector = Ir2vec.getProgramVector();
     Embedding Vector(ProgVector.begin(), ProgVector.end());

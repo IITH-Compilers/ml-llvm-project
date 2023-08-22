@@ -50,4 +50,8 @@ void ProtobufSerializer::addFeature(std::string name, bool& value) {
       message, message->GetDescriptor()->FindFieldByName(name), value);
 }
 
-
+std::string ProtobufSerializer::getSerializedData() {
+  std::string data;
+  message->SerializeToString(&data);
+  return data;
+}

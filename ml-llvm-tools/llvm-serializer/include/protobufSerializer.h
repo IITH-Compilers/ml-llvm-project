@@ -11,6 +11,7 @@ class ProtobufSerializer : public BaseSerializer {
 public:
   ProtobufSerializer(Message *msg) { this->message = msg; };
 
+
   void setFeature(std::string, int&) override;
   void setFeature(std::string, float&) override;
   void setFeature(std::string, double&) override;
@@ -29,12 +30,7 @@ public:
   void addFeature(std::string, std::string&);
   void addFeature(std::string, bool&);
 
-  template <class T>
-  void addFeature(std::string name, std::vector<T> value) {
-    for (auto v : value) {
-      addFeature(name, v);
-    }
-  }
+  std::string getSerializedData() override;
 
   Message* getMessage() { return message; };
 private:
