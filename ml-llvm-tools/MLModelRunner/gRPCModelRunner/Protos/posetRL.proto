@@ -1,7 +1,7 @@
 syntax = "proto3";
 import "google/protobuf/empty.proto";
 
-package posetrl;
+package posetRL;
 
 service PosetRL{
     rpc getEmbedding (google.protobuf.Empty) returns (EmbeddingResponse) {}

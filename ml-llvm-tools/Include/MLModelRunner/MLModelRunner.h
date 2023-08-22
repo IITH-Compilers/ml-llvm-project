@@ -11,6 +11,7 @@
 #define LLVM_MLMODELRUNNER_H
 
 #include "llvm/IR/PassManager.h"
+#include <future>
 
 namespace llvm {
 class LLVMContext;
@@ -41,6 +42,7 @@ public:
 
   void feedInputBuffers(std::vector<void *> Buffers) { InputBuffers = Buffers; }
   virtual void requestExit() = 0;
+  std::promise<void> *exit_requested;
 
 protected:
   MLModelRunner(LLVMContext &Ctx, Kind Type) : Ctx(Ctx), Type(Type) {

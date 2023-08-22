@@ -40,6 +40,10 @@ from ray.rllib.models import ModelCatalog
 from model import CustomPhaseOrderModel
 from ray.tune.registry import register_env
 
+import sys
+sys.path.append('/home/cs20mtech12003/ML-Phase-Ordering/ml-llvm-tools/MLModelRunner/gRPCModelRunner/Python-Utilities')
+import posetRL_pb2_grpc, posetRL_pb2
+
 from Filesystem import *
 
 logger = logging.getLogger(__file__)
@@ -50,6 +54,10 @@ from networkx.readwrite import json_graph
 import json
 import torch
 import pydot
+
+import grpc
+from concurrent import futures
+import traceback
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--llvm_dir", help = "path to llvm-build directory")
@@ -62,10 +70,11 @@ parser.add_argument("-beta", "--beta", required=False, type=float, default=5)
 parser.add_argument("-size_reward_thresh", "--size_reward_thresh", required=False, type=float, default=0.2)
 parser.add_argument("-mca_reward_thresh", "--mca_reward_thresh", required=False, type=float, default=0.2)
 parser.add_argument("--use_pipe", action='store_true', help = "Use pipe communication", required=False, default=False)
+parser.add_argument("--use_grpc", action='store_true', help = "Use grpc communication", required=False, default=False)
 
 
 class PhaseOrderInference:
-    def __init__(self, model_path, llvm_dir, ir2vec_dir, use_pipe=False):
+    def __init__(self, model_path, llvm_dir, ir2vec_dir, use_pipe=False, use_grpc=False):
         logdir='/tmp'
         logger = logging.getLogger(__file__)
         logging.basicConfig(filename='running.log', format='%(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
@@ -105,6 +114,7 @@ class PhaseOrderInference:
                     "mca_reward_thresh": args.mca_reward_thresh,
                     "action_space_size": 34,
                     "use_pipe": use_pipe,
+                    "use_grpc": use_grpc
                 },
                 "framework": "torch",
                 "explore": False,
@@ -163,6 +173,42 @@ class PhaseOrderInference:
                 break
     
         return reward, response
+    
+class service_server(posetRL_pb2_grpc.PosetRLServicer):
+    def __init__(self, inferece_obj):
+        self.inference_obj = inferece_obj
+        self.new_file = True
+        self.state = None
+        self.env = None
+        self.action = None
+        
+    def getAdvice(self, request, context):        
+        try:
+            done = False
+            if self.new_file:
+                self.env = PhaseOrder(self.inference_obj.config["env_config"])
+                self.state = self.env.reset(embedding=request.embedding)
+                self.new_file = False
+                print("Episode Started")
+            else:
+                self.env.embedding = np.array(request.embedding)
+                self.state, reward, done, response  = self.env.step(self.action)
+                        
+            if not done:
+                self.action = self.inference_obj.train_agent.compute_action(self.state)        
+                reply=posetRL_pb2.ActionRequest(action=self.action.item())
+            else:
+                reply=posetRL_pb2.ActionRequest(action=-1)
+                self.new_file = True
+                print("Episode Finished")
+            return reply
+        except:
+            print('Error')
+            traceback.print_exc()
+            reply=posetRL_pb2.ActionRequest(action=-1)
+            return reply    
+        
+        
 
 if __name__ == '__main__':
     args = parser.parse_args()
@@ -170,10 +216,26 @@ if __name__ == '__main__':
 
     ray.init()
 
-    inference_obj = PhaseOrderInference(args.model, args.llvm_dir, args.ir2vec_dir, args.use_pipe)
+    inference_obj = PhaseOrderInference(args.model, args.llvm_dir, args.ir2vec_dir, args.use_pipe, args.use_grpc)
     if args.use_pipe:
         while(True):
             reward, response = inference_obj.run_predict()
+    elif args.use_grpc:
+        # ray.init()
+
+        server=grpc.server(futures.ThreadPoolExecutor(max_workers=20),options = [
+                    ('grpc.max_send_message_length', 200*1024*1024), #50MB
+                            ('grpc.max_receive_message_length', 200*1024*1024) #50MB
+                                ])
+
+        # RegisterAllocationInference_pb2_grpc.add_RegisterAllocationInferenceServicer_to_server(service_server(inference_obj),server)
+        posetRL_pb2_grpc.add_PosetRLServicer_to_server(service_server(inference_obj),server)
+        # server.add_insecure_port('localhost:' + str(sys.argv[1]))
+        server.add_insecure_port('127.0.0.1:50051')
+
+        server.start()
+        print("Server Running")        
+        server.wait_for_termination()
     else:
         f = open("timetaken.txt", "w")
         for file in os.listdir(args.test_dir):

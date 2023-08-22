@@ -134,7 +134,9 @@ class PhaseOrder(gym.Env):
             if os.path.exists(from_compiler):
                 os.remove(from_compiler)
             os.mkfifo(to_compiler, 0o666)
-            os.mkfifo(from_compiler, 0o666)    
+            os.mkfifo(from_compiler, 0o666) 
+            
+        self.use_grpc = config["use_grpc"]   
 
     def make(self, TrainingPath):
         self.FileSys_Obj.generateTrainingData(TrainingPath)
@@ -187,7 +189,7 @@ class PhaseOrder(gym.Env):
         self.CurrIR = os.path.join(self.Curr_Dir, fileName)
         self.prev_action = None
 
-    def reset(self, test_file=None):
+    def reset(self, test_file=None, embedding=None):
         self.BaseIR = None
         self.CurrIR = None
         self.Curr_Dir = None
@@ -221,7 +223,7 @@ class PhaseOrder(gym.Env):
                 self.rename_Dir = True
 
         else:
-            if not self.use_pipe:
+            if not self.use_pipe and not self.use_grpc:
                 self.Obs = test_file
                 print("test_file {}".format(test_file))
                 logging.info("test_file {}".format(test_file))
@@ -229,6 +231,7 @@ class PhaseOrder(gym.Env):
                 print("Obs {}".format(index))
                 logging.info("Obs {}".format(index))
                 self.createEnv(test_file)
+                            
 
         # Opening pipe files
         if self.use_pipe:
@@ -251,7 +254,8 @@ class PhaseOrder(gym.Env):
                 for i in range(result[0].__len__()):
                     element = result[0].__getitem__(i)
                     self.embedding[i] = element
-        
+        elif self.mode == 'inference' and self.use_grpc:
+            self.embedding = np.array(embedding)
         else:
             self.embedding = self.getEmbedding(self.BaseIR)
 
@@ -343,23 +347,26 @@ class PhaseOrder(gym.Env):
         # self.embedding = self.applyActionGetEmbeddings(action=action_index)
         
         # make call to compiler to get the updated embedding
-        if self.use_pipe:
-            self.sendResponse(self.tc, action_index, self.advice_spec)
-            result = self.readObservation()
-        else:
-            result = self.stable_grpc("Action", action_index) # LLVMgRPC way
-        
-        if result is None:
-#quiet#            print("result is None")
-            raise
+        if self.mode == 'inference' and self.use_grpc:
+            pass
         else:
             if self.use_pipe:
-                self.embedding = np.empty([300])
-                for i in range(result[0].__len__()):
-                    element = result[0].__getitem__(i)
-                    self.embedding[i] = element
+                self.sendResponse(self.tc, action_index, self.advice_spec)
+                result = self.readObservation()
             else:
-                self.embedding = result                    
+                result = self.stable_grpc("Action", action_index) # LLVMgRPC way
+            
+            if result is None:
+    #quiet#            print("result is None")
+                raise       
+            else:
+                if self.use_pipe:
+                    self.embedding = np.empty([300])
+                    for i in range(result[0].__len__()):
+                        element = result[0].__getitem__(i)
+                        self.embedding[i] = element
+                else:
+                    self.embedding = result                    
         # self.embedding = self.getEmbedding(NextStateIR)
         # self.CurrIR = NextStateIR
         self.cur_action_mask[action_index] = 0
@@ -372,7 +379,7 @@ class PhaseOrder(gym.Env):
         # Max number of actions (optimaztions sub-sequences) to be applied
         if self.action_count >= 15:
             done = True
-            print("Episode done")
+            # print("Episode done")
 #quiet#            print(self.cur_action_seq)
             logging.info(self.cur_action_seq)
             if self.mode == 'inference':

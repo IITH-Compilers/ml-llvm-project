@@ -4,7 +4,7 @@
 include(AddLLVM)
 
 # set(CMAKE_CXX_STANDARD 14)
-# set(CMAKE_BUILD_TYPE RelWithDebInfo)
+set(CMAKE_BUILD_TYPE RelWithDebInfo)
 
 set(protobuf_MODULE_COMPATIBLE TRUE)
 
