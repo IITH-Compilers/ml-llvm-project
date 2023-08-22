@@ -19,13 +19,14 @@
 // gRPC includes
 #include "grpc/example/example.grpc.pb.h"
 #include "grpc/gRPCUtil.h"
-#include <google/protobuf/text_format.h>
-#include <grpcpp/grpcpp.h>
-
-#include "llvm/Transforms/InteractiveModelRunner.h"
 #include "serializer/bitstreamSerializer.h"
+#include "serializer/deserializer.h"
 #include "serializer/jsonSerializer.h"
 #include "serializer/protobufSerializer.h"
+#include "llvm/Transforms/InteractiveModelRunner.h"
+#include <fstream>
+#include <google/protobuf/text_format.h>
+#include <grpcpp/grpcpp.h>
 
 using namespace llvm;
 
@@ -33,9 +34,14 @@ static cl::opt<bool> training("training", cl::Hidden,
                               cl::desc("whether it is training or inference"),
                               cl::init(false));
 
-static cl::opt<bool> usePipe("use-pipe", cl::Hidden,
-                              cl::desc("Use pipe based interation with python model"),
-                              cl::init(false));
+static cl::opt<bool>
+    usePipe("use-pipe", cl::Hidden,
+            cl::desc("Use pipe based interation with python model"),
+            cl::init(false));
+
+cl::opt<std::string> data_format(
+    "data-format", cl::Hidden, cl::init("protobuf"),
+    cl::desc("Data format to use for communication with python model"));
 
 static cl::opt<std::string> server_address(
     "server_address", cl::Hidden,
@@ -52,23 +58,36 @@ struct PosetRL : public ModulePass,
   bool runOnModule(Module &M) override {
     this->M = &M;
     // Establish pipe communication
-    if(usePipe)
-      initPipeCommunication3();
-    else {
+    if (usePipe) {
+      // data_format can take values: protobuf, json, bytes
+      errs() << "Using pipe communication...\n";
+      if (data_format == "protobuf")
+        initPipeCommunication3();
+      else if (data_format == "json")
+        initPipeCommunication2();
+      else if (data_format == "bytes")
+        initPipeCommunication1();
+      else {
+        errs() << "Invalid data format\n";
+        exit(1);
+      }
+
+    } else {
       if (training) {
-        RunService(this, server_address);      
+        RunService(this, server_address);
       } else {
         runInference();
         errs() << "Sequence: ";
         for (auto a : Sequence)
           errs() << a << " ";
         errs() << "\n";
-      }  
+      }
     }
-    
+
     return true;
   }
   void initPipeCommunication1() {
+    errs() << "Entering bitstream pipe communication...\n";
     BitstreamSerializer serializer;
 
     int i = 1;
@@ -77,7 +96,7 @@ struct PosetRL : public ModulePass,
     std::string s = "test";
     bool b = true;
     std::vector<int> v{1, 2, 3};
-    serializer.setFeature("test_int",i);
+    serializer.setFeature("test_int", i);
     serializer.setFeature("test_float", f);
     serializer.setFeature("test_double", d);
     serializer.setFeature("test_string", s);
@@ -86,14 +105,15 @@ struct PosetRL : public ModulePass,
 
     error_code EC;
     raw_fd_ostream pipe("pipe", EC);
-
+    errs() << "Starting serialization...\n";
     pipe << serializer.getSerializedData();
+    errs() << "Pipe output: " << serializer.getSerializedData() << "\n";
     pipe.flush();
     pipe.close();
   }
 
   void initPipeCommunication2() {
-
+    errs() << "Entering JSON pipe communication...\n";
     JsonSerializer serializer;
 
     int i = 1;
@@ -111,13 +131,53 @@ struct PosetRL : public ModulePass,
 
     error_code EC;
     raw_fd_ostream pipe("pipe", EC);
-
+    errs() << "Starting serialization...\n";
     pipe << serializer.getSerializedData();
     pipe.flush();
     pipe.close();
+
+    // open the pipe for reading and deserialize the data using deserialize
+    // function
+    std::string line;
+    std::ifstream Infile;
+    Infile.open("pipe");
+    if (Infile.is_open()) {
+      while (std::getline(Infile, line)) {
+        errs() << "line: " << line << "\n";
+        if (line.size() > 0) {
+          break;
+        }
+      }
+      Infile.close();
+    } else {
+      errs() << "Unable to open file\n";
+    }
+    errs() << "Starting deserialization...\n";
+    auto obj = JsonSerializer::deserialize(line);
+    // print the deserialized data
+    errs() << "Printing Deserialized data:\n";
+    for (auto &it : obj) {
+      errs() << it.first << ": ";
+      if (it.second.kind() == json::Value::Number) {
+        errs() << it.second.getAsNumber().value() << "\n";
+      } else if (it.second.kind() == json::Value::String) {
+        errs() << it.second.getAsString().value() << "\n";
+      } else if (it.second.kind() == json::Value::Boolean) {
+        errs() << it.second.getAsBoolean().value() << "\n";
+      } else if (it.second.kind() == json::Value::Array) {
+        errs() << "[";
+        auto arr = it.second.getAsArray();
+        for (auto it2 = arr->begin(); it2 != arr->end(); it2++) {
+          errs() << it2->getAsNumber().value() << " ";
+        }
+        errs() << "]\n";
+      }
+    }
+    exit(0);
   }
 
   void initPipeCommunication3() {
+    errs() << "Entering protobuf pipe communication...\n";
     posetrl::EmbeddingResponse response;
     ProtobufSerializer serializer(&response);
     Embedding emb = getEmbeddings();
@@ -139,14 +199,14 @@ struct PosetRL : public ModulePass,
     const TensorSpec DefaultFeatureSpec =
         TensorSpec::createSpec<float_t>(DefaultFeatureName, {300});
 
-    std::vector<float_t> feature_data;  
-    for(size_t i=0; i<DefaultFeatureSpec.getElementCount(); i++) 
-        feature_data.push_back((float_t) (i+0.5));
+    std::vector<float_t> feature_data;
+    for (size_t i = 0; i < DefaultFeatureSpec.getElementCount(); i++)
+      feature_data.push_back((float_t)(i + 0.5));
 
-    std::string basename = "/home/cs20mtech12003/ML-Phase-Ordering/Model/RLLib-PhaseOrder/temppipe";
+    std::string basename = "/home/cs20mtech12003/ML-Phase-Ordering/Model/"
+                           "RLLib-PhaseOrder/temppipe";
     std::vector<TensorSpec> Features;
     // std::vector<void*> InputBuffers;
-
 
     // if (InteractiveIncludeDefault){
     Features.push_back(DefaultFeatureSpec);
@@ -157,21 +217,19 @@ struct PosetRL : public ModulePass,
     std::cout << "DEBUG1\n" << std::endl;
 
     AOTRunner = std::make_unique<InteractiveModelRunner>(
-      M->getContext(), Features, DecisionSpec,
-      basename + ".out",
-      basename + ".in");
+        M->getContext(), Features, DecisionSpec, basename + ".out",
+        basename + ".in");
     errs() << "DEBUG2\n";
-    
-    
+
     int passSequence = 0;
-    while(passSequence != -1) {
-      std::vector<void*> InputBuffers;
+    while (passSequence != -1) {
+      std::vector<void *> InputBuffers;
       auto embedding = getEmbeddings();
       // errs() << "Embedding size:" << embedding.size() << "\n";
       InputBuffers.push_back(embedding.data());
       AOTRunner->feedInputBuffers(InputBuffers);
       int res = static_cast<int>(AOTRunner->evaluate<int64_t>());
-      errs() << "Runner result: " << res <<'\n';
+      errs() << "Runner result: " << res << '\n';
       applySeq(res);
       passSequence = res;
     }
@@ -181,7 +239,6 @@ struct PosetRL : public ModulePass,
     // errs() << "Runner result: " << res <<'\n';
   }
 
-  
   Embedding getEmbeddings() override {
 
     // redirecting the module to a file
@@ -192,10 +249,10 @@ struct PosetRL : public ModulePass,
     // M->print(os, nullptr);
     // os.close();
 
-    auto Ir2vec =
-        IR2Vec::Embeddings(*M, IR2Vec::IR2VecMode::FlowAware,
-                           "/home/cs20btech11018/repos/POSET-RL/IR2Vec/"
-                           "seedEmbeddingVocab-300-llvm10.txt");
+    auto Ir2vec = IR2Vec::Embeddings(
+        *M, IR2Vec::IR2VecMode::FlowAware,
+        "/home/cs20btech11024/repos/ML-Phase-Ordering/IR2Vec/vocabulary/"
+        "seedEmbeddingVocab-300-llvm10.txt");
 
     auto ProgVector = Ir2vec.getProgramVector();
     Embedding Vector(ProgVector.begin(), ProgVector.end());
@@ -258,7 +315,6 @@ struct PosetRL : public ModulePass,
     return grpc::Status::OK;
   }
 
-  
 private:
   Module *M;
   std::unique_ptr<MLModelRunner> AOTRunner;

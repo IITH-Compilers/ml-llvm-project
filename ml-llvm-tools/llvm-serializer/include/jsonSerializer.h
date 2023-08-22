@@ -19,21 +19,22 @@ public:
   void setFeature(std::string, std::string &) override;
   void setFeature(std::string, bool &) override;
 
-  template <class T> void setFeature(std::string name, std::vector<T>& value) {
+  template <class T> void setFeature(std::string name, std::vector<T> &value) {
     J.attributeBegin(name);
     J.arrayBegin();
-    for (auto& v : value) {
+    for (auto &v : value) {
       J.value(v);
     }
     J.arrayEnd();
     J.attributeEnd();
   }
 
-    std::string getSerializedData() override {
+  std::string getSerializedData() override {
     J.objectEnd();
     J.flush();
     return Buffer;
-    }
+  }
+  static json::Object deserialize(std::string data);
 
 private:
   string Buffer;
