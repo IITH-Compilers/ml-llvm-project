@@ -29,6 +29,8 @@
 #include "grpc/posetRL/posetRL.grpc.pb.h"
 #include <google/protobuf/text_format.h>
 #include <grpcpp/grpcpp.h>
+#include <utility>
+#include <vector>
 
 #include "MLModelRunner/MLModelRunner.h"
 #include "MLModelRunner/MLModelRunnerWithTensorSpec.h"
@@ -159,14 +161,10 @@ struct PosetRL : public ModulePass, public PosetRLEnv {
 
   void initPipeCommunication2() {
     errs() << "Entering JSON pipe communication...\n";
-    errs() << "Deserialize testing...\n";
 
-    // MLModelRunner::KV<std::string> kv = {"name", "test"};
-    // MLModelRunner::KV<int> kv1 = {"age", 20};
-    // MLModelRunner::KV<float> kv2 = {"height", 5.5};
-    MLModelRunner::KV<vector<float>> kv = {"embedding", getEmbeddings()};
+    std::pair<std::string, std::vector<float>> p1("embedding", getEmbeddings());
     errs() << "Populating features...\n";
-    MLRunner->populateFeatures(kv);
+    MLRunner->populateFeatures(p1);
     errs() << "Features populated END...\n";
     auto out = MLRunner->evaluate<json::Object>();
     // errs() << "Deserialized data: " << &out << "\n";
