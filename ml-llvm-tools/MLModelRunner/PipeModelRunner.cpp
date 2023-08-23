@@ -8,8 +8,8 @@
 //
 // A runner that communicates with an external agent via 2 file descriptors.
 //===----------------------------------------------------------------------===//
-#include "PipeModelRunner.h"
-#include "MLModelRunner.h"
+#include "MLModelRunner/PipeModelRunner.h"
+#include "MLModelRunner/MLModelRunner.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"

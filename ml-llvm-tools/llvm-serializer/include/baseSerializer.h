@@ -3,13 +3,21 @@
 
 #include <string>
 #include <vector>
+#include <cassert>
+#include "llvm/Support/raw_ostream.h"
 
 class BaseSerializer {
 public:
-  BaseSerializer(){};
-
   // setRepeatedField as pushback
   // setFeature as setFeature, setAttribute
+  enum class Kind : int {
+    Unknown,
+    Json,
+    Bitstream,
+    Protobuf
+  };
+  Kind getKind() const { return Type; }
+
   virtual void setFeature(std::string, int&) = 0;
   virtual void setFeature(std::string, float&) = 0;
   virtual void setFeature(std::string, double&) = 0;
@@ -25,7 +33,12 @@ public:
   }
 
 protected:
+  BaseSerializer(Kind Type) : Type(Type) {
+    llvm::errs() << "In BaseSerializer constructor...\n";
+    assert(Type != Kind::Unknown);
+    llvm::errs() << "End BaseSerializer constructor...\n";
+  }
   virtual void* deserializeUntyped(std::string data) = 0;
-
+  const Kind Type;
 };
 #endif

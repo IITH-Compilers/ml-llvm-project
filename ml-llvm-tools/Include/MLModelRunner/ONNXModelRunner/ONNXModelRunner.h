@@ -28,7 +28,6 @@ public:
   void computeAction(Observation obs);
 
   void requestExit() override {}
-  void *evaluateUntyped() override;
 
 private:
   Environment *env;

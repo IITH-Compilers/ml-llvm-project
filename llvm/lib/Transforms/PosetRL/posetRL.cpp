@@ -13,12 +13,14 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
-#include "serializer/bitstreamSerializer.h"
+// #include "serializer/bitstreamSerializer.h"
+// #include "serializer/deserializer.h"
 #include "serializer/jsonSerializer.h"
-#include "serializer/protobufSerializer.h"
+// #include "serializer/protobufSerializer.h"
 #include <cstdlib>
 #include <fstream>
 // gRPC includes
@@ -64,74 +66,107 @@ struct PosetRL : public ModulePass,
     // Establish pipe communication
     if (usePipe) {
       // data_format can take values: protobuf, json, bytes
+      const char *const DecisionName = "advisor_decision";
+      const TensorSpec DecisionSpec =
+          TensorSpec::createSpec<int64_t>(DecisionName, {1});
+
+      const char *const DefaultFeatureName = "feature_default";
+      const TensorSpec DefaultFeatureSpec =
+          TensorSpec::createSpec<float_t>(DefaultFeatureName, {300});
+
+      std::vector<float_t> feature_data;
+      for (size_t i = 0; i < DefaultFeatureSpec.getElementCount(); i++)
+        feature_data.push_back((float_t)(i + 0.5));
+
+      std::string basename = "/home/cs20btech11024/repos/ML-Phase-Ordering/"
+                             "Model/RLLib-PhaseOrder/temppipe";
+      std::vector<TensorSpec> Features;
+      // std::vector<void*> InputBuffers;
+
+      // if (InteractiveIncludeDefault){
+      Features.push_back(DefaultFeatureSpec);
+      // Features.push_back(DefaultFeatureSpec2);
+
+      // InputBuffers.push_back(feature_data.data());
+
+      std::cout << "DEBUG1\n" << std::endl;
+
+      MLRunner = std::make_unique<PipeModelRunner>(
+          M.getContext(), basename + ".out",
+          basename + ".in");
+
       errs() << "Using pipe communication...\n";
-      if (data_format == "protobuf")
-        initPipeCommunication3();
-      else if (data_format == "json")
+      if (data_format == "json")
         initPipeCommunication2();
-      else if (data_format == "bytes")
-        initPipeCommunication1();
+      // else if (data_format == "protobuf")
+      //   initPipeCommunication3();
+      // else if (data_format == "bytes")
+      //   initPipeCommunication1();
       else {
         errs() << "Invalid data format\n";
         exit(1);
       }
 
     } else {
-      if (training) {
-        MLRunner = std::make_unique<gRPCModelRunner<
-            posetrl::PosetRL::Service, posetrl::PosetRL::Stub,
-            posetrl::EmbeddingResponse, posetrl::ActionRequest>>(
-            M.getContext(), server_address, this);
-      } else {
-        Agent agent("/home/cs20btech11018/repos/ML-Phase-Ordering/Model/"
-                    "RLLib-PhaseOrder/poset-RL-onnx-model/model.onnx",
-                    ActionMaskSize + EmbeddingSize);
-        std::map<std::string, Agent *> agents;
-        agents["agent"] = &agent;
-        MLRunner =
-            std::make_unique<ONNXModelRunner>(M.getContext(), this, agents);
-        // runInference();
-        MLRunner->evaluate<int64_t>();
-        errs() << "Sequence: ";
-        for (auto a : Sequence)
-          errs() << a << " ";
-        errs() << "\n";
-      }
+      // if (training) {
+      //   MLRunner = std::make_unique<gRPCModelRunner<
+      //       posetrl::PosetRL::Service, posetrl::PosetRL::Stub,
+      //       posetrl::EmbeddingResponse, posetrl::ActionRequest>>(
+      //       M.getContext(), server_address, this);
+      // } else {
+      //   Agent agent("/home/cs20btech11018/repos/ML-Phase-Ordering/Model/"
+      //               "RLLib-PhaseOrder/poset-RL-onnx-model/model.onnx",
+      //               ActionMaskSize + EmbeddingSize);
+      //   std::map<std::string, Agent *> agents;
+      //   agents["agent"] = &agent;
+      //   MLRunner =
+      //       std::make_unique<ONNXModelRunner>(M.getContext(), this, agents);
+      //   // runInference();
+      //   MLRunner->evaluate<int64_t>();
+      //   errs() << "Sequence: ";
+      //   for (auto a : Sequence)
+      //     errs() << a << " ";
+      //   errs() << "\n";
+      // }
     }
 
     return true;
   }
-  void initPipeCommunication1() {
-    errs() << "Entering bitstream pipe communication...\n";
-    BitstreamSerializer serializer;
+  // void initPipeCommunication1() {
+  //   errs() << "Entering bitstream pipe communication...\n";
+  //   BitstreamSerializer serializer;
 
-    int i = 1;
-    float f = 1.0f;
-    double d = 1.0;
-    std::string s = "test";
-    bool b = true;
-    std::vector<int> v{1, 2, 3};
-    serializer.setFeature("test_int", i);
-    serializer.setFeature("test_float", f);
-    serializer.setFeature("test_double", d);
-    serializer.setFeature("test_string", s);
-    serializer.setFeature("test_bool", b);
-    serializer.setFeature<int>("test_vector", v);
+  //   int i = 1;
+  //   float f = 1.0f;
+  //   double d = 1.0;
+  //   std::string s = "test";
+  //   bool b = true;
+  //   std::vector<int> v{1, 2, 3};
+  //   serializer.setFeature("test_int", i);
+  //   serializer.setFeature("test_float", f);
+  //   serializer.setFeature("test_double", d);
+  //   serializer.setFeature("test_string", s);
+  //   serializer.setFeature("test_bool", b);
+  //   serializer.setFeature<int>("test_vector", v);
 
-    error_code EC;
-    raw_fd_ostream pipe("pipe", EC);
-    errs() << "Starting serialization...\n";
-    pipe << serializer.getSerializedData();
-    errs() << "Pipe output: " << serializer.getSerializedData() << "\n";
-    pipe.flush();
-    pipe.close();
-  }
+  //   error_code EC;
+  //   raw_fd_ostream pipe("pipe", EC);
+  //   errs() << "Starting serialization...\n";
+  //   pipe << serializer.getSerializedData();
+  //   errs() << "Pipe output: " << serializer.getSerializedData() << "\n";
+  //   pipe.flush();
+  //   pipe.close();
+  // }
 
   void initPipeCommunication2() {
     errs() << "Entering JSON pipe communication...\n";
     errs() << "Deserialize testing...\n";
-    auto out = MLRunner->evaluate<std::string>();
-    errs() << "Deserialized data: " << out << "\n";
+    auto out = MLRunner->evaluate<json::Object>();
+    // errs() << "Deserialized data: " << &out << "\n";
+    errs() << "out.size(): " << out.size() << "\n";
+    errs()<< "out[\"name\"] = " <<  out["name"].getAsString().value() << "\n";
+
+
     exit(0);
     // errs() << "Entering JSON pipe communication...\n";
     // JsonSerializer serializer;
@@ -196,31 +231,31 @@ struct PosetRL : public ModulePass,
     // exit(0);
   }
 
-  void initPipeCommunication3() {
-    errs() << "Entering protobuf pipe communication...\n";
-    posetrl::EmbeddingResponse response;
-    ProtobufSerializer serializer(&response);
-    Embedding emb = getEmbeddings();
+  // void initPipeCommunication3() {
+  //   errs() << "Entering protobuf pipe communication...\n";
+  //   posetrl::EmbeddingResponse response;
+  //   ProtobufSerializer serializer(&response);
+  //   Embedding emb = getEmbeddings();
 
-    for (unsigned long i = 0; i < emb.size(); i++) {
-      errs() << emb[i] << " ";
-    }
-    errs() << "\n";
+  //   for (unsigned long i = 0; i < emb.size(); i++) {
+  //     errs() << emb[i] << " ";
+  //   }
+  //   errs() << "\n";
 
-    serializer.setFeature("embedding", emb);
+  //   serializer.setFeature("embedding", emb);
 
-    error_code EC;
-    raw_fd_ostream pipe("pipe", EC);
+  //   error_code EC;
+  //   raw_fd_ostream pipe("pipe", EC);
 
-    pipe << serializer.getSerializedData();
-    pipe.flush();
-    pipe.close();
-  }
+  //   pipe << serializer.getSerializedData();
+  //   pipe.flush();
+  //   pipe.close();
+  // }
   void processMLInputs() {
     std::vector<void *> InputBuffers;
     auto embedding = getEmbeddings();
     InputBuffers.push_back(embedding.data());
-    MLRunner->feedInputBuffers(InputBuffers);
+    // MLRunner->feedInputBuffers(InputBuffers);
   }
 
   void processMLAdvice(int advice) {
@@ -255,7 +290,7 @@ struct PosetRL : public ModulePass,
     std::cout << "DEBUG1\n" << std::endl;
 
     MLRunner = std::make_unique<PipeModelRunner>(
-        M->getContext(), Features, DecisionSpec, basename + ".out",
+        M->getContext(), basename + ".out",
         basename + ".in");
     errs() << "DEBUG2\n";
 

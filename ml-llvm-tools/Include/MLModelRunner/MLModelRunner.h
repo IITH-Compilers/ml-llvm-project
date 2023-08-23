@@ -11,9 +11,11 @@
 #define LLVM_MLMODELRUNNER_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/raw_ostream.h"
 #include <memory>
 #include <string>
 #include "serializer/baseSerializer.h"
+#include "serializer/jsonSerializer.h"
 
 namespace llvm {
 class LLVMContext;
@@ -33,7 +35,7 @@ public:
   }
 
   std::string get() {
-    std::string ret = "hello";
+    std::string ret = "{\"name\": \"test\"}";
     return ret;
   }
   //   enum class Kind : int { Unknown, Release, Development, NoOp, Interactive
@@ -65,6 +67,9 @@ public:
 protected:
   MLModelRunner(LLVMContext &Ctx, Kind Type) : Ctx(Ctx), Type(Type) {
     assert(Type != Kind::Unknown);
+    errs() << "In MLModelRunner constructor...\n";
+    Serializer = std::make_unique<JsonSerializer>();
+    errs() << "End MLModelRunner constructor...\n";
   }
   virtual void send(std::string&) = 0;
   virtual std::string receive() = 0;
