@@ -17,7 +17,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "serializer/bitstreamSerializer.h"
-#include "serializer/deserializer.h"
 #include "serializer/jsonSerializer.h"
 #include "serializer/protobufSerializer.h"
 #include <cstdlib>
