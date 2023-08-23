@@ -23,10 +23,10 @@ public:
   virtual void setFeature(std::string, double&) = 0;
   virtual void setFeature(std::string, std::string&) = 0;
   virtual void setFeature(std::string, bool &) = 0;
-
+  virtual void setFeature(std::string, std::vector<float>&) = 0;
   virtual std::string getSerializedData() = 0;
 
-  template <class T> void setFeature(std::string, std::vector<T>);
+  // template <class T> void setFeature(std::string, std::vector<T>);
 
   template<typename T> T deserialize(std::string data) {
     return *reinterpret_cast<T*>(deserializeUntyped(data));

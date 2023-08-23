@@ -19,12 +19,13 @@
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 // #include "serializer/bitstreamSerializer.h"
 // #include "serializer/deserializer.h"
+#include "serializer/baseSerializer.h"
 #include "serializer/jsonSerializer.h"
 // #include "serializer/protobufSerializer.h"
 #include <cstdlib>
 #include <fstream>
 // gRPC includes
-#include "MLModelRunner/gRPCModelRunner.h"
+// #include "MLModelRunner/gRPCModelRunner.h"
 #include "grpc/posetRL/posetRL.grpc.pb.h"
 #include <google/protobuf/text_format.h>
 #include <grpcpp/grpcpp.h>
@@ -56,9 +57,7 @@ static cl::opt<std::string> server_address(
     cl::init("0.0.0.0:50051"));
 
 namespace {
-struct PosetRL : public ModulePass,
-                 public PosetRLEnv,
-                 public posetrl::PosetRL::Service {
+struct PosetRL : public ModulePass, public PosetRLEnv {
   static char ID;
   PosetRL() : ModulePass(ID) {}
   bool runOnModule(Module &M) override {
@@ -92,8 +91,8 @@ struct PosetRL : public ModulePass,
       std::cout << "DEBUG1\n" << std::endl;
 
       MLRunner = std::make_unique<PipeModelRunner>(
-          M.getContext(), basename + ".out",
-          basename + ".in");
+          M.getContext(), basename + ".out", basename + ".in",
+          BaseSerializer::Kind::Json);
 
       errs() << "Using pipe communication...\n";
       if (data_format == "json")
@@ -161,11 +160,18 @@ struct PosetRL : public ModulePass,
   void initPipeCommunication2() {
     errs() << "Entering JSON pipe communication...\n";
     errs() << "Deserialize testing...\n";
+
+    // MLModelRunner::KV<std::string> kv = {"name", "test"};
+    // MLModelRunner::KV<int> kv1 = {"age", 20};
+    // MLModelRunner::KV<float> kv2 = {"height", 5.5};
+    MLModelRunner::KV<vector<float>> kv = {"embedding", getEmbeddings()};
+    errs() << "Populating features...\n";
+    MLRunner->populateFeatures(kv);
+    errs() << "Features populated END...\n";
     auto out = MLRunner->evaluate<json::Object>();
     // errs() << "Deserialized data: " << &out << "\n";
     errs() << "out.size(): " << out.size() << "\n";
-    errs()<< "out[\"name\"] = " <<  out["name"].getAsString().value() << "\n";
-
+    errs() << "out[\"name\"] = " << out["action"].getAsString().value() << "\n";
 
     exit(0);
     // errs() << "Entering JSON pipe communication...\n";
@@ -290,8 +296,8 @@ struct PosetRL : public ModulePass,
     std::cout << "DEBUG1\n" << std::endl;
 
     MLRunner = std::make_unique<PipeModelRunner>(
-        M->getContext(), basename + ".out",
-        basename + ".in");
+        M->getContext(), basename + ".out", basename + ".in",
+        BaseSerializer::Kind::Json);
     errs() << "DEBUG2\n";
 
     int passSequence = 0;

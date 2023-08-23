@@ -28,6 +28,7 @@ public:
   void setFeature(std::string, double &) override;
   void setFeature(std::string, std::string &) override;
   void setFeature(std::string, bool &) override;
+  void setFeature(std::string, std::vector<float> &) override;
 
   template <class T> void setFeature(std::string name, std::vector<T> &value) {
     J.attributeBegin(name);

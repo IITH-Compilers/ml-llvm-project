@@ -10,12 +10,12 @@
 #ifndef LLVM_MLMODELRUNNER_H
 #define LLVM_MLMODELRUNNER_H
 
+#include "serializer/baseSerializer.h"
+#include "serializer/jsonSerializer.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
 #include <string>
-#include "serializer/baseSerializer.h"
-#include "serializer/jsonSerializer.h"
 
 namespace llvm {
 class LLVMContext;
@@ -29,8 +29,10 @@ public:
 
   template <typename T> T evaluate() {
     std::string data = Serializer->getSerializedData();
+    errs() << "Data: " << data << "\n";
     send(data);
     std::string reply = receive();
+    errs() << "Reply: " << reply << "\n";
     return Serializer->deserialize<T>(reply);
   }
 
@@ -58,27 +60,33 @@ public:
     T value;
   };
 
-  template <typename T, typename... Types> void populateFeatures(KV<T> &var1, KV<Types> &... var2) {
+  template <typename T, typename... Types>
+  void populateFeatures(KV<T> &var1, KV<Types> &...var2) {
     Serializer->setFeature(var1.key, var1.value);
     populateFeatures(var2...);
   }
-
+  void populateFeatures() {}
 
 protected:
-  MLModelRunner(LLVMContext &Ctx, Kind Type) : Ctx(Ctx), Type(Type) {
+  MLModelRunner(LLVMContext &Ctx, Kind Type, BaseSerializer::Kind SerializerType) : Ctx(Ctx), Type(Type), SerializerType(SerializerType) {
     assert(Type != Kind::Unknown);
     errs() << "In MLModelRunner constructor...\n";
-    Serializer = std::make_unique<JsonSerializer>();
+    // Serializer = std::make_unique<JsonSerializer>();
+    switch (SerializerType) {
+    case BaseSerializer::Kind::Json:
+      Serializer = std::make_unique<JsonSerializer>();
+      break;
+    }
     errs() << "End MLModelRunner constructor...\n";
   }
-  virtual void send(std::string&) = 0;
+  virtual void send(std::string &) = 0;
   virtual std::string receive() = 0;
 
   LLVMContext &Ctx;
   const Kind Type;
+  const BaseSerializer::Kind SerializerType;
 
 private:
-
   std::unique_ptr<BaseSerializer> Serializer;
   //   std::vector<std::vector<char *>> OwnedBuffers;
 };

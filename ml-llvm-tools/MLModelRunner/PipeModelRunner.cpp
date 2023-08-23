@@ -23,8 +23,8 @@ static cl::opt<bool> DebugReply(
              "the data received from the host (for debugging purposes)."));
 
 PipeModelRunner::PipeModelRunner(LLVMContext &Ctx, StringRef OutboundName,
-                                 StringRef InboundName)
-    : MLModelRunner(Ctx, Kind::Pipe),
+                                 StringRef InboundName, BaseSerializer::Kind SerializerType)
+    : MLModelRunner(Ctx, Kind::Pipe, SerializerType),
       InEC(sys::fs::openFileForRead(InboundName, Inbound)) {
   if (InEC) {
     Ctx.emitError("Cannot open inbound file: " + InEC.message());
@@ -50,11 +50,15 @@ PipeModelRunner::~PipeModelRunner() {
 }
 
 void PipeModelRunner::send(std::string& data) {
+  errs() << "PipeModelRunner::sending..." << "\n";
   OutStream->write(data.data(), data.size());
+  OutStream->write("\n", 1);
   OutStream->flush();
+  errs() << "PipeModelRunner::flushed..." << "\n";
 }
 
 std::string PipeModelRunner::receive() {
+  errs() << "PipeModelRunner::receiving..." << "\n";
   std::string Buffer;
   uint count = 0;
   while (true) {
@@ -66,11 +70,13 @@ std::string PipeModelRunner::receive() {
       break;
     }
     if (C == '\n')
-      count++;
-    if (count == 2)
       break;
+    //   count++;
+    // if (count == 2)
+    //   break;
     Buffer += C;
   }
+  errs() << "PipeModelRunner::received..." << "\n";
   return Buffer;
 }
 
