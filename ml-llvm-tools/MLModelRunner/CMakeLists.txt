@@ -3,8 +3,8 @@ PipeModelRunner.cpp
 )
 
 add_subdirectory(Utils)
-add_subdirectory(gRPCModelRunner)
-add_subdirectory(ONNXModelRunner)
+# add_subdirectory(gRPCModelRunner)
+# add_subdirectory(ONNXModelRunner)
 
 find_package(Protobuf CONFIG REQUIRED)
 
@@ -19,8 +19,8 @@ add_dependencies(LLVMMLModelRunner copy-mlmodelrunner-include)
 # target_include_directories(LLVMMLModelRunner PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../Include)
 target_link_libraries(LLVMMLModelRunner 
 PRIVATE LLVMMLModelRunnerUtils
-LLVMgRPCModelRunner
-LLVMONNXModelRunner
+# LLVMgRPCModelRunner
+# LLVMONNXModelRunner
 )
 set_property(TARGET LLVMMLModelRunner PROPERTY CXX_STANDARD 17)
 

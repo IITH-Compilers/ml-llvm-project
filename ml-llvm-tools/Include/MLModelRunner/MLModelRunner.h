@@ -26,7 +26,10 @@ public:
   virtual ~MLModelRunner() = default;
 
   template <typename T> T evaluate() {
-    return Serializer->deserialize<T>(get());
+    std::string data = Serializer->getSerializedData();
+    send(data);
+    std::string reply = receive();
+    return Serializer->deserialize<T>(reply);
   }
 
   std::string get() {
@@ -58,20 +61,19 @@ public:
     populateFeatures(var2...);
   }
 
-  virtual void send(std::string&) = 0;
-  virtual std::string receive() = 0;
 
 protected:
   MLModelRunner(LLVMContext &Ctx, Kind Type) : Ctx(Ctx), Type(Type) {
     assert(Type != Kind::Unknown);
   }
-  virtual void *evaluateUntyped() = 0;
+  virtual void send(std::string&) = 0;
+  virtual std::string receive() = 0;
 
   LLVMContext &Ctx;
   const Kind Type;
 
 private:
-  std::vector<void *> InputBuffers;
+
   std::unique_ptr<BaseSerializer> Serializer;
   //   std::vector<std::vector<char *>> OwnedBuffers;
 };

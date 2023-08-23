@@ -39,33 +39,28 @@ namespace llvm {
 /// the compiler - i.e. the "Inbound" - and then the "Outbound", to avoid
 /// deadlock. This is because the compiler first tries to open the inbound
 /// (which will hang until there's a writer on the other end).
-class PipeModelRunner : public MLModelRunnerWithTensorSpec {
+class PipeModelRunner : public MLModelRunner {
 public:
-  PipeModelRunner(LLVMContext &Ctx, const std::vector<TensorSpec> &Inputs,
-                  const TensorSpec &Advice, StringRef OutboundName,
+  PipeModelRunner(LLVMContext &Ctx, StringRef OutboundName,
                   StringRef InboundName);
 
   static bool classof(const MLModelRunner *R) {
     return R->getKind() == MLModelRunner::Kind::Pipe;
   }
-  void switchContext(StringRef Name) override {
-    Log->switchContext(Name);
-    Log->flush();
-  }
+
   void requestExit() override {}
   virtual ~PipeModelRunner();
 
 private:
-  void *evaluateUntyped() override;
+  void send(std::string &data) override;
+  std::string receive() override;
   // This must be declared before InEC if we want to initialize it in the
   // ctor initializer list.
   int Inbound = -1;
-  const std::vector<TensorSpec> InputSpecs;
-  const TensorSpec OutputSpec;
   std::error_code OutEC;
   std::error_code InEC;
-  std::vector<char> OutputBuffer;
-  std::unique_ptr<Logger> Log;
+  std::unique_ptr<raw_fd_ostream> OutStream;
+  
 };
 } // namespace llvm
 #endif // PipeModelRunner_H
