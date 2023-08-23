@@ -12,6 +12,7 @@
 
 #include "llvm/IR/PassManager.h"
 #include <memory>
+#include <string>
 #include "serializer/baseSerializer.h"
 
 namespace llvm {
@@ -45,8 +46,20 @@ public:
   };
   Kind getKind() const { return Type; }
 
-  void feedInputBuffers(std::vector<void *> Buffers) { InputBuffers = Buffers; }
   virtual void requestExit() = 0;
+
+  template <typename T> struct KV {
+    std::string key;
+    T value;
+  };
+
+  template <typename T, typename... Types> void populateFeatures(KV<T> &var1, KV<Types> &... var2) {
+    Serializer->setFeature(var1.key, var1.value);
+    populateFeatures(var2...);
+  }
+
+  virtual void send(std::string&) = 0;
+  virtual std::string receive() = 0;
 
 protected:
   MLModelRunner(LLVMContext &Ctx, Kind Type) : Ctx(Ctx), Type(Type) {
