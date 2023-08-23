@@ -55,17 +55,6 @@ public:
 
   virtual void requestExit() = 0;
 
-  // template <typename T> struct KV {
-  //   std::string key;
-  //   T value;
-  // };
-
-  // template <typename T, typename... Types>
-  // void populateFeatures(KV<T> &var1, KV<Types> &...var2) {
-  //   Serializer->setFeature(var1.key, var1.value);
-  //   populateFeatures(var2...);
-  // }
-
   template<typename T, typename... Types>
   void populateFeatures(std::pair<std::string, T> &var1, std::pair<std::string, Types> &...var2) {
     Serializer->setFeature(var1.first, var1.second);
