@@ -40,13 +40,24 @@ public:
     return ret;
   }
 
-  void desFeature(int &) override;
-  void desFeature(long int &) override;
-  void desFeature(double &) override;
-  void desFeature(std::string &) override;
-  void desFeature(bool &) override;
+  void* deserializeUntyped(std::string data) override;
+
+  // void constructReplyObject(std::string data) override {
+  //   errs() << "In JsonSerializer constructReplyObject...\n";
+  //   Expected<json::Value> valueOrErr = json::parse(data);
+  //   if (!valueOrErr) {
+  //     llvm::errs() << "Error parsing JSON: " << valueOrErr.takeError() << "\n";
+  //     exit(1);
+  //   }
+  //   Reply = valueOrErr->getAsObject();
+  //   CurrValue = new json::Value(std::move(*Reply->get("out")));
+  //   errs() << "End JsonSerializer constructReplyObject...\n";
+  // }
+private:
+  void* desJson(json::Value* V);
 
 private:
+  json::Object* Reply;
   json::Value* CurrValue;
   json::Object J;
 };
