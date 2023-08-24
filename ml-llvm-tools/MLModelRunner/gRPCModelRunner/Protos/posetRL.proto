@@ -9,8 +9,6 @@ service PosetRL{
     rpc applyActionGetEmbeddings (ActionRequest) returns (EmbeddingResponse) {}
     
     rpc getAdvice(EmbeddingResponse) returns (ActionRequest) {}
-    rpc giveEmbeddings(EmbeddingResponse) returns (google.protobuf.Empty) {}
-    rpc getAdvice1(google.protobuf.Empty) returns (ActionRequest) {}
 }
 
 message EmbeddingResponse {
