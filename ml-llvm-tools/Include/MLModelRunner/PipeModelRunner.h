@@ -53,7 +53,7 @@ public:
   virtual ~PipeModelRunner();
 
 private:
-  void send(std::string &data) override;
+  void send(const std::string &data) override;
   std::string receive() override;
   // This must be declared before InEC if we want to initialize it in the
   // ctor initializer list.

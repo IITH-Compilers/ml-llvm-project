@@ -21,7 +21,7 @@ namespace llvm {
 class ONNXModelRunner : public MLModelRunner {
 public:
   ONNXModelRunner(LLVMContext &Ctx, Environment *env,
-                  std::map<std::string, Agent *> agents);
+                  std::map<std::string, Agent *> agents, BaseSerializer::Kind SerializerType);
   void setEnvironment(Environment *_env) { env = _env; }
   Environment *getEnvironment() { return env; }
   void addAgent(Agent *agent, std::string name);

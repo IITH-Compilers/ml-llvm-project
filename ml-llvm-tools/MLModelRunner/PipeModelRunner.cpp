@@ -49,7 +49,7 @@ PipeModelRunner::~PipeModelRunner() {
 
 }
 
-void PipeModelRunner::send(std::string& data) {
+void PipeModelRunner::send(const std::string& data) {
   errs() << "PipeModelRunner::sending..." << "\n";
   OutStream->write(data.data(), data.size());
   OutStream->write("\n", 1);

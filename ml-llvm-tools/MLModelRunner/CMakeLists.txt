@@ -20,7 +20,7 @@ add_dependencies(LLVMMLModelRunner copy-mlmodelrunner-include)
 target_link_libraries(LLVMMLModelRunner 
 PRIVATE LLVMMLModelRunnerUtils
 LLVMgRPCModelRunner
-# LLVMONNXModelRunner
+LLVMONNXModelRunner
 )
 set_property(TARGET LLVMMLModelRunner PROPERTY CXX_STANDARD 17)
 
