@@ -166,9 +166,13 @@ struct PosetRL : public ModulePass, public PosetRLEnv {
     errs() << "Populating features...\n";
     MLRunner->populateFeatures(p1);
     errs() << "Features populated END...\n";
-    auto out = MLRunner->evaluate<int>();
+    // auto out = MLRunner->evaluate<double>();
+    auto out = MLRunner->evaluate<std::map<std::string, double>>();
     // errs() << "Deserialized data: " << &out << "\n";
-    errs() << "action: " << out << "\n";
+    for(auto[k, v] : out) {
+      errs() << k << ": " << v << "\n";
+    }
+    // errs() << "action: " << out << "\n";
 
     exit(0);
     // errs() << "Entering JSON pipe communication...\n";

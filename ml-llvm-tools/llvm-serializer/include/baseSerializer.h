@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include <map>
 #include <cassert>
 #include "llvm/Support/raw_ostream.h"
 
@@ -29,9 +30,16 @@ public:
   // template <class T> void setFeature(std::string, std::vector<T>);
 
   template<typename T> T deserialize(std::string data) {
+    llvm::errs() << "In BaseSerializer deserialize...\n";
     return *reinterpret_cast<T*>(deserializeUntyped(data));
   }
 
+  virtual void desFeature(int&) = 0;
+  virtual void desFeature(double&) = 0;
+  virtual void desFeature(std::string&) = 0;
+  virtual void desFeature(bool &) = 0;
+  virtual void desFeature(std::vector<double>&) = 0;
+  virtual void desFeature(std::map<std::string, double>&) = 0;
 protected:
   BaseSerializer(Kind Type) : Type(Type) {
     llvm::errs() << "In BaseSerializer constructor...\n";
