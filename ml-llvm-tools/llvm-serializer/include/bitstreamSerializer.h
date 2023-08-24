@@ -12,7 +12,7 @@ using namespace std;
 
 class BitstreamSerializer : public BaseSerializer {
 public:
-  BitstreamSerializer() : Buffer(string()), OS(Buffer), J(OS) {
+  BitstreamSerializer() : BaseSerializer(Kind::Bitstream), Buffer(string()), OS(Buffer), J(OS) {
     tensorSpecs = vector<TensorSpec>();
     rawData = vector<void *>();
   };
@@ -32,9 +32,6 @@ public:
   std::string getSerializedData() override;
 
 protected:
-  void *deserializeUntyped(std::string data) override {
-    return nullptr;
-  }
 
 private:
   vector<TensorSpec> tensorSpecs;
@@ -42,6 +39,5 @@ private:
   string Buffer;
   raw_string_ostream OS;
   json::OStream J;
-  Expected<json::Value> tensorSpecToJSON(const TensorSpec &Spec);
 };
 #endif

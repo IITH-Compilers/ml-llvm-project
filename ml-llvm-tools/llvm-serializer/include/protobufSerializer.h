@@ -9,8 +9,10 @@ using namespace google::protobuf;
 
 class ProtobufSerializer : public BaseSerializer {
 public:
-  ProtobufSerializer(Message *msg) { this->message = msg; };
+  ProtobufSerializer() : BaseSerializer(Kind::Protobuf){};
 
+  void setRequest(void *Request) override;
+  void setResponse(void *Response) override;
 
   void setFeature(std::string, int&) override;
   void setFeature(std::string, float&) override;
@@ -32,13 +34,10 @@ public:
 
   std::string getSerializedData() override;
 
-  Message* getMessage() { return message; };
+  Message *getMessage() { return Response; };
   
-protected:
-  void *deserializeUntyped(std::string data) override {
-    return nullptr;
-  }
 private:
-  Message *message;
+  Message *Response;
+  Message *Request;
 };
 #endif

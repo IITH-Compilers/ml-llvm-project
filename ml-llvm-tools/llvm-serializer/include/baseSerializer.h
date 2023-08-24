@@ -6,6 +6,7 @@
 #include <cassert>
 #include "llvm/Support/raw_ostream.h"
 
+
 class BaseSerializer {
 public:
   // setRepeatedField as pushback
@@ -26,11 +27,13 @@ public:
   virtual void setFeature(std::string, std::vector<float>&) = 0;
   virtual std::string getSerializedData() = 0;
 
+  // a hack to set the request and response structures in protobuf serializer
+  virtual void setRequest(void *Request) {};
+  virtual void setResponse(void *Response) {};
+
   // template <class T> void setFeature(std::string, std::vector<T>);
 
-  template<typename T> T deserialize(std::string data) {
-    return *reinterpret_cast<T*>(deserializeUntyped(data));
-  }
+  template<typename T> T deserialize(std::string data);
 
 protected:
   BaseSerializer(Kind Type) : Type(Type) {
@@ -38,7 +41,11 @@ protected:
     assert(Type != Kind::Unknown);
     llvm::errs() << "End BaseSerializer constructor...\n";
   }
-  virtual void* deserializeUntyped(std::string data) = 0;
+  void* desFeature(int&);
   const Kind Type;
+
+  void *RequestVoid;
+  void *ResponseVoid;
+  
 };
 #endif

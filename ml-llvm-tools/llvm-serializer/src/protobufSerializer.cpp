@@ -1,57 +1,67 @@
 #include "protobufSerializer.h"
 
 void ProtobufSerializer::setFeature(std::string name, int& value) {
-  message->GetReflection()->SetInt32(
-      message, message->GetDescriptor()->FindFieldByName(name), value);
+  Request->GetReflection()->SetInt32(
+      Request, Request->GetDescriptor()->FindFieldByName(name), value);
 }
 
 void ProtobufSerializer::setFeature(std::string name, float& value) {
-  message->GetReflection()->SetFloat(
-      message, message->GetDescriptor()->FindFieldByName(name), value);
+  Request->GetReflection()->SetFloat(
+      Request, Request->GetDescriptor()->FindFieldByName(name), value);
 }
 
 void ProtobufSerializer::setFeature(std::string name, double& value) {
-  message->GetReflection()->SetDouble(
-      message, message->GetDescriptor()->FindFieldByName(name), value);
+  Request->GetReflection()->SetDouble(
+      Request, Request->GetDescriptor()->FindFieldByName(name), value);
 }
 
 void ProtobufSerializer::setFeature(std::string name, std::string& value) {
-  message->GetReflection()->SetString(
-      message, message->GetDescriptor()->FindFieldByName(name), value);
+  Request->GetReflection()->SetString(
+      Request, Request->GetDescriptor()->FindFieldByName(name), value);
 }
 
 void ProtobufSerializer::setFeature(std::string name, bool& value) {
-  message->GetReflection()->SetBool(
-      message, message->GetDescriptor()->FindFieldByName(name), value);
+  Request->GetReflection()->SetBool(
+      Request, Request->GetDescriptor()->FindFieldByName(name), value);
 }
 
 void ProtobufSerializer::addFeature(std::string name, int& value) {
-  message->GetReflection()->AddInt32(
-      message, message->GetDescriptor()->FindFieldByName(name), value);
+  Request->GetReflection()->AddInt32(
+      Request, Request->GetDescriptor()->FindFieldByName(name), value);
 }
 
 void ProtobufSerializer::addFeature(std::string name, float& value) {
-  message->GetReflection()->AddFloat(
-      message, message->GetDescriptor()->FindFieldByName(name), value);
+  Request->GetReflection()->AddFloat(
+      Request, Request->GetDescriptor()->FindFieldByName(name), value);
 }
 
 void ProtobufSerializer::addFeature(std::string name, double& value) {
-  message->GetReflection()->AddDouble(
-      message, message->GetDescriptor()->FindFieldByName(name), value);
+  Request->GetReflection()->AddDouble(
+      Request, Request->GetDescriptor()->FindFieldByName(name), value);
 }
 
 void ProtobufSerializer::addFeature(std::string name, std::string& value) {
-  message->GetReflection()->AddString(
-      message, message->GetDescriptor()->FindFieldByName(name), value);
+  Request->GetReflection()->AddString(
+      Request, Request->GetDescriptor()->FindFieldByName(name), value);
 }
 
 void ProtobufSerializer::addFeature(std::string name, bool& value) {
-  message->GetReflection()->AddBool(
-      message, message->GetDescriptor()->FindFieldByName(name), value);
+  Request->GetReflection()->AddBool(
+      Request, Request->GetDescriptor()->FindFieldByName(name), value);
 }
 
 std::string ProtobufSerializer::getSerializedData() {
   std::string data;
-  message->SerializeToString(&data);
+  Request->SerializeToString(&data);
   return data;
 }
+
+void ProtobufSerializer::setRequest(void *Request) {
+  this->Request = reinterpret_cast<Message*>(Request);
+}
+
+void ProtobufSerializer::setResponse(void *Response) {
+  this->Response = reinterpret_cast<Message*>(Response);
+}
+
+

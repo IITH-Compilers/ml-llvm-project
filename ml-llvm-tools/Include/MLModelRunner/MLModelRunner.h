@@ -63,6 +63,14 @@ public:
 
   void populateFeatures() {}
 
+  void setRequest(void *request) {
+    Serializer->setRequest(request);
+  }
+
+  void setResponse(void *response) {
+    Serializer->setResponse(response);
+  }
+
 protected:
   MLModelRunner(LLVMContext &Ctx, Kind Type, BaseSerializer::Kind SerializerType) : Ctx(Ctx), Type(Type), SerializerType(SerializerType) {
     assert(Type != Kind::Unknown);
