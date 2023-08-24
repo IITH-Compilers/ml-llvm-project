@@ -1,4 +1,5 @@
 #include "protobufSerializer.h"
+#include "llvm/Support/ErrorHandling.h"
 
 void ProtobufSerializer::setFeature(std::string name, int& value) {
   Request->GetReflection()->SetInt32(
@@ -66,8 +67,26 @@ void ProtobufSerializer::setResponse(void *Response) {
 
 void *ProtobufSerializer::deserializeUntyped(std::string data) {
   Response->ParseFromString(data);
+  const Descriptor *descriptor = Response->GetDescriptor();
+  const Reflection *reflection = Response->GetReflection();
+  const FieldDescriptor *field = descriptor->field(0);
 
-  Response->GetReflection()->GetMessage(*Response, Response->GetDescriptor()->field(0));
-  return Response;
+  if (field->type() ==  FieldDescriptor::Type::TYPE_INT32) {
+    int32_t value = reflection->GetInt32(*Response, field);
+    return &value;
+  } else if (field->type() ==  FieldDescriptor::Type::TYPE_FLOAT) {
+    float value = reflection->GetFloat(*Response, field);
+    return &value;
+  } else if (field->type() ==  FieldDescriptor::Type::TYPE_DOUBLE) {
+    double value = reflection->GetDouble(*Response, field);
+    return &value;
+  } else if (field->type() ==  FieldDescriptor::Type::TYPE_STRING) {
+    std::string value = reflection->GetString(*Response, field);
+    return &value;
+  } else if (field->type() ==  FieldDescriptor::Type::TYPE_BOOL) {
+    bool value = reflection->GetBool(*Response, field);
+    return &value;
+  }
+  llvm_unreachable("unimplemented container types");
 }
 
