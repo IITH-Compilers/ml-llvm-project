@@ -318,7 +318,13 @@ class PhaseOrder(gym.Env):
           # )
         elif self.data_format == "json":
             f: io.BufferedWriter = self.tc
-            f.write(json.dumps({"out": int(value)}).encode("utf-8"))
+            f.write(json.dumps({"out": {
+                "1": [4,2,20],
+                "2": [5,3,30],
+                "3": [6,4,40],
+                "4": [7,5,50],
+                "10": [8,6,60],
+            }}).encode("utf-8"))
             f.write(b"\n")
 
         f.flush()
