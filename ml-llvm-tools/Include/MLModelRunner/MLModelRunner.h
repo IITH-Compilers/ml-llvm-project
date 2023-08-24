@@ -49,7 +49,8 @@ public:
     NoOp,
     Pipe,
     gRPC,
-    ONNX
+    ONNX,
+    TFAOT
   };
   Kind getKind() const { return Type; }
 
