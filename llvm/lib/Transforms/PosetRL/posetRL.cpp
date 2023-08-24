@@ -21,11 +21,12 @@
 // #include "serializer/deserializer.h"
 #include "serializer/baseSerializer.h"
 #include "serializer/jsonSerializer.h"
-// #include "serializer/protobufSerializer.h"
+#include "serializer/protobufSerializer.h"
 #include <cstdlib>
 #include <fstream>
 // gRPC includes
 // #include "MLModelRunner/gRPCModelRunner.h"
+#include "grpc/posetRL/posetRL.pb.h"
 #include "grpc/posetRL/posetRL.grpc.pb.h"
 #include <google/protobuf/text_format.h>
 #include <grpcpp/grpcpp.h>
@@ -36,6 +37,8 @@
 #include "MLModelRunner/MLModelRunnerWithTensorSpec.h"
 #include "MLModelRunner/ONNXModelRunner/ONNXModelRunner.h"
 #include "MLModelRunner/PipeModelRunner.h"
+
+#include "grpcpp/impl/codegen/status.h"
 
 using namespace llvm;
 using namespace grpc;
@@ -79,7 +82,7 @@ struct PosetRL : public ModulePass, public PosetRLEnv {
       for (size_t i = 0; i < DefaultFeatureSpec.getElementCount(); i++)
         feature_data.push_back((float_t)(i + 0.5));
 
-      std::string basename = "/home/cs20btech11024/repos/ML-Phase-Ordering/"
+      std::string basename = "/home/cs20btech11018/repos/ML-Phase-Ordering/"
                              "Model/RLLib-PhaseOrder/temppipe";
       std::vector<TensorSpec> Features;
       // std::vector<void*> InputBuffers;
@@ -92,9 +95,17 @@ struct PosetRL : public ModulePass, public PosetRLEnv {
 
       std::cout << "DEBUG1\n" << std::endl;
 
+
+
       MLRunner = std::make_unique<PipeModelRunner>(
           M.getContext(), basename + ".out", basename + ".in",
           BaseSerializer::Kind::Json);
+
+      // posetrl::EmbeddingResponse response;
+      // posetrl::ActionRequest request;
+      // MLRunner->setRequest(&response);
+      // MLRunner->setResponse(&request);
+      
 
       errs() << "Using pipe communication...\n";
       if (data_format == "json")
@@ -279,7 +290,7 @@ struct PosetRL : public ModulePass, public PosetRLEnv {
     for (size_t i = 0; i < DefaultFeatureSpec.getElementCount(); i++)
       feature_data.push_back((float_t)(i + 0.5));
 
-    std::string basename = "/home/cs20mtech12003/ML-Phase-Ordering/Model/"
+    std::string basename = "/home/cs20btech11018/ML-Phase-Ordering/Model/"
                            "RLLib-PhaseOrder/temppipe";
     std::vector<TensorSpec> Features;
     // std::vector<void*> InputBuffers;
@@ -319,7 +330,7 @@ struct PosetRL : public ModulePass, public PosetRLEnv {
 
     auto Ir2vec = IR2Vec::Embeddings(
         *M, IR2Vec::IR2VecMode::FlowAware,
-        "/home/cs20btech11024/repos/ML-Phase-Ordering/IR2Vec/vocabulary/"
+        "/home/cs20btech11018/repos/ML-Phase-Ordering/IR2Vec/vocabulary/"
         "seedEmbeddingVocab-300-llvm10.txt");
 
     auto ProgVector = Ir2vec.getProgramVector();
