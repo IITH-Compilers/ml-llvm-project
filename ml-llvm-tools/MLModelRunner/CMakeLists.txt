@@ -75,7 +75,7 @@ DEPENDS
 copy-mlmodelrunner-include
 LLVMMLModelRunnerUtils
 LLVMgRPCModelRunner
-# LLVMONNXModelRunner
+LLVMONNXModelRunner
 ${MLDeps}
 
 LINK_COMPONENTS

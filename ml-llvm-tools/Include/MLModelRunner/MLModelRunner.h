@@ -84,7 +84,7 @@ protected:
     }
     errs() << "End MLModelRunner constructor...\n";
   }
-  virtual void send(std::string &) = 0;
+  virtual void send(const std::string &) = 0;
   virtual std::string receive() = 0;
 
   LLVMContext &Ctx;

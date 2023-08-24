@@ -52,11 +52,3 @@ std::string BitstreamSerializer::getSerializedData() {
   }
   return Buffer;
 }
-
-Expected<json::Value> BitstreamSerializer::tensorSpecToJSON(const TensorSpec &Spec) {
-  string storage;
-  raw_string_ostream sstream(storage);
-  json::OStream OS(sstream);
-  Spec.toJSON(OS);
-  return json::parse(sstream.str());
-}
