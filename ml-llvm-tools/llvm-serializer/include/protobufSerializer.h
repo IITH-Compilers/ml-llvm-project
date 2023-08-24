@@ -18,7 +18,13 @@ public:
   void setFeature(std::string, float&) override;
   void setFeature(std::string, double&) override;
   void setFeature(std::string, std::string&) override;
-  void setFeature(std::string, bool&) override;
+  void setFeature(std::string, bool &) override;
+
+  void desFeature(int &) override;
+  void desFeature(long int &) override;
+  void desFeature(double &) override;
+  void desFeature(std::string &) override;
+  void desFeature(bool &) override;
   
   template <class T>
   void setFeature(std::string name, std::vector<T> value) {

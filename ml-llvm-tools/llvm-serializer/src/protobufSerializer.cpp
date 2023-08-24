@@ -64,4 +64,30 @@ void ProtobufSerializer::setResponse(void *Response) {
   this->Response = reinterpret_cast<Message*>(Response);
 }
 
+void ProtobufSerializer::desFeature(int& out) {
+  out = Response->GetReflection()->GetInt32(
+      *Response, Response->GetDescriptor()->field(0));
+}
+
+void ProtobufSerializer::desFeature(long int& out) {
+  out = Response->GetReflection()->GetInt64(
+      *Response, Response->GetDescriptor()->field(0));
+}
+
+void ProtobufSerializer::desFeature(double& out) {
+  out = Response->GetReflection()->GetDouble(
+      *Response, Response->GetDescriptor()->field(0));
+}
+
+void ProtobufSerializer::desFeature(std::string& out) {
+  out = Response->GetReflection()->GetString(
+      *Response, Response->GetDescriptor()->field(0));
+}
+
+void ProtobufSerializer::desFeature(bool& out) {
+  out = Response->GetReflection()->GetBool(
+      *Response, Response->GetDescriptor()->field(0));
+}
+
+
 
