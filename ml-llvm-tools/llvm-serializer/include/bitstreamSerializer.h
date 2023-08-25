@@ -31,9 +31,10 @@ public:
 
   std::string getSerializedData() override;
 
-protected:
+
 
 private:
+  void *deserializeUntyped(std::string data) override;
   vector<TensorSpec> tensorSpecs;
   vector<void *> rawData;
   string Buffer;

@@ -1,5 +1,6 @@
 #include "protobufSerializer.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <cstdint>
 
 void ProtobufSerializer::setFeature(std::string name, int& value) {
   Request->GetReflection()->SetInt32(
@@ -73,19 +74,28 @@ void *ProtobufSerializer::deserializeUntyped(std::string data) {
 
   if (field->type() ==  FieldDescriptor::Type::TYPE_INT32) {
     int32_t value = reflection->GetInt32(*Response, field);
-    return &value;
-  } else if (field->type() ==  FieldDescriptor::Type::TYPE_FLOAT) {
+    int32_t* ptr = new int32_t(value);
+    return ptr;
+  }
+  if (field->type() ==  FieldDescriptor::Type::TYPE_FLOAT) {
     float value = reflection->GetFloat(*Response, field);
-    return &value;
-  } else if (field->type() ==  FieldDescriptor::Type::TYPE_DOUBLE) {
+    float* ptr = new float(value);
+    return ptr;
+  }
+  if (field->type() ==  FieldDescriptor::Type::TYPE_DOUBLE) {
     double value = reflection->GetDouble(*Response, field);
-    return &value;
-  } else if (field->type() ==  FieldDescriptor::Type::TYPE_STRING) {
+    double* ptr = new double(value);
+    return ptr;
+  }
+  if (field->type() ==  FieldDescriptor::Type::TYPE_STRING) {
     std::string value = reflection->GetString(*Response, field);
-    return &value;
-  } else if (field->type() ==  FieldDescriptor::Type::TYPE_BOOL) {
+    std::string* ptr = new std::string(value);
+    return ptr;
+  }
+  if (field->type() ==  FieldDescriptor::Type::TYPE_BOOL) {
     bool value = reflection->GetBool(*Response, field);
-    return &value;
+    bool* ptr = new bool(value);
+    return ptr;
   }
   llvm_unreachable("unimplemented container types");
 }
