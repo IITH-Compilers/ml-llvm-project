@@ -26,8 +26,8 @@
 #include <fstream>
 // gRPC includes
 // #include "MLModelRunner/gRPCModelRunner.h"
-#include "grpc/posetRL/posetRL.pb.h"
 #include "grpc/posetRL/posetRL.grpc.pb.h"
+#include "grpc/posetRL/posetRL.pb.h"
 #include <google/protobuf/text_format.h>
 #include <grpcpp/grpcpp.h>
 #include <utility>
@@ -82,7 +82,7 @@ struct PosetRL : public ModulePass, public PosetRLEnv {
       for (size_t i = 0; i < DefaultFeatureSpec.getElementCount(); i++)
         feature_data.push_back((float_t)(i + 0.5));
 
-      std::string basename = "/home/cs20btech11018/repos/ML-Phase-Ordering/"
+      std::string basename = "/home/cs20btech11024/repos/ML-Phase-Ordering/"
                              "Model/RLLib-PhaseOrder/temppipe";
       std::vector<TensorSpec> Features;
       // std::vector<void*> InputBuffers;
@@ -95,25 +95,33 @@ struct PosetRL : public ModulePass, public PosetRLEnv {
 
       std::cout << "DEBUG1\n" << std::endl;
 
-
+      BaseSerializer::Kind SerializerType;
+      if (data_format == "json")
+        SerializerType = BaseSerializer::Kind::Json;
+      else if (data_format == "protobuf")
+        SerializerType = BaseSerializer::Kind::Protobuf;
+      else if (data_format == "bytes")
+        SerializerType = BaseSerializer::Kind::Bitstream;
+      else {
+        errs() << "Invalid data format\n";
+        exit(1);
+      }
 
       MLRunner = std::make_unique<PipeModelRunner>(
-          M.getContext(), basename + ".out", basename + ".in",
-          BaseSerializer::Kind::Json);
+          M.getContext(), basename + ".out", basename + ".in", SerializerType);
 
       // posetrl::EmbeddingResponse response;
       // posetrl::ActionRequest request;
       // MLRunner->setRequest(&response);
       // MLRunner->setResponse(&request);
-      
 
       errs() << "Using pipe communication...\n";
       if (data_format == "json")
         initPipeCommunication2();
       // else if (data_format == "protobuf")
       //   initPipeCommunication3();
-      // else if (data_format == "bytes")
-      //   initPipeCommunication1();
+      else if (data_format == "bytes")
+        initPipeCommunication1();
       else {
         errs() << "Invalid data format\n";
         exit(1);
@@ -144,31 +152,28 @@ struct PosetRL : public ModulePass, public PosetRLEnv {
 
     return true;
   }
-  // void initPipeCommunication1() {
-  //   errs() << "Entering bitstream pipe communication...\n";
-  //   BitstreamSerializer serializer;
+  void initPipeCommunication1() {
+    errs() << "Entering bitstream pipe communication...\n";
+    std::pair<std::string, std::vector<float>> p1("embedding", getEmbeddings());
+    errs() << "Populating features...\n";
+    MLRunner->populateFeatures(p1);
+    errs() << "Features populated END...\n";
+    // auto out = MLRunner->evaluate<double>();
+    auto out = MLRunner->evaluate<std::map<std::string, vector<int *> *>>();
+    errs() << "out.size() = " << out.size() << "\n";
+    errs() << "Deserialized data: ";
+    llvm::errs() << "{ ";
+    for (auto &it : out) {
+      llvm::errs() << it.first << ": [";
+      for (auto &it2 : *it.second) {
+        llvm::errs() << *it2 << " ";
+      }
+      llvm::errs() << "]\n";
+    }
+    llvm::errs() << "}\n";
 
-  //   int i = 1;
-  //   float f = 1.0f;
-  //   double d = 1.0;
-  //   std::string s = "test";
-  //   bool b = true;
-  //   std::vector<int> v{1, 2, 3};
-  //   serializer.setFeature("test_int", i);
-  //   serializer.setFeature("test_float", f);
-  //   serializer.setFeature("test_double", d);
-  //   serializer.setFeature("test_string", s);
-  //   serializer.setFeature("test_bool", b);
-  //   serializer.setFeature<int>("test_vector", v);
-
-  //   error_code EC;
-  //   raw_fd_ostream pipe("pipe", EC);
-  //   errs() << "Starting serialization...\n";
-  //   pipe << serializer.getSerializedData();
-  //   errs() << "Pipe output: " << serializer.getSerializedData() << "\n";
-  //   pipe.flush();
-  //   pipe.close();
-  // }
+    exit(0);
+  }
 
   void initPipeCommunication2() {
     errs() << "Entering JSON pipe communication...\n";
@@ -340,7 +345,7 @@ struct PosetRL : public ModulePass, public PosetRLEnv {
 
     auto Ir2vec = IR2Vec::Embeddings(
         *M, IR2Vec::IR2VecMode::FlowAware,
-        "/home/cs20btech11018/repos/ML-Phase-Ordering/IR2Vec/vocabulary/"
+        "/home/cs20btech11024/repos/ML-Phase-Ordering/IR2Vec/vocabulary/"
         "seedEmbeddingVocab-300-llvm10.txt");
 
     auto ProgVector = Ir2vec.getProgramVector();

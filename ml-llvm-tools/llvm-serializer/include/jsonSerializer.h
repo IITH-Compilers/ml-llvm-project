@@ -12,8 +12,7 @@ using namespace std;
 
 class JsonSerializer : public BaseSerializer {
 public:
-  JsonSerializer()
-      : BaseSerializer(BaseSerializer::Kind::Json) {
+  JsonSerializer() : BaseSerializer(BaseSerializer::Kind::Json) {
     errs() << "In JsonSerializer constructor...\n";
     errs() << "End JsonSerializer constructor...\n";
   };
@@ -22,11 +21,22 @@ public:
     return S->getKind() == BaseSerializer::Kind::Json;
   }
 
-  void setFeature(std::string, int &) override;
-  void setFeature(std::string, float &) override;
-  void setFeature(std::string, double &) override;
-  void setFeature(std::string, std::string &) override;
-  void setFeature(std::string, bool &) override;
+  void setFeature(std::string name, int &value) override {
+    setFeatureHelper<int>(name, value);
+  };
+  void setFeature(std::string name, float &value) override {
+    errs() << "float val = " << value << "\n";
+    setFeatureHelper<float>(name, value);
+  };
+  void setFeature(std::string name, double &value) override {
+    setFeatureHelper<double>(name, value);
+  };
+  void setFeature(std::string name, std::string &value) override {
+    setFeatureHelper<std::string>(name, value);
+  };
+  void setFeature(std::string name, bool &value) override {
+    setFeatureHelper<bool>(name, value);
+  };
   // void setFeature(std::string, std::vector<float> &) override;
 
   std::string getSerializedData() override {
@@ -40,25 +50,27 @@ public:
     return ret;
   }
 
-  void* deserializeUntyped(std::string data) override;
-
-  // void constructReplyObject(std::string data) override {
-  //   errs() << "In JsonSerializer constructReplyObject...\n";
-  //   Expected<json::Value> valueOrErr = json::parse(data);
-  //   if (!valueOrErr) {
-  //     llvm::errs() << "Error parsing JSON: " << valueOrErr.takeError() << "\n";
-  //     exit(1);
-  //   }
-  //   Reply = valueOrErr->getAsObject();
-  //   CurrValue = new json::Value(std::move(*Reply->get("out")));
-  //   errs() << "End JsonSerializer constructReplyObject...\n";
-  // }
-private:
-  void* desJson(json::Value* V);
+  void *deserializeUntyped(std::string data) override;
 
 private:
-  json::Object* Reply;
-  json::Value* CurrValue;
+  template <class T> void setFeatureHelper(std::string name, T value) {
+    errs() << "In JsonSerializer setFeatureHelper...\n";
+    errs() << "val = " << value << "\n";
+    if (auto X = J.get(name)) {
+      if (X->kind() == json::Value::Kind::Array) {
+        X->getAsArray()->push_back(value);
+      } else {
+        J[name] = json::Array({*X, value});
+      }
+    } else {
+      J[name] = value;
+    }
+  }
+  void *desJson(json::Value *V);
+
+private:
+  json::Object *Reply;
+  json::Value *CurrValue;
   json::Object J;
 };
 
