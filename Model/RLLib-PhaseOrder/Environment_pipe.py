@@ -286,15 +286,13 @@ class PhaseOrder(gym.Env):
           for i in range(tensor_value.__len__()):
               element = tensor_value.__getitem__(i)
               embedding[i] = element
-          print("embedding: ", embedding)
         elif self.data_format == "json":
             print("reading json...")
             line = self.fc.readline()
-            print("line: ", line)
+            # print("line: ", line)
             embedding = json.loads(line)["embedding"]
             assert len(embedding) == 300
             embedding = np.array(embedding)
-        print("Embedding: ", embedding)
         return embedding   
 
     def sendResponse(self, value: Union[int, float]):
@@ -304,11 +302,19 @@ class PhaseOrder(gym.Env):
           """Send the `value` - currently just a scalar - formatted as per `spec`."""
           # just int64 for now
           # assert spec.element_type == ctypes.c_int64
-          to_send = ctypes.c_int64(int(value))
+          # to_send = ctypes.c_int64(int(value))
           # print("to_send", f.write(bytes(to_send)), ctypes.sizeof(spec.element_type) * reduce(operator.mul, spec.shape, 1))
-          f.write(bytes(to_send))
-          f.write(b"\n")
-          # assert f.write(bytes(to_send)) == ctypes.sizeof(spec.element_type) * reduce(operator.mul, spec.shape, 1)
+          # f.write(to_send. + b"\n")
+          # hdr = int(4).to_bytes(length=8, byteorder='little')
+          # f.write(hdr + b'\n')
+
+          hdr = int(4).to_bytes(length=4, byteorder='little')
+          val = int(value)
+          mess = val.to_bytes(length=4, byteorder='little', signed=True)
+          out = hdr + mess
+          f.write(out)
+
+          # # assert f.write(bytes(to_send)) == ctypes.sizeof(spec.element_type) * reduce(operator.mul, spec.shape, 1)
           # assert f.write(bytes(to_send)) == ctypes.sizeof(spec.element_type) * math.prod(
           #     spec.shape
           # )

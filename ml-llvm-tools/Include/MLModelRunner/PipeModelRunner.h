@@ -18,6 +18,8 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
+#include <fstream>
+#include <memory>
 #include <system_error>
 
 namespace llvm {
@@ -55,6 +57,7 @@ public:
 private:
   void send(const std::string &data) override;
   std::string receive() override;
+  std::string readNBytes(size_t N);
   // This must be declared before InEC if we want to initialize it in the
   // ctor initializer list.
   std::string InboundName;
