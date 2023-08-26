@@ -21,7 +21,6 @@ set(LLVM_LINK_COMPONENTS
   Vectorize
   IPO
   PosetRL
-  InferenceEngine
   IR2Vec
   )
 

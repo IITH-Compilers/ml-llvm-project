@@ -9,35 +9,37 @@ using namespace google::protobuf;
 
 class ProtobufSerializer : public BaseSerializer {
 public:
-  ProtobufSerializer(Message *msg) { this->message = msg; };
+  ProtobufSerializer() : BaseSerializer(Kind::Protobuf){};
 
-  void setField(std::string, int) override;
-  void setField(std::string, float) override;
-  void setField(std::string, double) override;
-  void setField(std::string, std::string) override;
-  void setField(std::string, bool) override;
+  void setRequest(void *Request) override;
+  void setResponse(void *Response) override;
+
+  void setFeature(std::string, int&) override;
+  void setFeature(std::string, float&) override;
+  void setFeature(std::string, double&) override;
+  void setFeature(std::string, std::string&) override;
+  void setFeature(std::string, bool &) override;
+
   
   template <class T>
-  void setField(std::string name, std::vector<T> value) {
+  void setFeature(std::string name, std::vector<T> value) {
     for (auto v : value) {
-      addField(name, v);
+      addFeature(name, v);
     }
   }
-  void addField(std::string, int) override;
-  void addField(std::string, float) override;
-  void addField(std::string, double) override;
-  void addField(std::string, std::string) override;
-  void addField(std::string, bool) override;
+  void addFeature(std::string, int&);
+  void addFeature(std::string, float&);
+  void addFeature(std::string, double&);
+  void addFeature(std::string, std::string&);
+  void addFeature(std::string, bool&);
 
-  template <class T>
-  void addField(std::string name, std::vector<T> value) {
-    for (auto v : value) {
-      addField(name, v);
-    }
-  }
+  std::string getSerializedData() override;
+  void *deserializeUntyped(std::string data) override;
 
-  Message* getMessage() { return message; };
+  Message *getMessage() { return Response; };
+  
 private:
-  Message *message;
+  Message *Response;
+  Message *Request;
 };
 #endif

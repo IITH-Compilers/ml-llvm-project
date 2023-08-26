@@ -26,7 +26,8 @@ import argparse
 from argparse import Namespace
 import os
 import shutil
-import utils
+
+# import utils
 import logging
 import time
 
@@ -35,7 +36,7 @@ from ray import tune
 from ray.rllib.agents import ppo
 from ray.rllib.agents import dqn
 from ray.rllib.agents.dqn import DQNTrainer, DEFAULT_CONFIG
-from Environment import PhaseOrder
+from Environment_pipe import PhaseOrder
 from ray.rllib.models import ModelCatalog
 from model import CustomPhaseOrderModel
 from ray.tune.registry import register_env
@@ -43,7 +44,11 @@ from ray.tune.registry import register_env
 from Filesystem import *
 
 logger = logging.getLogger(__file__)
-logging.basicConfig(filename='inference.log', format='%(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
+logging.basicConfig(
+    filename="inference.log",
+    format="%(levelname)s - %(filename)s - %(message)s",
+    level=logging.DEBUG,
+)
 
 import networkx
 from networkx.readwrite import json_graph
@@ -52,22 +57,56 @@ import torch
 import pydot
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--llvm_dir", help = "path to llvm-build directory")
-parser.add_argument("--ir2vec_dir", help = "path to IR2vec directory which has seed embedding and IR2Vec binary files")
-parser.add_argument("--test_dir", help = "Path to test directory")
-parser.add_argument("--model", help = "Path to saved checkpoint")
-parser.add_argument("-a", "--isAArch", required=False, default=False, action='store_true')
+parser.add_argument("--llvm_dir", help="path to llvm-build directory")
+parser.add_argument(
+    "--ir2vec_dir",
+    help="path to IR2vec directory which has seed embedding and IR2Vec binary files",
+)
+parser.add_argument(
+    "--test_dir", help="Path to test directory", required=False, default="./"
+)
+parser.add_argument("--model", help="Path to saved checkpoint")
+parser.add_argument(
+    "-a", "--isAArch", required=False, default=False, action="store_true"
+)
 parser.add_argument("-alpha", "--alpha", required=False, type=float, default=10)
 parser.add_argument("-beta", "--beta", required=False, type=float, default=5)
-parser.add_argument("-size_reward_thresh", "--size_reward_thresh", required=False, type=float, default=0.2)
-parser.add_argument("-mca_reward_thresh", "--mca_reward_thresh", required=False, type=float, default=0.2)
+parser.add_argument(
+    "-size_reward_thresh",
+    "--size_reward_thresh",
+    required=False,
+    type=float,
+    default=0.2,
+)
+parser.add_argument(
+    "-mca_reward_thresh", "--mca_reward_thresh", required=False, type=float, default=0.2
+)
+parser.add_argument(
+    "--use_pipe",
+    action="store_true",
+    help="Use pipe communication",
+    required=False,
+    default=False,
+)
+parser.add_argument("--server_port", type=str, help="Server port")
+parser.add_argument(
+    "--data_format",
+    type=str,
+    choices=["json", "protobuf", "bytes"],
+    help="Data format to use for communication",
+)
 
 
 class PhaseOrderInference:
-    def __init__(self, model_path, llvm_dir, ir2vec_dir):
-        logdir='/tmp'
+    def __init__(self, model_path, llvm_dir, ir2vec_dir, use_pipe=False, data_format="json"):
+        print("use_pipe {}".format(use_pipe))
+        logdir = "/tmp"
         logger = logging.getLogger(__file__)
-        logging.basicConfig(filename='running.log', format='%(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
+        logging.basicConfig(
+            filename="running.log",
+            format="%(levelname)s - %(filename)s - %(message)s",
+            level=logging.DEBUG,
+        )
 
         config = DEFAULT_CONFIG.copy()
 
@@ -86,7 +125,7 @@ class PhaseOrderInference:
                     "custom_model_config": {
                         "state_size": 300,
                         "fc1_units": 64,
-                        "fc2_units": 64
+                        "fc2_units": 64,
                     },
                 },
                 "env_config": {
@@ -103,31 +142,32 @@ class PhaseOrderInference:
                     "size_reward_thresh": args.size_reward_thresh,
                     "mca_reward_thresh": args.mca_reward_thresh,
                     "action_space_size": 34,
+                    "use_pipe": use_pipe,
+                    "data_format": data_format,
                 },
                 "framework": "torch",
                 "explore": False,
                 "num_workers": 0,
                 "train_batch_size": 1,
             },
-            **cfg)
-        
+            **cfg
+        )
+
         def env_creator(env_config):
             return PhaseOrder(env_config)
 
         # Create environment
         register_env("Environment", env_creator)
 
-        self.train_agent= DQNTrainer(env='Environment', config=config)
+        self.train_agent = DQNTrainer(env="Environment", config=config)
 
         checkpoint = model_path
         # Load saved model
         self.train_agent.restore(checkpoint)
 
         self.config = config
-        
-        self.train_agent.export_policy_model("/home/cs20btech11018/repos/ML-Phase-Ordering/Model/RLLib-PhaseOrder/poset-RL-onnx-model", onnx=int(os.getenv("ONNX_OPSET", "11")))
-        
-        
+
+        # self.train_agent.export_policy_model("/home/cs20btech11018/repos/ML-Phase-Ordering/Model/RLLib-PhaseOrder/poset-RL-onnx-model", onnx=int(os.getenv("ONNX_OPSET", "11")))
 
     def dot_to_json(self, dot_):
         py_dot_graph = pydot.graph_from_dot_data(dot_)[0]
@@ -136,42 +176,49 @@ class PhaseOrderInference:
         return graph_json
 
     # Predict best optimization sequence for the given LLVM IR
-    def run_predict(self, test_file):
+    def run_predict(self, test_file=None):
         env = PhaseOrder(self.config["env_config"])
 
         print("test_file {}".format(test_file))
         state = env.reset(test_file)
         score = 0
-        while(True):
-            logging.debug('-^_^-^_^-^_^-^_^-^_^-^_^-^_^-^_^-^_^-^_^-^_^-^_^-^_^-')
-    
+        while True:
+            logging.debug("-^_^-^_^-^_^-^_^-^_^-^_^-^_^-^_^-^_^-^_^-^_^-^_^-^_^-")
+
             action = self.train_agent.compute_action(state)
             print("action {}".format(action))
-            
-            next_state, reward, done, response  = env.step(action)
-    
-            logging.debug('reward : {}'.format(reward))
-            
+
+            next_state, reward, done, response = env.step(action)
+
+            logging.debug("reward : {}".format(reward))
+
             state = next_state
             if done:
-                with open('actionlist.txt', 'a') as actionfile:
+                with open("actionlist.txt", "a") as actionfile:
                     actionfile.write(str(test_file) + "\n")
-                assert response is not None, 'Allocation is not preset.'
+                assert response is not None, "Allocation is not preset."
                 break
-    
+
         return reward, response
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     args = parser.parse_args()
-    logging.info('Start the inference....')
+    logging.info("Start the inference....")
 
     ray.init()
 
-    inference_obj = PhaseOrderInference(args.model, args.llvm_dir, args.ir2vec_dir)
-
-    f = open("timetaken.txt", "w")
-    for file in os.listdir(args.test_dir):
-        start = time.time()
-        reward, response = inference_obj.run_predict(file)
-        end = time.time()
-        f.write("Time taken for {} is {}\n".format(file, end-start))
+    inference_obj = PhaseOrderInference(
+        args.model, args.llvm_dir, args.ir2vec_dir, args.use_pipe, args.data_format
+    )
+    if args.use_pipe:
+        print("about to enter while loop...")
+        while True:
+            reward, response = inference_obj.run_predict()
+    else:
+        f = open("timetaken.txt", "w")
+        for file in os.listdir(args.test_dir):
+            start = time.time()
+            reward, response = inference_obj.run_predict(file)
+            end = time.time()
+            f.write("Time taken for {} is {}\n".format(file, end - start))

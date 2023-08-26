@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 3.13)
 
 # include(AddLLVM)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_BUILD_TYPE RelWithDebInfo)
 
 set(protobuf_MODULE_COMPATIBLE TRUE)
@@ -24,17 +24,16 @@ add_llvm_component_library(LLVMPosetRL posetRL.cpp
 
 LINK_COMPONENTS
 IR2Vec
-InferenceEngine
-gRPC
 Serializer
+MLModelRunner
 
 ADDITIONAL_HEADER_DIRS
 ${LLVM_MAIN_INCLUDE_DIR}/llvm/Transforms
 ${LLVM_MAIN_INCLUDE_DIR}/llvm/Transforms/PosetRL
 
-
 DEPENDS
 intrinsics_gen
+LLVMMLModelRunner
 )
-target_link_libraries(LLVMPosetRL PUBLIC LLVMgRPC)
 target_link_libraries(LLVMPosetRL PUBLIC LLVMSerializer)
+target_link_libraries(LLVMPosetRL PUBLIC LLVMMLModelRunner)

@@ -84,7 +84,7 @@ class PhaseOrder(gym.Env):
         self.grpc_rtt = 0
         self.worker_index = config.worker_index
 
-        print(f"Worker Index: {self.worker_index}")
+#quiet#        print(f"Worker Index: {self.worker_index}")
 
         if self.mode != 'inference':
             self.FileSys_Obj.createFolder("env")
@@ -133,7 +133,7 @@ class PhaseOrder(gym.Env):
 
         # setting current directory to point to the folder for the chosen file
         self.Curr_Dir = self.ENV_Dir + "/" + os.path.splitext(fileName)[0]
-        print("Curr_Dir {}".format(self.Curr_Dir))
+#quiet#        print("Curr_Dir {}".format(self.Curr_Dir))
         logging.info("Curr_Dir {}".format(self.Curr_Dir))
 
         # Creating the folder for the chosen file
@@ -144,7 +144,7 @@ class PhaseOrder(gym.Env):
             self.FileSys_Obj.copyFile(os.path.join(
                 self.FileSys_Obj.TrainingDataPath, fileName), self.Curr_Dir)
         else:
-            print("test_Benchmark {}".format(self.test_Benchmark))
+#quiet#            print("test_Benchmark {}".format(self.test_Benchmark))
             logging.info("test_Benchmark {}".format(self.test_Benchmark))
             self.FileSys_Obj.copyFile(os.path.join(
                 self.test_Benchmark, fileName), self.Curr_Dir)
@@ -171,7 +171,7 @@ class PhaseOrder(gym.Env):
         self.cur_action_mask = [1] * self.action_space_size
 
         if self.mode != 'inference':
-            print("Number of files {}".format(len(self.Obs)))
+#quiet#            print("Number of files {}".format(len(self.Obs)))
             logging.info("Number of files {}".format(len(self.Obs)))
             if (len(self.Obs) >= 1):
                 index = np.random.random_integers(0, len(self.Obs) - 1)
@@ -218,10 +218,10 @@ class PhaseOrder(gym.Env):
             command = self.FileSys_Obj.ClangPath + " " + self.clang_arch_flag + " -c " + \
                 self.Curr_Dir + "/" + fileName + ".ll -o " + \
                 self.Curr_Dir + "/" + "base_binary.o"
-            print("O0 binary object compile command: "+command)
+#quiet#            print("O0 binary object compile command: "+command)
             os.system(command)
             baseBinarySize = os.path.getsize(self.Curr_Dir + "/base_binary.o")
-            print("base {}".format(baseBinarySize))
+#quiet#            print("base {}".format(baseBinarySize))
             logging.info("base {}".format(baseBinarySize))
 
             # Compute Oz Binary size
@@ -243,10 +243,7 @@ class PhaseOrder(gym.Env):
             # Get Oz MCA Throughput
             self.OzMcaThroughtput = self.getMCACost(
                 self.Curr_Dir + "/" + fileName + "_Oz")
-            
-            self.lastMcaThroughtput = None 
-            
-            print("base {}".format(self.OzMcaThroughtput))
+#quiet#            print("base {}".format(self.OzMcaThroughtput))
             logging.info("base {}".format(self.OzMcaThroughtput))
 
             return baseBinarySize, minBinarySize
@@ -262,7 +259,7 @@ class PhaseOrder(gym.Env):
         # self.embedding = self.applyActionGetEmbeddings(action=action_index)
         result = self.stable_grpc("Action", action_index)
         if result is None:
-            print("result is None")
+#quiet#            print("result is None")
             raise
         else:
             self.embedding = result
@@ -279,7 +276,7 @@ class PhaseOrder(gym.Env):
         if self.action_count >= 15:
             done = True
             print("Episode done")
-            print(self.cur_action_seq)
+#quiet#            print(self.cur_action_seq)
             logging.info(self.cur_action_seq)
             if self.mode == 'inference':
                 # Write pass sequence to actionfile
@@ -300,11 +297,11 @@ class PhaseOrder(gym.Env):
             self.action_count = 0
             self.cur_action_seq = []
 
-        print("Reward {}".format(Reward))
+#quiet#        print("Reward {}".format(Reward))
         logging.info("Reward {}".format(Reward))
-        print("Action {}".format(action_index))
+#quiet#        print("Action {}".format(action_index))
         logging.info("Action {}".format(action_index))
-        print("done {}".format(done))
+#quiet#        print("done {}".format(done))
         logging.info("done {}".format(done))
 
         return next_observation, Reward, done, {}
@@ -330,7 +327,7 @@ class PhaseOrder(gym.Env):
                 currMcaThroughtput = float(pair[1].strip(' '))
             line = Output_cmd2.readline()
 
-        print("LLVM-MCA command: {}".format(cmd2))
+#quiet#        print("LLVM-MCA command: {}".format(cmd2))
         logging.info("LLVM-MCA command: {}".format(cmd2))
 
         return currMcaThroughtput
@@ -340,11 +337,11 @@ class PhaseOrder(gym.Env):
         self.StateIndex += 1
         fileName = os.path.splitext(os.path.basename(self.BaseIR))[0]
 
-        print("fileName {}".format(fileName))
+#quiet#        print("fileName {}".format(fileName))
         logging.info("fileName {}".format(fileName))
-        print("StateIndex {}".format(self.StateIndex))
+#quiet#        print("StateIndex {}".format(self.StateIndex))
         logging.info("StateIndex {}".format(self.StateIndex))
-        print("BaseIR {}".format(self.CurrIR))
+#quiet#        print("BaseIR {}".format(self.CurrIR))
         logging.info("BaseIR {}".format(self.CurrIR))
 
         # Modified IR path
@@ -368,9 +365,9 @@ class PhaseOrder(gym.Env):
         # Size reward
         currBinarySize = os.path.getsize(new_file + ".o")
 
-        print("lastBinarySize {}".format(self.lastBinarySize))
+#quiet#        print("lastBinarySize {}".format(self.lastBinarySize))
         logging.info("lastBinarySize {}".format(self.lastBinarySize))
-        print("currBinarySize {}".format(currBinarySize))
+#quiet#        print("currBinarySize {}".format(currBinarySize))
         logging.info("currBinarySize {}".format(currBinarySize))
 
         if ((self.baseBinarySize - self.minBinarySize) > 0):
@@ -384,11 +381,11 @@ class PhaseOrder(gym.Env):
 
         # Throughput reward
         currMcaThroughtput = self.getMCACost(new_file)
-        print("currMcaThroughtput: {}".format(currMcaThroughtput))
+#quiet#        print("currMcaThroughtput: {}".format(currMcaThroughtput))
         logging.info("currMcaThroughtput: {}".format(currMcaThroughtput))
-        print("OzMcaThroughtput: {}".format(self.OzMcaThroughtput))
+#quiet#        print("OzMcaThroughtput: {}".format(self.OzMcaThroughtput))
         logging.info("OzMcaThroughtput: {}".format(self.OzMcaThroughtput))
-        print("lastMcaThroughtput: {}".format(self.lastMcaThroughtput))
+#quiet#        print("lastMcaThroughtput: {}".format(self.lastMcaThroughtput))
         logging.info("lastMcaThroughtput: {}".format(self.lastMcaThroughtput))
 
         if self.lastMcaThroughtput is None:
@@ -441,7 +438,7 @@ class PhaseOrder(gym.Env):
 
         llvmMcaCommand = f"{self.FileSys_Obj.MCAPath} {self.opt_arch_flag} {AssemblyFilePath}"
 
-        print(f"LLVM MCA Command: {llvmMcaCommand}")
+#quiet#        print(f"LLVM MCA Command: {llvmMcaCommand}")
 
         pro = subprocess.Popen(llvmMcaCommand, executable='/bin/bash', shell=True,
                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding='utf8')
@@ -458,11 +455,11 @@ class PhaseOrder(gym.Env):
                 currMcaThroughtput = float(pair[1].strip(' '))
             line = Output_cmd2.readline()
 
-        print("currMcaThroughtput: {}".format(currMcaThroughtput))
+#quiet#        print("currMcaThroughtput: {}".format(currMcaThroughtput))
         logging.info("currMcaThroughtput: {}".format(currMcaThroughtput))
-        print("OzMcaThroughtput: {}".format(self.OzMcaThroughtput))
+#quiet#        print("OzMcaThroughtput: {}".format(self.OzMcaThroughtput))
         logging.info("OzMcaThroughtput: {}".format(self.OzMcaThroughtput))
-        print("lastMcaThroughtput: {}".format(self.lastMcaThroughtput))
+#quiet#        print("lastMcaThroughtput: {}".format(self.lastMcaThroughtput))
         logging.info("lastMcaThroughtput: {}".format(self.lastMcaThroughtput))
 
         if self.lastMcaThroughtput is None:
@@ -501,13 +498,13 @@ class PhaseOrder(gym.Env):
         return config_path
 
     def startServer(self, filename, ip):
-        optPath = "/home/cs20btech11018/repos/ML-Phase-Ordering/build/bin/opt"
-        clangPath = "/home/cs20btech11018/repos/ML-Phase-Ordering/build/bin/clang"
+        optPath = "/home/cs20mtech12003/ML-Phase-Ordering/build_release/bin/opt"
+        clangPath = "/home/cs20mtech12003/ML-Phase-Ordering/build_release/bin/clang"
         filepath = self.train_Dir + "/" + filename
         newfilepath = self.assembly_file_path
 
         cmd = f"{clangPath} -S -mllvm --OPosetRL -mllvm --training -mllvm --server_address={ip} {filepath}  -o {newfilepath}"
-        print("Server starting command: "+cmd)
+#quiet#        print("Server starting command: "+cmd)
         pid = subprocess.Popen(cmd, executable='/bin/bash',
                                shell=True, preexec_fn=os.setsid)
         # pid = os.system(cmd)
@@ -537,14 +534,14 @@ class PhaseOrder(gym.Env):
         result = None
         while True:
             try:
-                print("LLVM grpc called")
+#quiet#                print("LLVM grpc called")
                 t1 = time.time()
                 if op != "Exit":
                     result = self.applyActionGetEmbeddings(action=action)
                 else:
                     result = self.stopServer()
                 t2 = time.time()
-                print("LLVM grpc response came in {} sec".format(t2 - t1))
+#quiet#                print("LLVM grpc response came in {} sec".format(t2 - t1))
                 self.grpc_rtt += t2-t1
                 # time.sleep(.1)
                 break
@@ -557,7 +554,7 @@ class PhaseOrder(gym.Env):
                     # raise
                     attempt += 1
                     if attempt > max_retries:
-                        print("Maximum attempts completed")
+#quiet#                        print("Maximum attempts completed")
                         return None
                         # raise #ServiceTransportError( f"{self.url} {e.details()} ({max_retries} retries)") from None
                     remaining = max_retries - attempt
