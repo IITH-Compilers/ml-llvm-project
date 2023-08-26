@@ -66,7 +66,7 @@ class PhaseOrder(gym.Env):
         self.rename_Dir = False
         self.FileSys_Obj = fsystem(config["llvm_dir"], config["ir2vec_dir"])
         self.FileSys_Obj.createFolder("env")
-        self.temporaryDirectory = '/home/cs20btech11024/tmp'
+        self.temporaryDirectory = tempfile.gettempdir()
 
         self.clang_arch_flag = "-mcpu=cortex-a72" if config["target"] == "AArch64" else ""
         self.opt_arch_flag = "--mcpu=cortex-a72" if config["target"] == "AArch64" else ""

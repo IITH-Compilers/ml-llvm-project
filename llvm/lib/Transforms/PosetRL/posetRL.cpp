@@ -69,7 +69,8 @@ static cl::opt<std::string> server_address(
 
 namespace {
 struct PosetRL : public ModulePass,
-                 public PosetRLEnv {
+                 public PosetRLEnv,
+                 public posetRL::PosetRL::Service {
   static char ID;
   PosetRL() : ModulePass(ID) {}
   bool runOnModule(Module &M) override {
@@ -139,12 +140,12 @@ struct PosetRL : public ModulePass,
 
     } else {
       if (training) {
-        // MLRunner = std::make_unique<gRPCModelRunner<
-        //     posetRL::PosetRL::Service, posetRL::PosetRL::Stub,
-        //     posetRL::EmbeddingResponse, posetRL::ActionRequest>>(
-        //     M.getContext(), server_address, this);
-        errs() << "To be Implemented\n";
-        exit(0);
+        MLRunner = std::make_unique<gRPCModelRunner<
+            posetRL::PosetRL::Service, posetRL::PosetRL::Stub,
+            posetRL::EmbeddingResponse, posetRL::ActionRequest>>(
+            M.getContext(), server_address, this);
+        // errs() << "To be Implemented\n";
+        // exit(0);
 
       } else {
         errs() << "Onnx model runner...\n";
