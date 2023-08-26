@@ -32,8 +32,8 @@ from google.protobuf.json_format import MessageToJson
 import json
 
 import grpc
-import example_pb2_grpc
-import example_pb2
+sys.path.append('/home/cs20mtech12003/ML-Phase-Ordering/ml-llvm-tools/MLModelRunner/gRPCModelRunner/Python-Utilities')
+import posetRL_pb2_grpc, posetRL_pb2
 from google.protobuf.empty_pb2 import Empty
 # pipe related imports
 from typing import Callable, List, Union, Optional
@@ -136,7 +136,9 @@ class PhaseOrder(gym.Env):
             if os.path.exists(from_compiler):
                 os.remove(from_compiler)
             os.mkfifo(to_compiler, 0o666)
-            os.mkfifo(from_compiler, 0o666)    
+            os.mkfifo(from_compiler, 0o666) 
+            
+        self.use_grpc = config["use_grpc"]   
 
     def make(self, TrainingPath):
         self.FileSys_Obj.generateTrainingData(TrainingPath)
@@ -189,7 +191,7 @@ class PhaseOrder(gym.Env):
         self.CurrIR = os.path.join(self.Curr_Dir, fileName)
         self.prev_action = None
 
-    def reset(self, test_file=None):
+    def reset(self, test_file=None, embedding=None):
         self.BaseIR = None
         self.CurrIR = None
         self.Curr_Dir = None
@@ -211,7 +213,7 @@ class PhaseOrder(gym.Env):
                     self.Obs[index], "127.0.0.1:50051")
                 self.channel = grpc.insecure_channel(
                     '{}:{}'.format("127.0.0.1", "50051"))
-                self.stub = example_pb2_grpc.PosetRLStub(self.channel)                                                
+                self.stub = posetRL_pb2_grpc.PosetRLStub(self.channel)                                                
                 
                 self.createEnv(self.Obs[index])
                 self.doneList.append(self.Obs[index])
@@ -223,12 +225,13 @@ class PhaseOrder(gym.Env):
                 self.rename_Dir = True
 
         else:
-            if not self.use_pipe:
+            if not self.use_pipe and not self.use_grpc:
                 self.Obs = test_file
                 logging.info("test_file {}".format(test_file))
                 index = np.random.random_integers(0, len(self.Obs) - 1)
                 logging.info("Obs {}".format(index))
                 self.createEnv(test_file)
+                            
 
         # Opening pipe files
         if self.use_pipe:
@@ -250,12 +253,13 @@ class PhaseOrder(gym.Env):
             if result is None:
     #quiet#            print("result is None")
                 raise
-            # else:
-            #     self.embedding = np.empty([300])
-            #     for i in range(result[0].__len__()):
-            #         element = result[0].__getitem__(i)
-            #         self.embedding[i] = element
-            self.embedding = result
+            else:
+                self.embedding = np.empty([300])
+                for i in range(result.__len__()):
+                    element = result.__getitem__(i)
+                    self.embedding[i] = element
+        elif self.mode == 'inference' and self.use_grpc:
+            self.embedding = np.array(embedding)
         else:
             self.embedding = self.getEmbedding(self.BaseIR)
 
@@ -280,7 +284,6 @@ class PhaseOrder(gym.Env):
           for i in range(tensor_value.__len__()):
               element = tensor_value.__getitem__(i)
               embedding[i] = element
-          print("embedding: ", embedding)
         elif self.data_format == "json":
             # print("reading json...")
             line = self.fc.readline()
@@ -297,11 +300,19 @@ class PhaseOrder(gym.Env):
           """Send the `value` - currently just a scalar - formatted as per `spec`."""
           # just int64 for now
           # assert spec.element_type == ctypes.c_int64
-          to_send = ctypes.c_int64(int(value))
+          # to_send = ctypes.c_int64(int(value))
           # print("to_send", f.write(bytes(to_send)), ctypes.sizeof(spec.element_type) * reduce(operator.mul, spec.shape, 1))
-          f.write(bytes(to_send))
-          f.write(b"\n")
-          # assert f.write(bytes(to_send)) == ctypes.sizeof(spec.element_type) * reduce(operator.mul, spec.shape, 1)
+          # f.write(to_send. + b"\n")
+          # hdr = int(4).to_bytes(length=8, byteorder='little')
+          # f.write(hdr + b'\n')
+
+          hdr = int(4).to_bytes(length=4, byteorder='little')
+          val = int(value)
+          mess = val.to_bytes(length=4, byteorder='little', signed=True)
+          out = hdr + mess
+          f.write(out)
+
+          # # assert f.write(bytes(to_send)) == ctypes.sizeof(spec.element_type) * reduce(operator.mul, spec.shape, 1)
           # assert f.write(bytes(to_send)) == ctypes.sizeof(spec.element_type) * math.prod(
           #     spec.shape
           # )
@@ -364,25 +375,26 @@ class PhaseOrder(gym.Env):
         # self.embedding = self.applyActionGetEmbeddings(action=action_index)
         
         # make call to compiler to get the updated embedding
-        if self.use_pipe:
-            self.sendResponse(action_index)
-            print("Called from step")
-            result = self.readObservation()
+        if self.mode == 'inference' and self.use_grpc:
+            pass
         else:
-            result = self.stable_grpc("Action", action_index) # LLVMgRPC way
-        
-        if result is None:
-#quiet#            print("result is None")
-            raise
-        # else:
-        #     if self.use_pipe:
-        #         self.embedding = np.empty([300])
-        #         for i in range(result[0].__len__()):
-        #             element = result[0].__getitem__(i)
-        #             self.embedding[i] = element
-        #     else:
-        #         self.embedding = result    
-        self.embedding = result                
+            if self.use_pipe:
+                self.sendResponse(action_index)
+                result = self.readObservation()
+            else:
+                result = self.stable_grpc("Action", action_index) # LLVMgRPC way
+            
+            if result is None:
+    #quiet#            print("result is None")
+                raise       
+            else:
+                if self.use_pipe:
+                    self.embedding = np.empty([300])
+                    for i in range(result.__len__()):
+                        element = result.__getitem__(i)
+                        self.embedding[i] = element
+                else:
+                    self.embedding = result                    
         # self.embedding = self.getEmbedding(NextStateIR)
         # self.CurrIR = NextStateIR
         self.cur_action_mask[action_index] = 0
@@ -395,7 +407,7 @@ class PhaseOrder(gym.Env):
         # Max number of actions (optimaztions sub-sequences) to be applied
         if self.action_count >= 15:
             done = True
-            print("Episode done")
+            # print("Episode done")
 #quiet#            print(self.cur_action_seq)
             logging.info(self.cur_action_seq)
             if self.mode == 'inference':
@@ -649,12 +661,12 @@ class PhaseOrder(gym.Env):
         return np.array(array)
 
     def applyActionGetEmbeddings(self, action):
-        request = example_pb2.ActionRequest(action=action)
+        request = posetRL_pb2.ActionRequest(action=action)
         response = self.stub.applyActionGetEmbeddings(request)
         return self.repeatedgRPCFieldToNumpyArray(response)
 
     def stopServer(self):
-        request = example_pb2.ActionRequest(action=-1)
+        request = posetRL_pb2.ActionRequest(action=-1)
         self.stub.applyActionGetEmbeddings(request)
 
     def stable_grpc(self, op, action):

@@ -51,7 +51,12 @@ public:
   }
 
   // void *getStub() { return stub_; }
-  void requestExit() override { exit_requested->set_value(); }
+  void requestExit() override {
+    errs() << "Exit from grpc\n";
+    exit_requested->set_value();
+  }
+  
+  std::promise<void> *exit_requested;
 
   // void *evaluateUntyped() override {
   //   if (server_mode)
@@ -85,7 +90,6 @@ private:
   Request *request;
   Response *response;
   bool server_mode;
-  std::promise<void> *exit_requested;
 
   int RunService(grpc::Service *s) {
     exit_requested = new std::promise<void>();

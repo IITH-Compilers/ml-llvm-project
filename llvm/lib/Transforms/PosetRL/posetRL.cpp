@@ -57,6 +57,10 @@ static cl::opt<bool>
 cl::opt<std::string> data_format(
     "data-format", cl::Hidden, cl::init("protobuf"),
     cl::desc("Data format to use for communication with python model"));
+static cl::opt<bool>
+    useONNX("use-onnx", cl::Hidden,
+            cl::desc("Use ONNX for inferencing model"),
+            cl::init(false));
 
 static cl::opt<std::string> server_address(
     "server_address", cl::Hidden,
@@ -64,7 +68,9 @@ static cl::opt<std::string> server_address(
     cl::init("0.0.0.0:50051"));
 
 namespace {
-struct PosetRL : public ModulePass, public PosetRLEnv, public posetrl::PosetRL::Service {
+struct PosetRL : public ModulePass,
+                 public PosetRLEnv,
+                 public posetRL::PosetRL::Service {
   static char ID;
   PosetRL() : ModulePass(ID) {}
   bool runOnModule(Module &M) override {
@@ -135,8 +141,8 @@ struct PosetRL : public ModulePass, public PosetRLEnv, public posetrl::PosetRL::
     } else {
       if (training) {
         MLRunner = std::make_unique<gRPCModelRunner<
-            posetrl::PosetRL::Service, posetrl::PosetRL::Stub,
-            posetrl::EmbeddingResponse, posetrl::ActionRequest>>(
+            posetRL::PosetRL::Service, posetRL::PosetRL::Stub,
+            posetRL::EmbeddingResponse, posetRL::ActionRequest>>(
             M.getContext(), server_address, this);
       } else {
         // Agent agent("/home/cs20btech11018/repos/ML-Phase-Ordering/Model/"
@@ -159,25 +165,17 @@ struct PosetRL : public ModulePass, public PosetRLEnv, public posetrl::PosetRL::
   }
   void initPipeCommunication1() {
     errs() << "Entering bitstream pipe communication...\n";
-    std::pair<std::string, std::vector<float>> p1("embedding", getEmbeddings());
-    errs() << "Populating features...\n";
-    MLRunner->populateFeatures(p1);
-    errs() << "Features populated END...\n";
-    // auto out = MLRunner->evaluate<double>();
-    auto out = MLRunner->evaluate<int>();
-    // errs() << "out.size() = " << out.size() << "\n";
-    // errs() << "Deserialized data: ";
-    // llvm::errs() << "{ ";
-    // for (auto &it : out) {
-    //   llvm::errs() << it.first << ": [";
-    //   for (auto &it2 : *it.second) {
-    //     llvm::errs() << *it2 << " ";
-    //   }
-    //   llvm::errs() << "]\n";
-    // }
-    // llvm::errs() << "}\n";
+    int passSequence = 0;
+    while (passSequence != -1) {
+      std::pair<std::string, std::vector<float>> p1("embedding", getEmbeddings());
+      // errs() << "Populating features...\n";
+      MLRunner->populateFeatures(p1);
 
-    // exit(0);
+      int res = MLRunner->evaluate<int>();
+      processMLAdvice(res);
+      passSequence = res;
+    }
+    errs() << "Episode completed\n";
   }
 
   void initPipeCommunication2() {
@@ -195,80 +193,7 @@ struct PosetRL : public ModulePass, public PosetRLEnv, public posetrl::PosetRL::
         break;
       processMLAdvice(out);
     }
-    // errs() << "out.size() = " << out.size() << "\n";
-    // errs() << "Deserialized data: ";
-    // llvm::errs() << "{ ";
-    // for (auto &it : out) {
-    //   llvm::errs() << it.first << ": [";
-    //   for (auto &it2 : *it.second) {
-    //     llvm::errs() << *it2 << " ";
-    //   }
-    //   llvm::errs() << "]\n";
-    // }
-    // llvm::errs() << "}\n";
-
-    // exit(0);
-    // errs() << "Entering JSON pipe communication...\n";
-    // JsonSerializer serializer;
-
-    // int i = 1;
-    // float f = 1.0f;
-    // double d = 1.0;
-    // std::string s = "test";
-    // bool b = true;
-    // std::vector<int> v{1, 2, 3};
-    // serializer.setFeature("test_int", i);
-    // serializer.setFeature("test_float", f);
-    // serializer.setFeature("test_double", d);
-    // serializer.setFeature("test_string", s);
-    // serializer.setFeature("test_bool", b);
-    // serializer.setFeature<int>("test_vector", v);
-
-    // error_code EC;
-    // raw_fd_ostream pipe("pipe", EC);
-    // errs() << "Starting serialization...\n";
-    // pipe << serializer.getSerializedData();
-    // pipe.flush();
-    // pipe.close();
-
-    // // open the pipe for reading and deserialize the data using deserialize
-    // // function
-    // std::string line;
-    // std::ifstream Infile;
-    // Infile.open("pipe");
-    // if (Infile.is_open()) {
-    //   while (std::getline(Infile, line)) {
-    //     errs() << "line: " << line << "\n";
-    //     if (line.size() > 0) {
-    //       break;
-    //     }
-    //   }
-    //   Infile.close();
-    // } else {
-    //   errs() << "Unable to open file\n";
-    // }
-    // errs() << "Starting deserialization...\n";
-    // auto obj = MLRunner->evaluate<std::string>();
-    // // print the deserialized data
-    // errs() << "Printing Deserialized data:\n";
-    // for (auto &it : obj) {
-    //   errs() << it.first << ": ";
-    //   if (it.second.kind() == json::Value::Number) {
-    //     errs() << it.second.getAsNumber().value() << "\n";
-    //   } else if (it.second.kind() == json::Value::String) {
-    //     errs() << it.second.getAsString().value() << "\n";
-    //   } else if (it.second.kind() == json::Value::Boolean) {
-    //     errs() << it.second.getAsBoolean().value() << "\n";
-    //   } else if (it.second.kind() == json::Value::Array) {
-    //     errs() << "[";
-    //     auto arr = it.second.getAsArray();
-    //     for (auto it2 = arr->begin(); it2 != arr->end(); it2++) {
-    //       errs() << it2->getAsNumber().value() << " ";
-    //     }
-    //     errs() << "]\n";
-    //   }
-    // }
-    // exit(0);
+ 
   }
 
   // void initPipeCommunication3() {
@@ -302,6 +227,20 @@ struct PosetRL : public ModulePass, public PosetRLEnv, public posetrl::PosetRL::
     errs() << "Runner result: " << advice << '\n';
     applySeq(advice);
   }
+
+  // void grpcCommunication() {
+
+  //   auto request = new posetRL::EmbeddingResponse();
+  //   auto response = new posetRL::ActionRequest();
+
+  //   MLRunner = std::make_unique<gRPCModelRunner<
+  //     posetRL::PosetRL, posetRL::PosetRL::Stub,
+  //     posetRL::EmbeddingResponse, posetRL::ActionRequest>>(
+  //     M->getContext(), server_address, request, response);
+
+  //   auto reply = MLRunner->evaluate<posetRL::ActionRequest>();
+  //   processMLAdvice(reply.action());
+  // }
 
   void initPipeCommunication() {
     const char *const DecisionName = "advisor_decision";
@@ -391,12 +330,15 @@ struct PosetRL : public ModulePass, public PosetRLEnv, public posetrl::PosetRL::
 
   grpc::Status
   applyActionGetEmbeddings(grpc::ServerContext *context,
-                           const ::posetrl::ActionRequest *request,
-                           ::posetrl::EmbeddingResponse *response) {
+                           const ::posetRL::ActionRequest *request,
+                           ::posetRL::EmbeddingResponse *response) {
     errs() << "Action requested: " << request->action() << "\n";
     if (request->action() == -1) {
-      errs() << "server exit requested\n";
-      MLRunner->requestExit();
+      errs() << "Before: server exit requested\n";
+      // MLRunner->requestExit();
+      // MLRunner->exit_requested->set_value();
+      errs() << "After: server exit requested\n";
+
       return grpc::Status::OK;
     }
 
@@ -411,7 +353,7 @@ struct PosetRL : public ModulePass, public PosetRLEnv, public posetrl::PosetRL::
   }
   ::grpc::Status getEmbedding(::grpc::ServerContext *context,
                               const ::google::protobuf::Empty *request,
-                              ::posetrl::EmbeddingResponse *response) {
+                              ::posetRL::EmbeddingResponse *response) {
     Embedding emb = getEmbeddings();
 
     for (unsigned long i = 0; i < emb.size(); i++) {

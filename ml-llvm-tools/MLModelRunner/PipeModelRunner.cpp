@@ -14,7 +14,11 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cstddef>
+#include <cstring>
 #include <fstream>
+#include <iostream>
+#include <string>
 
 using namespace llvm;
 
@@ -28,7 +32,7 @@ PipeModelRunner::PipeModelRunner(LLVMContext &Ctx, StringRef OutboundName,
                                  BaseSerializer::Kind SerializerType)
     : MLModelRunner(Ctx, Kind::Pipe, SerializerType),
       InEC(sys::fs::openFileForRead(InboundName, Inbound)) {
-        this->InboundName = InboundName.str();
+  this->InboundName = InboundName.str();
   if (InEC) {
     Ctx.emitError("Cannot open inbound file: " + InEC.message());
     return;
@@ -50,68 +54,54 @@ PipeModelRunner::~PipeModelRunner() {
   OutStream->close();
 }
 
-void PipeModelRunner::send(const std::string& data) {
-  errs() << "PipeModelRunner::sending..." << "\n";
+void PipeModelRunner::send(const std::string &data) {
+  // errs() << "PipeModelRunner::sending..."
+  //  << "\n";
   OutStream->write(data.data(), data.size());
   OutStream->write("\n", 1);
   OutStream->flush();
-  errs() << "PipeModelRunner::flushed..." << "\n";
+  // errs() << "PipeModelRunner::flushed..."
+  //  << "\n";
 }
 
-std::string PipeModelRunner::receive() {
-  errs() << "PipeModelRunner::receiving..." << "\n";
-  std::string Buffer;
-  int count = 0;
-  auto SerializerKind = getSerializerKind();
-  if(SerializerKind == BaseSerializer::Kind::Json){
-    count = 1;
-  } else if(SerializerKind == BaseSerializer::Kind::Bitstream){
-    count = 2;
-  }
-  int current = 0;
-  while (true) {
-    char C;
+std::string PipeModelRunner::readNBytes(size_t N) {
+  std::string OutputBuffer(N, '\0');
+  char *Buff = OutputBuffer.data();
+  size_t InsPoint = 0;
+  const size_t Limit = N;
+  while (InsPoint < Limit) {
     auto ReadOrErr = ::sys::fs::readNativeFile(
-        sys::fs::convertFDToNativeFile(Inbound), {&C, 1});
+        sys::fs::convertFDToNativeFile(Inbound),
+        {Buff + InsPoint, OutputBuffer.size() - InsPoint});
     if (ReadOrErr.takeError()) {
       Ctx.emitError("Failed reading from inbound file");
       break;
     }
-    if (C == '\n')
-      current++;
-    if (current == count)
-      break;
-    Buffer += C;
+    InsPoint += *ReadOrErr;
   }
-  errs() << "PipeModelRunner::received..."
-         << "\n";
-  return Buffer;
+  return OutputBuffer;
 }
 
-// void *PipeModelRunner::evaluateUntyped() {
-//   Log->startObservation();
-//   for (size_t I = 0; I < InputSpecs.size(); ++I)
-//     Log->logTensorValue(I, reinterpret_cast<const char
-//     *>(getTensorUntyped(I)));
-//   Log->endObservation();
-//   Log->flush();
+std::string PipeModelRunner::receive() {
+  // Read header
+  auto hdr = readNBytes(4);
+  // for(int i=0; i<hdr.size(); i++){
+  //   errs() << int(hdr[i]) << " ";
+  // }
+  // errs() << "\n";
+  int MessageLength = 0;
+  memcpy(&MessageLength, hdr.data(), sizeof(MessageLength));
+  // errs() << "PipeModelRunner::receive: MessageLength = " << MessageLength <<
+  // "\n";
 
-//   size_t InsPoint = 0;
-//   char *Buff = OutputBuffer.data();
-//   const size_t Limit = OutputBuffer.size();
-//   while (InsPoint < Limit) {
-//     auto ReadOrErr = ::sys::fs::readNativeFile(
-//         sys::fs::convertFDToNativeFile(Inbound),
-//         {Buff + InsPoint, OutputBuffer.size() - InsPoint});
-//     if (ReadOrErr.takeError()) {
-//       Ctx.emitError("Failed reading from inbound file");
-//       break;
-//     }
-//     InsPoint += *ReadOrErr;
-//   }
-//   if (DebugReply)
-//     dbgs() << OutputSpec.name() << ": "
-//            << tensorValueToString(OutputBuffer.data(), OutputSpec) << "\n";
-//   return OutputBuffer.data();
-//   // return tensorValueToString(OutputBuffer.data(), OutputSpec);
-// }
+  // Read message
+  auto OutputBuffer = readNBytes(MessageLength);
+  // errs() << "PipeModelRunner::receive: OutputBuffer.size() = " <<
+  // OutputBuffer.size() << "\n";
+
+  // for(int i=0; i<OutputBuffer.size(); i++){
+  //   errs() << int(OutputBuffer[i]) << " ";
+  // }
+  // errs() << "\n";
+  return OutputBuffer;
+}

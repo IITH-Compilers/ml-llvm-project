@@ -1,4 +1,5 @@
 #include "bitstreamSerializer.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/raw_ostream.h"
@@ -18,8 +19,6 @@ void BitstreamSerializer::setFeature(std::string name, int &value) {
 }
 
 void BitstreamSerializer::setFeature(std::string name, float &value) {
-  f.push_back(value);
-  errs() << "In BitstreamSerializer setFeature of float...\n";
   auto it = featureNames.find(name);
   if (it == featureNames.end()) {
     float *newData = new float(value);
@@ -42,10 +41,8 @@ void BitstreamSerializer::setFeature(std::string name, float &value) {
       newData->push_back(value);
       tensorSpecs[Index].setShape({static_cast<long>(newData->size())});
       rawData[Index] = newData->data();
-      errs() << "newData->size() = " << newData->size() << "\n";
     }
   }
-  errs() << "tensorSpecs.size() = " << tensorSpecs.size() << "\n";
 }
 
 void BitstreamSerializer::setFeature(std::string name, double &value) {
@@ -65,7 +62,7 @@ void BitstreamSerializer::setFeature(std::string name, bool &value) {
 }
 
 std::string BitstreamSerializer::getSerializedData() {
-  errs() << "In BitstreamSerializer getSerializedData...\n";
+  // errs() << "In BitstreamSerializer getSerializedData...\n";
   std::unique_ptr<raw_ostream> OS =
       std::make_unique<raw_string_ostream>(Buffer);
   json::OStream J(*OS);
@@ -78,70 +75,16 @@ std::string BitstreamSerializer::getSerializedData() {
   });
   OS->write("\n", 1);
   J.flush();
-  errs() << "Buffer = " << Buffer << "\n";
   for (size_t I = 0; I < rawData.size(); ++I) {
     OS->write(reinterpret_cast<const char *>(rawData[I]),
               tensorSpecs[I].getTotalTensorBufferSize());
   }
   OS->flush();
-  return Buffer;
+  std::string out = Buffer;
+  cleanDataStructures();
+  return out;
 }
 
 void *BitstreamSerializer::deserializeUntyped(std::string data) {
-  string hdr = data.substr(0, data.find("\n"));
-  Expected<json::Value> json = json::parse(hdr);
-  if (!json) {
-    llvm::errs() << "Error parsing JSON header: " << toString(json.takeError())
-                 << "\n";
-    return nullptr;
-  }
-  json::Object *obj = json->getAsObject();
-  if (!obj) {
-    llvm::errs() << "Error parsing JSON header: not an object\n";
-    return nullptr;
-  }
-  json::Array *features = obj->getArray("features");
-  if (!features) {
-    llvm::errs() << "Error parsing JSON header: no features array\n";
-    return nullptr;
-  }
-  // assuming only one feature
-  const json::Object *v = ((*features)[0]).getAsObject();
-  if (!v) {
-    llvm::errs() << "Error parsing JSON header: feature is not an object\n";
-    return nullptr;
-  }
-  std::optional<StringRef> type = v->getString("type");
-  if (!type) {
-    llvm::errs() << "Error parsing JSON header: feature has no type\n";
-    return nullptr;
-  }
-
-  int start_index = data.find("\n") + 1;
-  if (type == "int") {
-    int i = stoi(data.substr(start_index, sizeof(int)));
-    int *ptr = new int(i);
-    return ptr;
-  }
-  if (type == "float") {
-    float f = stof(data.substr(start_index, sizeof(float)));
-    float *ptr = new float(f);
-    return ptr;
-  }
-  if (type == "double") {
-    double d = stod(data.substr(start_index, sizeof(double)));
-    double *ptr = new double(d);
-    return ptr;
-  }
-  if (type == "string") {
-    std::string s = data.substr(start_index);
-    std::string *ptr = new std::string(s);
-    return ptr;
-  }
-  if (type == "bool") {
-    bool b = data.substr(start_index, sizeof(bool)) == "1";
-    bool *ptr = new bool(b);
-    return ptr;
-  }
-  llvm_unreachable("unimplemented container types");
+  return data.data();
 }
