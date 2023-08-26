@@ -12,6 +12,7 @@
 
 #include "serializer/baseSerializer.h"
 #include "serializer/jsonSerializer.h"
+#include "serializer/bitstreamSerializer.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
@@ -53,6 +54,7 @@ public:
     TFAOT
   };
   Kind getKind() const { return Type; }
+  BaseSerializer::Kind getSerializerKind() const { return SerializerType; }
 
   virtual void requestExit() = 0;
 
@@ -80,6 +82,9 @@ protected:
     switch (SerializerType) {
     case BaseSerializer::Kind::Json:
       Serializer = std::make_unique<JsonSerializer>();
+      break;
+    case BaseSerializer::Kind::Bitstream:
+      Serializer = std::make_unique<BitstreamSerializer>();
       break;
     }
     errs() << "End MLModelRunner constructor...\n";

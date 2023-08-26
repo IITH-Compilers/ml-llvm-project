@@ -11,6 +11,7 @@ add_llvm_library(LLVMSerializer
 ${CMAKE_CURRENT_SOURCE_DIR}/src/protobufSerializer.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/src/TensorSpec.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/src/jsonSerializer.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/src/bitstreamSerializer.cpp
 )
 
 set_property(TARGET LLVMSerializer PROPERTY CXX_STANDARD 17)
@@ -21,6 +22,7 @@ add_custom_command(
   TARGET LLVMSerializer POST_BUILD 
   COMMAND ${CMAKE_COMMAND} -E copy 
  ${CMAKE_CURRENT_SOURCE_DIR}/include/*.h ${LLVM_INCLUDE_DIR}/serializer)
+
 
 target_link_libraries(LLVMSerializer PUBLIC protobuf::libprotobuf)
 target_include_directories(LLVMSerializer PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)

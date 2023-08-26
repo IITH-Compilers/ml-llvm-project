@@ -40,9 +40,9 @@ public:
     return *reinterpret_cast<T *>(deserializeUntyped(data));
   }
 
-  virtual void *deserializeUntyped(std::string data) = 0;
 
 protected:
+  virtual void *deserializeUntyped(std::string data) = 0;
   BaseSerializer(Kind Type) : Type(Type) {
     llvm::errs() << "In BaseSerializer constructor...\n";
     assert(Type != Kind::Unknown);

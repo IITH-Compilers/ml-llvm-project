@@ -15,12 +15,12 @@
 
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/Transforms/TensorSpec.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/TensorSpec.h"
 #include <array>
 #include <cassert>
 #include <numeric>
@@ -49,12 +49,17 @@ StringRef toString(TensorType TT) {
 
 void TensorSpec::toJSON(json::OStream &OS) const {
   OS.object([&]() {
+    errs() << "name: " << name() << "\n";
+    errs() << "type: " << toString(type()) << "\n";
+
     OS.attribute("name", name());
     OS.attribute("type", toString(type()));
     OS.attribute("port", port());
     OS.attributeArray("shape", [&]() {
-      for (size_t D : shape())
+      for (size_t D : shape()) {
+        errs() << "D: " << D << "\n";
         OS.value(static_cast<int64_t>(D));
+      }
     });
   });
 }

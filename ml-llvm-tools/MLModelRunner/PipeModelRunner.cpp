@@ -14,6 +14,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
+#include <fstream>
 
 using namespace llvm;
 
@@ -23,9 +24,11 @@ static cl::opt<bool> DebugReply(
              "the data received from the host (for debugging purposes)."));
 
 PipeModelRunner::PipeModelRunner(LLVMContext &Ctx, StringRef OutboundName,
-                                 StringRef InboundName, BaseSerializer::Kind SerializerType)
+                                 StringRef InboundName,
+                                 BaseSerializer::Kind SerializerType)
     : MLModelRunner(Ctx, Kind::Pipe, SerializerType),
       InEC(sys::fs::openFileForRead(InboundName, Inbound)) {
+        this->InboundName = InboundName.str();
   if (InEC) {
     Ctx.emitError("Cannot open inbound file: " + InEC.message());
     return;
@@ -37,30 +40,35 @@ PipeModelRunner::PipeModelRunner(LLVMContext &Ctx, StringRef OutboundName,
       return;
     }
   }
-
 }
 
 PipeModelRunner::~PipeModelRunner() {
-  //close the file descriptors
+  // close the file descriptors
   sys::fs::file_t FDAsOSHandle = sys::fs::convertFDToNativeFile(Inbound);
   sys::fs::closeFile(FDAsOSHandle);
 
   OutStream->close();
-
 }
 
 void PipeModelRunner::send(const std::string& data) {
-  // errs() << "PipeModelRunner::sending..." << "\n";
+  errs() << "PipeModelRunner::sending..." << "\n";
   OutStream->write(data.data(), data.size());
   OutStream->write("\n", 1);
   OutStream->flush();
-  // errs() << "PipeModelRunner::flushed..." << "\n";
+  errs() << "PipeModelRunner::flushed..." << "\n";
 }
 
 std::string PipeModelRunner::receive() {
-  // errs() << "PipeModelRunner::receiving..." << "\n";
+  errs() << "PipeModelRunner::receiving..." << "\n";
   std::string Buffer;
-  uint count = 0;
+  int count = 0;
+  auto SerializerKind = getSerializerKind();
+  if(SerializerKind == BaseSerializer::Kind::Json){
+    count = 1;
+  } else if(SerializerKind == BaseSerializer::Kind::Bitstream){
+    count = 2;
+  }
+  int current = 0;
   while (true) {
     char C;
     auto ReadOrErr = ::sys::fs::readNativeFile(
@@ -70,13 +78,13 @@ std::string PipeModelRunner::receive() {
       break;
     }
     if (C == '\n')
+      current++;
+    if (current == count)
       break;
-    //   count++;
-    // if (count == 2)
-    //   break;
     Buffer += C;
   }
-  errs() << "PipeModelRunner::received..." << "\n";
+  errs() << "PipeModelRunner::received..."
+         << "\n";
   return Buffer;
 }
 

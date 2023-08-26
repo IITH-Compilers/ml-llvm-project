@@ -34,11 +34,11 @@ public:
   void addFeature(std::string, bool&);
 
   std::string getSerializedData() override;
-  void *deserializeUntyped(std::string data) override;
 
   Message *getMessage() { return Response; };
   
 private:
+  void *deserializeUntyped(std::string data) override;
   Message *Response;
   Message *Request;
 };

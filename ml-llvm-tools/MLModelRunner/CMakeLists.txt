@@ -79,7 +79,7 @@ LINK_LIBS
 ${MLLinkDeps}
 LLVMMLModelRunnerUtils
 LLVMgRPCModelRunner
-LLVMONNXModelRunner
+# LLVMONNXModelRunner
 
 )
 

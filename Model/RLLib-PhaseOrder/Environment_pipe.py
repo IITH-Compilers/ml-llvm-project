@@ -243,7 +243,7 @@ class PhaseOrder(gym.Env):
             if self.data_format == "bytes":
               self.tensor_specs, _, self.advice_spec = log_reader.read_header(self.fc)
               print("Tensor and Advice spec", self.tensor_specs, self.advice_spec)          
-
+            print("Called from reset")
             result = self.readObservation()
 
             # print("Returned obs value is", result[0]._view)
@@ -271,24 +271,16 @@ class PhaseOrder(gym.Env):
         #     break
         embedding = None
         if self.data_format == "bytes":
-          next_event = self.fc.readline()
-          context = None
-          last_context, observation_id, features,_ = log_reader.read_one_observation(
-              context, next_event, self.fc, self.tensor_specs, None
-          )
-          if last_context != context:
-              print(f"context: {last_context}")
-          context = last_context
-          # print(f"observation: {observation_id}")
-          tensor_values = []
-          for fv in features:
-              # log_reader.pretty_print_tensor_value(fv)
-              tensor_values.append(fv)
+          # next_event = self.fc.readline()
+          # print(next_event)
+          
+          tensor_value = log_reader.read_tensor(self.fc, self.tensor_specs[0])
           
           embedding = np.empty([300])
-          for i in range(tensor_values[0].__len__()):
-              element = tensor_values[0].__getitem__(i)
+          for i in range(tensor_value.__len__()):
+              element = tensor_value.__getitem__(i)
               embedding[i] = element
+          print("embedding: ", embedding)
         elif self.data_format == "json":
             # print("reading json...")
             line = self.fc.readline()
@@ -304,10 +296,12 @@ class PhaseOrder(gym.Env):
           spec: log_reader.TensorSpec = self.advice_spec
           """Send the `value` - currently just a scalar - formatted as per `spec`."""
           # just int64 for now
-          assert spec.element_type == ctypes.c_int64
+          # assert spec.element_type == ctypes.c_int64
           to_send = ctypes.c_int64(int(value))
           # print("to_send", f.write(bytes(to_send)), ctypes.sizeof(spec.element_type) * reduce(operator.mul, spec.shape, 1))
-          assert f.write(bytes(to_send)) == ctypes.sizeof(spec.element_type) * reduce(operator.mul, spec.shape, 1)
+          f.write(bytes(to_send))
+          f.write(b"\n")
+          # assert f.write(bytes(to_send)) == ctypes.sizeof(spec.element_type) * reduce(operator.mul, spec.shape, 1)
           # assert f.write(bytes(to_send)) == ctypes.sizeof(spec.element_type) * math.prod(
           #     spec.shape
           # )
@@ -317,6 +311,7 @@ class PhaseOrder(gym.Env):
             f.write(b"\n")
 
         f.flush()
+        print("flushed !!!!")
                 
     
     def getBinarySize(self, IRFile, init=False):
@@ -371,6 +366,7 @@ class PhaseOrder(gym.Env):
         # make call to compiler to get the updated embedding
         if self.use_pipe:
             self.sendResponse(action_index)
+            print("Called from step")
             result = self.readObservation()
         else:
             result = self.stable_grpc("Action", action_index) # LLVMgRPC way

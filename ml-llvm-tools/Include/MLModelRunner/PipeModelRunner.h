@@ -57,6 +57,7 @@ private:
   std::string receive() override;
   // This must be declared before InEC if we want to initialize it in the
   // ctor initializer list.
+  std::string InboundName;
   int Inbound = -1;
   std::error_code OutEC;
   std::error_code InEC;
