@@ -11,8 +11,8 @@
 #define LLVM_MLMODELRUNNER_H
 
 #include "serializer/baseSerializer.h"
-#include "serializer/jsonSerializer.h"
 #include "serializer/bitstreamSerializer.h"
+#include "serializer/jsonSerializer.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
@@ -30,16 +30,17 @@ public:
   virtual ~MLModelRunner() = default;
 
   template <typename T> T evaluate() {
+    if (!Serializer)
+    {
+      evaluateUntyped();
+      return T();
+    }
     std::string data = Serializer->getSerializedData();
     send(data);
     std::string reply = receive();
     return Serializer->deserialize<T>(reply);
   }
 
-  std::string get() {
-    std::string ret = "{\"name\": \"test\"}";
-    return ret;
-  }
   //   enum class Kind : int { Unknown, Release, Development, NoOp, Interactive
   //   };
   enum class Kind : int {
@@ -58,24 +59,23 @@ public:
   virtual void requestExit() = 0;
   std::promise<void> *exit_requested;
 
-  template<typename T, typename... Types>
-  void populateFeatures(std::pair<std::string, T> &var1, std::pair<std::string, Types> &...var2) {
+  template <typename T, typename... Types>
+  void populateFeatures(std::pair<std::string, T> &var1,
+                        std::pair<std::string, Types> &...var2) {
     Serializer->setFeature(var1.first, var1.second);
     populateFeatures(var2...);
   }
 
   void populateFeatures() {}
 
-  void setRequest(void *request) {
-    Serializer->setRequest(request);
-  }
+  void setRequest(void *request) { Serializer->setRequest(request); }
 
-  void setResponse(void *response) {
-    Serializer->setResponse(response);
-  }
+  void setResponse(void *response) { Serializer->setResponse(response); }
 
 protected:
-  MLModelRunner(LLVMContext &Ctx, Kind Type, BaseSerializer::Kind SerializerType) : Ctx(Ctx), Type(Type), SerializerType(SerializerType) {
+  MLModelRunner(LLVMContext &Ctx, Kind Type,
+                BaseSerializer::Kind SerializerType)
+      : Ctx(Ctx), Type(Type), SerializerType(SerializerType) {
     assert(Type != Kind::Unknown);
     errs() << "In MLModelRunner constructor...\n";
     // Serializer = std::make_unique<JsonSerializer>();
@@ -89,8 +89,14 @@ protected:
     }
     errs() << "End MLModelRunner constructor...\n";
   }
+  MLModelRunner(LLVMContext &Ctx, Kind Type)
+      : Ctx(Ctx), Type(Type), SerializerType(BaseSerializer::Kind::Unknown) {
+    Serializer = nullptr;
+  };
+
   virtual void send(const std::string &) = 0;
   virtual std::string receive() = 0;
+  virtual void *evaluateUntyped() { return nullptr; }
 
   LLVMContext &Ctx;
   const Kind Type;

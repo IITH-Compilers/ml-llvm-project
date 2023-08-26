@@ -37,3 +37,4 @@ LLVMMLModelRunner
 )
 target_link_libraries(LLVMPosetRL PUBLIC LLVMSerializer)
 target_link_libraries(LLVMPosetRL PUBLIC LLVMMLModelRunner)
+target_link_libraries(LLVMPosetRL PUBLIC LLVMONNXModelRunner)

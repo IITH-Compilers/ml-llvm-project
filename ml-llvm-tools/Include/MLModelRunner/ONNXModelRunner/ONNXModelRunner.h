@@ -21,13 +21,17 @@ namespace llvm {
 class ONNXModelRunner : public MLModelRunner {
 public:
   ONNXModelRunner(LLVMContext &Ctx, Environment *env,
-                  std::map<std::string, Agent *> agents, BaseSerializer::Kind SerializerType);
+                  std::map<std::string, Agent *> agents);
   void setEnvironment(Environment *_env) { env = _env; }
   Environment *getEnvironment() { return env; }
   void addAgent(Agent *agent, std::string name);
   void computeAction(Observation obs);
 
   void requestExit() override {}
+
+  void send(const std::string &) override{};
+  std::string receive() override { return ""; };
+  void *evaluateUntyped() override;
 
 private:
   Environment *env;

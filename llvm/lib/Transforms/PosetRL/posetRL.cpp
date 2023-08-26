@@ -67,8 +67,7 @@ static cl::opt<std::string> server_address(
 
 namespace {
 struct PosetRL : public ModulePass,
-                 public PosetRLEnv,
-                 public posetRL::PosetRL::Service {
+                 public PosetRLEnv {
   static char ID;
   PosetRL() : ModulePass(ID) {}
   bool runOnModule(Module &M) override {
@@ -134,26 +133,29 @@ struct PosetRL : public ModulePass,
       }
 
     } else {
-      // if (training) {
-      //   MLRunner = std::make_unique<gRPCModelRunner<
-      //       posetrl::PosetRL::Service, posetrl::PosetRL::Stub,
-      //       posetrl::EmbeddingResponse, posetrl::ActionRequest>>(
-      //       M.getContext(), server_address, this);
-      // } else {
-      //   Agent agent("/home/cs20btech11018/repos/ML-Phase-Ordering/Model/"
-      //               "RLLib-PhaseOrder/poset-RL-onnx-model/model.onnx",
-      //               ActionMaskSize + EmbeddingSize);
-      //   std::map<std::string, Agent *> agents;
-      //   agents["agent"] = &agent;
-      //   MLRunner =
-      //       std::make_unique<ONNXModelRunner>(M.getContext(), this, agents);
-      //   // runInference();
-      //   MLRunner->evaluate<int64_t>();
-      //   errs() << "Sequence: ";
-      //   for (auto a : Sequence)
-      //     errs() << a << " ";
-      //   errs() << "\n";
-      // }
+      if (training) {
+        // MLRunner = std::make_unique<gRPCModelRunner<
+        //     posetrl::PosetRL::Service, posetrl::PosetRL::Stub,
+        //     posetrl::EmbeddingResponse, posetrl::ActionRequest>>(
+        //     M.getContext(), server_address, this);
+        errs() << "TO BE IMPLEMENTED\n";
+        exit(0);
+      } else {
+        errs() << "Onnx model runner...\n";
+        Agent agent("/home/cs20btech11024/repos/ML-Phase-Ordering/Model/"
+                    "RLLib-PhaseOrder/poset-RL-onnx-model/model.onnx",
+                    ActionMaskSize + EmbeddingSize);
+        std::map<std::string, Agent *> agents;
+        agents["agent"] = &agent;
+        MLRunner =
+            std::make_unique<ONNXModelRunner>(M.getContext(), this, agents);
+        // runInference();
+        MLRunner->evaluate<int64_t>();
+        errs() << "Sequence: ";
+        for (auto a : Sequence)
+          errs() << a << " ";
+        errs() << "\n";
+      }
     }
 
     return true;
