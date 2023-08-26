@@ -55,6 +55,10 @@ static cl::opt<bool>
 cl::opt<std::string> data_format(
     "data-format", cl::Hidden, cl::init("protobuf"),
     cl::desc("Data format to use for communication with python model"));
+static cl::opt<bool>
+    useONNX("use-onnx", cl::Hidden,
+            cl::desc("Use ONNX for inferencing model"),
+            cl::init(false));
 
 static cl::opt<std::string> server_address(
     "server_address", cl::Hidden,
@@ -62,7 +66,9 @@ static cl::opt<std::string> server_address(
     cl::init("0.0.0.0:50051"));
 
 namespace {
-struct PosetRL : public ModulePass, public PosetRLEnv {
+struct PosetRL : public ModulePass,
+                 public PosetRLEnv,
+                 public posetRL::PosetRL::Service {
   static char ID;
   PosetRL() : ModulePass(ID) {}
   bool runOnModule(Module &M) override {
@@ -292,6 +298,20 @@ struct PosetRL : public ModulePass, public PosetRLEnv {
     applySeq(advice);
   }
 
+  // void grpcCommunication() {
+
+  //   auto request = new posetRL::EmbeddingResponse();
+  //   auto response = new posetRL::ActionRequest();
+
+  //   MLRunner = std::make_unique<gRPCModelRunner<
+  //     posetRL::PosetRL, posetRL::PosetRL::Stub,
+  //     posetRL::EmbeddingResponse, posetRL::ActionRequest>>(
+  //     M->getContext(), server_address, request, response);
+
+  //   auto reply = MLRunner->evaluate<posetRL::ActionRequest>();
+  //   processMLAdvice(reply.action());
+  // }
+
   void initPipeCommunication() {
     const char *const DecisionName = "advisor_decision";
     const TensorSpec DecisionSpec =
@@ -381,12 +401,15 @@ struct PosetRL : public ModulePass, public PosetRLEnv {
 
   grpc::Status
   applyActionGetEmbeddings(grpc::ServerContext *context,
-                           const ::posetrl::ActionRequest *request,
-                           ::posetrl::EmbeddingResponse *response) {
+                           const ::posetRL::ActionRequest *request,
+                           ::posetRL::EmbeddingResponse *response) {
     errs() << "Action requested: " << request->action() << "\n";
     if (request->action() == -1) {
-      errs() << "server exit requested\n";
-      MLRunner->requestExit();
+      errs() << "Before: server exit requested\n";
+      // MLRunner->requestExit();
+      // MLRunner->exit_requested->set_value();
+      errs() << "After: server exit requested\n";
+
       return grpc::Status::OK;
     }
 
@@ -401,7 +424,7 @@ struct PosetRL : public ModulePass, public PosetRLEnv {
   }
   ::grpc::Status getEmbedding(::grpc::ServerContext *context,
                               const ::google::protobuf::Empty *request,
-                              ::posetrl::EmbeddingResponse *response) {
+                              ::posetRL::EmbeddingResponse *response) {
     Embedding emb = getEmbeddings();
 
     for (unsigned long i = 0; i < emb.size(); i++) {

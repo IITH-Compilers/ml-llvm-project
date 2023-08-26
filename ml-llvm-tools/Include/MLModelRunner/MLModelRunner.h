@@ -17,6 +17,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
 #include <string>
+#include <future>
 
 namespace llvm {
 class LLVMContext;
@@ -57,6 +58,7 @@ public:
   BaseSerializer::Kind getSerializerKind() const { return SerializerType; }
 
   virtual void requestExit() = 0;
+  std::promise<void> *exit_requested;
 
   template<typename T, typename... Types>
   void populateFeatures(std::pair<std::string, T> &var1, std::pair<std::string, Types> &...var2) {
