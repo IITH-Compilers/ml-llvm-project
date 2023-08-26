@@ -15,6 +15,7 @@ public:
   JsonSerializer() : BaseSerializer(BaseSerializer::Kind::Json) {
     errs() << "In JsonSerializer constructor...\n";
     errs() << "End JsonSerializer constructor...\n";
+    f = std::vector<float>();
   };
 
   static bool classof(const BaseSerializer *S) {
@@ -25,7 +26,8 @@ public:
     setFeatureHelper<int>(name, value);
   };
   void setFeature(std::string name, float &value) override {
-    errs() << "float val = " << value << "\n";
+    // errs() << "float val = " << value << "\n";
+    f.push_back(value);
     setFeatureHelper<float>(name, value);
   };
   void setFeature(std::string name, double &value) override {
@@ -45,25 +47,32 @@ public:
     std::string ret;
     llvm::raw_string_ostream OS(ret);
     json::OStream(OS).value(data);
-    OS << "\n";
-    J.clear();
-    errs() << "data = " << ret << "\n";
+    // errs() << "data = " << ret << "\n";
+    // errs() << "f.size() = " << f.size() << "\n";
+    // for(auto &v : f) {
+    //   errs() << v << " ";
+    // }
+    // errs() << "\n";
+    cleanDataStructures();
     return ret;
   }
 
   void cleanDataStructures() override {
     errs() << "In JsonSerializer cleanDataStructures...\n";
     J = json::Object();
+    f = std::vector<float>();
   }
 
 private:
   void *deserializeUntyped(std::string data) override;
   template <class T> void setFeatureHelper(std::string name, T value) {
-    errs() << "In JsonSerializer setFeatureHelper...\n";
-    errs() << "val = " << value << "\n";
+    // errs() << "In JsonSerializer setFeatureHelper...\n";
+    // errs() << "val = " << value << "\n";
     if (auto X = J.get(name)) {
       if (X->kind() == json::Value::Kind::Array) {
         X->getAsArray()->push_back(value);
+        // errs() << "X->getAsArray()->size() = " << X->getAsArray()->size()
+              //  << "\n";
       } else {
         J[name] = json::Array({*X, value});
       }
@@ -77,6 +86,7 @@ private:
   json::Object *Reply;
   json::Value *CurrValue;
   json::Object J;
+  std::vector<float> f;
 };
 
 #endif

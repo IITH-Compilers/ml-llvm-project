@@ -66,7 +66,7 @@ class PhaseOrder(gym.Env):
         self.rename_Dir = False
         self.FileSys_Obj = fsystem(config["llvm_dir"], config["ir2vec_dir"])
         self.FileSys_Obj.createFolder("env")
-        self.temporaryDirectory = tempfile.gettempdir()
+        self.temporaryDirectory = '/home/cs20btech11024/tmp'
 
         self.clang_arch_flag = "-mcpu=cortex-a72" if config["target"] == "AArch64" else ""
         self.opt_arch_flag = "--mcpu=cortex-a72" if config["target"] == "AArch64" else ""
@@ -126,8 +126,10 @@ class PhaseOrder(gym.Env):
         self.temp_rootname = "temppipe"
         to_compiler = self.temp_rootname + ".in"
         from_compiler = self.temp_rootname + ".out"
+        self.from_compiler = from_compiler
         self.tc = None
         self.fc = None
+        self.read_stream_iter = None
         self.tensor_specs = None
         self.advice_spec =  None
         if self.use_pipe:
@@ -242,11 +244,8 @@ class PhaseOrder(gym.Env):
             print("Opened the write pipe")
             self.fc = io.BufferedReader(io.FileIO(from_compiler, "rb"))
             print("Opened the read pipe")
+                      
 
-            if self.data_format == "bytes":
-              self.tensor_specs, _, self.advice_spec = log_reader.read_header(self.fc)
-              print("Tensor and Advice spec", self.tensor_specs, self.advice_spec)          
-            print("Called from reset")
             result = self.readObservation()
 
             # print("Returned obs value is", result[0]._view)
@@ -254,10 +253,7 @@ class PhaseOrder(gym.Env):
     #quiet#            print("result is None")
                 raise
             else:
-                self.embedding = np.empty([300])
-                for i in range(result.__len__()):
-                    element = result.__getitem__(i)
-                    self.embedding[i] = element
+                self.embedding = result
         elif self.mode == 'inference' and self.use_grpc:
             self.embedding = np.array(embedding)
         else:
@@ -275,22 +271,36 @@ class PhaseOrder(gym.Env):
         #     break
         embedding = None
         if self.data_format == "bytes":
+            if self.read_stream_iter is None:
+                self.read_stream_iter = log_reader.read_stream2(self.from_compiler)
+            context, observation_id, features, score = next(self.read_stream_iter)
+            embedding = np.empty([300])
+            for i in range(len(features[0])):
+                embedding[i] = features[0][i]
+            # print("embedding: ", embedding)
+            # print(type(embedding))
+                # exit(0)
           # next_event = self.fc.readline()
           # print(next_event)
+          # self.fc.readline()
+          # self.tensor_specs, _, self.advice_spec = log_reader.read_header(self.fc)
+
+          # print("Tensor and Advice spec", self.tensor_specs, self.advice_spec)  
+
+          # tensor_value = log_reader.read_tensor(self.fc, self.tensor_specs[0])
           
-          tensor_value = log_reader.read_tensor(self.fc, self.tensor_specs[0])
-          
-          embedding = np.empty([300])
-          for i in range(tensor_value.__len__()):
-              element = tensor_value.__getitem__(i)
-              embedding[i] = element
+          # embedding = np.empty([300])
+          # for i in range(tensor_value.__len__()):
+          #     element = tensor_value.__getitem__(i)
+          #     embedding[i] = element
+
         elif self.data_format == "json":
             # print("reading json...")
             line = self.fc.readline()
-            raw = self.fc.readline() # Reading the extra new line charactor 
             embedding = json.loads(line)["embedding"]
             assert len(embedding) == 300
             embedding = np.array(embedding)
+        # print(embedding)
         return embedding   
 
     def sendResponse(self, value: Union[int, float]):
@@ -308,8 +318,8 @@ class PhaseOrder(gym.Env):
 
           hdr = int(4).to_bytes(length=4, byteorder='little')
           val = int(value)
-          mess = val.to_bytes(length=4, byteorder='little', signed=True)
-          out = hdr + mess
+          message = val.to_bytes(length=4, byteorder='little', signed=True)
+          out = hdr + message
           f.write(out)
 
           # # assert f.write(bytes(to_send)) == ctypes.sizeof(spec.element_type) * reduce(operator.mul, spec.shape, 1)
@@ -318,8 +328,11 @@ class PhaseOrder(gym.Env):
           # )
         elif self.data_format == "json":
             f: io.BufferedWriter = self.tc
-            f.write(json.dumps({"out": int(value)}).encode("utf-8"))
-            f.write(b"\n")
+            message = json.dumps({"out": int(value)}).encode("utf-8")
+            print("message: ", message)
+            hdr = int(len(message)).to_bytes(length=4, byteorder='little')
+            out = hdr + message
+            f.write(out)
 
         f.flush()
         print("flushed !!!!")
@@ -385,16 +398,10 @@ class PhaseOrder(gym.Env):
                 result = self.stable_grpc("Action", action_index) # LLVMgRPC way
             
             if result is None:
-    #quiet#            print("result is None")
-                raise       
+                raise Exception("result is None")
             else:
                 if self.use_pipe:
-                    self.embedding = np.empty([300])
-                    for i in range(result.__len__()):
-                        element = result.__getitem__(i)
-                        self.embedding[i] = element
-                else:
-                    self.embedding = result                    
+                    self.embedding = result                   
         # self.embedding = self.getEmbedding(NextStateIR)
         # self.CurrIR = NextStateIR
         self.cur_action_mask[action_index] = 0

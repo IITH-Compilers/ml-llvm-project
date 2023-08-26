@@ -31,11 +31,11 @@ public:
   std::string getSerializedData() override;
   void cleanDataStructures() override {
     errs() << "In BitstreamSerializer cleanDataStructures...\n";
-    tensorSpecs.clear();
-    rawData.clear();
-    featureNames.clear();
-    featureNamesSet.clear();
     Buffer = "";
+    tensorSpecs = vector<TensorSpec>();
+    rawData = vector<void *>();
+    featureNames = std::map<std::string, std::pair<unsigned, void*>>();
+    featureNamesSet = std::set<std::string>();
   }
 
 private:

@@ -69,8 +69,7 @@ static cl::opt<std::string> server_address(
 
 namespace {
 struct PosetRL : public ModulePass,
-                 public PosetRLEnv,
-                 public posetRL::PosetRL::Service {
+                 public PosetRLEnv {
   static char ID;
   PosetRL() : ModulePass(ID) {}
   bool runOnModule(Module &M) override {
@@ -140,24 +139,28 @@ struct PosetRL : public ModulePass,
 
     } else {
       if (training) {
-        MLRunner = std::make_unique<gRPCModelRunner<
-            posetRL::PosetRL::Service, posetRL::PosetRL::Stub,
-            posetRL::EmbeddingResponse, posetRL::ActionRequest>>(
-            M.getContext(), server_address, this);
+        // MLRunner = std::make_unique<gRPCModelRunner<
+        //     posetRL::PosetRL::Service, posetRL::PosetRL::Stub,
+        //     posetRL::EmbeddingResponse, posetRL::ActionRequest>>(
+        //     M.getContext(), server_address, this);
+        errs() << "To be Implemented\n";
+        exit(0);
+
       } else {
-        // Agent agent("/home/cs20btech11018/repos/ML-Phase-Ordering/Model/"
-        //             "RLLib-PhaseOrder/poset-RL-onnx-model/model.onnx",
-        //             ActionMaskSize + EmbeddingSize);
-        // std::map<std::string, Agent *> agents;
-        // agents["agent"] = &agent;
-        // MLRunner =
-        //     std::make_unique<ONNXModelRunner>(M.getContext(), this, agents);
-        // // runInference();
-        // MLRunner->evaluate<int64_t>();
-        // errs() << "Sequence: ";
-        // for (auto a : Sequence)
-        //   errs() << a << " ";
-        // errs() << "\n";
+        errs() << "Onnx model runner...\n";
+        Agent agent("/home/cs20mtech12003/ml-llvm-project/Model/"
+                    "RLLib-PhaseOrder/poset-RL-onnx-model/model.onnx",
+                    ActionMaskSize + EmbeddingSize);
+        std::map<std::string, Agent *> agents;
+        agents["agent"] = &agent;
+        MLRunner =
+            std::make_unique<ONNXModelRunner>(M.getContext(), this, agents);
+        // runInference();
+        MLRunner->evaluate<int64_t>();
+        errs() << "Sequence: ";
+        for (auto a : Sequence)
+          errs() << a << " ";
+        errs() << "\n";
       }
     }
 
