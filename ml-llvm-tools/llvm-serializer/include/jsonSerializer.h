@@ -50,9 +50,13 @@ public:
     return ret;
   }
 
-  void *deserializeUntyped(std::string data) override;
+  void cleanDataStructures() override {
+    errs() << "In JsonSerializer cleanDataStructures...\n";
+    J = json::Object();
+  }
 
 private:
+  void *deserializeUntyped(std::string data) override;
   template <class T> void setFeatureHelper(std::string name, T value) {
     errs() << "In JsonSerializer setFeatureHelper...\n";
     errs() << "val = " << value << "\n";

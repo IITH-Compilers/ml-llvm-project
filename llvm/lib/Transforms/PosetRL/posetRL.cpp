@@ -154,110 +154,35 @@ struct PosetRL : public ModulePass, public PosetRLEnv {
   }
   void initPipeCommunication1() {
     errs() << "Entering bitstream pipe communication...\n";
-    std::pair<std::string, std::vector<float>> p1("embedding", getEmbeddings());
-    errs() << "Populating features...\n";
-    MLRunner->populateFeatures(p1);
-    errs() << "Features populated END...\n";
-    // auto out = MLRunner->evaluate<double>();
-    auto out = MLRunner->evaluate<std::map<std::string, vector<int *> *>>();
-    errs() << "out.size() = " << out.size() << "\n";
-    errs() << "Deserialized data: ";
-    llvm::errs() << "{ ";
-    for (auto &it : out) {
-      llvm::errs() << it.first << ": [";
-      for (auto &it2 : *it.second) {
-        llvm::errs() << *it2 << " ";
-      }
-      llvm::errs() << "]\n";
-    }
-    llvm::errs() << "}\n";
+    int passSequence = 0;
+    while (passSequence != -1) {
+      std::pair<std::string, std::vector<float>> p1("embedding", getEmbeddings());
+      // errs() << "Populating features...\n";
+      MLRunner->populateFeatures(p1);
 
-    exit(0);
+      int res = static_cast<int>(MLRunner->evaluate<int64_t>());
+      processMLAdvice(res);
+      passSequence = res;
+    }
+    errs() << "Episode completed\n";
   }
 
   void initPipeCommunication2() {
     errs() << "Entering JSON pipe communication...\n";
 
-    std::pair<std::string, std::vector<float>> p1("embedding", getEmbeddings());
-    errs() << "Populating features...\n";
-    MLRunner->populateFeatures(p1);
     errs() << "Features populated END...\n";
     // auto out = MLRunner->evaluate<double>();
-    auto out = MLRunner->evaluate<std::map<std::string, vector<int *> *>>();
-    errs() << "out.size() = " << out.size() << "\n";
-    errs() << "Deserialized data: ";
-    llvm::errs() << "{ ";
-    for (auto &it : out) {
-      llvm::errs() << it.first << ": [";
-      for (auto &it2 : *it.second) {
-        llvm::errs() << *it2 << " ";
-      }
-      llvm::errs() << "]\n";
+    int passSequence = 0;
+    while (passSequence != -1) {
+      std::pair<std::string, std::vector<float>> p1("embedding", getEmbeddings());
+      errs() << "Populating features...\n";
+      MLRunner->populateFeatures(p1);
+
+      int res = static_cast<int>(MLRunner->evaluate<int64_t>());
+      processMLAdvice(res);
+      passSequence = res;
     }
-    llvm::errs() << "}\n";
-
-    exit(0);
-    // errs() << "Entering JSON pipe communication...\n";
-    // JsonSerializer serializer;
-
-    // int i = 1;
-    // float f = 1.0f;
-    // double d = 1.0;
-    // std::string s = "test";
-    // bool b = true;
-    // std::vector<int> v{1, 2, 3};
-    // serializer.setFeature("test_int", i);
-    // serializer.setFeature("test_float", f);
-    // serializer.setFeature("test_double", d);
-    // serializer.setFeature("test_string", s);
-    // serializer.setFeature("test_bool", b);
-    // serializer.setFeature<int>("test_vector", v);
-
-    // error_code EC;
-    // raw_fd_ostream pipe("pipe", EC);
-    // errs() << "Starting serialization...\n";
-    // pipe << serializer.getSerializedData();
-    // pipe.flush();
-    // pipe.close();
-
-    // // open the pipe for reading and deserialize the data using deserialize
-    // // function
-    // std::string line;
-    // std::ifstream Infile;
-    // Infile.open("pipe");
-    // if (Infile.is_open()) {
-    //   while (std::getline(Infile, line)) {
-    //     errs() << "line: " << line << "\n";
-    //     if (line.size() > 0) {
-    //       break;
-    //     }
-    //   }
-    //   Infile.close();
-    // } else {
-    //   errs() << "Unable to open file\n";
-    // }
-    // errs() << "Starting deserialization...\n";
-    // auto obj = MLRunner->evaluate<std::string>();
-    // // print the deserialized data
-    // errs() << "Printing Deserialized data:\n";
-    // for (auto &it : obj) {
-    //   errs() << it.first << ": ";
-    //   if (it.second.kind() == json::Value::Number) {
-    //     errs() << it.second.getAsNumber().value() << "\n";
-    //   } else if (it.second.kind() == json::Value::String) {
-    //     errs() << it.second.getAsString().value() << "\n";
-    //   } else if (it.second.kind() == json::Value::Boolean) {
-    //     errs() << it.second.getAsBoolean().value() << "\n";
-    //   } else if (it.second.kind() == json::Value::Array) {
-    //     errs() << "[";
-    //     auto arr = it.second.getAsArray();
-    //     for (auto it2 = arr->begin(); it2 != arr->end(); it2++) {
-    //       errs() << it2->getAsNumber().value() << " ";
-    //     }
-    //     errs() << "]\n";
-    //   }
-    // }
-    // exit(0);
+    errs() << "Episode completed\n";
   }
 
   // void initPipeCommunication3() {

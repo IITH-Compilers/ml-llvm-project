@@ -49,17 +49,12 @@ StringRef toString(TensorType TT) {
 
 void TensorSpec::toJSON(json::OStream &OS) const {
   OS.object([&]() {
-    errs() << "name: " << name() << "\n";
-    errs() << "type: " << toString(type()) << "\n";
-
     OS.attribute("name", name());
     OS.attribute("type", toString(type()));
     OS.attribute("port", port());
     OS.attributeArray("shape", [&]() {
-      for (size_t D : shape()) {
-        errs() << "D: " << D << "\n";
+      for (size_t D : shape())
         OS.value(static_cast<int64_t>(D));
-      }
     });
   });
 }

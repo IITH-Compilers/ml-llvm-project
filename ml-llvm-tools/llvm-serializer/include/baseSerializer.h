@@ -48,6 +48,7 @@ protected:
     assert(Type != Kind::Unknown);
     llvm::errs() << "End BaseSerializer constructor...\n";
   }
+  virtual void cleanDataStructures() = 0;
   const Kind Type;
 
   void *RequestVoid;

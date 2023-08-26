@@ -30,10 +30,8 @@ public:
 
   template <typename T> T evaluate() {
     std::string data = Serializer->getSerializedData();
-    errs() << "Data: " << data << "\n";
     send(data);
     std::string reply = receive();
-    errs() << "Reply: " << reply << "\n";
     return Serializer->deserialize<T>(reply);
   }
 
