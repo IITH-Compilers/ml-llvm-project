@@ -24,9 +24,8 @@ add_custom_command(
   COMMAND ${CMAKE_COMMAND} -E copy 
  ${CMAKE_CURRENT_SOURCE_DIR}/include/*.h ${LLVM_INCLUDE_DIR}/serializer)
 
+
 target_link_libraries(LLVMSerializer PUBLIC protobuf::libprotobuf)
 target_include_directories(LLVMSerializer PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-
-
 target_include_directories(LLVMSerializer PUBLIC ${PROTOBUF_INCLUDE_DIRS})
 

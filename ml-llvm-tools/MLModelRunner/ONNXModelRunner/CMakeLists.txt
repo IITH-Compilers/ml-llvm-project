@@ -1,7 +1,7 @@
-# cmake_minimum_required(VERSION 3.16)
-# project(llvm-inference-engine C CXX)
+cmake_minimum_required(VERSION 3.16)
+project(llvm-inference-engine C CXX)
 
-# set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -DORT_NO_EXCEPTIONS")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra")
 
@@ -60,4 +60,4 @@ target_link_libraries(LLVMONNXModelRunner PUBLIC onnxruntime LLVMSerializer)
 #   COMMAND ${CMAKE_COMMAND} -E copy 
 #  ${CMAKE_CURRENT_SOURCE_DIR}/Include/*.h ${LLVM_INCLUDE_DIR}/MLInferenceEngine)
 
-# target_include_directories(ONNXModelRunner PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/Include)
+# target_include_directories(LLVMONNXModelRunner PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/Include)

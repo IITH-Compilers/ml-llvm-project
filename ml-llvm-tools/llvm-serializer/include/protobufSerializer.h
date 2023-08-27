@@ -18,22 +18,22 @@ public:
   void setRequest(void *Request) override;
   void setResponse(void *Response) override;
 
-  void setFeature(std::string, int&) override;
-  void setFeature(std::string, float&) override;
-  void setFeature(std::string, double&) override;
-  void setFeature(std::string, std::string&) override;
+  void setFeature(std::string, int &) override;
+  void setFeature(std::string, float &) override;
+  void setFeature(std::string, double &) override;
+  void setFeature(std::string, std::string &) override;
   void setFeature(std::string, bool &) override;
   void setFeature(std::string, std::vector<int> &) override;
   void setFeature(std::string, std::vector<float> &) override;
   void setFeature(std::string, std::vector<double> &) override;
   void setFeature(std::string, std::vector<std::string> &) override;
   void setFeature(std::string, std::vector<bool> &) override;
-  
-  
+
   std::string getSerializedData() override;
+  void cleanDataStructures() override;
 
   Message *getMessage() { return Response; };
-  
+
 private:
   void *deserializeUntyped(std::string data) override;
   Message *Response;

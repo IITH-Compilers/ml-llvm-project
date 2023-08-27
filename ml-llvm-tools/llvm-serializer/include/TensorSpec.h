@@ -16,6 +16,7 @@
 #include "llvm/Support/JSON.h"
 
 #include <memory>
+#include <numeric>
 #include <optional>
 #include <vector>
 
@@ -64,7 +65,11 @@ public:
   int port() const { return Port; }
   TensorType type() const { return Type; }
   const std::vector<int64_t> &shape() const { return Shape; }
-
+  void setShape(const std::vector<int64_t> &NewShape) {
+    Shape = NewShape;
+    ElementCount = std::accumulate(Shape.begin(), Shape.end(), 1,
+                                   std::multiplies<int64_t>());
+  }
   bool operator==(const TensorSpec &Other) const {
     return Name == Other.Name && Port == Other.Port && Type == Other.Type &&
            Shape == Other.Shape;

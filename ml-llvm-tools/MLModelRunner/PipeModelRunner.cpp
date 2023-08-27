@@ -14,6 +14,11 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cstddef>
+#include <cstring>
+#include <fstream>
+#include <iostream>
+#include <string>
 
 using namespace llvm;
 
@@ -27,6 +32,8 @@ PipeModelRunner::PipeModelRunner(LLVMContext &Ctx, StringRef OutboundName,
                                  BaseSerializer::Kind SerializerType)
     : MLModelRunner(Ctx, Kind::Pipe, SerializerType),
       InEC(sys::fs::openFileForRead(InboundName, Inbound)) {
+  this->InboundName = InboundName.str();
+  errs() << "InboundName: " << InboundName.str() << "\n";
   if (InEC) {
     Ctx.emitError("Cannot open inbound file: " + InEC.message());
     return;

@@ -66,7 +66,7 @@ class PhaseOrder(gym.Env):
         self.rename_Dir = False
         self.FileSys_Obj = fsystem(config["llvm_dir"], config["ir2vec_dir"])
         self.FileSys_Obj.createFolder("env")
-        self.temporaryDirectory = tempfile.gettempdir()
+        self.temporaryDirectory = '/home/cs20btech11024/tmp'
 
         self.clang_arch_flag = "-mcpu=cortex-a72" if config["target"] == "AArch64" else ""
         self.opt_arch_flag = "--mcpu=cortex-a72" if config["target"] == "AArch64" else ""
@@ -126,8 +126,10 @@ class PhaseOrder(gym.Env):
         self.temp_rootname = "temppipe"
         to_compiler = self.temp_rootname + ".in"
         from_compiler = self.temp_rootname + ".out"
+        self.from_compiler = from_compiler
         self.tc = None
         self.fc = None
+        self.read_stream_iter = None
         self.tensor_specs = None
         self.advice_spec = None
         if self.use_pipe:
@@ -136,7 +138,9 @@ class PhaseOrder(gym.Env):
             if os.path.exists(from_compiler):
                 os.remove(from_compiler)
             os.mkfifo(to_compiler, 0o666)
-            os.mkfifo(from_compiler, 0o666)
+            os.mkfifo(from_compiler, 0o666) 
+            
+        self.use_grpc = config["use_grpc"]   
 
     def make(self, TrainingPath):
         self.FileSys_Obj.generateTrainingData(TrainingPath)
@@ -189,7 +193,7 @@ class PhaseOrder(gym.Env):
         self.CurrIR = os.path.join(self.Curr_Dir, fileName)
         self.prev_action = None
 
-    def reset(self, test_file=None):
+    def reset(self, test_file=None, embedding=None):
         self.BaseIR = None
         self.CurrIR = None
         self.Curr_Dir = None
@@ -223,9 +227,7 @@ class PhaseOrder(gym.Env):
                 self.rename_Dir = True
 
         else:
-            print("line 226: self.use_pipe {}".format(self.use_pipe))
-            if not self.use_pipe:
-                print("line 228")
+            if not self.use_pipe and not self.use_grpc:
                 self.Obs = test_file
                 print("test_file {}".format(test_file))
                 logging.info("test_file {}".format(test_file))
@@ -233,6 +235,7 @@ class PhaseOrder(gym.Env):
                 print("Obs {}".format(index))
                 logging.info("Obs {}".format(index))
                 self.createEnv(test_file)
+                            
 
         # Opening pipe files
         if self.use_pipe:
@@ -243,12 +246,7 @@ class PhaseOrder(gym.Env):
             print("Opened the write pipe")
             self.fc = io.BufferedReader(io.FileIO(from_compiler, "rb"))
             print("Opened the read pipe")
-
-            if self.data_format == "bytes":
-                self.tensor_specs, _, self.advice_spec = log_reader.read_header(
-                    self.fc)
-                print("Tensor and Advice spec",
-                      self.tensor_specs, self.advice_spec)
+                      
 
             result = self.readObservation()
 
@@ -256,12 +254,10 @@ class PhaseOrder(gym.Env):
             if result is None:
                 # quiet#            print("result is None")
                 raise
-            # else:
-            #     self.embedding = np.empty([300])
-            #     for i in range(result[0].__len__()):
-            #         element = result[0].__getitem__(i)
-            #         self.embedding[i] = element
-            self.embedding = result
+            else:
+                self.embedding = result
+        elif self.mode == 'inference' and self.use_grpc:
+            self.embedding = np.array(embedding)
         else:
             self.embedding = self.getEmbedding(self.BaseIR)
 
@@ -277,28 +273,32 @@ class PhaseOrder(gym.Env):
         #     break
         embedding = None
         if self.data_format == "bytes":
-            next_event = self.fc.readline()
-            context = None
-            last_context, observation_id, features, _ = log_reader.read_one_observation(
-                context, next_event, self.fc, self.tensor_specs, None
-            )
-            if last_context != context:
-                print(f"context: {last_context}")
-            context = last_context
-            # print(f"observation: {observation_id}")
-            tensor_values = []
-            for fv in features:
-                # log_reader.pretty_print_tensor_value(fv)
-                tensor_values.append(fv)
-
+            if self.read_stream_iter is None:
+                self.read_stream_iter = log_reader.read_stream2(self.from_compiler)
+            context, observation_id, features, score = next(self.read_stream_iter)
             embedding = np.empty([300])
-            for i in range(tensor_values[0].__len__()):
-                element = tensor_values[0].__getitem__(i)
-                embedding[i] = element
+            for i in range(len(features[0])):
+                embedding[i] = features[0][i]
+            # print("embedding: ", embedding)
+            # print(type(embedding))
+                # exit(0)
+          # next_event = self.fc.readline()
+          # print(next_event)
+          # self.fc.readline()
+          # self.tensor_specs, _, self.advice_spec = log_reader.read_header(self.fc)
+
+          # print("Tensor and Advice spec", self.tensor_specs, self.advice_spec)  
+
+          # tensor_value = log_reader.read_tensor(self.fc, self.tensor_specs[0])
+          
+          # embedding = np.empty([300])
+          # for i in range(tensor_value.__len__()):
+          #     element = tensor_value.__getitem__(i)
+          #     embedding[i] = element
+
         elif self.data_format == "json":
             print("reading json...")
             line = self.fc.readline()
-            print("line: ", line)
             embedding = json.loads(line)["embedding"]
             assert len(embedding) == 300
             embedding = np.array(embedding)
@@ -319,30 +319,37 @@ class PhaseOrder(gym.Env):
         print("Embedding: ", embedding)
         return embedding
 
+
     def sendResponse(self, value: Union[int, float]):
         if self.data_format == "bytes":
-            f: io.BufferedWriter = self.tc
-            spec: log_reader.TensorSpec = self.advice_spec
-            """Send the `value` - currently just a scalar - formatted as per `spec`."""
-            # just int64 for now
-            assert spec.element_type == ctypes.c_int64
-            to_send = ctypes.c_int64(int(value))
-            # print("to_send", f.write(bytes(to_send)), ctypes.sizeof(spec.element_type) * reduce(operator.mul, spec.shape, 1))
-            assert f.write(bytes(to_send)) == ctypes.sizeof(
-                spec.element_type) * reduce(operator.mul, spec.shape, 1)
-            # assert f.write(bytes(to_send)) == ctypes.sizeof(spec.element_type) * math.prod(
-            #     spec.shape
-            # )
+          f: io.BufferedWriter = self.tc
+          spec: log_reader.TensorSpec = self.advice_spec
+          """Send the `value` - currently just a scalar - formatted as per `spec`."""
+          # just int64 for now
+          # assert spec.element_type == ctypes.c_int64
+          # to_send = ctypes.c_int64(int(value))
+          # print("to_send", f.write(bytes(to_send)), ctypes.sizeof(spec.element_type) * reduce(operator.mul, spec.shape, 1))
+          # f.write(to_send. + b"\n")
+          # hdr = int(4).to_bytes(length=8, byteorder='little')
+          # f.write(hdr + b'\n')
+
+          hdr = int(4).to_bytes(length=4, byteorder='little')
+          val = int(value)
+          message = val.to_bytes(length=4, byteorder='little', signed=True)
+          out = hdr + message
+          f.write(out)
+
+          # # assert f.write(bytes(to_send)) == ctypes.sizeof(spec.element_type) * reduce(operator.mul, spec.shape, 1)
+          # assert f.write(bytes(to_send)) == ctypes.sizeof(spec.element_type) * math.prod(
+          #     spec.shape
+          # )
         elif self.data_format == "json":
             f: io.BufferedWriter = self.tc
-            f.write(json.dumps({"out": {
-                "1": [4, 2, 20],
-                "2": [5, 3, 30],
-                "3": [6, 4, 40],
-                "4": [7, 5, 50],
-                "10": [8, 6, 60],
-            }}).encode("utf-8"))
-            f.write(b"\n")
+            message = json.dumps({"out": int(value)}).encode("utf-8")
+            print("message: ", message)
+            hdr = int(len(message)).to_bytes(length=4, byteorder='little')
+            out = hdr + message
+            f.write(out)
 
         elif self.data_format == "protobuf":
             f: io.BufferedWriter = self.tc
@@ -356,7 +363,9 @@ class PhaseOrder(gym.Env):
             exit()
 
         f.flush()
-
+        print("flushed !!!!")
+                
+    
     def getBinarySize(self, IRFile, init=False):
         fileName = os.path.splitext(os.path.basename(IRFile))[0]
         minBinarySize = 0
@@ -407,24 +416,20 @@ class PhaseOrder(gym.Env):
         # self.embedding = self.applyActionGetEmbeddings(action=action_index)
 
         # make call to compiler to get the updated embedding
-        if self.use_pipe:
-            self.sendResponse(action_index)
-            result = self.readObservation()
+        if self.mode == 'inference' and self.use_grpc:
+            pass
         else:
-            result = self.stable_grpc("Action", action_index)  # LLVMgRPC way
-
-        if result is None:
-            # quiet#            print("result is None")
-            raise
-        # else:
-        #     if self.use_pipe:
-        #         self.embedding = np.empty([300])
-        #         for i in range(result[0].__len__()):
-        #             element = result[0].__getitem__(i)
-        #             self.embedding[i] = element
-        #     else:
-        #         self.embedding = result
-        self.embedding = result
+            if self.use_pipe:
+                self.sendResponse(action_index)
+                result = self.readObservation()
+            else:
+                result = self.stable_grpc("Action", action_index) # LLVMgRPC way
+            
+            if result is None:
+                raise Exception("result is None")
+            else:
+                if self.use_pipe:
+                    self.embedding = result                   
         # self.embedding = self.getEmbedding(NextStateIR)
         # self.CurrIR = NextStateIR
         self.cur_action_mask[action_index] = 0
@@ -437,8 +442,8 @@ class PhaseOrder(gym.Env):
         # Max number of actions (optimaztions sub-sequences) to be applied
         if self.action_count >= 15:
             done = True
-            print("Episode done")
-# quiet#            print(self.cur_action_seq)
+            # print("Episode done")
+#quiet#            print(self.cur_action_seq)
             logging.info(self.cur_action_seq)
             if self.mode == 'inference':
                 # Write pass sequence to actionfile
@@ -665,8 +670,8 @@ class PhaseOrder(gym.Env):
         return config_path
 
     def startServer(self, filename, ip):
-        optPath = "/home/cs20mtech12003/ML-Phase-Ordering/build_pipe/bin/opt"
-        clangPath = "/home/cs20mtech12003/ML-Phase-Ordering/build_pipe/bin/clang"
+        optPath = "/home/cs20btech11024/repos/ML-Phase-Ordering/build_release/bin/opt"
+        clangPath = "/home/cs20btech11024/repos/ML-Phase-Ordering/build_release/bin/clang"
         filepath = self.train_Dir + "/" + filename
         newfilepath = self.assembly_file_path
 

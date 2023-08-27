@@ -51,7 +51,12 @@ public:
   }
 
   // void *getStub() { return stub_; }
-  void requestExit() override { exit_requested->set_value(); }
+  void requestExit() override {
+    errs() << "Exit from grpc\n";
+    exit_requested->set_value();
+  }
+  
+  std::promise<void> *exit_requested;
 
   void *evaluateUntyped() override {
     if (server_mode)
@@ -59,9 +64,13 @@ public:
                        "Override gRPC method instead");
     assert(request != nullptr && "Request cannot be null");
     grpc::ClientContext grpcCtx;
+    // errs() << "Calling grpc function\n";
     auto status = stub_->getAdvice(&grpcCtx, *request, response);
-    if (!status.ok())
+    // errs() << "grpc function call successful \n";
+    if (!status.ok()){
+      Ctx.emitError("gRPC failed code: " + status.error_code());
       Ctx.emitError("gRPC failed: " + status.error_message());
+    }
     return response;
   }
 
@@ -85,7 +94,6 @@ private:
   Request *request;
   Response *response;
   bool server_mode;
-  std::promise<void> *exit_requested;
 
   int RunService(grpc::Service *s) {
     exit_requested = new std::promise<void>();

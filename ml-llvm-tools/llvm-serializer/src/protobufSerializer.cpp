@@ -153,3 +153,8 @@ void *ProtobufSerializer::deserializeUntyped(std::string data) {
 
   llvm_unreachable("Unknown type in protobuf serializer");
 }
+
+void ProtobufSerializer::cleanDataStructures() {
+  Request->Clear();
+  Response->Clear();
+}
