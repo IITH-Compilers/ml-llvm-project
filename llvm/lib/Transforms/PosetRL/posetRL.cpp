@@ -25,7 +25,7 @@
 #include <cstdlib>
 #include <fstream>
 // gRPC includes
-// #include "MLModelRunner/gRPCModelRunner.h"
+#include "MLModelRunner/gRPCModelRunner.h"
 #include "grpc/posetRL/posetRL.grpc.pb.h"
 #include "grpc/posetRL/posetRL.pb.h"
 #include <google/protobuf/text_format.h>
@@ -68,6 +68,7 @@ static cl::opt<std::string> server_address(
 
 namespace {
 struct PosetRL : public ModulePass,
+                 public posetRL::PosetRL::Service,
                  public PosetRLEnv {
   static char ID;
   PosetRL() : ModulePass(ID) {}
@@ -123,6 +124,7 @@ struct PosetRL : public ModulePass,
       MLRunner->setRequest(&response);
       MLRunner->setResponse(&request);
       errs() << "end set MLRunner request and response...\n";
+
       
 
       errs() << "Using pipe communication...\n";
@@ -143,15 +145,15 @@ struct PosetRL : public ModulePass,
 
     } else {
       if (training) {
-        // MLRunner = std::make_unique<gRPCModelRunner<
-        //     posetrl::PosetRL::Service, posetrl::PosetRL::Stub,
-        //     posetrl::EmbeddingResponse, posetrl::ActionRequest>>(
-        //     M.getContext(), server_address, this);
+        MLRunner = std::make_unique<gRPCModelRunner<
+            posetRL::PosetRL::Service, posetRL::PosetRL::Stub,
+            posetRL::EmbeddingResponse, posetRL::ActionRequest>>(
+            M.getContext(), server_address, this);
         errs() << "TO BE IMPLEMENTED\n";
         exit(0);
       } else {
         errs() << "Onnx model runner...\n";
-        Agent agent("/home/cs20btech11024/repos/ML-Phase-Ordering/Model/"
+        Agent agent("/home/cs20btech11018/repos/ML-Phase-Ordering/Model/"
                     "RLLib-PhaseOrder/poset-RL-onnx-model/model.onnx",
                     ActionMaskSize + EmbeddingSize);
         std::map<std::string, Agent *> agents;
@@ -330,7 +332,7 @@ struct PosetRL : public ModulePass,
 
     auto Ir2vec = IR2Vec::Embeddings(
         *M, IR2Vec::IR2VecMode::FlowAware,
-        "/home/cs20btech11018/repos/ML-Phase-Ordering/IR2Vec/vocabulary/"
+        "/home/cs20btech110/repos/ML-Phase-Ordering/IR2Vec/vocabulary/"
         "seedEmbeddingVocab-300-llvm10.txt");
 
     auto ProgVector = Ir2vec.getProgramVector();

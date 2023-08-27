@@ -18,11 +18,10 @@ public:
   void setRequest(void *Request) override;
   void setResponse(void *Response) override;
 
-  void setFeature(std::string, int &) override;
-  void setFeature(std::string, float &) override;
-  void setFeature(std::string, double &) override;
-  void setFeature(std::string, std::string &) override;
-  void setFeature(std::string, bool &) override;
+#define SET_FEATURE(TYPE) virtual void setFeature(std::string, TYPE &) override;
+  SUPPORTED_TYPES(SET_FEATURE)
+#undef SET_FEATURE
+
   void setFeature(std::string, std::vector<int> &) override;
   void setFeature(std::string, std::vector<float> &) override;
   void setFeature(std::string, std::vector<double> &) override;

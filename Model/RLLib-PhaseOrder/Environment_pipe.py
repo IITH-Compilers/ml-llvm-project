@@ -273,6 +273,8 @@ class PhaseOrder(gym.Env):
         #     break
         embedding = None
         if self.data_format == "bytes":
+            #read first 8 bytes to be compatible with protobuf
+            self.fc.read(8)
             if self.read_stream_iter is None:
                 self.read_stream_iter = log_reader.read_stream2(self.from_compiler)
             context, observation_id, features, score = next(self.read_stream_iter)
@@ -298,6 +300,8 @@ class PhaseOrder(gym.Env):
 
         elif self.data_format == "json":
             print("reading json...")
+            #read first 8 bytes to be compatible with protobuf
+            self.fc.read(8)
             line = self.fc.readline()
             embedding = json.loads(line)["embedding"]
             assert len(embedding) == 300

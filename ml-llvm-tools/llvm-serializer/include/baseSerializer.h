@@ -1,12 +1,19 @@
 #ifndef BASE_SERIALIZER_H
 #define BASE_SERIALIZER_H
 
+#include "serializer/baseSerializer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <map>
 #include <string>
 #include <vector>
 
+#define SUPPORTED_TYPES(M)                                                     \
+  M(int)                                                                       \
+  M(float)                                                                     \
+  M(double)                                                                    \
+  M(std::string)                                                               \
+  M(bool)
 
 class BaseSerializer {
 public:
@@ -15,11 +22,10 @@ public:
   enum class Kind : int { Unknown, Json, Bitstream, Protobuf };
   Kind getKind() const { return Type; }
 
-  virtual void setFeature(std::string, int &) = 0;
-  virtual void setFeature(std::string, float &) = 0;
-  virtual void setFeature(std::string, double &) = 0;
-  virtual void setFeature(std::string, std::string &) = 0;
-  virtual void setFeature(std::string, bool &) = 0;
+#define SET_FEATURE(TYPE) virtual void setFeature(std::string, TYPE &) = 0;
+  SUPPORTED_TYPES(SET_FEATURE)
+#undef SET_FEATURE
+
   virtual void setFeature(std::string, std::vector<int> &) {};
   virtual void setFeature(std::string, std::vector<float> &) {};
   virtual void setFeature(std::string, std::vector<double> &) {};
@@ -37,7 +43,7 @@ public:
   virtual void setRequest(void *Request) {llvm::errs() << "In BaseSerializer setRequest...\n";};
   virtual void setResponse(void *Response) {};
 
-  // template <class T> void setFeature(std::string, std::vector<T>);
+
 
   virtual std::string getSerializedData() = 0;
 

@@ -5,6 +5,7 @@
 #include "google/protobuf/descriptor.h"
 #include <type_traits>
 
+
 inline void ProtobufSerializer::setFeature(std::string name, int &value) {
   Request->GetReflection()->SetInt32(
       Request, Request->GetDescriptor()->FindFieldByName(name), value);
@@ -31,7 +32,7 @@ inline void ProtobufSerializer::setFeature(std::string name, bool &value) {
 }
 
 inline void ProtobufSerializer::setFeature(std::string name, std::vector<int> &value) {
-  auto ref = Request->GetReflection()->MutableRepeatedField<int32_t>(
+  auto ref = Request->GetReflection()->MutableRepeatedField<int>(
       Request, Request->GetDescriptor()->FindFieldByName(name));
   ref->Add(value.begin(), value.end());
 }
