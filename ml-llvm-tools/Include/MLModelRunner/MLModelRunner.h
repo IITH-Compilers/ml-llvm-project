@@ -53,8 +53,8 @@ public:
   std::promise<void> *exit_requested;
 
   template <typename T, typename... Types>
-  void populateFeatures(const std::pair<std::string, T> &var1,
-                        const std::pair<std::string, Types> &...var2) {
+  void populateFeatures(std::pair<std::string, T > &var1,
+                        std::pair<std::string, Types> &...var2) {
     Serializer->setFeature(var1.first, var1.second);
     populateFeatures(var2...);
   }

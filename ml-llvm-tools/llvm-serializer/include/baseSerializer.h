@@ -28,13 +28,6 @@ public:
   SUPPORTED_TYPES(SET_FEATURE)
 #undef SET_FEATURE
 
-  template <class T> void setFeature(std::string name, std::vector<T> &value) {
-    llvm::errs() << "In BaseSerializer setFeature of vector...\n";
-    for (auto &v : value) {
-      setFeature(name, v);
-    }
-  }
-
   // a hack to set the request and response structures in protobuf serializer
   virtual void setRequest(void *Request) {
     llvm::errs() << "In BaseSerializer setRequest...\n";
