@@ -52,7 +52,7 @@ agent.cpp
 ONNXModelRunner.cpp
 )
 
-target_link_libraries(LLVMONNXModelRunner PUBLIC onnxruntime)
+target_link_libraries(LLVMONNXModelRunner PUBLIC onnxruntime LLVMSerializer)
 # target_include_directories(LLVMONNXModelRunner PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../Include)
 
 # add_custom_command(

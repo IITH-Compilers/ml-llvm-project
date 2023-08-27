@@ -14,10 +14,11 @@
 #include "serializer/bitstreamSerializer.h"
 #include "serializer/jsonSerializer.h"
 // #include "llvm/IR/PassManager.h"
+#include "serializer/protobufSerializer.h"
 #include "llvm/Support/raw_ostream.h"
+#include <future>
 #include <memory>
 #include <string>
-#include <future>
 
 namespace llvm {
 class LLVMContext;
@@ -30,15 +31,7 @@ public:
   virtual ~MLModelRunner() = default;
 
   template <typename T> T evaluate() {
-    if (!Serializer)
-    {
-      evaluateUntyped();
-      return T();
-    }
-    std::string data = Serializer->getSerializedData();
-    send(data);
-    std::string reply = receive();
-    return Serializer->deserialize<T>(reply);
+    return *reinterpret_cast<T *>(evaluateUntyped());
   }
 
   //   enum class Kind : int { Unknown, Release, Development, NoOp, Interactive
@@ -60,7 +53,7 @@ public:
   std::promise<void> *exit_requested;
 
   template <typename T, typename... Types>
-  void populateFeatures(std::pair<std::string, T> &var1,
+  void populateFeatures(std::pair<std::string, T > &var1,
                         std::pair<std::string, Types> &...var2) {
     Serializer->setFeature(var1.first, var1.second);
     populateFeatures(var2...);
@@ -83,6 +76,9 @@ protected:
     case BaseSerializer::Kind::Json:
       Serializer = std::make_unique<JsonSerializer>();
       break;
+    case BaseSerializer::Kind::Protobuf:
+      Serializer = std::make_unique<ProtobufSerializer>();
+      break;
     case BaseSerializer::Kind::Bitstream:
       Serializer = std::make_unique<BitstreamSerializer>();
       break;
@@ -94,15 +90,13 @@ protected:
     Serializer = nullptr;
   };
 
-  virtual void send(const std::string &) = 0;
-  virtual std::string receive() = 0;
-  virtual void *evaluateUntyped() { return nullptr; }
+  virtual void *evaluateUntyped() = 0;
 
   LLVMContext &Ctx;
   const Kind Type;
   const BaseSerializer::Kind SerializerType;
 
-private:
+protected:
   std::unique_ptr<BaseSerializer> Serializer;
   //   std::vector<std::vector<char *>> OwnedBuffers;
 };

@@ -22,40 +22,18 @@ public:
     return S->getKind() == BaseSerializer::Kind::Json;
   }
 
-  void setFeature(std::string name, int &value) override {
-    setFeatureHelper<int>(name, value);
-  };
-  void setFeature(std::string name, float &value) override {
-    // errs() << "float val = " << value << "\n";
-    f.push_back(value);
-    setFeatureHelper<float>(name, value);
-  };
-  void setFeature(std::string name, double &value) override {
-    setFeatureHelper<double>(name, value);
-  };
-  void setFeature(std::string name, std::string &value) override {
-    setFeatureHelper<std::string>(name, value);
-  };
-  void setFeature(std::string name, bool &value) override {
-    setFeatureHelper<bool>(name, value);
-  };
-  // void setFeature(std::string, std::vector<float> &) override;
-
-  std::string getSerializedData() override {
-    auto tempJO = J;
-    auto data = json::Value(std::move(tempJO));
-    std::string ret;
-    llvm::raw_string_ostream OS(ret);
-    json::OStream(OS).value(data);
-    // errs() << "data = " << ret << "\n";
-    // errs() << "f.size() = " << f.size() << "\n";
-    // for(auto &v : f) {
-    //   errs() << v << " ";
-    // }
-    // errs() << "\n";
-    cleanDataStructures();
-    return ret;
+#define SET_FEATURE(TYPE)                                                      \
+  void setFeature(const std::string &name, const TYPE &value) override {       \
+    J[name] = value;                                                           \
+  }                                                                            \
+  void setFeature(const std::string &name, const std::vector<TYPE> &value)     \
+      override {                                                               \
+    J[name] = json::Array(value);                                              \
   }
+  SUPPORTED_TYPES(SET_FEATURE)
+#undef SET_FEATURE
+
+  void *getSerializedData() override;
 
   void cleanDataStructures() override {
     errs() << "In JsonSerializer cleanDataStructures...\n";
@@ -64,22 +42,7 @@ public:
   }
 
 private:
-  void *deserializeUntyped(std::string data) override;
-  template <class T> void setFeatureHelper(std::string name, T value) {
-    // errs() << "In JsonSerializer setFeatureHelper...\n";
-    // errs() << "val = " << value << "\n";
-    if (auto X = J.get(name)) {
-      if (X->kind() == json::Value::Kind::Array) {
-        X->getAsArray()->push_back(value);
-        // errs() << "X->getAsArray()->size() = " << X->getAsArray()->size()
-              //  << "\n";
-      } else {
-        J[name] = json::Array({*X, value});
-      }
-    } else {
-      J[name] = value;
-    }
-  }
+  void *deserializeUntyped(void *data) override;
   void *desJson(json::Value *V);
 
 private:

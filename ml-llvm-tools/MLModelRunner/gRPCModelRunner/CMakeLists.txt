@@ -12,7 +12,6 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -fno-rtti")
  
-
 find_package(Protobuf CONFIG REQUIRED)
 message(STATUS "Using protobuf ${Protobuf_VERSION}")
 message(STATUS "Using protobuf ${Protobuf_INCLUDE_DIRS}")
@@ -121,6 +120,5 @@ target_link_libraries(LLVMgRPCModelRunner
 
 # target_include_directories(LLVMgRPCModelRunner PRIVATE ${LLVM_INCLUDE_DIR})
 target_include_directories(LLVMgRPCModelRunner PRIVATE ${LLVM_INCLUDE_DIR}/Service)
-# target_include_directories(LLVMgRPCModelRunner PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../Include)
-# target_include_directories(LLVMgRPCModelRunner PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/Include)
+
 target_include_directories(LLVMgRPCModelRunner PUBLIC ${Protobuf_INCLUDE_DIRS})
