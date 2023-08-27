@@ -12,6 +12,8 @@
 
 #include "serializer/baseSerializer.h"
 #include "serializer/jsonSerializer.h"
+#include "serializer/protobufSerializer.h"
+#include "serializer/bitstreamSerializer.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
@@ -56,8 +58,9 @@ public:
 
   virtual void requestExit() = 0;
 
-  template<typename T, typename... Types>
-  void populateFeatures(std::pair<std::string, T> &var1, std::pair<std::string, Types> &...var2) {
+  template <typename T, typename... Types>
+  void populateFeatures(std::pair<std::string, T> &var1,
+                        std::pair<std::string, Types> &...var2) {
     Serializer->setFeature(var1.first, var1.second);
     populateFeatures(var2...);
   }
@@ -80,6 +83,12 @@ protected:
     switch (SerializerType) {
     case BaseSerializer::Kind::Json:
       Serializer = std::make_unique<JsonSerializer>();
+      break;
+    case BaseSerializer::Kind::Protobuf:
+      Serializer = std::make_unique<ProtobufSerializer>();
+      break;
+    case BaseSerializer::Kind::Bitstream:
+      Serializer = std::make_unique<BitstreamSerializer>();
       break;
     }
     errs() << "End MLModelRunner constructor...\n";

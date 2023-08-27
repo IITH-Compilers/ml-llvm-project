@@ -88,14 +88,13 @@ ${MLLinkDeps}
 
 )
 
-# add_dependencies(LLVMMLModelRunner copy-mlmodelrunner-include)
-# # target_include_directories(LLVMMLModelRunner PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../Include)
-# target_link_libraries(LLVMMLModelRunner 
-# PRIVATE LLVMMLModelRunnerUtils
-# # LLVMgRPCModelRunner
-# # LLVMONNXModelRunner
-# # LLVMTFModelRunner
-# )
+
+target_link_libraries(LLVMMLModelRunner 
+PRIVATE LLVMMLModelRunnerUtils
+LLVMgRPCModelRunner
+LLVMONNXModelRunner
+# LLVMTFModelRunner
+)
 set_property(TARGET LLVMMLModelRunner PROPERTY CXX_STANDARD 17)
 
 target_link_libraries(LLVMMLModelRunner PUBLIC LLVMSerializer)

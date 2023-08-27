@@ -23,7 +23,8 @@ static cl::opt<bool> DebugReply(
              "the data received from the host (for debugging purposes)."));
 
 PipeModelRunner::PipeModelRunner(LLVMContext &Ctx, StringRef OutboundName,
-                                 StringRef InboundName, BaseSerializer::Kind SerializerType)
+                                 StringRef InboundName,
+                                 BaseSerializer::Kind SerializerType)
     : MLModelRunner(Ctx, Kind::Pipe, SerializerType),
       InEC(sys::fs::openFileForRead(InboundName, Inbound)) {
   if (InEC) {
@@ -37,73 +38,57 @@ PipeModelRunner::PipeModelRunner(LLVMContext &Ctx, StringRef OutboundName,
       return;
     }
   }
-
 }
 
 PipeModelRunner::~PipeModelRunner() {
-  //close the file descriptors
+  // close the file descriptors
   sys::fs::file_t FDAsOSHandle = sys::fs::convertFDToNativeFile(Inbound);
   sys::fs::closeFile(FDAsOSHandle);
 
   OutStream->close();
-
 }
 
-void PipeModelRunner::send(const std::string& data) {
-  errs() << "PipeModelRunner::sending..." << "\n";
+void PipeModelRunner::send(const std::string &data) {
+  //TODO: send data size first (a hack to send protbuf data properly)
+  size_t message_length = data.size();
+  const char *message_length_ptr = reinterpret_cast<const char *>(&message_length);
+  OutStream->write(message_length_ptr, sizeof(size_t));
   OutStream->write(data.data(), data.size());
-  OutStream->write("\n", 1);
   OutStream->flush();
-  errs() << "PipeModelRunner::flushed..." << "\n";
 }
 
 std::string PipeModelRunner::receive() {
-  errs() << "PipeModelRunner::receiving..." << "\n";
-  std::string Buffer;
-  uint count = 0;
-  while (true) {
-    char C;
+
+  size_t MessageLength = 0;
+  size_t InsPoint = 0;
+  char *Buff = (char*)(&MessageLength);
+  const size_t LimitLength = sizeof(size_t);
+  while (InsPoint < LimitLength) {
     auto ReadOrErr = ::sys::fs::readNativeFile(
-        sys::fs::convertFDToNativeFile(Inbound), {&C, 1});
+        sys::fs::convertFDToNativeFile(Inbound),
+        {Buff + InsPoint, LimitLength - InsPoint});
     if (ReadOrErr.takeError()) {
       Ctx.emitError("Failed reading from inbound file");
       break;
     }
-    if (C == '\n')
-      break;
-    //   count++;
-    // if (count == 2)
-    //   break;
-    Buffer += C;
+    InsPoint += *ReadOrErr;
   }
-  errs() << "PipeModelRunner::received..." << "\n";
-  return Buffer;
+
+  string Message(MessageLength, '\0');
+  InsPoint = 0;
+  Buff = Message.data();
+  const size_t Limit = Message.length();
+  while (InsPoint < Limit) {
+    auto ReadOrErr = ::sys::fs::readNativeFile(
+        sys::fs::convertFDToNativeFile(Inbound),
+        {Buff + InsPoint, Limit - InsPoint});
+    if (ReadOrErr.takeError()) {
+      Ctx.emitError("Failed reading from inbound file");
+      break;
+    }
+    InsPoint += *ReadOrErr;
+  }
+
+  return Message;
 }
 
-// void *PipeModelRunner::evaluateUntyped() {
-//   Log->startObservation();
-//   for (size_t I = 0; I < InputSpecs.size(); ++I)
-//     Log->logTensorValue(I, reinterpret_cast<const char
-//     *>(getTensorUntyped(I)));
-//   Log->endObservation();
-//   Log->flush();
-
-//   size_t InsPoint = 0;
-//   char *Buff = OutputBuffer.data();
-//   const size_t Limit = OutputBuffer.size();
-//   while (InsPoint < Limit) {
-//     auto ReadOrErr = ::sys::fs::readNativeFile(
-//         sys::fs::convertFDToNativeFile(Inbound),
-//         {Buff + InsPoint, OutputBuffer.size() - InsPoint});
-//     if (ReadOrErr.takeError()) {
-//       Ctx.emitError("Failed reading from inbound file");
-//       break;
-//     }
-//     InsPoint += *ReadOrErr;
-//   }
-//   if (DebugReply)
-//     dbgs() << OutputSpec.name() << ": "
-//            << tensorValueToString(OutputBuffer.data(), OutputSpec) << "\n";
-//   return OutputBuffer.data();
-//   // return tensorValueToString(OutputBuffer.data(), OutputSpec);
-// }
