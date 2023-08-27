@@ -13,55 +13,69 @@
 using namespace llvm;
 using namespace std;
 
-void BitstreamSerializer::setFeature(std::string name, int &value) {
-  tensorSpecs.push_back(TensorSpec::createSpec<int32_t>(name, {1}));
+void BitstreamSerializer::setFeature(const std::string &name,
+                                     const int &value) {
+  tensorSpecs.push_back(TensorSpec::createSpec<int8_t>(name, {1}));
   rawData.push_back(&value);
 }
 
-void BitstreamSerializer::setFeature(std::string name, float &value) {
-  auto it = featureNames.find(name);
-  if (it == featureNames.end()) {
-    float *newData = new float(value);
-    featureNames[name] = {tensorSpecs.size(), newData};
-    tensorSpecs.push_back(TensorSpec::createSpec<float>(name, {1}));
-    rawData.push_back(newData);
-  } else {
-    if (featureNamesSet.find(name) == featureNamesSet.end()) {
-      featureNamesSet.insert(name);
-      auto Index = it->second.first;
-      tensorSpecs[Index].setShape({2});
-      auto newData = new std::vector<float>(2);
-      (*newData)[0] = *(float *)rawData[Index];
-      (*newData)[1] = value;
-      rawData[Index] = newData->data();
-      featureNames[name] = {Index, newData};
-    } else {
-      auto Index = it->second.first;
-      std::vector<float> *newData = (std::vector<float> *)it->second.second;
-      newData->push_back(value);
-      tensorSpecs[Index].setShape({static_cast<long>(newData->size())});
-      rawData[Index] = newData->data();
-    }
-  }
+void BitstreamSerializer::setFeature(const std::string &name,
+                                     const float &value) {
+  tensorSpecs.push_back(TensorSpec::createSpec<float>(name, {1}));
+  rawData.push_back(&value);
 }
 
-void BitstreamSerializer::setFeature(std::string name, double &value) {
+void BitstreamSerializer::setFeature(const std::string &name,
+                                     const double &value) {
   tensorSpecs.push_back(TensorSpec::createSpec<double>(name, {1}));
   rawData.push_back(&value);
 }
 
-void BitstreamSerializer::setFeature(std::string name, std::string &value) {
+void BitstreamSerializer::setFeature(const std::string &name,
+                                     const std::string &value) {
   long size = value.length();
   tensorSpecs.push_back(TensorSpec::createSpec<uint8_t>(name, {size}));
   rawData.push_back((void *)value.c_str());
 }
 
-void BitstreamSerializer::setFeature(std::string name, bool &value) {
+void BitstreamSerializer::setFeature(const std::string &name,
+                                     const bool &value) {
   tensorSpecs.push_back(TensorSpec::createSpec<uint8_t>(name, {1}));
   rawData.push_back(&value);
 }
 
-std::string BitstreamSerializer::getSerializedData() {
+void BitstreamSerializer::setFeature(const std::string &name,
+                                     const std::vector<int> &value) {
+  tensorSpecs.push_back(
+      TensorSpec::createSpec<int8_t>(name, {static_cast<long>(value.size())}));
+  rawData.push_back(value.data());
+}
+
+void BitstreamSerializer::setFeature(const std::string &name,
+                                     const std::vector<float> &value) {
+  tensorSpecs.push_back(
+      TensorSpec::createSpec<float>(name, {static_cast<long>(value.size())}));
+  rawData.push_back(value.data());
+}
+
+void BitstreamSerializer::setFeature(const std::string &name,
+                                     const std::vector<double> &value) {
+  tensorSpecs.push_back(
+      TensorSpec::createSpec<double>(name, {static_cast<long>(value.size())}));
+  rawData.push_back(value.data());
+}
+
+void BitstreamSerializer::setFeature(const std::string &name,
+                                     const std::vector<std::string> &value) {
+  llvm_unreachable("Currently std::vector<std::string> not supported");
+}
+
+void BitstreamSerializer::setFeature(const std::string &name,
+                                     const std::vector<bool> &value) {
+  llvm_unreachable("Currently std::vector<bool> not supported");
+}
+
+void *BitstreamSerializer::getSerializedData() {
   // errs() << "In BitstreamSerializer getSerializedData...\n";
   std::unique_ptr<raw_ostream> OS =
       std::make_unique<raw_string_ostream>(Buffer);
@@ -73,18 +87,19 @@ std::string BitstreamSerializer::getSerializedData() {
       }
     });
   });
-  OS->write("\n", 1);
   J.flush();
+  OS->write("\n", 1);
   for (size_t I = 0; I < rawData.size(); ++I) {
     OS->write(reinterpret_cast<const char *>(rawData[I]),
               tensorSpecs[I].getTotalTensorBufferSize());
   }
+  OS->write("\n", 1);
   OS->flush();
-  std::string out = Buffer;
+  auto *out = new std::string(Buffer);
   cleanDataStructures();
   return out;
 }
 
-void *BitstreamSerializer::deserializeUntyped(std::string data) {
-  return data.data();
+void *BitstreamSerializer::deserializeUntyped(void *data) {
+  return reinterpret_cast<std::string *>(data)->data();
 }

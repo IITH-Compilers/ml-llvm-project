@@ -274,36 +274,23 @@ class PhaseOrder(gym.Env):
         embedding = None
         if self.data_format == "bytes":
             #read first 8 bytes to be compatible with protobuf
-            self.fc.read(8)
             if self.read_stream_iter is None:
-                self.read_stream_iter = log_reader.read_stream2(self.from_compiler)
+                self.read_stream_iter = log_reader.read_stream2(self.fc)
+            hdr = self.fc.read(8)
             context, observation_id, features, score = next(self.read_stream_iter)
             embedding = np.empty([300])
             for i in range(len(features[0])):
                 embedding[i] = features[0][i]
-            # print("embedding: ", embedding)
-            # print(type(embedding))
-                # exit(0)
-          # next_event = self.fc.readline()
-          # print(next_event)
-          # self.fc.readline()
-          # self.tensor_specs, _, self.advice_spec = log_reader.read_header(self.fc)
-
-          # print("Tensor and Advice spec", self.tensor_specs, self.advice_spec)  
-
-          # tensor_value = log_reader.read_tensor(self.fc, self.tensor_specs[0])
-          
-          # embedding = np.empty([300])
-          # for i in range(tensor_value.__len__()):
-          #     element = tensor_value.__getitem__(i)
-          #     embedding[i] = element
 
         elif self.data_format == "json":
             print("reading json...")
             #read first 8 bytes to be compatible with protobuf
-            self.fc.read(8)
-            line = self.fc.readline()
-            embedding = json.loads(line)["embedding"]
+            hdr = self.fc.read(8)
+            print("hdr: ",hdr)
+            size = int.from_bytes(hdr, "little")
+            print("size: ", size)
+            msg = self.fc.read(size)
+            embedding = json.loads(msg.decode('utf-8'))["embedding"]
             assert len(embedding) == 300
             embedding = np.array(embedding)
         elif self.data_format == "protobuf":
@@ -320,7 +307,6 @@ class PhaseOrder(gym.Env):
             emb.ParseFromString(msg)
             print(emb)
             embedding = np.array(emb.embedding)
-        print("Embedding: ", embedding)
         return embedding
 
 
@@ -337,7 +323,7 @@ class PhaseOrder(gym.Env):
           # hdr = int(4).to_bytes(length=8, byteorder='little')
           # f.write(hdr + b'\n')
 
-          hdr = int(4).to_bytes(length=4, byteorder='little')
+          hdr = int(4).to_bytes(length=8, byteorder='little')
           val = int(value)
           message = val.to_bytes(length=4, byteorder='little', signed=True)
           out = hdr + message
@@ -351,7 +337,7 @@ class PhaseOrder(gym.Env):
             f: io.BufferedWriter = self.tc
             message = json.dumps({"out": int(value)}).encode("utf-8")
             print("message: ", message)
-            hdr = int(len(message)).to_bytes(length=4, byteorder='little')
+            hdr = int(len(message)).to_bytes(length=8, byteorder='little')
             out = hdr + message
             f.write(out)
 

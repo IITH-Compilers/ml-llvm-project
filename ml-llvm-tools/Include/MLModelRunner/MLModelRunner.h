@@ -11,8 +11,8 @@
 #define LLVM_MLMODELRUNNER_H
 
 #include "serializer/baseSerializer.h"
-// #include "serializer/bitstreamSerializer.h"
-// #include "serializer/jsonSerializer.h"
+#include "serializer/bitstreamSerializer.h"
+#include "serializer/jsonSerializer.h"
 #include "serializer/protobufSerializer.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/raw_ostream.h"
@@ -74,13 +74,13 @@ protected:
     // Serializer = std::make_unique<JsonSerializer>();
     switch (SerializerType) {
     case BaseSerializer::Kind::Json:
-      // Serializer = std::make_unique<JsonSerializer>();
+      Serializer = std::make_unique<JsonSerializer>();
       break;
     case BaseSerializer::Kind::Protobuf:
       Serializer = std::make_unique<ProtobufSerializer>();
       break;
     case BaseSerializer::Kind::Bitstream:
-      // Serializer = std::make_unique<BitstreamSerializer>();
+      Serializer = std::make_unique<BitstreamSerializer>();
       break;
     }
     errs() << "End MLModelRunner constructor...\n";

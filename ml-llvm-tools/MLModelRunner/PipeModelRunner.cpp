@@ -55,6 +55,24 @@ PipeModelRunner::~PipeModelRunner() {
   OutStream->close();
 }
 
+std::string PipeModelRunner::readNBytes(size_t N) {
+  std::string OutputBuffer(N, '\0');
+  char *Buff = OutputBuffer.data();
+  size_t InsPoint = 0;
+  const size_t Limit = N;
+  while (InsPoint < Limit) {
+    auto ReadOrErr = ::sys::fs::readNativeFile(
+        sys::fs::convertFDToNativeFile(Inbound),
+        {Buff + InsPoint, OutputBuffer.size() - InsPoint});
+    if (ReadOrErr.takeError()) {
+      Ctx.emitError("Failed reading from inbound file");
+      break;
+    }
+    InsPoint += *ReadOrErr;
+  }
+  return OutputBuffer;
+}
+
 void PipeModelRunner::send(void *data) {
   // TODO: send data size first (a hack to send protbuf data properly)
   auto dataString = reinterpret_cast<std::string *>(data);
@@ -67,38 +85,12 @@ void PipeModelRunner::send(void *data) {
 }
 
 void *PipeModelRunner::receive() {
-
+  auto hdr = readNBytes(8);
   size_t MessageLength = 0;
-  size_t InsPoint = 0;
-  char *Buff = (char *)(&MessageLength);
-  const size_t LimitLength = sizeof(size_t);
-  while (InsPoint < LimitLength) {
-    auto ReadOrErr =
-        ::sys::fs::readNativeFile(sys::fs::convertFDToNativeFile(Inbound),
-                                  {Buff + InsPoint, LimitLength - InsPoint});
-    if (ReadOrErr.takeError()) {
-      Ctx.emitError("Failed reading from inbound file");
-      break;
-    }
-    InsPoint += *ReadOrErr;
-  }
-
-  auto *Message = new std::string(MessageLength, '\0');
-  InsPoint = 0;
-  Buff = Message->data();
-  const size_t Limit = Message->length();
-  while (InsPoint < Limit) {
-    auto ReadOrErr =
-        ::sys::fs::readNativeFile(sys::fs::convertFDToNativeFile(Inbound),
-                                  {Buff + InsPoint, Limit - InsPoint});
-    if (ReadOrErr.takeError()) {
-      Ctx.emitError("Failed reading from inbound file");
-      break;
-    }
-    InsPoint += *ReadOrErr;
-  }
-
-  return Message;
+  memcpy(&MessageLength, hdr.data(), sizeof(MessageLength));
+  // Read message
+  auto OutputBuffer = new std::string(readNBytes(MessageLength));
+  return OutputBuffer;
 }
 
 void *PipeModelRunner::evaluateUntyped() {

@@ -1,8 +1,4 @@
 #include "llvm/Transforms/PosetRL/PosetRL.h"
-// #include "MLInferenceEngine/agent.h"
-// #include "MLInferenceEngine/driver.h"
-// #include "grpc/example/example.pb.h"
-// #include "grpcpp/impl/codegen/status.h"
 #include "inference/poset_rl_env.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
@@ -17,11 +13,6 @@
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
-// #include "serializer/bitstreamSerializer.h"
-// #include "serializer/deserializer.h"
-#include "serializer/baseSerializer.h"
-// #include "serializer/jsonSerializer.h"
-// #include "serializer/protobufSerializer.h"
 #include <cstdlib>
 #include <fstream>
 // gRPC includes
@@ -89,7 +80,7 @@ struct PosetRL : public ModulePass,
       for (size_t i = 0; i < DefaultFeatureSpec.getElementCount(); i++)
         feature_data.push_back((float_t)(i + 0.5));
 
-      std::string basename = "/home/cs20btech11018/repos/ML-Phase-Ordering/"
+      std::string basename = "/home/cs20btech11024/repos/ML-Phase-Ordering/"
                              "Model/RLLib-PhaseOrder/temppipe";
       std::vector<TensorSpec> Features;
       // std::vector<void*> InputBuffers;
@@ -116,7 +107,7 @@ struct PosetRL : public ModulePass,
 
       MLRunner = std::make_unique<PipeModelRunner>(
           M.getContext(), basename + ".out", basename + ".in",
-          BaseSerializer::Kind::Protobuf);
+          SerializerType);
 
       posetRL::EmbeddingResponse response;
       posetRL::ActionRequest request;
@@ -153,7 +144,7 @@ struct PosetRL : public ModulePass,
         exit(0);
       } else {
         errs() << "Onnx model runner...\n";
-        Agent agent("/home/cs20btech11018/repos/ML-Phase-Ordering/Model/"
+        Agent agent("/home/cs20btech11024/repos/ML-Phase-Ordering/Model/"
                     "RLLib-PhaseOrder/poset-RL-onnx-model/model.onnx",
                     ActionMaskSize + EmbeddingSize);
         std::map<std::string, Agent *> agents;
@@ -295,7 +286,7 @@ struct PosetRL : public ModulePass,
     for (size_t i = 0; i < DefaultFeatureSpec.getElementCount(); i++)
       feature_data.push_back((float_t)(i + 0.5));
 
-    std::string basename = "/home/cs20btech11018/ML-Phase-Ordering/Model/"
+    std::string basename = "/home/cs20btech11024/ML-Phase-Ordering/Model/"
                            "RLLib-PhaseOrder/temppipe";
     std::vector<TensorSpec> Features;
     // std::vector<void*> InputBuffers;
@@ -335,7 +326,7 @@ struct PosetRL : public ModulePass,
 
     auto Ir2vec = IR2Vec::Embeddings(
         *M, IR2Vec::IR2VecMode::FlowAware,
-        "/home/cs20btech11018/repos/ML-Phase-Ordering/IR2Vec/vocabulary/"
+        "/home/cs20btech11024/repos/ML-Phase-Ordering/IR2Vec/vocabulary/"
         "seedEmbeddingVocab-300-llvm10.txt");
 
     auto ProgVector = Ir2vec.getProgramVector();
@@ -362,7 +353,7 @@ struct PosetRL : public ModulePass,
   //   InferenceEngine driver;
   //   driver.setEnvironment(this);
   //   Observation Obs = reset();
-  //   Agent agent("/home/cs20btech11018/repos/ML-Phase-Ordering/Model/"
+  //   Agent agent("/home/cs20btech11024/repos/ML-Phase-Ordering/Model/"
   //               "RLLib-PhaseOrder/poset-RL-onnx-model/model.onnx",
   //               ActionMaskSize + EmbeddingSize);
   //   driver.addAgent(&agent, "agent");
