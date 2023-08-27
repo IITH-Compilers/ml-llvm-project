@@ -55,8 +55,9 @@ public:
   virtual ~PipeModelRunner();
 
 private:
-  void send(const std::string &data) override;
-  std::string receive() override;
+  void send(const std::string &data);
+  std::string receive();
+  void *evaluateUntyped() override;
   std::string readNBytes(size_t N);
   // This must be declared before InEC if we want to initialize it in the
   // ctor initializer list.

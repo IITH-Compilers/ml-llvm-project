@@ -363,8 +363,6 @@ class PhaseOrder(gym.Env):
             hdr = int.to_bytes(size, 8, "little")
             f.write(hdr)
             f.write(serialized_message)
-            f.flush()
-            exit()
 
         f.flush()
         print("flushed !!!!")

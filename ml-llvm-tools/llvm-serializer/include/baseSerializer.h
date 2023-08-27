@@ -46,15 +46,9 @@ public:
 
 
   virtual std::string getSerializedData() = 0;
-
-  template <typename T> T deserialize(std::string data) {
-    llvm::errs() << "In BaseSerializer deserialize...\n";
-    return *reinterpret_cast<T *>(deserializeUntyped(data));
-  }
-
+  virtual void *deserializeUntyped(std::string data) = 0;
 
 protected:
-  virtual void *deserializeUntyped(std::string data) = 0;
   BaseSerializer(Kind Type) : Type(Type) {
     llvm::errs() << "In BaseSerializer constructor...\n";
     assert(Type != Kind::Unknown);

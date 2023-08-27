@@ -99,3 +99,10 @@ std::string PipeModelRunner::receive() {
   return Message;
 }
 
+void *PipeModelRunner::evaluateUntyped() {
+  llvm::errs() << "In PipeModelRunner evaluateUntyped...\n";
+  std::string data = Serializer->getSerializedData();
+  send(data);
+  std::string reply = receive();
+  return Serializer->deserializeUntyped(reply);
+}

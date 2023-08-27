@@ -68,8 +68,7 @@ inline void ProtobufSerializer::setFeature(std::string name, std::vector<bool> &
 std::string ProtobufSerializer::getSerializedData() {
   std::string data;
   Request->SerializeToString(&data);
-  llvm::errs() << data << "\n";
-  llvm::errs() << Request->DebugString() << "\n"; 
+  cleanDataStructures();
   return data;
 }
 

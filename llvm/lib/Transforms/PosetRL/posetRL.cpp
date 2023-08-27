@@ -25,7 +25,7 @@
 #include <cstdlib>
 #include <fstream>
 // gRPC includes
-#include "MLModelRunner/gRPCModelRunner.h"
+// #include "MLModelRunner/gRPCModelRunner.h"
 #include "grpc/posetRL/posetRL.grpc.pb.h"
 #include "grpc/posetRL/posetRL.pb.h"
 #include <google/protobuf/text_format.h>
@@ -145,11 +145,11 @@ struct PosetRL : public ModulePass,
 
     } else {
       if (training) {
-        MLRunner = std::make_unique<gRPCModelRunner<
-            posetRL::PosetRL::Service, posetRL::PosetRL::Stub,
-            posetRL::EmbeddingResponse, posetRL::ActionRequest>>(
-            M.getContext(), server_address, this);
-        errs() << "TO BE IMPLEMENTED\n";
+        // MLRunner = std::make_unique<gRPCModelRunner<
+        //     posetRL::PosetRL::Service, posetRL::PosetRL::Stub,
+        //     posetRL::EmbeddingResponse, posetRL::ActionRequest>>(
+        //     M.getContext(), server_address, this);
+        // errs() << "TO BE IMPLEMENTED\n";
         exit(0);
       } else {
         errs() << "Onnx model runner...\n";
@@ -174,15 +174,18 @@ struct PosetRL : public ModulePass,
   void initPipeCommunication4() {
     errs() << "Entering protobuf pipe communication...\n";
 
-    std::pair<std::string, std::vector<float>> p1("embedding", getEmbeddings());
-    errs() << "Populating features...\n";
-    MLRunner->populateFeatures(p1);
-    errs() << "Features populated END...\n";
+    int passSequence = 0;
+    while (passSequence != -1) {
+      std::pair<std::string, std::vector<float>> p1("embedding",
+                                                    getEmbeddings());
+      // errs() << "Populating features...\n";
+      MLRunner->populateFeatures(p1);
 
-    auto out = MLRunner->evaluate<int>();
-
-    errs() << "out = " << out << "\n";
-    exit(0);
+      int res = static_cast<int>(MLRunner->evaluate<int64_t>());
+      processMLAdvice(res);
+      passSequence = res;
+    }
+    errs() << "Episode completed\n";
   }
   // void initPipeCommunication1() {
   //   errs() << "Entering bitstream pipe communication...\n";
@@ -332,7 +335,7 @@ struct PosetRL : public ModulePass,
 
     auto Ir2vec = IR2Vec::Embeddings(
         *M, IR2Vec::IR2VecMode::FlowAware,
-        "/home/cs20btech110/repos/ML-Phase-Ordering/IR2Vec/vocabulary/"
+        "/home/cs20btech11018/repos/ML-Phase-Ordering/IR2Vec/vocabulary/"
         "seedEmbeddingVocab-300-llvm10.txt");
 
     auto ProgVector = Ir2vec.getProgramVector();
