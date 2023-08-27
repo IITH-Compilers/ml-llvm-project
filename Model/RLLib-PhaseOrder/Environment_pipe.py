@@ -66,7 +66,7 @@ class PhaseOrder(gym.Env):
         self.rename_Dir = False
         self.FileSys_Obj = fsystem(config["llvm_dir"], config["ir2vec_dir"])
         self.FileSys_Obj.createFolder("env")
-        self.temporaryDirectory = '/home/cs20btech11024/tmp'
+        self.temporaryDirectory = tempfile.gettempdir()
 
         self.clang_arch_flag = "-mcpu=cortex-a72" if config["target"] == "AArch64" else ""
         self.opt_arch_flag = "--mcpu=cortex-a72" if config["target"] == "AArch64" else ""
@@ -213,9 +213,10 @@ class PhaseOrder(gym.Env):
 
                 self.serverId = self.startServer(
                     self.Obs[index], "127.0.0.1:50051")
+                print("Server started at pid:", self.serverId)
                 self.channel = grpc.insecure_channel(
                     '{}:{}'.format("127.0.0.1", "50051"))
-                self.stub = posetRL_pb2_grpc.PosetRLStub(self.channel)                                                
+                self.stub = posetRL_pb2_grpc.PosetRLServiceStub(self.channel)                                                
                 
                 self.createEnv(self.Obs[index])
                 self.doneList.append(self.Obs[index])
@@ -409,6 +410,7 @@ class PhaseOrder(gym.Env):
                 self.sendResponse(action_index)
                 result = self.readObservation()
             else:
+                print("In gRPC training flow")
                 result = self.stable_grpc("Action", action_index) # LLVMgRPC way
             
             if result is None:
@@ -447,6 +449,12 @@ class PhaseOrder(gym.Env):
             if self.mode != 'inference':
                 if not self.use_pipe:
                     self.stable_grpc("Exit", None)
+                    try:
+                        outs, errs = self.server_pid.communicate(timeout=5)
+                    except:
+                        self.serverId.kill()
+                        print("Clang failing")
+                                                    
                 Reward = self.getReward(self.assembly_file_path)
             if self.use_pipe:
                 self.sendResponse(-1)

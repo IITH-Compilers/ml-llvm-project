@@ -58,31 +58,31 @@ public:
   
   std::promise<void> *exit_requested;
 
-  // void *evaluateUntyped() override {
-  //   if (server_mode)
-  //     llvm_unreachable("evaluateUntyped not implemented for gRPCModelRunner; "
-  //                      "Override gRPC method instead");
-  //   assert(request != nullptr && "Request cannot be null");
-  //   grpc::ClientContext grpcCtx;
-  //   auto status = stub_->getAdvice(&grpcCtx, *request, response);
-  //   if (!status.ok())
-  //     Ctx.emitError("gRPC failed: " + status.error_message());
-  //   return response;
-  // }
-
-  void send(const std::string & str) override {
+  void *evaluateUntyped() override {
     if (server_mode)
       llvm_unreachable("evaluateUntyped not implemented for gRPCModelRunner; "
                        "Override gRPC method instead");
-
     assert(request != nullptr && "Request cannot be null");
     grpc::ClientContext grpcCtx;
     auto status = stub_->getAdvice(&grpcCtx, *request, response);
     if (!status.ok())
       Ctx.emitError("gRPC failed: " + status.error_message());
+    return response;
   }
 
-  std::string receive() override { return response->SerializeAsString(); }
+  // void send(const std::string & str) override {
+  //   if (server_mode)
+  //     llvm_unreachable("evaluateUntyped not implemented for gRPCModelRunner; "
+  //                      "Override gRPC method instead");
+
+  //   assert(request != nullptr && "Request cannot be null");
+  //   grpc::ClientContext grpcCtx;
+  //   auto status = stub_->getAdvice(&grpcCtx, *request, response);
+  //   if (!status.ok())
+  //     Ctx.emitError("gRPC failed: " + status.error_message());
+  // }
+
+  // std::string receive() override { return response->SerializeAsString(); }
 
 private:
   Stub *stub_;

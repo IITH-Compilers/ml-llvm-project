@@ -210,7 +210,7 @@ class PhaseOrderInference:
 
         return reward, response
     
-class service_server(posetRL_pb2_grpc.PosetRLServicer):
+class service_server(posetRL_pb2_grpc.PosetRLService):
     def __init__(self, inferece_obj):
         self.inference_obj = inferece_obj
         self.new_file = True

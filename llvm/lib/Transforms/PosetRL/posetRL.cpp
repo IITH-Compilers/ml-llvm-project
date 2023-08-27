@@ -18,9 +18,9 @@
 // gRPC includes
 #include "grpc/posetRL/posetRL.pb.h"
 #include "grpc/posetRL/posetRL.grpc.pb.h"
-#include "grpc/posetRL/posetRL.pb.h"
+// #include "grpc/posetRL/posetRL.pb.h"
 #include <google/protobuf/text_format.h>
-#include <grpcpp/grpcpp.h>
+// #include <grpcpp/grpcpp.h>
 #include <utility>
 #include <vector>
 
@@ -35,7 +35,8 @@
 
 using namespace llvm;
 using namespace grpc;
-using namespace google::protobuf;
+using namespace posetRLgRPC;
+// using namespace google::protobuf;
 
 static cl::opt<bool> training("training", cl::Hidden,
                               cl::desc("whether it is training or inference"),
@@ -61,8 +62,8 @@ static cl::opt<std::string> server_address(
 
 namespace {
 struct PosetRL : public ModulePass,
-                 public posetRL::PosetRL::Service,
-                 public PosetRLEnv {
+                 public PosetRLEnv,
+                 public posetRLgRPC::PosetRLService::Service {
   static char ID;
   PosetRL() : ModulePass(ID) {}
   bool runOnModule(Module &M) override {
@@ -113,8 +114,8 @@ struct PosetRL : public ModulePass,
           M.getContext(), basename + ".out", basename + ".in",
           SerializerType);
 
-      posetRL::EmbeddingResponse response;
-      posetRL::ActionRequest request;
+      posetRLgRPC::EmbeddingResponse response;
+      posetRLgRPC::ActionRequest request;
       errs() << "set MLRunner request and response...\n";
       MLRunner->setRequest(&response);
       MLRunner->setResponse(&request);
@@ -141,12 +142,13 @@ struct PosetRL : public ModulePass,
 
     } else {
       if (training) {
-        // MLRunner = std::make_unique<gRPCModelRunner<
-        //     posetRL::PosetRL::Service, posetRL::PosetRL::Stub,
-        //     posetRL::EmbeddingResponse, posetRL::ActionRequest>>(
-        //     M.getContext(), server_address, this);
-        errs() << "TO BE IMPLEMENTED\n";
-        exit(0);
+        MLRunner = std::make_unique<gRPCModelRunner<
+            posetRLgRPC::PosetRLService::Service, posetRLgRPC::PosetRLService::Stub,
+            posetRLgRPC::EmbeddingResponse, posetRLgRPC::ActionRequest>>(
+            M.getContext(), server_address, this);
+        // errs() << "To be Implemented\n";
+        // exit(0);
+
       } else {
         errs() << "Onnx model runner...\n";
         Agent agent("/home/cs20btech11024/repos/ML-Phase-Ordering/Model/"
@@ -366,8 +368,8 @@ struct PosetRL : public ModulePass,
 
   grpc::Status
   applyActionGetEmbeddings(grpc::ServerContext *context,
-                           const ::posetRL::ActionRequest *request,
-                           ::posetRL::EmbeddingResponse *response) {
+                           const ::posetRLgRPC::ActionRequest *request,
+                           ::posetRLgRPC::EmbeddingResponse *response) {
     errs() << "Action requested: " << request->action() << "\n";
     if (request->action() == -1) {
       errs() << "Before: server exit requested\n";
@@ -387,16 +389,16 @@ struct PosetRL : public ModulePass,
 
     return grpc::Status::OK;
   }
-  ::grpc::Status getEmbedding(::grpc::ServerContext *context,
-                              const ::google::protobuf::Empty *request,
-                              ::posetRL::EmbeddingResponse *response) {
-    Embedding emb = getEmbeddings();
+  // ::grpc::Status getEmbedding(::grpc::ServerContext *context,
+  //                             const ::google::protobuf::Empty *request,
+  //                             ::posetRLgRPC::EmbeddingResponse *response) {
+  //   Embedding emb = getEmbeddings();
 
-    for (unsigned long i = 0; i < emb.size(); i++) {
-      response->add_embedding(emb[i]);
-    }
-    return grpc::Status::OK;
-  }
+  //   for (unsigned long i = 0; i < emb.size(); i++) {
+  //     response->add_embedding(emb[i]);
+  //   }
+  //   return grpc::Status::OK;
+  // }
 
 private:
   Module *M;

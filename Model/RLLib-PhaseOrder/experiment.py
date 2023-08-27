@@ -58,6 +58,12 @@ parser.add_argument("-size_reward_thresh", "--size_reward_thresh", required=Fals
 parser.add_argument("-mca_reward_thresh", "--mca_reward_thresh", required=False, type=float, default=0.2)
 parser.add_argument("--use_pipe", action='store_true', help = "Use pipe communication", required=False, default=False)
 parser.add_argument("--use_grpc", action='store_true', help = "Use grpc communication", required=False, default=False)
+parser.add_argument(
+    "--data_format",
+    type=str,
+    choices=["json", "protobuf", "bytes"],
+    help="Data format to use for communication",
+)
 
 # Use for resuming training from checkpoint
 # checkpoint = "/home/cs20btech11018/ray_results/0.2thresh-10alpha-5beta-aarch/experiment_PhaseOrder_54b91_00000_0_2023-02-04_18-33-34/checkpoint_000010/checkpoint-10"
@@ -140,7 +146,7 @@ if __name__ == '__main__':
                 "mca_reward_thresh": args.mca_reward_thresh,
                 "action_space_size": 34,
                 "use_pipe": args.use_pipe,
-                "data_format": "json",
+                "data_format": args.data_format,
                 "use_grpc": args.use_grpc
             },
             "train_batch_size": 512,
