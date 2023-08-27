@@ -20,6 +20,12 @@ public:
   virtual void setFeature(std::string, double &) = 0;
   virtual void setFeature(std::string, std::string &) = 0;
   virtual void setFeature(std::string, bool &) = 0;
+  virtual void setFeature(std::string, std::vector<int> &) {};
+  virtual void setFeature(std::string, std::vector<float> &) {};
+  virtual void setFeature(std::string, std::vector<double> &) {};
+  virtual void setFeature(std::string, std::vector<std::string> &) {};
+  virtual void setFeature(std::string, std::vector<bool> &) {};
+
   template <class T> void setFeature(std::string name, std::vector<T> &value) {
     llvm::errs() << "In BaseSerializer setFeature of vector...\n";
     for (auto &v : value) {
@@ -28,7 +34,7 @@ public:
   }
 
   // a hack to set the request and response structures in protobuf serializer
-  virtual void setRequest(void *Request) {};
+  virtual void setRequest(void *Request) {llvm::errs() << "In BaseSerializer setRequest...\n";};
   virtual void setResponse(void *Response) {};
 
   // template <class T> void setFeature(std::string, std::vector<T>);
