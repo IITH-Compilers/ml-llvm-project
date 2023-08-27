@@ -40,6 +40,7 @@
 
 #include "grpcpp/impl/codegen/status.h"
 
+
 using namespace llvm;
 using namespace grpc;
 
@@ -99,12 +100,14 @@ struct PosetRL : public ModulePass, public PosetRLEnv {
 
       MLRunner = std::make_unique<PipeModelRunner>(
           M.getContext(), basename + ".out", basename + ".in",
-          BaseSerializer::Kind::Json);
+          BaseSerializer::Kind::Protobuf);
 
-      // posetrl::EmbeddingResponse response;
-      // posetrl::ActionRequest request;
-      // MLRunner->setRequest(&response);
-      // MLRunner->setResponse(&request);
+      posetrl::EmbeddingResponse response;
+      posetrl::ActionRequest request;
+      errs() << "set MLRunner request and response...\n";
+      MLRunner->setRequest(&response);
+      MLRunner->setResponse(&request);
+      errs() << "end set MLRunner request and response...\n";
       
 
       errs() << "Using pipe communication...\n";
@@ -114,6 +117,8 @@ struct PosetRL : public ModulePass, public PosetRLEnv {
       //   initPipeCommunication3();
       // else if (data_format == "bytes")
       //   initPipeCommunication1();
+      else if (data_format == "protobuf")
+        initPipeCommunication4();
       else {
         errs() << "Invalid data format\n";
         exit(1);
@@ -143,6 +148,19 @@ struct PosetRL : public ModulePass, public PosetRLEnv {
     }
 
     return true;
+  }
+  void initPipeCommunication4() {
+    errs() << "Entering protobuf pipe communication...\n";
+
+    std::pair<std::string, std::vector<float>> p1("embedding", getEmbeddings());
+    errs() << "Populating features...\n";
+    MLRunner->populateFeatures(p1);
+    errs() << "Features populated END...\n";
+
+    auto out = MLRunner->evaluate<int>();
+
+    errs() << "out = " << out << "\n";
+    exit(0);
   }
   // void initPipeCommunication1() {
   //   errs() << "Entering bitstream pipe communication...\n";
