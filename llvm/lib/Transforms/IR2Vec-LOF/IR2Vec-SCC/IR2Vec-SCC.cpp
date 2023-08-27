@@ -1,4 +1,5 @@
 #include "llvm/Transforms/IR2Vec-LOF/IR2Vec-SCC.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/Transforms/IR2Vec-LOF/Config.h"
 #include "llvm/Transforms/IR2Vec-LOF/RDG.h"
 
@@ -29,8 +30,6 @@
 #include <algorithm>
 #include <fstream>
 #include <string>
-
-
 
 #define DEBUG_TYPE "RDG"
 
@@ -80,17 +79,16 @@ void RDGWrapperPass::Print_IR2Vec_File(DataDependenceGraph &G,
       if (N->NodeLabel != "") {
         for (Instruction *II : IList) {
           tmp++;
-          LLVM_DEBUG(errs() << " tmp = " << tmp << " " << instVecMap.find(II)
-                            << "\n";
-                     II->dump();
+          LLVM_DEBUG(
+              errs() << " tmp = " << tmp << " " << instVecMap.find(II) << "\n";
+              II->dump();
 
-                      if (instVecMap.find(II) != instVecMap.end())
-                                     instVecMap.find(II)
-                                         ->first->dump();
-                     else {
-                       errs() << "Not in Map\n";
-                       II->dump();
-                     });
+              if (instVecMap.find(II) != instVecMap.end()) instVecMap.find(II)
+                  ->first->dump();
+              else {
+                LLVM_DEBUG(errs() << "Not in Map\n");
+                II->dump();
+              });
 
           if (instVecMap.find(II) == instVecMap.end()) {
             continue;
@@ -199,9 +197,7 @@ void RDGWrapperPass::addMCACalls(Loop *L, int loopID) const {
   CallInst::Create(IE, AsmArgs, "", &*(exitBlock->begin()))->setDoesNotThrow();
 }
 
-bool RDGWrapperPass::runOnFunction(Function &F) {
-  return computeRDG(F);
-}
+bool RDGWrapperPass::runOnFunction(Function &F) { return computeRDG(F); }
 
 bool RDGWrapperPass::computeRDG(Function &F) {
   // errs()<<"Inside RDGWrapperPass:\n";
@@ -236,10 +232,16 @@ bool RDGWrapperPass::computeRDG(Function &F) {
   //               // errs() << "Processing use:";
   //               // use->dump();
   //               auto inst = dyn_cast<Instruction>(use);
-  //               if (inst && inst->getOpcode()!=Instruction::Store && inst->getOpcode() != Instruction::PHI && DT->dominates(st, inst))                     
-  // //               // (isPotentiallyReachable(st, inst) && isPotentiallyReachable(inst, st) && !isPotentiallyReachable(inst, src_inst)) // => cyclic cases to add load
-  // //               // (isPotentiallyReachable(st, inst) && isPotentiallyReachable(inst, st))
-  //               // if (inst && inst->getOpcode()!=Instruction::Store && isPotentiallyReachable(src_inst, inst)) 
+  //               if (inst && inst->getOpcode()!=Instruction::Store &&
+  //               inst->getOpcode() != Instruction::PHI && DT->dominates(st,
+  //               inst))
+  // //               // (isPotentiallyReachable(st, inst) &&
+  // isPotentiallyReachable(inst, st) && !isPotentiallyReachable(inst,
+  // src_inst)) // => cyclic cases to add load
+  // //               // (isPotentiallyReachable(st, inst) &&
+  // isPotentiallyReachable(inst, st))
+  //               // if (inst && inst->getOpcode()!=Instruction::Store &&
+  //               isPotentiallyReachable(src_inst, inst))
   //               {
   //                 SmallVector<Value *, 3> tuples;
   //                 tuples.push_back(src);
@@ -258,7 +260,7 @@ bool RDGWrapperPass::computeRDG(Function &F) {
   // canonicalizeLoopsWithLoads(loadWorkList);
 
   auto ir2vec = IR2Vec::Embeddings(*F.getParent(),
-                                     IR2Vec::IR2VecMode::FlowAware, VOCAB_FILE);
+                                   IR2Vec::IR2VecMode::FlowAware, VOCAB_FILE);
   instVecMap = ir2vec.getInstVecMap();
   // for (auto II : instVecMap) { II.first->dump(); }
   LLVM_DEBUG(for (auto II
@@ -270,11 +272,15 @@ bool RDGWrapperPass::computeRDG(Function &F) {
   });
 
   rdgInfo = computeRDGForFunction(F);
+  LLVM_DEBUG(errs() << "rdgInfo.SCCGraph size: " << rdgInfo.SCCGraphs.size() << "\n");
+  LLVM_DEBUG(errs() << "rdgInfo.loops size: " << rdgInfo.loops.size() << "\n");
+  LLVM_DEBUG(errs() << "rdgInfo.input_rdgs size: " << rdgInfo.input_rdgs.size() << "\n");
   return false;
 }
 
-void RDGWrapperPass::canonicalizeLoopsWithLoads(SmallVector<SmallVector<Value *, 3>, 6> &loadWorkList){ 
-  for (auto tuples : loadWorkList){
+void RDGWrapperPass::canonicalizeLoopsWithLoads(
+    SmallVector<SmallVector<Value *, 3>, 6> &loadWorkList) {
+  for (auto tuples : loadWorkList) {
     auto src = tuples[0];
     auto dest = tuples[1];
     auto insv = tuples[2];
@@ -284,7 +290,7 @@ void RDGWrapperPass::canonicalizeLoopsWithLoads(SmallVector<SmallVector<Value *,
     auto ldInst = new LoadInst(dest, "");
     ldInst->insertBefore(inst);
     for (unsigned i = 0; i < inst->getNumOperands(); i++) {
-      if(inst->getOperand(i) == src){
+      if (inst->getOperand(i) == src) {
         inst->setOperand(i, ldInst);
         // errs() << "Operand set successfully - ";
         // inst->dump();
@@ -300,6 +306,85 @@ void RDGWrapperPass::canonicalizeLoopsWithLoads(SmallVector<SmallVector<Value *,
 //   SmallVector<std::string, 2> s = R.computeRDGForFunction(F);
 //   return s;
 // }
+void RDGWrapperPass::populateDOTData(DataDependenceGraph &G,
+                                     const std::string &FileName,
+                                     const std::string &LLName, unsigned LoopID,
+                                     DOTData &rdg) {
+  rdg.FileName = LLName;
+  rdg.FuncName = G.GetFunctionName();
+  rdg.LoopID = LoopID;
+
+  int NumNodes = 0;
+  for(auto* N : G) {
+    if(N->NodeLabel != "") {
+      NumNodes++;
+    }
+  }
+  errs() << "NumNodes = " << NumNodes << "\n";
+  // rdg.NodeRepresentations.resize(NumNodes);
+  // filling IR2Vec vectors
+  for (auto *N : G) {
+    if (N->NodeLabel == "")
+      continue;
+    InstructionListType IList;
+    N->collectInstructions([](const Instruction *I) { return true; }, IList);
+    auto &NodeVec = rdg.NodeRepresentations[stoi(N->NodeLabel.substr(1)) - 1];
+    // SmallVector<double, DIM> NodeVec;
+    LLVM_DEBUG(errs() << "line 324\n");
+    NodeVec.resize(DIM, 0.0);
+    bool Found = false;
+    for (Instruction *II : IList) {
+      if (instVecMap.find(II) == instVecMap.end())
+        continue;
+
+      auto Vec = instVecMap.find(II)->second;
+      // errs() << "Vec[" << II << "] = ";
+      // for (unsigned I = 0; I < DIM; ++I)
+      //   errs() << Vec[I] << " ";
+      // errs() << "\n";
+      // errs() << "End\n";
+      if(!Found) {
+        NodeVec = Vec;
+        Found = true;
+      }
+      else {
+        for (unsigned I = 0; I < DIM; ++I)
+          NodeVec[I] += Vec[I];
+      }
+      
+    }
+    // rdg.NodeRepresentations[stoi(N->NodeLabel.substr(1)) - 1] = NodeVec;
+    // errs() << "Nodevecd : ---\n";
+    // for(unsigned I = 0; I < DIM; ++I)
+    // {
+    //   errs() << NodeVec[I] << " ";
+    // }
+    // errs() << "\n";
+    // errs() << "End\n";
+    NodeNumber.insert(std::make_pair(N, N->NodeLabel));
+  }
+  LLVM_DEBUG(errs() << "**before adjlist filling\n");
+  // filling AdjList
+  for (auto *N : G) {
+    if (N->NodeLabel == "")
+      continue;
+
+    for (auto &E : N->getEdges()) {
+      LLVM_DEBUG(errs() << "IR2Vec-SCC.cpp: line 348\n");
+      if ((&E->getTargetNode())->NodeLabel == "") {
+        LLVM_DEBUG(errs() << "IR2Vec-SCC.cpp: line 353\n");
+        continue;
+      }
+      auto SrcNode = stoi(NodeNumber.find(N)->second.substr(1));
+      LLVM_DEBUG(errs() << "IR2Vec-SCC.cpp: line 358\n");
+      auto DestNode =
+          stoi(NodeNumber.find(&E->getTargetNode())->second.substr(1));
+      if(SrcNode != DestNode)
+        rdg.AdjList[SrcNode].push_back(DestNode);
+    }
+  }
+  LLVM_DEBUG(errs() << "rdg.AdjList size = " << rdg.AdjList.size() << "\n");
+}
 
 RDGData RDGWrapperPass::computeRDGForFunction(Function &F) {
   raw_ostream &operator<<(raw_ostream &OS, const DataDependenceGraph &G);
@@ -309,7 +394,7 @@ RDGData RDGWrapperPass::computeRDGForFunction(Function &F) {
 
   // // if (collectVectors) {
   //   // Collect IR2Vec encoding vector for each instruction in instVecMap
-    
+
   //   collectVectors = false;
   // // }
 
@@ -325,8 +410,11 @@ RDGData RDGWrapperPass::computeRDGForFunction(Function &F) {
   int loopNum = 0;
   for (LoopInfo::iterator i = LI->begin(), e = LI->end(); i != e; ++i) {
     Loop *L = *i;
+    // L->dump();
+    // errs() << " came lo line 376\n";
     for (auto il = df_begin(L), el = df_end(L); il != el; ++il) {
       if (il->getSubLoops().size() > 0) {
+        // errs() << "IR2Vec-SCC.cpp : line 377\n";
         continue;
       }
 
@@ -340,10 +428,12 @@ RDGData RDGWrapperPass::computeRDGForFunction(Function &F) {
       const LoopAccessInfo &LAI = LAA->getInfo(*il);
       auto RDGraph = RDG(*AA, *SE, *LI, DI, LAI, ORE);
       // errs() << "Function Name: " << F.getName() <<"\n";
+      // errs() << "**** LOOP No. :" << loopNum << "\n";
 
       auto SCC_Graph = RDGraph.computeRDGForInnerLoop(**il);
 
       if (SCC_Graph == nullptr) {
+        LLVM_DEBUG(errs() << "IR2Vec-SCC.cpp : line 394\n");
         continue;
       }
       DataDependenceGraph &SCCGraph = *SCC_Graph;
@@ -387,8 +477,8 @@ RDGData RDGWrapperPass::computeRDGForFunction(Function &F) {
       LLVM_DEBUG(errs() << "Writing " + Input_Filename + "\n");
       Print_IR2Vec_File(SCCGraph, Input_Filename, s2, loopNum);
 
-      errs() << "FileName: " << F.getParent()->getName() << "\n";
-      errs() << "Writing " + Input_Filename + "\n";
+      LLVM_DEBUG(errs() << "FileName: " << F.getParent()->getName() << "\n");
+      LLVM_DEBUG(errs() << "Writing " + Input_Filename + "\n");
 
       std::ifstream ifs_inputfile(Input_Filename);
       std::string content_input;
@@ -397,7 +487,13 @@ RDGData RDGWrapperPass::computeRDGForFunction(Function &F) {
 
       data.SCCGraphs.push_back(SCC_Graph);
       data.loops.push_back(*il);
-      data.input_rdgs.push_back(content_input);
+      data.input_rdgs_str.push_back(content_input);
+      /*****Populating data.input_rdgs*******/
+      DOTData rdg;
+      populateDOTData(SCCGraph, Input_Filename, s2, loopNum, rdg);
+      data.input_rdgs.push_back(rdg);
+      /**************************************/
+
       std::string totalSCC_Filename = "totalSCC.txt";
       std::error_code EC;
       raw_fd_ostream File(totalSCC_Filename.c_str(), EC, sys::fs::F_Append);
@@ -407,10 +503,13 @@ RDGData RDGWrapperPass::computeRDGForFunction(Function &F) {
           File << SCC_Filename << " : " << SCCGraph.totalSCCNodes << "\n";
         }
       } else {
-        errs() << "error opening file for writing! \n";
+        LLVM_DEBUG(errs() << "error opening file for writing! \n");
       }
     }
   }
+  LLVM_DEBUG(errs() << "data.SCCGraph size: " << data.SCCGraphs.size() << "\n");
+  LLVM_DEBUG(errs() << "data.loops size: " << data.loops.size() << "\n");
+  LLVM_DEBUG(errs() << "data.input_rdgs size: " << data.input_rdgs.size() << "\n");
   return data;
 }
 

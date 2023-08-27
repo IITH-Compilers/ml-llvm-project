@@ -50,7 +50,7 @@ clang_target_link_libraries(clang
   clangFrontendTool
   clangSerialization
   )
-    target_link_libraries(clang PUBLIC LLVMIR2Vec)
+    # target_link_libraries(clang PUBLIC LLVMIR2Vec)
     # set(IR2VEC_INSTALL_DIR "" CACHE PATH "IR2Vec installation directory")
     # include_directories("${IR2VEC_INSTALL_DIR}/include")
     # target_link_libraries(clang PUBLIC ${IR2VEC_INSTALL_DIR}/lib/libIR2Vec.a)

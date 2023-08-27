@@ -411,7 +411,11 @@ class DistributeLoopEnv(MultiAgentEnv):
         if (self.prev_node == None):
             select_node_mask = self.createNodeSelectMask()
             state = self.obs
-            self.hidden_state =  self.ggnn(initial_node_representation=state.initial_node_representation, annotations=state.annotations, adjacency_lists=state.adjacency_lists)
+            print("************************FROM MULTIAGENTENV.py***********************************************")
+            # print(state.shape)
+            self.hidden_state =  self.ggnn(initial_node_representation=state.
+            initial_node_representation, annotations=state.annotations, adjacency_lists=state.adjacency_lists)
+            print(self.hidden_state.shape)
             # self.obs.initial_node_representation = self.hidden_state
             self.current_obs = self.hidden_state[self.cur_node][0:self.emb_size]
             if self.current_obs is not None and not isinstance(self.current_obs, np.ndarray):

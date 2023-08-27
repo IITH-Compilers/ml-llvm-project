@@ -13,7 +13,8 @@ from typing import Dict as type_dict
 import psutil
 import gc
 import utils
-
+import torch
+import numpy as np
 import ray
 from ray import tune
 from ray.tune import function
@@ -39,7 +40,7 @@ from model import SelectNodeNetwork, DistributionTask
 import logging
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--train-iterations", type=int, default=100000)
+parser.add_argument("--train-iterations", type=int, default=1)
 
 checkpoint = None
 def experiment(config):
@@ -53,6 +54,11 @@ def experiment(config):
     if checkpoint is not None:
         train_agent.restore(checkpoint)
         print("Checkpoint restored") 
+
+    # # export model using torch.onnx
+    SELECT_NODE_MODEL_PATH = "/home/cs20btech11024/onnx/select_node/model-1.onnx"
+    DISTRIBUTION_MODEL_PATH = "/home/cs20btech11024/onnx/distribution/model-1.onnx"
+
 
     last_checkpoint = 0
     for i in range(iterations):
@@ -70,6 +76,11 @@ def experiment(config):
         checkpoint = train_agent.save(tune.get_trial_dir())
 
     train_agent.stop()
+
+    torch.onnx.export(train_agent.get_policy("select_node_policy").model, ({"obs": torch.randn(1, 301000)}, {}), f=SELECT_NODE_MODEL_PATH, verbose=True, input_names=["obs"], output_names=["output"])
+
+    torch.onnx.export(train_agent.get_policy("distribution_policy").model, ({"obs": torch.randn(1, 603)}, {}), f=DISTRIBUTION_MODEL_PATH, verbose=True, input_names=["obs"], output_names=["output"])
+
 
 if __name__ == "__main__":
     args = parser.parse_args()
@@ -95,6 +106,7 @@ if __name__ == "__main__":
     config["env_config"]["mode"] = "train"
     config["env_config"]["loop_cost"] = "LC"
     config["env_config"]["EPOCHS"] = 100
+    config["env_config"]["dataset"] = "/home/cs20btech11024/repos/ML-Loop-Distribution/data/tsvc_train/generated_final"
 
     Curr_Dir = os.path.basename(normpath(config["env_config"]["dataset"]))
     # print("aaaaaaaaaaa{}".format(Curr_Dir))

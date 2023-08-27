@@ -15,7 +15,7 @@ message(STATUS "Found Python3_LIBRARIES ${Python3_LIBRARIES}")
 
 include_directories(${Python3_INCLUDE_DIRS})
 link_directories(${Python3_LIBRARY_DIRS})
-
+add_subdirectory(inference)
 add_library(libpython3.6m SHARED IMPORTED) 
 set_target_properties(libpython3.6m PROPERTIES IMPORTED_LOCATION ${Python3_LIBRARIES} INTERFACE_INCLUDE_DIRECTORIES ${Python3_INCLUDE_DIRS})
-target_link_libraries(LLVMcustom_loop_distribution LLVMLoopDistribution libpython3.6m)
+target_link_libraries(LLVMcustom_loop_distribution LLVMLoopDistribution LLVMCLDInference libpython3.6m)
