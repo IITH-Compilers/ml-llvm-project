@@ -26,10 +26,19 @@ class VirtRegMap;
   public:
     virtual ~Spiller() = 0;
 
+    int NumSpilledRangesMF = 0;
+    int NumReloadsMF = 0;
+
+    Spiller() {
+      NumSpilledRangesMF = 0;
+      NumReloadsMF = 0;
+    }
+
     /// spill - Spill the LRE.getParent() live interval.
     virtual void spill(LiveRangeEdit &LRE) = 0;
 
     virtual void postOptimization() {}
+    
   };
 
   /// Create and return a spiller that will insert spill code directly instead

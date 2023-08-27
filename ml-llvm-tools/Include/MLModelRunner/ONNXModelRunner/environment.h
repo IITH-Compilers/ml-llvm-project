@@ -10,18 +10,20 @@
 #define ONNX_MODELRUNNER_ENVIRONMENT_H
 
 #include "MLModelRunner/ONNXModelRunner/agent.h"
+#include <map>
 
 typedef signed Action;
 
 class Environment {
   bool done = false;
-  std::string next_agent;
+  std::string nextAgent;
+  std::map<std::string, Observation> obsMap;
 
 public:
   bool checkDone() { return done == true; };
   void setDone() { done = true; }
-  std::string getNextAgent() { return next_agent; };
-  void setNextAgent(std::string name) { next_agent = name; }
+  std::string getNextAgent() { return nextAgent; };
+  void setNextAgent(std::string name) { nextAgent = name; }
   virtual Observation step(Action action) = 0;
   virtual Observation reset() = 0;
 };

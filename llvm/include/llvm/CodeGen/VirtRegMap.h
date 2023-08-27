@@ -37,12 +37,14 @@ class TargetInstrInfo;
       NO_STACK_SLOT = (1L << 30)-1,
       MAX_STACK_SLOT = (1L << 18)-1
     };
+    int SpillCountMF;
 
   private:
     MachineRegisterInfo *MRI;
     const TargetInstrInfo *TII;
     const TargetRegisterInfo *TRI;
     MachineFunction *MF;
+
 
     /// Virt2PhysMap - This is a virtual to physical register
     /// mapping. Each virtual register is required to have an entry in
@@ -175,6 +177,8 @@ class TargetInstrInfo;
     /// create a mapping for the specified virtual register to
     /// the specified stack slot
     void assignVirt2StackSlot(Register virtReg, int SS);
+
+    void getStats(int &numAssigned);
 
     void print(raw_ostream &OS, const Module* M = nullptr) const override;
     void dump() const;

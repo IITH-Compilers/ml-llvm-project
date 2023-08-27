@@ -74,15 +74,15 @@ void SummaryView::printView(raw_ostream &OS) const {
 
   std::string Buffer;
   raw_string_ostream TempStream(Buffer);
-  TempStream << "Iterations:        " << Iterations;
-  TempStream << "\nInstructions:      " << TotalInstructions;
+  // TempStream << "Iterations:        " << Iterations;
+  // TempStream << "\nInstructions:      " << TotalInstructions;
   TempStream << "\nTotal Cycles:      " << TotalCycles;
-  TempStream << "\nTotal uOps:        " << TotalUOps << '\n';
-  TempStream << "\nDispatch Width:    " << DispatchWidth;
-  TempStream << "\nuOps Per Cycle:    "
-             << format("%.2f", floor((UOpsPerCycle * 100) + 0.5) / 100);
-  TempStream << "\nIPC:               "
-             << format("%.2f", floor((IPC * 100) + 0.5) / 100);
+  // TempStream << "\nTotal uOps:        " << TotalUOps << '\n';
+  // TempStream << "\nDispatch Width:    " << DispatchWidth;
+  // TempStream << "\nuOps Per Cycle:    "
+  //            << format("%.2f", floor((UOpsPerCycle * 100) + 0.5) / 100);
+  // TempStream << "\nIPC:               "
+  //            << format("%.2f", floor((IPC * 100) + 0.5) / 100);
   TempStream << "\nBlock RThroughput: "
              << format("%.1f", floor((BlockRThroughput * 10) + 0.5) / 10)
              << '\n';

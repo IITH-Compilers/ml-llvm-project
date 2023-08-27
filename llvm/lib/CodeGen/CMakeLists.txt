@@ -1,3 +1,5 @@
+include_directories( ${CMAKE_CURRENT_SOURCE_DIR}/MLRegAlloc/inference/includes)
+
 add_llvm_component_library(LLVMCodeGen
   AggressiveAntiDepBreaker.cpp
   AllocationOrder.cpp
@@ -175,12 +177,16 @@ add_llvm_component_library(LLVMCodeGen
   WasmEHPrepare.cpp
   WinEHPrepare.cpp
   XRayInstrumentation.cpp
+  MLConfig.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/CodeGen
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/CodeGen/PBQP
+  ${CMAKE_CURRENT_SOURCE_DIR}/MLRegAlloc/inference/includes
 
-  LINK_LIBS ${LLVM_PTHREAD_LIB}
+  LINK_LIBS ${LLVM_PTHREAD_LIB} LLVMMLRegAlloc
+  LINK_LIBS ${LLVM_PTHREAD_LIB} LLVMConfigGen
+  LINK_LIBS LLVMCollectMachineIR
 
   DEPENDS
   intrinsics_gen
@@ -190,3 +196,7 @@ add_subdirectory(SelectionDAG)
 add_subdirectory(AsmPrinter)
 add_subdirectory(MIRParser)
 add_subdirectory(GlobalISel)
+add_subdirectory(MLRegAlloc)
+add_subdirectory(MIR2Vec)
+add_subdirectory(ConfigGen)
+

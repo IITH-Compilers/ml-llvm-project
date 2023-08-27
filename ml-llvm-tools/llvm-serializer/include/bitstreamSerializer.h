@@ -2,7 +2,7 @@
 #define BITSTREAM_SERIALIZER_H
 
 #include "baseSerializer.h"
-#include "serializer/TensorSpec.h"
+#include "TensorSpec.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
 #include <set>

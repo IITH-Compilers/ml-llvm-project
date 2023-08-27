@@ -47,7 +47,7 @@ static cl::opt<bool>
             cl::desc("Use pipe based interation with python model"),
             cl::init(false));
 
-cl::opt<std::string> data_format(
+static cl::opt<std::string> data_format(
     "data-format", cl::Hidden, cl::init("protobuf"),
     cl::desc("Data format to use for communication with python model"));
 static cl::opt<bool>

@@ -36,6 +36,7 @@
 #ifndef LLVM_LIB_CODEGEN_REGALLOCBASE_H
 #define LLVM_LIB_CODEGEN_REGALLOCBASE_H
 
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 
@@ -46,7 +47,7 @@ class LiveIntervals;
 class LiveRegMatrix;
 class MachineInstr;
 class MachineRegisterInfo;
-template<typename T> class SmallVectorImpl;
+template <typename T> class SmallVectorImpl;
 class Spiller;
 class TargetRegisterInfo;
 class VirtRegMap;
@@ -67,12 +68,21 @@ protected:
   LiveIntervals *LIS = nullptr;
   LiveRegMatrix *Matrix = nullptr;
   RegisterClassInfo RegClassInfo;
+  SmallVector<unsigned, 10> mlAllocatedRegs;
+  SmallVector<unsigned, 10> mlSplitRegs;
+  SmallMapVector<unsigned, unsigned, 8>
+      mlAssignedRegMap; // Reg will be present only if it is unassigned in spill
+                        // flow
+  SmallVector<LiveInterval *, 10> mlSpilledRegs;
 
-  /// Inst which is a def of an original reg and whose defs are already all
-  /// dead after remat is saved in DeadRemats. The deletion of such inst is
-  /// postponed till all the allocations are done, so its remat expr is
-  /// always available for the remat of all the siblings of the original reg.
+  /// Inst which is a def of an original reg and whose defs are already
+  /// all dead after remat is saved in DeadRemats. The deletion of such
+  /// inst is postponed till all the allocations are done, so its remat
+  /// expr is always available for the remat of all the siblings of the
+  /// original reg.
   SmallPtrSet<MachineInstr *, 32> DeadRemats;
+
+  SmallVector<LiveInterval *, 10> spilledRegs;
 
   RegAllocBase() = default;
   virtual ~RegAllocBase() = default;
@@ -110,6 +120,10 @@ protected:
 
   /// Method called when the allocator is about to remove a LiveInterval.
   virtual void aboutToRemoveInterval(LiveInterval &LI) {}
+
+  float accumulateSpilledRegWeights();
+
+  float computeAllocationCost(float movesCost);
 
 public:
   /// VerifyEnabled - True when -verify-regalloc is given.

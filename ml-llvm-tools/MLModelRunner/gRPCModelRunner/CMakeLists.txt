@@ -50,7 +50,6 @@ file(MAKE_DIRECTORY ${LLVM_INCLUDE_DIR}/grpc)
 
 # message(STATUS "include dirs:" ${LLVM_INCLUDE_DIR})
 
-
 foreach(proto ${proto_list})
   get_filename_component(proto_name ${proto} NAME_WLE)
   file(GLOB cc_file ${CMAKE_CURRENT_SOURCE_DIR}/Service/${proto_name}/*.cc)

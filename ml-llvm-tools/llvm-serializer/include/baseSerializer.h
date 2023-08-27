@@ -1,7 +1,6 @@
 #ifndef BASE_SERIALIZER_H
 #define BASE_SERIALIZER_H
 
-#include "serializer/baseSerializer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <map>

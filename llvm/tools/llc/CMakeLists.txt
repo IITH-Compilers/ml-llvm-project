@@ -22,6 +22,7 @@ set(LLVM_LINK_COMPONENTS
   IPO
   PosetRL
   IR2Vec
+  CollectMachineIR
   )
 
 add_llvm_tool(llc

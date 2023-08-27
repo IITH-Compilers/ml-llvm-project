@@ -29,6 +29,7 @@ set(LLVM_LINK_COMPONENTS
   AddSizeAttr
   IR2Vec
   Serializer
+  CollectMachineIR
   )
 
 add_llvm_tool(opt

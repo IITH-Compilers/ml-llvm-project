@@ -35,7 +35,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "regalloc"
 
-STATISTIC(NumNewQueued    , "Number of new live ranges queued");
+STATISTIC(NumNewQueued, "Number of new live ranges queued");
 
 // Temporary verification option until we can put verification inside
 // MachineVerifier.
@@ -54,8 +54,7 @@ bool RegAllocBase::VerifyEnabled = false;
 // Pin the vtable to this file.
 void RegAllocBase::anchor() {}
 
-void RegAllocBase::init(VirtRegMap &vrm,
-                        LiveIntervals &lis,
+void RegAllocBase::init(VirtRegMap &vrm, LiveIntervals &lis,
                         LiveRegMatrix &mat) {
   TRI = &vrm.getTargetRegInfo();
   MRI = &vrm.getRegInfo();
@@ -74,8 +73,11 @@ void RegAllocBase::seedLiveRegs() {
                      TimerGroupDescription, TimePassesIsEnabled);
   for (unsigned i = 0, e = MRI->getNumVirtRegs(); i != e; ++i) {
     unsigned Reg = Register::index2VirtReg(i);
-    if (MRI->reg_nodbg_empty(Reg))
+    if (MRI->reg_nodbg_empty(Reg) ||
+        std::find(mlAllocatedRegs.begin(), mlAllocatedRegs.end(), Reg) !=
+            mlAllocatedRegs.end())
       continue;
+    // errs() << "Enqueing -- " << printReg(Reg, TRI) << "\n";
     enqueue(&LIS->getInterval(Reg));
   }
 }
@@ -87,6 +89,16 @@ void RegAllocBase::allocatePhysRegs() {
 
   // Continue assigning vregs one at a time to available physical registers.
   while (LiveInterval *VirtReg = dequeue()) {
+    // errs() << "Dequeing VirtReg: ";
+    // VirtReg->dump();
+    // errs() << "Size of mlAllocatedRegs: " << mlAllocatedRegs.size() << "\n";
+    auto it =
+        std::find(mlAllocatedRegs.begin(), mlAllocatedRegs.end(), VirtReg->reg);
+    if (it != mlAllocatedRegs.end()) {
+      LLVM_DEBUG(errs() << "Already allocated by mlra -- continuing\n");
+      continue;
+    }
+
     assert(!VRM->hasPhys(VirtReg->reg) && "Register already assigned");
 
     // Unused registers can appear when the spiller coalesces snippets.
@@ -117,8 +129,9 @@ void RegAllocBase::allocatePhysRegs() {
       // Probably caused by an inline asm.
       MachineInstr *MI = nullptr;
       for (MachineRegisterInfo::reg_instr_iterator
-           I = MRI->reg_instr_begin(VirtReg->reg), E = MRI->reg_instr_end();
-           I != E; ) {
+               I = MRI->reg_instr_begin(VirtReg->reg),
+               E = MRI->reg_instr_end();
+           I != E;) {
         MI = &*(I++);
         if (MI->isInlineAsm())
           break;
@@ -128,13 +141,16 @@ void RegAllocBase::allocatePhysRegs() {
       } else if (MI) {
         LLVMContext &Context =
             MI->getParent()->getParent()->getMMI().getModule()->getContext();
-        Context.emitError("ran out of registers during register allocation");
+        Context.emitError(VRM->getMachineFunction().getName() +
+                          ": ran out of registers during register allocation");
       } else {
-        report_fatal_error("ran out of registers during register allocation");
+        report_fatal_error(VRM->getMachineFunction().getName() +
+                           ": ran out of registers during register allocation");
       }
       // Keep going after reporting the error.
-      VRM->assignVirt2Phys(VirtReg->reg,
-                 RegClassInfo.getOrder(MRI->getRegClass(VirtReg->reg)).front());
+      VRM->assignVirt2Phys(
+          VirtReg->reg,
+          RegClassInfo.getOrder(MRI->getRegClass(VirtReg->reg)).front());
       continue;
     }
 
@@ -147,7 +163,18 @@ void RegAllocBase::allocatePhysRegs() {
       LiveInterval *SplitVirtReg = &LIS->getInterval(Reg);
       assert(!VRM->hasPhys(SplitVirtReg->reg) && "Register already assigned");
       if (MRI->reg_nodbg_empty(SplitVirtReg->reg)) {
-        assert(SplitVirtReg->empty() && "Non-empty but used interval");
+        // errs() << "Checking in regallocbase - " <<
+        // printReg(SplitVirtReg->reg)
+        //        << "\n";
+        // if (!SplitVirtReg->empty()) {
+        //   errs() << "empty segments check: \n";
+        //   for (auto i : SplitVirtReg->segments) {
+        //     errs() << "\t not empty: ";
+        //     i.dump();
+        //   }
+        //   VRM->getMachineFunction().dump();
+        // }
+        // assert(SplitVirtReg->empty() && "Non-empty but used interval");
         LLVM_DEBUG(dbgs() << "not queueing unused  " << *SplitVirtReg << '\n');
         aboutToRemoveInterval(*SplitVirtReg);
         LIS->removeInterval(SplitVirtReg->reg);
@@ -169,4 +196,21 @@ void RegAllocBase::postOptimization() {
     DeadInst->eraseFromParent();
   }
   DeadRemats.clear();
+}
+
+float RegAllocBase::accumulateSpilledRegWeights() {
+  float spillWeightTotal = 0;
+  for (LiveInterval *vreg : spilledRegs) {
+    spillWeightTotal += vreg->weight;
+  }
+  return spillWeightTotal;
+}
+
+float RegAllocBase::computeAllocationCost(float movesCost) {
+  float alpha = 1;
+  float beta = 0;
+  // float movesCost = 0;
+  float spillRegWeightsTotal = accumulateSpilledRegWeights();
+  float cost = alpha * spillRegWeightsTotal + beta * movesCost;
+  return cost;
 }

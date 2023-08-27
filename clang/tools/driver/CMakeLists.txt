@@ -20,6 +20,7 @@ set( LLVM_LINK_COMPONENTS
   PosetRL
   AddSizeAttr
   IR2Vec
+  CollectMachineIR
   )
 
 option(CLANG_PLUGIN_SUPPORT "Build clang with plugin support" ON)

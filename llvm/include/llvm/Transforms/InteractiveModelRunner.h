@@ -10,12 +10,17 @@
 #ifndef LLVM_ANALYSIS_INTERACTIVEMODELRUNNER_H
 #define LLVM_ANALYSIS_INTERACTIVEMODELRUNNER_H
 
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Config/llvm-config.h"
+#include "llvm/MC/MCExpr.h"
+#include "llvm/ObjectYAML/ELFYAML.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/JSON.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/MLModelRunner.h"
 #include "llvm/Transforms/TensorSpec.h"
 #include "llvm/Transforms/Utils/TrainingLogger.h"
-#include "llvm/Config/llvm-config.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/raw_ostream.h"
+#include <fstream>
 #include <system_error>
 
 namespace llvm {
@@ -45,6 +50,10 @@ public:
                          const TensorSpec &Advice, StringRef OutboundName,
                          StringRef InboundName);
 
+  InteractiveModelRunner(MCContext &Ctx, const std::vector<TensorSpec> &Inputs,
+                         const TensorSpec &Advice, StringRef OutboundName,
+                         StringRef InboundName);
+
   static bool classof(const MLModelRunner *R) {
     return R->getKind() == MLModelRunner::Kind::Interactive;
   }
@@ -53,6 +62,90 @@ public:
     Log->flush();
   }
 
+  // template <typename T> T *communicateData(std::function<void(json::OStream&
+  // OS)>& AddAttributes){
+  //   Log->addDataToStream(AddAttributes);
+  //   // Log->endObservation();
+
+  //   errs() << "About to flush\n";
+  //   Log->flush();
+
+  //   size_t InsPoint = 0;
+  //   char *Buff = OutputBuffer.data();
+  //   const size_t Limit = OutputBuffer.size();
+  //   errs() << "communicateData: Limit = " << Limit << "\n";
+  //   while (InsPoint < Limit) {
+  //     auto ReadOrErr = sys::fs::readNativeFile(
+  //         sys::fs::convertFDToNativeFile(Inbound),
+  //         {Buff + InsPoint, OutputBuffer.size() - InsPoint});
+  //     errs() << ". ";
+  //     if (ReadOrErr.takeError()) {
+  //       // Ctx.emitError("Failed reading from inbound file");
+  //       errs() << "Failed reading from inbound file\n";
+  //       break;
+  //     }
+  //     InsPoint += *ReadOrErr;
+  //   }
+  //   return reinterpret_cast<T *>(OutputBuffer.data());
+  // }
+
+  std::string communicateData(json::Value &Data) {
+    Log->addDataToStream(Data);
+    Log->endObservation();
+    Log->flush();
+
+    std::string line;
+    std::ifstream Infile;
+    Infile.open(InboundName);
+    if (Infile.is_open()) {
+      while (std::getline(Infile, line)) {
+        errs() << "line: " << line << "\n";
+        if (line.size() > 0) {
+          break;
+        }
+      }
+      Infile.close();
+    } else {
+      errs() << "Unable to open file\n";
+    }
+    return line;
+  }
+
+  std::string communicateData() {
+    Log->startObservation();
+    for (size_t I = 0; I < InputSpecs.size(); ++I) {
+      if(InputSpecs[I].name() == "regID"){
+      int x = *(int*)getTensorUntyped(I);
+      errs() << "regID from communicateData = " << x << "\n";
+      }
+      Log->logTensorValue(I,
+                          reinterpret_cast<const char *>(getTensorUntyped(I)));
+    }
+    Log->endObservation();
+    Log->flush();
+
+    std::string line;
+    std::ifstream Infile;
+    Infile.open(InboundName);
+    if (Infile.is_open()) {
+      while (std::getline(Infile, line)) {
+        errs() << "line: " << line << "\n";
+        if (line.size() > 0) {
+          break;
+        }
+      }
+      Infile.close();
+    } else {
+      errs() << "Unable to open file\n";
+    }
+    return line;
+  }
+  // getter for Logger
+  Logger *getLogger() { return Log.get(); }
+  // setter for InputSpecs
+  void setInputSpecs(std::vector<TensorSpec> &InputSpecs) {
+    this->InputSpecs = InputSpecs;
+  }
   virtual ~InteractiveModelRunner();
 
 private:
@@ -60,7 +153,8 @@ private:
   // This must be declared before InEC if we want to initialize it in the
   // ctor initializer list.
   int Inbound = -1;
-  const std::vector<TensorSpec> InputSpecs;
+  std::string InboundName;
+  std::vector<TensorSpec> InputSpecs;
   const TensorSpec OutputSpec;
   std::error_code OutEC;
   std::error_code InEC;

@@ -154,7 +154,7 @@ static cl::opt<bool>
 static cl::opt<bool> PrintResourcePressureView(
     "resource-pressure",
     cl::desc("Print the resource pressure view (enabled by default)"),
-    cl::cat(ViewOptions), cl::init(true));
+    cl::cat(ViewOptions), cl::init(false));
 
 static cl::opt<bool> PrintTimelineView("timeline",
                                        cl::desc("Print the timeline view"),
@@ -192,7 +192,7 @@ static cl::opt<bool>
 static cl::opt<bool> PrintInstructionInfoView(
     "instruction-info",
     cl::desc("Print the instruction info view (enabled by default)"),
-    cl::cat(ViewOptions), cl::init(true));
+    cl::cat(ViewOptions), cl::init(false));
 
 static cl::opt<bool> EnableAllStats("all-stats",
                                     cl::desc("Print all hardware statistics"),

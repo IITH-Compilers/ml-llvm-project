@@ -1,4 +1,4 @@
-name: rllib_env_posetrl
+name: rllib_master_env
 channels:
   - pytorch
   - conda-forge

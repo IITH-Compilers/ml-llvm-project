@@ -13,5 +13,5 @@ add_subdirectory(Coroutines)
 add_subdirectory(CFGuard)
 add_subdirectory(AddSizeAttr)
 add_subdirectory(PosetRL)
-
+add_subdirectory(MCAInstrumentation)
 add_subdirectory(PipeIR)

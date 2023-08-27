@@ -12,14 +12,14 @@
 #include <algorithm>
 #include <assert.h>
 #include <numeric>
+#include <iostream>
 
 ONNXModel::ONNXModel(const char *model_path) : model_path(model_path) {
   env = new Ort::Env(ORT_LOGGING_LEVEL_WARNING, "test");
   session = new Ort::Session(*env, model_path, Ort::SessionOptions{nullptr});
 }
 
-float *ONNXModel::run(std::vector<float> &input,
-                      std::vector<int64_t> &outputDims) {
+void ONNXModel::run(llvm::SmallVector<float, 100> &input, llvm::SmallVector<float, 100> &output){
   Ort::AllocatorWithDefaultOptions allocator;
   auto inputName = session->GetInputNameAllocated(0, allocator);
   auto inputNameStr = inputName.get();
@@ -49,7 +49,10 @@ float *ONNXModel::run(std::vector<float> &input,
                                     inputTensor, 1, &outputNameStr, 1);
   assert(outputTensors.size() == 1 && outputTensors.front().IsTensor());
 
-  outputDims = outputTensors.front().GetTensorTypeAndShapeInfo().GetShape();
+  auto outputDims = outputTensors.front().GetTensorTypeAndShapeInfo().GetShape()[1];
 
-  return outputTensors.front().GetTensorMutableData<float>();
+  auto outVal = outputTensors.front().GetTensorMutableData<float>();
+
+  output = llvm::SmallVector<float, 100>(outVal, outVal+outputDims);
+  std::replace_if(output.begin(), output.end(), [](double x){ return std::isnan(x); }, -1.17549e+038);
 }
