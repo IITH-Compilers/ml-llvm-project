@@ -15,12 +15,14 @@
 #include <stdio.h>
 #include <string>
 
+#define DEBUG_TYPE "rl-inference-engine"
+
 class Agent {
 public:
   ONNXModel *model;
   int input_size;
   Agent(std::string model_path, int input_size);
-  unsigned computeAction(Observation obs);
+  unsigned computeAction(Observation &obs);
 };
 
 #endif // ONNX_MODELRUNNER_AGENT_H

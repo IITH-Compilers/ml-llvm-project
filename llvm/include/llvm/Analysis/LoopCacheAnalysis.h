@@ -201,6 +201,7 @@ public:
         LoopCosts.begin(), LoopCosts.end(),
         [&L](const LoopCacheCostTy &LCC) { return LCC.first == &L; });
     return (IT != LoopCosts.end()) ? (*IT).second : -1;
+    // return (*IT).second;
   }
 
   /// Return the estimated ordered loop costs.

@@ -14,4 +14,6 @@ add_subdirectory(CFGuard)
 add_subdirectory(AddSizeAttr)
 add_subdirectory(PosetRL)
 
+add_subdirectory(IR2Vec-LOF)
+# add_subdirectory(LoopTime)
 add_subdirectory(PipeIR)

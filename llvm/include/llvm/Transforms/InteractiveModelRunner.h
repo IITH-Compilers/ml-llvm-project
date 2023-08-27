@@ -53,6 +53,27 @@ public:
     Log->flush();
   }
 
+  template <typename T> T *communicateData(std::string RDG_List){
+    Log->addRDGs(RDG_List);
+    Log->endObservation();
+    Log->flush();
+
+    size_t InsPoint = 0;
+    char *Buff = OutputBuffer.data();
+    const size_t Limit = OutputBuffer.size();
+    while (InsPoint < Limit) {
+      auto ReadOrErr = sys::fs::readNativeFile(
+          sys::fs::convertFDToNativeFile(Inbound),
+          {Buff + InsPoint, OutputBuffer.size() - InsPoint});
+      if (ReadOrErr.takeError()) {
+        Ctx.emitError("Failed reading from inbound file");
+        break;
+      }
+      InsPoint += *ReadOrErr;
+    }
+    return reinterpret_cast<T *>(OutputBuffer.data());
+  }
+
   virtual ~InteractiveModelRunner();
 
 private:

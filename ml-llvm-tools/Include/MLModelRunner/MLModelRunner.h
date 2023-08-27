@@ -13,7 +13,7 @@
 #include "serializer/baseSerializer.h"
 #include "serializer/bitstreamSerializer.h"
 #include "serializer/jsonSerializer.h"
-#include "llvm/IR/PassManager.h"
+// #include "llvm/IR/PassManager.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
 #include <string>
