@@ -14,10 +14,10 @@
 #include "MLModelRunner/MLModelRunnerWithTensorSpec.h"
 #include "MLModelRunner/Utils/TrainingLogger.h"
 #include "serializer/baseSerializer.h"
-#include "llvm/Transforms/TensorSpec.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/TensorSpec.h"
 #include <fstream>
 #include <memory>
 #include <system_error>
@@ -55,8 +55,8 @@ public:
   virtual ~PipeModelRunner();
 
 private:
-  void send(const std::string &data);
-  std::string receive();
+  void send(void *data);
+  void *receive();
   void *evaluateUntyped() override;
   std::string readNBytes(size_t N);
   // This must be declared before InEC if we want to initialize it in the
@@ -66,7 +66,6 @@ private:
   std::error_code OutEC;
   std::error_code InEC;
   std::unique_ptr<raw_fd_ostream> OutStream;
-  
 };
 } // namespace llvm
 #endif // PipeModelRunner_H

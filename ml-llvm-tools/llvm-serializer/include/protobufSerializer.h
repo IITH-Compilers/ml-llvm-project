@@ -18,23 +18,20 @@ public:
   void setRequest(void *Request) override;
   void setResponse(void *Response) override;
 
-#define SET_FEATURE(TYPE) virtual void setFeature(std::string, TYPE &) override;
+#define SET_FEATURE(TYPE)                                                      \
+  virtual void setFeature(const std::string &, const TYPE &) override;         \
+  virtual void setFeature(const std::string &, const std::vector<TYPE> &)      \
+      override;
   SUPPORTED_TYPES(SET_FEATURE)
 #undef SET_FEATURE
 
-  void setFeature(std::string, std::vector<int> &) override;
-  void setFeature(std::string, std::vector<float> &) override;
-  void setFeature(std::string, std::vector<double> &) override;
-  void setFeature(std::string, std::vector<std::string> &) override;
-  void setFeature(std::string, std::vector<bool> &) override;
-
-  std::string getSerializedData() override;
+  void *getSerializedData() override;
   void cleanDataStructures() override;
 
   Message *getMessage() { return Response; };
 
 private:
-  void *deserializeUntyped(std::string data) override;
+  void *deserializeUntyped(void *data) override;
   Message *Response;
   Message *Request;
 };

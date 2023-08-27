@@ -22,15 +22,11 @@ public:
   enum class Kind : int { Unknown, Json, Bitstream, Protobuf };
   Kind getKind() const { return Type; }
 
-#define SET_FEATURE(TYPE) virtual void setFeature(std::string, TYPE &) = 0;
+#define SET_FEATURE(TYPE)                                                      \
+  virtual void setFeature(const std::string &, const TYPE &) = 0;              \
+  virtual void setFeature(const std::string &, const std::vector<TYPE> &){};
   SUPPORTED_TYPES(SET_FEATURE)
 #undef SET_FEATURE
-
-  virtual void setFeature(std::string, std::vector<int> &) {};
-  virtual void setFeature(std::string, std::vector<float> &) {};
-  virtual void setFeature(std::string, std::vector<double> &) {};
-  virtual void setFeature(std::string, std::vector<std::string> &) {};
-  virtual void setFeature(std::string, std::vector<bool> &) {};
 
   template <class T> void setFeature(std::string name, std::vector<T> &value) {
     llvm::errs() << "In BaseSerializer setFeature of vector...\n";
@@ -40,13 +36,13 @@ public:
   }
 
   // a hack to set the request and response structures in protobuf serializer
-  virtual void setRequest(void *Request) {llvm::errs() << "In BaseSerializer setRequest...\n";};
-  virtual void setResponse(void *Response) {};
+  virtual void setRequest(void *Request) {
+    llvm::errs() << "In BaseSerializer setRequest...\n";
+  };
+  virtual void setResponse(void *Response){};
 
-
-
-  virtual std::string getSerializedData() = 0;
-  virtual void *deserializeUntyped(std::string data) = 0;
+  virtual void *getSerializedData() = 0;
+  virtual void *deserializeUntyped(void *data) = 0;
 
 protected:
   BaseSerializer(Kind Type) : Type(Type) {
@@ -59,6 +55,5 @@ protected:
 
   void *RequestVoid;
   void *ResponseVoid;
-  
 };
 #endif

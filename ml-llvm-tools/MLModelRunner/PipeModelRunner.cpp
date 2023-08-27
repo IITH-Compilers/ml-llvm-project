@@ -55,25 +55,27 @@ PipeModelRunner::~PipeModelRunner() {
   OutStream->close();
 }
 
-void PipeModelRunner::send(const std::string &data) {
-  //TODO: send data size first (a hack to send protbuf data properly)
-  size_t message_length = data.size();
-  const char *message_length_ptr = reinterpret_cast<const char *>(&message_length);
+void PipeModelRunner::send(void *data) {
+  // TODO: send data size first (a hack to send protbuf data properly)
+  auto dataString = reinterpret_cast<std::string *>(data);
+  size_t message_length = dataString->size();
+  const char *message_length_ptr =
+      reinterpret_cast<const char *>(&message_length);
   OutStream->write(message_length_ptr, sizeof(size_t));
-  OutStream->write(data.data(), data.size());
+  OutStream->write(dataString->data(), dataString->size());
   OutStream->flush();
 }
 
-std::string PipeModelRunner::receive() {
+void *PipeModelRunner::receive() {
 
   size_t MessageLength = 0;
   size_t InsPoint = 0;
-  char *Buff = (char*)(&MessageLength);
+  char *Buff = (char *)(&MessageLength);
   const size_t LimitLength = sizeof(size_t);
   while (InsPoint < LimitLength) {
-    auto ReadOrErr = ::sys::fs::readNativeFile(
-        sys::fs::convertFDToNativeFile(Inbound),
-        {Buff + InsPoint, LimitLength - InsPoint});
+    auto ReadOrErr =
+        ::sys::fs::readNativeFile(sys::fs::convertFDToNativeFile(Inbound),
+                                  {Buff + InsPoint, LimitLength - InsPoint});
     if (ReadOrErr.takeError()) {
       Ctx.emitError("Failed reading from inbound file");
       break;
@@ -81,14 +83,14 @@ std::string PipeModelRunner::receive() {
     InsPoint += *ReadOrErr;
   }
 
-  string Message(MessageLength, '\0');
+  auto *Message = new std::string(MessageLength, '\0');
   InsPoint = 0;
-  Buff = Message.data();
-  const size_t Limit = Message.length();
+  Buff = Message->data();
+  const size_t Limit = Message->length();
   while (InsPoint < Limit) {
-    auto ReadOrErr = ::sys::fs::readNativeFile(
-        sys::fs::convertFDToNativeFile(Inbound),
-        {Buff + InsPoint, Limit - InsPoint});
+    auto ReadOrErr =
+        ::sys::fs::readNativeFile(sys::fs::convertFDToNativeFile(Inbound),
+                                  {Buff + InsPoint, Limit - InsPoint});
     if (ReadOrErr.takeError()) {
       Ctx.emitError("Failed reading from inbound file");
       break;
@@ -101,8 +103,8 @@ std::string PipeModelRunner::receive() {
 
 void *PipeModelRunner::evaluateUntyped() {
   llvm::errs() << "In PipeModelRunner evaluateUntyped...\n";
-  std::string data = Serializer->getSerializedData();
+  auto *data = Serializer->getSerializedData();
   send(data);
-  std::string reply = receive();
+  auto *reply = receive();
   return Serializer->deserializeUntyped(reply);
 }

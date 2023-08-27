@@ -11,15 +11,14 @@
 #define LLVM_MLMODELRUNNER_H
 
 #include "serializer/baseSerializer.h"
-#include "serializer/bitstreamSerializer.h"
-#include "serializer/jsonSerializer.h"
+// #include "serializer/bitstreamSerializer.h"
+// #include "serializer/jsonSerializer.h"
 #include "serializer/protobufSerializer.h"
-#include "serializer/bitstreamSerializer.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/raw_ostream.h"
+#include <future>
 #include <memory>
 #include <string>
-#include <future>
 
 namespace llvm {
 class LLVMContext;
@@ -32,7 +31,7 @@ public:
   virtual ~MLModelRunner() = default;
 
   template <typename T> T evaluate() {
-    return *reinterpret_cast<T*>(evaluateUntyped());
+    return *reinterpret_cast<T *>(evaluateUntyped());
   }
 
   //   enum class Kind : int { Unknown, Release, Development, NoOp, Interactive
@@ -54,8 +53,8 @@ public:
   std::promise<void> *exit_requested;
 
   template <typename T, typename... Types>
-  void populateFeatures(std::pair<std::string, T> &var1,
-                        std::pair<std::string, Types> &...var2) {
+  void populateFeatures(const std::pair<std::string, T> &var1,
+                        const std::pair<std::string, Types> &...var2) {
     Serializer->setFeature(var1.first, var1.second);
     populateFeatures(var2...);
   }
@@ -75,13 +74,13 @@ protected:
     // Serializer = std::make_unique<JsonSerializer>();
     switch (SerializerType) {
     case BaseSerializer::Kind::Json:
-      Serializer = std::make_unique<JsonSerializer>();
+      // Serializer = std::make_unique<JsonSerializer>();
       break;
     case BaseSerializer::Kind::Protobuf:
       Serializer = std::make_unique<ProtobufSerializer>();
       break;
     case BaseSerializer::Kind::Bitstream:
-      Serializer = std::make_unique<BitstreamSerializer>();
+      // Serializer = std::make_unique<BitstreamSerializer>();
       break;
     }
     errs() << "End MLModelRunner constructor...\n";
