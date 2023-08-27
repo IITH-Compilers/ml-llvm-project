@@ -35,6 +35,7 @@ DEPENDS
 intrinsics_gen
 LLVMMLModelRunner
 )
+target_include_directories(LLVMPosetRL PUBLIC ${LLVM_MAIN_INCLUDE_DIRS})
 target_link_libraries(LLVMPosetRL PUBLIC LLVMSerializer)
 target_link_libraries(LLVMPosetRL PUBLIC LLVMMLModelRunner)
 target_link_libraries(LLVMPosetRL PUBLIC LLVMONNXModelRunner)

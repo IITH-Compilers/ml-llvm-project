@@ -85,7 +85,6 @@ def pretty_print_tensor_value(tv: TensorValue):
 
 def read_header(f: io.BufferedReader):
     line = f.readline()
-    # print('header: ', line)
     header = json.loads(line)
     tensor_specs = [TensorSpec.from_dict(ts) for ts in header["features"]]
     score_spec = TensorSpec.from_dict(header["score"]) if "score" in header else None
@@ -133,19 +132,18 @@ def read_stream(fname: str):
             )
             yield context, observation_id, features, score
 
-def read_stream2(fname: str):
-    with io.BufferedReader(io.FileIO(fname, "rb")) as f:
-        context = None
-        while True:
-            tensor_specs, score_spec, _ = read_header(f)
-            # event_str = f.readline()
-            # print("Event: ", event_str)
-            # if not event_str:
-                # break
-            context, observation_id, features, score = read_one_observation(
-                context, '', f, tensor_specs, score_spec
-            )
-            yield context, observation_id, features, score
+def read_stream2(f: io.BufferedReader):
+    context = None
+    while True:
+        tensor_specs, score_spec, _ = read_header(f)
+        # event_str = f.readline()
+        # print("Event: ", event_str)
+        # if not event_str:
+            # break
+        context, observation_id, features, score = read_one_observation(
+            context, '', f, tensor_specs, score_spec
+        )
+        yield context, observation_id, features, score
 
 def main(args):
     last_context = None

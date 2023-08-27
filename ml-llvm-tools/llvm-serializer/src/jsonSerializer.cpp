@@ -4,9 +4,21 @@
 #include "llvm/Support/raw_ostream.h"
 #include <string>
 
-void *JsonSerializer::deserializeUntyped(std::string data) {
-  // errs() << "In JsonSerializer deserializeUntyped...\n";
-  Expected<json::Value> valueOrErr = json::parse(data);
+void *JsonSerializer::getSerializedData() {
+  auto tempJO = J;
+  auto data = json::Value(std::move(tempJO));
+  auto* ret = new std::string();
+  llvm::raw_string_ostream OS(*ret);
+  json::OStream(OS).value(data);
+  cleanDataStructures();
+  errs() << "data from json func: " << *ret << "\n";
+  return ret;
+}
+
+void *JsonSerializer::deserializeUntyped(void *data) {
+  errs() << "In JsonSerializer deserializeUntyped...\n";
+  auto dataStr = static_cast<std::string *>(data);
+  Expected<json::Value> valueOrErr = json::parse(*dataStr);
   if (!valueOrErr) {
     llvm::errs() << "Error parsing JSON: " << valueOrErr.takeError() << "\n";
     exit(1);

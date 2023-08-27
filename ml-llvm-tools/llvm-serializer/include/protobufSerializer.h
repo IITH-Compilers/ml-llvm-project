@@ -2,8 +2,8 @@
 #define PROTOBUF_SERIALIZER_H
 
 #include "baseSerializer.h"
-#include <google/protobuf/extension_set.h>
-#include <google/protobuf/message.h>
+#include "google/protobuf/extension_set.h"
+#include "google/protobuf/message.h"
 
 using namespace google::protobuf;
 
@@ -11,34 +11,27 @@ class ProtobufSerializer : public BaseSerializer {
 public:
   ProtobufSerializer() : BaseSerializer(Kind::Protobuf){};
 
+  static bool classof(const BaseSerializer *S) {
+    return S->getKind() == BaseSerializer::Kind::Protobuf;
+  }
+
   void setRequest(void *Request) override;
   void setResponse(void *Response) override;
 
-  void setFeature(std::string, int&) override;
-  void setFeature(std::string, float&) override;
-  void setFeature(std::string, double&) override;
-  void setFeature(std::string, std::string&) override;
-  void setFeature(std::string, bool &) override;
+#define SET_FEATURE(TYPE)                                                      \
+  virtual void setFeature(const std::string &, const TYPE &) override;         \
+  virtual void setFeature(const std::string &, const std::vector<TYPE> &)      \
+      override;
+  SUPPORTED_TYPES(SET_FEATURE)
+#undef SET_FEATURE
 
-  
-  template <class T>
-  void setFeature(std::string name, std::vector<T> value) {
-    for (auto v : value) {
-      addFeature(name, v);
-    }
-  }
-  void addFeature(std::string, int&);
-  void addFeature(std::string, float&);
-  void addFeature(std::string, double&);
-  void addFeature(std::string, std::string&);
-  void addFeature(std::string, bool&);
-
-  std::string getSerializedData() override;
+  void *getSerializedData() override;
+  void cleanDataStructures() override;
 
   Message *getMessage() { return Response; };
-  
+
 private:
-  void *deserializeUntyped(std::string data) override;
+  void *deserializeUntyped(void *data) override;
   Message *Response;
   Message *Request;
 };

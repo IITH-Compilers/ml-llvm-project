@@ -29,8 +29,6 @@ public:
 
   void requestExit() override {}
 
-  void send(const std::string &) override{};
-  std::string receive() override { return ""; };
   void *evaluateUntyped() override;
 
 private:

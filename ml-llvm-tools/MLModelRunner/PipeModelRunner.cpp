@@ -33,6 +33,7 @@ PipeModelRunner::PipeModelRunner(LLVMContext &Ctx, StringRef OutboundName,
     : MLModelRunner(Ctx, Kind::Pipe, SerializerType),
       InEC(sys::fs::openFileForRead(InboundName, Inbound)) {
   this->InboundName = InboundName.str();
+  errs() << "InboundName: " << InboundName.str() << "\n";
   if (InEC) {
     Ctx.emitError("Cannot open inbound file: " + InEC.message());
     return;
@@ -54,16 +55,6 @@ PipeModelRunner::~PipeModelRunner() {
   OutStream->close();
 }
 
-void PipeModelRunner::send(const std::string &data) {
-  // errs() << "PipeModelRunner::sending..."
-  //  << "\n";
-  OutStream->write(data.data(), data.size());
-  OutStream->write("\n", 1);
-  OutStream->flush();
-  // errs() << "PipeModelRunner::flushed..."
-  //  << "\n";
-}
-
 std::string PipeModelRunner::readNBytes(size_t N) {
   std::string OutputBuffer(N, '\0');
   char *Buff = OutputBuffer.data();
@@ -82,26 +73,30 @@ std::string PipeModelRunner::readNBytes(size_t N) {
   return OutputBuffer;
 }
 
-std::string PipeModelRunner::receive() {
-  // Read header
-  auto hdr = readNBytes(4);
-  // for(int i=0; i<hdr.size(); i++){
-  //   errs() << int(hdr[i]) << " ";
-  // }
-  // errs() << "\n";
-  int MessageLength = 0;
+void PipeModelRunner::send(void *data) {
+  // TODO: send data size first (a hack to send protbuf data properly)
+  auto dataString = reinterpret_cast<std::string *>(data);
+  size_t message_length = dataString->size();
+  const char *message_length_ptr =
+      reinterpret_cast<const char *>(&message_length);
+  OutStream->write(message_length_ptr, sizeof(size_t));
+  OutStream->write(dataString->data(), dataString->size());
+  OutStream->flush();
+}
+
+void *PipeModelRunner::receive() {
+  auto hdr = readNBytes(8);
+  size_t MessageLength = 0;
   memcpy(&MessageLength, hdr.data(), sizeof(MessageLength));
-  // errs() << "PipeModelRunner::receive: MessageLength = " << MessageLength <<
-  // "\n";
-
   // Read message
-  auto OutputBuffer = readNBytes(MessageLength);
-  // errs() << "PipeModelRunner::receive: OutputBuffer.size() = " <<
-  // OutputBuffer.size() << "\n";
-
-  // for(int i=0; i<OutputBuffer.size(); i++){
-  //   errs() << int(OutputBuffer[i]) << " ";
-  // }
-  // errs() << "\n";
+  auto OutputBuffer = new std::string(readNBytes(MessageLength));
   return OutputBuffer;
+}
+
+void *PipeModelRunner::evaluateUntyped() {
+  llvm::errs() << "In PipeModelRunner evaluateUntyped...\n";
+  auto *data = Serializer->getSerializedData();
+  send(data);
+  auto *reply = receive();
+  return Serializer->deserializeUntyped(reply);
 }

@@ -31,11 +31,11 @@ class PosetRLClient(object):
         self.channel = grpc.insecure_channel(
             '{}:{}'.format(self.host, self.server_port))
 
-        self.stub = example_pb2_grpc.PosetRLStub(self.channel)
+        self.stub = posetRL_pb2_grpc.PosetRLStub(self.channel)
 
     def applyActionGetEmbeddings(self, action):
 
-        request = example_pb2.ActionRequest(action=action)
+        request = posetRL_pb2.ActionRequest(action=action)
 
         response = self.stub.applyActionGetEmbeddings(request)
 

@@ -32,7 +32,7 @@ from google.protobuf.json_format import MessageToJson
 import json
 
 import grpc
-sys.path.append('/home/cs20mtech12003/ML-Phase-Ordering/ml-llvm-tools/MLModelRunner/gRPCModelRunner/Python-Utilities')
+sys.path.append('../../ml-llvm-tools/MLModelRunner/gRPCModelRunner/Python-Utilities')
 import posetRL_pb2_grpc, posetRL_pb2
 from google.protobuf.empty_pb2 import Empty
 # pipe related imports
@@ -96,7 +96,7 @@ class PhaseOrder(gym.Env):
         else:
             self.worker_index = 0
 
-#quiet#        print(f"Worker Index: {self.worker_index}")
+# quiet#        print(f"Worker Index: {self.worker_index}")
 
         if self.mode != 'inference':
             self.FileSys_Obj.createFolder("env")
@@ -118,7 +118,7 @@ class PhaseOrder(gym.Env):
             os.remove("env.log")
         logging.basicConfig(
             filename='env.log', format='%(levelname)s - %(filename)s - %(message)s', level=log_level)
-        
+
         # pipes opening
         self.use_pipe = config["use_pipe"]
         print("self.use_pipe {}".format(self.use_pipe))
@@ -131,7 +131,7 @@ class PhaseOrder(gym.Env):
         self.fc = None
         self.read_stream_iter = None
         self.tensor_specs = None
-        self.advice_spec =  None
+        self.advice_spec = None
         if self.use_pipe:
             if os.path.exists(to_compiler):
                 os.remove(to_compiler)
@@ -168,7 +168,7 @@ class PhaseOrder(gym.Env):
 
         # setting current directory to point to the folder for the chosen file
         self.Curr_Dir = self.ENV_Dir + "/" + os.path.splitext(fileName)[0]
-#quiet#        print("Curr_Dir {}".format(self.Curr_Dir))
+# quiet#        print("Curr_Dir {}".format(self.Curr_Dir))
         logging.info("Curr_Dir {}".format(self.Curr_Dir))
 
         # Creating the folder for the chosen file
@@ -179,7 +179,7 @@ class PhaseOrder(gym.Env):
             self.FileSys_Obj.copyFile(os.path.join(
                 self.FileSys_Obj.TrainingDataPath, fileName), self.Curr_Dir)
         else:
-#quiet#            print("test_Benchmark {}".format(self.test_Benchmark))
+            # quiet#            print("test_Benchmark {}".format(self.test_Benchmark))
             logging.info("test_Benchmark {}".format(self.test_Benchmark))
             self.FileSys_Obj.copyFile(os.path.join(
                 self.test_Benchmark, fileName), self.Curr_Dir)
@@ -206,7 +206,7 @@ class PhaseOrder(gym.Env):
         self.cur_action_mask = [1] * self.action_space_size
 
         if self.mode != 'inference':
-#quiet#            print("Number of files {}".format(len(self.Obs)))
+            # quiet#            print("Number of files {}".format(len(self.Obs)))
             logging.info("Number of files {}".format(len(self.Obs)))
             if (len(self.Obs) >= 1):
                 index = np.random.random_integers(0, len(self.Obs) - 1)
@@ -250,7 +250,7 @@ class PhaseOrder(gym.Env):
 
             # print("Returned obs value is", result[0]._view)
             if result is None:
-    #quiet#            print("result is None")
+                # quiet#            print("result is None")
                 raise
             else:
                 self.embedding = result
@@ -264,44 +264,49 @@ class PhaseOrder(gym.Env):
             action_mask), 'state': self.embedding}
         self.cur_obs = next_observation
 
-        return next_observation        
-    
+        return next_observation
+
     def readObservation(self):
         # if not next_event:
         #     break
         embedding = None
         if self.data_format == "bytes":
+            #read first 8 bytes to be compatible with protobuf
             if self.read_stream_iter is None:
-                self.read_stream_iter = log_reader.read_stream2(self.from_compiler)
+                self.read_stream_iter = log_reader.read_stream2(self.fc)
+            hdr = self.fc.read(8)
             context, observation_id, features, score = next(self.read_stream_iter)
             embedding = np.empty([300])
             for i in range(len(features[0])):
                 embedding[i] = features[0][i]
-            # print("embedding: ", embedding)
-            # print(type(embedding))
-                # exit(0)
-          # next_event = self.fc.readline()
-          # print(next_event)
-          # self.fc.readline()
-          # self.tensor_specs, _, self.advice_spec = log_reader.read_header(self.fc)
-
-          # print("Tensor and Advice spec", self.tensor_specs, self.advice_spec)  
-
-          # tensor_value = log_reader.read_tensor(self.fc, self.tensor_specs[0])
-          
-          # embedding = np.empty([300])
-          # for i in range(tensor_value.__len__()):
-          #     element = tensor_value.__getitem__(i)
-          #     embedding[i] = element
 
         elif self.data_format == "json":
-            # print("reading json...")
-            line = self.fc.readline()
-            embedding = json.loads(line)["embedding"]
+            print("reading json...")
+            #read first 8 bytes to be compatible with protobuf
+            hdr = self.fc.read(8)
+            print("hdr: ",hdr)
+            size = int.from_bytes(hdr, "little")
+            print("size: ", size)
+            msg = self.fc.read(size)
+            embedding = json.loads(msg.decode('utf-8'))["embedding"]
             assert len(embedding) == 300
             embedding = np.array(embedding)
-        # print(embedding)
-        return embedding   
+        elif self.data_format == "protobuf":
+            print("reading protobuf...")
+            # 8 bytes for size
+            hdr = self.fc.read(8)
+            print("hdr: ",hdr)
+            size = int.from_bytes(hdr, "little")
+            print("size: ", size)
+            msg = self.fc.read(size)
+            print("msg: ", msg)
+
+            emb = posetRL_pb2.EmbeddingResponse()
+            emb.ParseFromString(msg)
+            print(emb)
+            embedding = np.array(emb.embedding)
+        return embedding
+
 
     def sendResponse(self, value: Union[int, float]):
         if self.data_format == "bytes":
@@ -316,7 +321,7 @@ class PhaseOrder(gym.Env):
           # hdr = int(4).to_bytes(length=8, byteorder='little')
           # f.write(hdr + b'\n')
 
-          hdr = int(4).to_bytes(length=4, byteorder='little')
+          hdr = int(4).to_bytes(length=8, byteorder='little')
           val = int(value)
           message = val.to_bytes(length=4, byteorder='little', signed=True)
           out = hdr + message
@@ -330,9 +335,18 @@ class PhaseOrder(gym.Env):
             f: io.BufferedWriter = self.tc
             message = json.dumps({"out": int(value)}).encode("utf-8")
             print("message: ", message)
-            hdr = int(len(message)).to_bytes(length=4, byteorder='little')
+            hdr = int(len(message)).to_bytes(length=8, byteorder='little')
             out = hdr + message
             f.write(out)
+
+        elif self.data_format == "protobuf":
+            f: io.BufferedWriter = self.tc
+
+            serialized_message = posetRL_pb2.ActionRequest(action=value).SerializeToString()
+            size = len(serialized_message)
+            hdr = int.to_bytes(size, 8, "little")
+            f.write(hdr)
+            f.write(serialized_message)
 
         f.flush()
         print("flushed !!!!")
@@ -350,7 +364,7 @@ class PhaseOrder(gym.Env):
 # quiet#            print("O0 binary object compile command: "+command)
             os.system(command)
             baseBinarySize = os.path.getsize(self.Curr_Dir + "/base_binary.o")
-#quiet#            print("base {}".format(baseBinarySize))
+# quiet#            print("base {}".format(baseBinarySize))
             logging.info("base {}".format(baseBinarySize))
 
             # Compute Oz Binary size
@@ -372,7 +386,7 @@ class PhaseOrder(gym.Env):
             # Get Oz MCA Throughput
             self.OzMcaThroughtput = self.getMCACost(
                 self.Curr_Dir + "/" + fileName + "_Oz")
-#quiet#            print("base {}".format(self.OzMcaThroughtput))
+# quiet#            print("base {}".format(self.OzMcaThroughtput))
             logging.info("base {}".format(self.OzMcaThroughtput))
 
             return baseBinarySize, minBinarySize
@@ -386,7 +400,7 @@ class PhaseOrder(gym.Env):
         # Get embedding for New IR
         # here we can use gRPC server to get the new embeddings
         # self.embedding = self.applyActionGetEmbeddings(action=action_index)
-        
+
         # make call to compiler to get the updated embedding
         if self.mode == 'inference' and self.use_grpc:
             pass
@@ -432,7 +446,7 @@ class PhaseOrder(gym.Env):
 
             if self.mode != 'inference':
                 if not self.use_pipe:
-                    self.stable_grpc("Exit", None)                                
+                    self.stable_grpc("Exit", None)
                 Reward = self.getReward(self.assembly_file_path)
             if self.use_pipe:
                 self.sendResponse(-1)
@@ -441,11 +455,11 @@ class PhaseOrder(gym.Env):
                 self.action_count = 0
                 self.cur_action_seq = []
 
-#quiet#        print("Reward {}".format(Reward))
+# quiet#        print("Reward {}".format(Reward))
         logging.info("Reward {}".format(Reward))
-#quiet#        print("Action {}".format(action_index))
+# quiet#        print("Action {}".format(action_index))
         logging.info("Action {}".format(action_index))
-#quiet#        print("done {}".format(done))
+# quiet#        print("done {}".format(done))
         logging.info("done {}".format(done))
 
         return next_observation, Reward, done, {}
@@ -477,7 +491,7 @@ class PhaseOrder(gym.Env):
                 currMcaThroughtput = float(pair[1].strip(' '))
             line = Output_cmd2.readline()
 
-#quiet#        print("LLVM-MCA command: {}".format(cmd2))
+# quiet#        print("LLVM-MCA command: {}".format(cmd2))
         logging.info("LLVM-MCA command: {}".format(cmd2))
 
         return currMcaThroughtput
@@ -487,11 +501,11 @@ class PhaseOrder(gym.Env):
         self.StateIndex += 1
         fileName = os.path.splitext(os.path.basename(self.BaseIR))[0]
 
-#quiet#        print("fileName {}".format(fileName))
+# quiet#        print("fileName {}".format(fileName))
         logging.info("fileName {}".format(fileName))
-#quiet#        print("StateIndex {}".format(self.StateIndex))
+# quiet#        print("StateIndex {}".format(self.StateIndex))
         logging.info("StateIndex {}".format(self.StateIndex))
-#quiet#        print("BaseIR {}".format(self.CurrIR))
+# quiet#        print("BaseIR {}".format(self.CurrIR))
         logging.info("BaseIR {}".format(self.CurrIR))
 
         # Modified IR path
@@ -515,9 +529,9 @@ class PhaseOrder(gym.Env):
         # Size reward
         currBinarySize = os.path.getsize(new_file + ".o")
 
-#quiet#        print("lastBinarySize {}".format(self.lastBinarySize))
+# quiet#        print("lastBinarySize {}".format(self.lastBinarySize))
         logging.info("lastBinarySize {}".format(self.lastBinarySize))
-#quiet#        print("currBinarySize {}".format(currBinarySize))
+# quiet#        print("currBinarySize {}".format(currBinarySize))
         logging.info("currBinarySize {}".format(currBinarySize))
 
         if ((self.baseBinarySize - self.minBinarySize) > 0):
@@ -531,11 +545,11 @@ class PhaseOrder(gym.Env):
 
         # Throughput reward
         currMcaThroughtput = self.getMCACost(new_file)
-#quiet#        print("currMcaThroughtput: {}".format(currMcaThroughtput))
+# quiet#        print("currMcaThroughtput: {}".format(currMcaThroughtput))
         logging.info("currMcaThroughtput: {}".format(currMcaThroughtput))
-#quiet#        print("OzMcaThroughtput: {}".format(self.OzMcaThroughtput))
+# quiet#        print("OzMcaThroughtput: {}".format(self.OzMcaThroughtput))
         logging.info("OzMcaThroughtput: {}".format(self.OzMcaThroughtput))
-#quiet#        print("lastMcaThroughtput: {}".format(self.lastMcaThroughtput))
+# quiet#        print("lastMcaThroughtput: {}".format(self.lastMcaThroughtput))
         logging.info("lastMcaThroughtput: {}".format(self.lastMcaThroughtput))
 
         if self.lastMcaThroughtput is None:
@@ -588,7 +602,7 @@ class PhaseOrder(gym.Env):
 
         llvmMcaCommand = f"{self.FileSys_Obj.MCAPath} {self.opt_arch_flag} {AssemblyFilePath}"
 
-#quiet#        print(f"LLVM MCA Command: {llvmMcaCommand}")
+# quiet#        print(f"LLVM MCA Command: {llvmMcaCommand}")
 
         pro = subprocess.Popen(llvmMcaCommand, executable='/bin/bash', shell=True,
                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding='utf8')
@@ -605,11 +619,11 @@ class PhaseOrder(gym.Env):
                 currMcaThroughtput = float(pair[1].strip(' '))
             line = Output_cmd2.readline()
 
-#quiet#        print("currMcaThroughtput: {}".format(currMcaThroughtput))
+# quiet#        print("currMcaThroughtput: {}".format(currMcaThroughtput))
         logging.info("currMcaThroughtput: {}".format(currMcaThroughtput))
-#quiet#        print("OzMcaThroughtput: {}".format(self.OzMcaThroughtput))
+# quiet#        print("OzMcaThroughtput: {}".format(self.OzMcaThroughtput))
         logging.info("OzMcaThroughtput: {}".format(self.OzMcaThroughtput))
-#quiet#        print("lastMcaThroughtput: {}".format(self.lastMcaThroughtput))
+# quiet#        print("lastMcaThroughtput: {}".format(self.lastMcaThroughtput))
         logging.info("lastMcaThroughtput: {}".format(self.lastMcaThroughtput))
 
         if self.lastMcaThroughtput is None:
@@ -646,8 +660,8 @@ class PhaseOrder(gym.Env):
         return config_path
 
     def startServer(self, filename, ip):
-        optPath = "/home/cs20mtech12003/ml-llvm-project/build_posetrl/bin/opt"
-        clangPath = "/home/cs20mtech12003/ml-llvm-project/build_posetrl/bin/clang"
+        optPath = "/home/cs20btech11024/repos/ml-llvm-project/build_posetrl/bin/opt"
+        clangPath = "/home/cs20btech11024/repos/ml-llvm-project/build_posetrl/bin/clang"
         filepath = self.train_Dir + "/" + filename
         newfilepath = self.assembly_file_path
         data_format = self.data_format
@@ -685,14 +699,14 @@ class PhaseOrder(gym.Env):
         result = None
         while True:
             try:
-#quiet#                print("LLVM grpc called")
+                # quiet#                print("LLVM grpc called")
                 t1 = time.time()
                 if op != "Exit":
                     result = self.applyActionGetEmbeddings(action=action)
                 else:
                     result = self.stopServer()
                 t2 = time.time()
-#quiet#                print("LLVM grpc response came in {} sec".format(t2 - t1))
+# quiet#                print("LLVM grpc response came in {} sec".format(t2 - t1))
                 self.grpc_rtt += t2-t1
                 # time.sleep(.1)
                 break
@@ -705,7 +719,7 @@ class PhaseOrder(gym.Env):
                     # raise
                     attempt += 1
                     if attempt > max_retries:
-#quiet#                        print("Maximum attempts completed")
+                        # quiet#                        print("Maximum attempts completed")
                         return None
                         # raise #ServiceTransportError( f"{self.url} {e.details()} ({max_retries} retries)") from None
                     remaining = max_retries - attempt

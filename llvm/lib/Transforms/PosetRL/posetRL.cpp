@@ -1,8 +1,4 @@
 #include "llvm/Transforms/PosetRL/PosetRL.h"
-// #include "MLInferenceEngine/agent.h"
-// #include "MLInferenceEngine/driver.h"
-// #include "grpc/example/example.pb.h"
-// #include "grpcpp/impl/codegen/status.h"
 #include "inference/poset_rl_env.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
@@ -17,11 +13,6 @@
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
-// #include "serializer/bitstreamSerializer.h"
-// #include "serializer/deserializer.h"
-#include "serializer/baseSerializer.h"
-#include "serializer/jsonSerializer.h"
-#include "serializer/protobufSerializer.h"
 #include <cstdlib>
 #include <fstream>
 // gRPC includes
@@ -40,6 +31,7 @@
 #include "MLModelRunner/PipeModelRunner.h"
 
 #include "grpcpp/impl/codegen/status.h"
+
 
 using namespace llvm;
 using namespace grpc;
@@ -69,6 +61,7 @@ static cl::opt<std::string> server_address(
 
 namespace {
 struct PosetRL : public ModulePass,
+                 public posetRL::PosetRL::Service,
                  public PosetRLEnv {
   static char ID;
   PosetRL() : ModulePass(ID) {}
@@ -91,7 +84,7 @@ struct PosetRL : public ModulePass,
       for (size_t i = 0; i < DefaultFeatureSpec.getElementCount(); i++)
         feature_data.push_back((float_t)(i + 0.5));
 
-      std::string basename = "/home/cs20mtech12003/ml-llvm-project/"
+      std::string basename = "/home/cs20btech11024/repos/ml-llvm-project/"
                              "Model/RLLib-PhaseOrder/temppipe";
       std::vector<TensorSpec> Features;
       // std::vector<void*> InputBuffers;
@@ -117,18 +110,27 @@ struct PosetRL : public ModulePass,
       }
 
       MLRunner = std::make_unique<PipeModelRunner>(
-          M.getContext(), basename + ".out", basename + ".in", SerializerType);
+          M.getContext(), basename + ".out", basename + ".in",
+          SerializerType);
 
-      // posetrl::EmbeddingResponse response;
-      // posetrl::ActionRequest request;
-      // MLRunner->setRequest(&response);
-      // MLRunner->setResponse(&request);
+      posetRL::EmbeddingResponse response;
+      posetRL::ActionRequest request;
+      errs() << "set MLRunner request and response...\n";
+      MLRunner->setRequest(&response);
+      MLRunner->setResponse(&request);
+      errs() << "end set MLRunner request and response...\n";
+
+      
 
       errs() << "Using pipe communication...\n";
       if (data_format == "json")
         initPipeCommunication2();
       // else if (data_format == "protobuf")
       //   initPipeCommunication3();
+      // else if (data_format == "bytes")
+      //   initPipeCommunication1();
+      else if (data_format == "protobuf")
+        initPipeCommunication4();
       else if (data_format == "bytes")
         // initPipeCommunication1();
         initPipeCommunication2();
@@ -143,12 +145,11 @@ struct PosetRL : public ModulePass,
         //     posetRL::PosetRL::Service, posetRL::PosetRL::Stub,
         //     posetRL::EmbeddingResponse, posetRL::ActionRequest>>(
         //     M.getContext(), server_address, this);
-        errs() << "To be Implemented\n";
+        errs() << "TO BE IMPLEMENTED\n";
         exit(0);
-
       } else {
         errs() << "Onnx model runner...\n";
-        Agent agent("/home/cs20mtech12003/ml-llvm-project/Model/"
+        Agent agent("/home/cs20btech11024/repos/ML-Phase-Ordering/Model/"
                     "RLLib-PhaseOrder/poset-RL-onnx-model/model.onnx",
                     ActionMaskSize + EmbeddingSize);
         std::map<std::string, Agent *> agents;
@@ -166,6 +167,38 @@ struct PosetRL : public ModulePass,
 
     return true;
   }
+  void initPipeCommunication4() {
+    errs() << "Entering protobuf pipe communication...\n";
+
+    int passSequence = 0;
+    while (passSequence != -1) {
+      std::pair<std::string, std::vector<float>> p1("embedding",
+                                                    getEmbeddings());
+      // errs() << "Populating features...\n";
+      MLRunner->populateFeatures(p1);
+
+      int res = static_cast<int>(MLRunner->evaluate<int64_t>());
+      processMLAdvice(res);
+      passSequence = res;
+    }
+    errs() << "Episode completed\n";
+  }
+  // void initPipeCommunication1() {
+  //   errs() << "Entering bitstream pipe communication...\n";
+  //   BitstreamSerializer serializer;
+
+  //   int i = 1;
+  //   float f = 1.0f;
+  //   double d = 1.0;
+  //   std::string s = "test";
+  //   bool b = true;
+  //   std::vector<int> v{1, 2, 3};
+  //   serializer.setFeature("test_int", i);
+  //   serializer.setFeature("test_float", f);
+  //   serializer.setFeature("test_double", d);
+  //   serializer.setFeature("test_string", s);
+  //   serializer.setFeature("test_bool", b);
+  //   serializer.setFeature<int>("test_vector", v);
   void initPipeCommunication1() {
     errs() << "Entering bitstream pipe communication...\n";
     int passSequence = 0;
@@ -258,7 +291,7 @@ struct PosetRL : public ModulePass,
     for (size_t i = 0; i < DefaultFeatureSpec.getElementCount(); i++)
       feature_data.push_back((float_t)(i + 0.5));
 
-    std::string basename = "/home/cs20mtech12003/ml-llvm-project/Model/"
+    std::string basename = "/home/cs20btech11024/ML-Phase-Ordering/Model/"
                            "RLLib-PhaseOrder/temppipe";
     std::vector<TensorSpec> Features;
     // std::vector<void*> InputBuffers;
@@ -298,7 +331,7 @@ struct PosetRL : public ModulePass,
 
     auto Ir2vec = IR2Vec::Embeddings(
         *M, IR2Vec::IR2VecMode::FlowAware,
-        "/home/cs20mtech12003/ml-llvm-project/IR2Vec/vocabulary/seedEmbeddingVocab-300-llvm10.txt");
+        "/home/cs20btech11024/repos/ml-llvm-project/IR2Vec/vocabulary/seedEmbeddingVocab-300-llvm10.txt");
 
     auto ProgVector = Ir2vec.getProgramVector();
     Embedding Vector(ProgVector.begin(), ProgVector.end());
@@ -324,7 +357,7 @@ struct PosetRL : public ModulePass,
   //   InferenceEngine driver;
   //   driver.setEnvironment(this);
   //   Observation Obs = reset();
-  //   Agent agent("/home/cs20btech11018/repos/ML-Phase-Ordering/Model/"
+  //   Agent agent("/home/cs20btech11024/repos/ML-Phase-Ordering/Model/"
   //               "RLLib-PhaseOrder/poset-RL-onnx-model/model.onnx",
   //               ActionMaskSize + EmbeddingSize);
   //   driver.addAgent(&agent, "agent");
