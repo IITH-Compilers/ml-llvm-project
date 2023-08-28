@@ -59,8 +59,8 @@ public:
   virtual void requestExit() = 0;
   
 protected:
-  MLModelRunnerWithTensorSpec(LLVMContext &Ctx, Kind Type, size_t NrInputs, BaseSerializer::Kind SerializerType)
-      : MLModelRunner(Ctx, Type, SerializerType), InputBuffers(NrInputs) {
+  MLModelRunnerWithTensorSpec(Kind Type, size_t NrInputs, BaseSerializer::Kind SerializerType, LLVMContext* Ctx = nullptr)
+      : MLModelRunner(Type, SerializerType, Ctx), InputBuffers(NrInputs) {
     assert(Type != Kind::Unknown);
   }
   virtual void *evaluateUntyped() = 0;

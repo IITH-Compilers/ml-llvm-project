@@ -15,6 +15,7 @@
 #include "serializer/jsonSerializer.h"
 #include "serializer/protobufSerializer.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/Support/raw_ostream.h"
 #include <future>
 #include <memory>
@@ -53,7 +54,7 @@ public:
   std::promise<void> *exit_requested;
 
   template <typename T, typename... Types>
-  void populateFeatures(std::pair<std::string, T > &var1,
+  void populateFeatures(std::pair<std::string, T> &var1,
                         std::pair<std::string, Types> &...var2) {
     Serializer->setFeature(var1.first, var1.second);
     populateFeatures(var2...);
@@ -66,12 +67,28 @@ public:
   void setResponse(void *response) { Serializer->setResponse(response); }
 
 protected:
-  MLModelRunner(LLVMContext &Ctx, Kind Type,
-                BaseSerializer::Kind SerializerType)
+  MLModelRunner(Kind Type, BaseSerializer::Kind SerializerType,
+                LLVMContext *Ctx = nullptr)
       : Ctx(Ctx), Type(Type), SerializerType(SerializerType) {
     assert(Type != Kind::Unknown);
-    errs() << "In MLModelRunner constructor...\n";
-    // Serializer = std::make_unique<JsonSerializer>();
+    initSerializer();
+  }
+  MLModelRunner(Kind Type, LLVMContext *Ctx = nullptr)
+      : Ctx(Ctx), Type(Type), SerializerType(BaseSerializer::Kind::Unknown) {
+    Serializer = nullptr;
+  };
+
+  virtual void *evaluateUntyped() = 0;
+
+  LLVMContext *Ctx;
+  const Kind Type;
+  const BaseSerializer::Kind SerializerType;
+
+protected:
+  std::unique_ptr<BaseSerializer> Serializer;
+  //   std::vector<std::vector<char *>> OwnedBuffers;
+private:
+  void initSerializer() {
     switch (SerializerType) {
     case BaseSerializer::Kind::Json:
       Serializer = std::make_unique<JsonSerializer>();
@@ -82,23 +99,11 @@ protected:
     case BaseSerializer::Kind::Bitstream:
       Serializer = std::make_unique<BitstreamSerializer>();
       break;
+    case BaseSerializer::Kind::Unknown:
+      Serializer = nullptr;
+      break;
     }
-    errs() << "End MLModelRunner constructor...\n";
   }
-  MLModelRunner(LLVMContext &Ctx, Kind Type)
-      : Ctx(Ctx), Type(Type), SerializerType(BaseSerializer::Kind::Unknown) {
-    Serializer = nullptr;
-  };
-
-  virtual void *evaluateUntyped() = 0;
-
-  LLVMContext &Ctx;
-  const Kind Type;
-  const BaseSerializer::Kind SerializerType;
-
-protected:
-  std::unique_ptr<BaseSerializer> Serializer;
-  //   std::vector<std::vector<char *>> OwnedBuffers;
 };
 } // namespace llvm
 

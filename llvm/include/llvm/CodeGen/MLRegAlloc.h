@@ -4,6 +4,7 @@
 #include "AllocationOrder.h"
 #include "InterferenceCache.h"
 #include "LiveDebugVariables.h"
+#include "MLModelRunner/MLModelRunner.h"
 #include "RegAllocBase.h"
 #include "SpillPlacement.h"
 #include "Spiller.h"
@@ -64,9 +65,6 @@
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/Transforms/InteractiveModelRunner.h"
-#include "llvm/Transforms/TensorSpec.h"
-
 #include "MLModelRunner/ONNXModelRunner/onnx.h"
 #include "multi_agent_env.h"
 // gRPC includes
@@ -198,7 +196,7 @@ private:
   // };
   // SmallMapVector<unsigned, RegisterProfile, 16> regProfMap;
   RegisterProfileMap regProfMap;
-  std::unique_ptr<MLModelRunner> AOTRunner;
+  std::unique_ptr<MLModelRunner> MLRunner;
   json::Object JO;
   std::vector<TensorSpec> FeatureSpecs;
   std::vector<void*> InputBuffers;
@@ -272,6 +270,8 @@ private:
   void constructTensorSpecs(SmallSetVector<unsigned, 8>* updatedRegIdxs, bool IsStart = false);
   void constructJson(SmallSetVector<unsigned, 8> *updatedRegIdxs, bool IsStart = false);
   void initPipeCommunication();
+  void processMLInputs(SmallSetVector<unsigned, 8> *updatedRegIdxs, bool IsStart = false);
+  // void processMLAdvice();
 
   // std::map<std::string, std::map<std::string, int64_t>>
   // parsePredictionJson(std::string jsonString) {

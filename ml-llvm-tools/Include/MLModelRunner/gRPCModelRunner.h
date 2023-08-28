@@ -10,6 +10,7 @@
 #define GRPC_MODELRUNNER_H
 
 #include "MLModelRunner/MLModelRunner.h"
+#include "llvm/IR/LLVMContext.h"
 #include <future>
 #include <grpcpp/grpcpp.h>
 #include <memory>
@@ -19,27 +20,27 @@ namespace llvm {
 template <class Client, class Stub, class Request, class Response>
 class gRPCModelRunner : public MLModelRunner {
 public:
-  gRPCModelRunner(LLVMContext &Ctx, std::string server_address,
-                  grpc::Service *s) // For server mode
-      : MLModelRunner(Ctx, MLModelRunner::Kind::gRPC,
-                      BaseSerializer::Kind::Protobuf),
+  gRPCModelRunner(std::string server_address,
+                  grpc::Service *s, LLVMContext* Ctx = nullptr) // For server mode
+      : MLModelRunner(MLModelRunner::Kind::gRPC,
+                      BaseSerializer::Kind::Protobuf, Ctx),
         server_address(server_address), request(nullptr), response(nullptr),
         server_mode(true) {
     RunService(s);
   }
 
-  gRPCModelRunner(LLVMContext &Ctx, std::string server_address,
-                  Request *request, Response *response) // For client mode
-      : MLModelRunner(Ctx, MLModelRunner::Kind::gRPC, BaseSerializer::Kind::Protobuf),
+  gRPCModelRunner(std::string server_address,
+                  Request *request, Response *response, LLVMContext* Ctx = nullptr) // For client mode
+      : MLModelRunner(MLModelRunner::Kind::gRPC, BaseSerializer::Kind::Protobuf, Ctx),
         server_address(server_address), request(request), response(response),
         server_mode(false) {
     SetStub();
   }
 
-  gRPCModelRunner(LLVMContext &Ctx, std::string server_address,
+  gRPCModelRunner(std::string server_address,
                   Request *request, Response *response,
-                  bool server_mode = false, grpc::Service *s = nullptr)
-      : MLModelRunner(Ctx, MLModelRunner::Kind::gRPC, BaseSerializer::Kind::Protobuf),
+                  bool server_mode = false, grpc::Service *s = nullptr, LLVMContext* Ctx = nullptr)
+      : MLModelRunner(MLModelRunner::Kind::gRPC, BaseSerializer::Kind::Protobuf, Ctx),
         server_address(server_address), request(request), response(response),
         server_mode(server_mode) {
     if (server_mode) {
@@ -66,7 +67,7 @@ public:
     grpc::ClientContext grpcCtx;
     auto status = stub_->getAdvice(&grpcCtx, *request, response);
     if (!status.ok())
-      Ctx.emitError("gRPC failed: " + status.error_message());
+      Ctx->emitError("gRPC failed: " + status.error_message());
     return response;
   }
 

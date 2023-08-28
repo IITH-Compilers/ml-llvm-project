@@ -10,6 +10,8 @@
 //===----------------------------------------------------------------------===//
 #include "MLModelRunner/PipeModelRunner.h"
 #include "MLModelRunner/MLModelRunner.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
@@ -27,21 +29,23 @@ static cl::opt<bool> DebugReply(
     cl::desc("The PipeModelRunner will echo back to stderr "
              "the data received from the host (for debugging purposes)."));
 
-PipeModelRunner::PipeModelRunner(LLVMContext &Ctx, StringRef OutboundName,
-                                 StringRef InboundName,
-                                 BaseSerializer::Kind SerializerType)
-    : MLModelRunner(Ctx, Kind::Pipe, SerializerType),
+PipeModelRunner::PipeModelRunner(StringRef OutboundName, StringRef InboundName,
+                                 BaseSerializer::Kind SerializerType,
+                                 LLVMContext *Ctx)
+    : MLModelRunner(Kind::Pipe, SerializerType, Ctx),
       InEC(sys::fs::openFileForRead(InboundName, Inbound)) {
   this->InboundName = InboundName.str();
   errs() << "InboundName: " << InboundName.str() << "\n";
   if (InEC) {
-    Ctx.emitError("Cannot open inbound file: " + InEC.message());
+    if (this->Ctx)
+      this->Ctx->emitError("Cannot open inbound file: " + InEC.message());
     return;
   }
   {
     OutStream = std::make_unique<raw_fd_ostream>(OutboundName, OutEC);
     if (OutEC) {
-      Ctx.emitError("Cannot open outbound file: " + OutEC.message());
+      if (this->Ctx)
+        this->Ctx->emitError("Cannot open outbound file: " + OutEC.message());
       return;
     }
   }
@@ -65,7 +69,8 @@ std::string PipeModelRunner::readNBytes(size_t N) {
         sys::fs::convertFDToNativeFile(Inbound),
         {Buff + InsPoint, OutputBuffer.size() - InsPoint});
     if (ReadOrErr.takeError()) {
-      Ctx.emitError("Failed reading from inbound file");
+      if (this->Ctx)
+        this->Ctx->emitError("Failed reading from inbound file");
       break;
     }
     InsPoint += *ReadOrErr;
