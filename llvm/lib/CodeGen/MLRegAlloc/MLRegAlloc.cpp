@@ -82,6 +82,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
 #include <fstream>
 #include <future>
 #include <google/protobuf/text_format.h>
@@ -96,6 +97,10 @@
 #include <tuple>
 #include <utility>
 #include <vector>
+#include "grpc/RegisterAllocation/RegisterAllocation.grpc.pb.h"
+#include "grpc/RegisterAllocation/RegisterAllocation.pb.h"
+#include "grpc/RegisterAllocationInference/RegisterAllocationInference.grpc.pb.h"
+#include "grpc/RegisterAllocationInference/RegisterAllocationInference.pb.h"
 // #include "Service/RegisterAllocationInference/RegisterAllocationInference.h"
 
 #define DIS_SANITY_CHECK 1
@@ -304,6 +309,7 @@ grpc::Status MLRA::codeGen(grpc::ServerContext *context,
 
 void MLRA::processMLInputs(SmallSetVector<unsigned, 8> *updatedRegIdxs,
                            bool IsStart) {
+  errs() << "Inside processMLInputs\n";
   regIdxs.clear();
 
   if (!updatedRegIdxs) {
@@ -313,24 +319,33 @@ void MLRA::processMLInputs(SmallSetVector<unsigned, 8> *updatedRegIdxs,
   } else
     regIdxs = *updatedRegIdxs;
 
-  for(auto reg : regIdxs) {
+  for(auto& reg : regIdxs) {
     auto& rp = regProfMap[reg];
     if(IsStart) {
       if(rp.cls == "Phy" && rp.frwdInterferences.begin() == rp.frwdInterferences.end()) {
         continue;
       }
     }
+    errs() << reg << " " << rp.cls << " " << rp.color << " " << rp.spillWeight << " ";
+    errs() << "[";
+    for(auto& val : rp.useDistances) {
+      errs() << val << " ";
+    }
+    errs() << "]\n";
+    std::pair<std::string, int> regID("regID_" + std::to_string(reg), reg);
+    std::pair<std::string, std::string> cls("cls_" + std::to_string(reg), rp.cls);
+    std::pair<std::string, int> color("color_" + std::to_string(reg), rp.color);
+    std::pair<std::string, std::vector<float>> spillWeights("positionalSpillWeights_" + std::to_string(reg), std::vector<float>(rp.spillWeights.begin(), rp.spillWeights.end()));
+    
+    std::pair<std::string, float> spillWeight("spillWeight_" + std::to_string(reg), rp.spillWeight);
+    if(rp.spillWeight == INFINITY) 
+      spillWeight.second = -1.0f;
 
-    std::pair<std::string, int> regID("regID" + std::to_string(reg), reg);
-    std::pair<std::string, std::string> cls("cls" + std::to_string(reg), rp.cls);
-    std::pair<std::string, int> color("color" + std::to_string(reg), rp.color);
-    std::pair<std::string, std::vector<float>> spillWeights("positionalSpillWeights" + std::to_string(reg), std::vector<float>(rp.spillWeights.begin(), rp.spillWeights.end()));
-    std::pair<std::string, float> spillWeight("spillWeight" + std::to_string(reg), rp.spillWeight);
-    std::pair<std::string, std::vector<int>> interferences("interferences" + std::to_string(reg), std::vector<int>(rp.interferences.begin(), rp.interferences.end()));
-    std::pair<std::string, std::vector<int>> splitSlots("splitSlots" + std::to_string(reg), std::vector<int>(rp.splitSlots.begin(), rp.splitSlots.end()));
-    std::pair<std::string, std::vector<int>> useDistances("useDistances" + std::to_string(reg), std::vector<int>(rp.useDistances.begin(), rp.useDistances.end()));
+    std::pair<std::string, std::vector<int>> interferences("interferences_" + std::to_string(reg), std::vector<int>(rp.interferences.begin(), rp.interferences.end()));
+    std::pair<std::string, std::vector<int>> splitSlots("splitSlots_" + std::to_string(reg), std::vector<int>(rp.splitSlots.begin(), rp.splitSlots.end()));
+    std::pair<std::string, std::vector<int>> useDistances("useDistances_" + std::to_string(reg), std::vector<int>(rp.useDistances.begin(), rp.useDistances.end()));
 
-    std::pair<std::string, std::vector<float>> vecRep("vectors" + std::to_string(reg), std::vector<float>());
+    std::pair<std::string, std::vector<float>> vecRep("vectors_" + std::to_string(reg), std::vector<float>());
 
     for(auto vec : rp.vecRep) {
       for(auto val : vec) {
@@ -2436,7 +2451,7 @@ void MLRA::training_flow() {
 
 void MLRA::initPipeCommunication() {
   std::string basename =
-      "/home/cs20btech11024/repos/ML-Register-Allocation/model/RegAlloc/"
+      "/home/cs20btech11024/repos/ml-llvm-project/model/RegAlloc/"
       "ggnn_drl/rllib_split_model/src/rl4realpipe";
 
   errs() << "Initializing pipe communication...\n";
@@ -2454,26 +2469,32 @@ void MLRA::initPipeCommunication() {
 
   MLRunner = std::make_unique<PipeModelRunner>(basename + ".out", basename + ".in", SerializerType);
 
-  // lambda function to get json::Object from reply string
-  // auto getJsonObj = [](std::string reply) -> json::Object {
-  //   Expected<json::Value> valueOrErr = json::parse(reply);
-  //   if (!valueOrErr) {
-  //     llvm::errs() << "Error parsing JSON: " << valueOrErr.takeError() << "\n";
-  //     exit(1);
-  //   }
-  //   json::Object jsonObject = *(valueOrErr->getAsObject());
-  //   return jsonObject;
-  // };
-
   auto getJsonObj = [](std::vector<int>& reply) -> json::Object {
     json::Object jsonObject;
-    // jsonObject["action"] = json::Value("Color");
-    // jsonObject["color"] = json::Value(reply);
+    if(reply[0] == 0) {
+      jsonObject["action"] = "Split";
+      jsonObject["regidx"] = reply[1];
+      jsonObject["payload"] = reply[2];
+    }
+    else if(reply[0] == 1) {
+      jsonObject["action"] = "Color";
+      json::Array colorArray;
+      for(int i = 1; i < reply.size(); i=i+2) {
+        json::Object colorObj;
+        colorObj[std::to_string(reply[i])] = reply[i+1];
+        colorArray.push_back(json::Value(std::move(colorObj)));
+      }
+      jsonObject["color"] = json::Value(std::move(colorArray));
+    }
+    else if(reply[0] == -1) {
+      jsonObject["action"] = "Exit";
+    }
     return jsonObject;
   };
 
   bool isGraphSet = false;
   while (true) {
+    errs() << "Entered while loop\n";
     if (!isGraphSet) {
       this->IsNew = true;
       int count = 0;
@@ -2512,12 +2533,17 @@ void MLRA::initPipeCommunication() {
       errs() << "Call model again\n";
     }
 
-    auto reply = MLRunner->evaluate<std::vector<int>>();
+    // auto reply = MLRunner->evaluate2();
+    using T = std::vector<int>;
+    auto reply = std::move(*static_cast<T*>(MLRunner->evaluateH<T>()));
 
-    // errs() << "Result : " << reply << "\n";
-    errs() << "After model call\n";
+    errs() << "Reply: ";
+    for (auto i : reply)
+      errs() << i << ", ";
+    errs() << "\n";
 
     json::Object res = getJsonObj(reply);
+
     if (res["action"].getAsString()->str() == "Color") {
       errs() << "Received color from model\n";
       std::string ucf = "";
@@ -2579,6 +2605,10 @@ void MLRA::initPipeCommunication() {
       } else {
         // JO["result"] = false;
         this->CommuResult = false;
+        errs() << "Splitting failed\n";
+        std::pair<std::string, bool> result("result", 0);
+        std::pair<std::string, bool> newBool("new", 0);
+        MLRunner->populateFeatures(result, newBool);
       }
     }
 
@@ -2686,8 +2716,9 @@ void MLRA::inference() {
     allocatePhysRegsViaRL();
     return;
   }
-
+  errs() << "In MLRA::inference\n";
   if (usePipe) {
+    errs() << "Entered initpipe\n";
     initPipeCommunication();
     return;
   }

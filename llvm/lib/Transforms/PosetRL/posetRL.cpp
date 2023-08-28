@@ -119,22 +119,7 @@ struct PosetRL : public ModulePass,
       errs() << "end set MLRunner request and response...\n";
 
       errs() << "Using pipe communication...\n";
-      if (data_format == "json")
-        initPipeCommunication2();
-      // else if (data_format == "protobuf")
-      //   initPipeCommunication3();
-      // else if (data_format == "bytes")
-      //   initPipeCommunication1();
-      else if (data_format == "protobuf")
-        initPipeCommunication4();
-      else if (data_format == "bytes")
-        // initPipeCommunication1();
-        initPipeCommunication2();
-      else {
-        errs() << "Invalid data format\n";
-        exit(1);
-      }
-
+      initPipeCommunication1();
     } else {
       if (training) {
         MLRunner = std::make_unique<gRPCModelRunner<
@@ -154,7 +139,7 @@ struct PosetRL : public ModulePass,
         MLRunner =
             std::make_unique<ONNXModelRunner>(this, agents, &M.getContext());
         // runInference();
-        MLRunner->evaluate<int64_t>();
+        MLRunner->evaluate<int>();
         errs() << "Sequence: ";
         for (auto a : Sequence)
           errs() << a << " ";
@@ -164,40 +149,9 @@ struct PosetRL : public ModulePass,
 
     return true;
   }
-  void initPipeCommunication4() {
-    errs() << "Entering protobuf pipe communication...\n";
-
-    int passSequence = 0;
-    while (passSequence != -1) {
-      std::pair<std::string, std::vector<float>> p1("embedding",
-                                                    getEmbeddings());
-      // errs() << "Populating features...\n";
-      MLRunner->populateFeatures(p1);
-
-      int res = static_cast<int>(MLRunner->evaluate<int64_t>());
-      processMLAdvice(res);
-      passSequence = res;
-    }
-    errs() << "Episode completed\n";
-  }
-  // void initPipeCommunication1() {
-  //   errs() << "Entering bitstream pipe communication...\n";
-  //   BitstreamSerializer serializer;
-
-  //   int i = 1;
-  //   float f = 1.0f;
-  //   double d = 1.0;
-  //   std::string s = "test";
-  //   bool b = true;
-  //   std::vector<int> v{1, 2, 3};
-  //   serializer.setFeature("test_int", i);
-  //   serializer.setFeature("test_float", f);
-  //   serializer.setFeature("test_double", d);
-  //   serializer.setFeature("test_string", s);
-  //   serializer.setFeature("test_bool", b);
-  //   serializer.setFeature<int>("test_vector", v);
   void initPipeCommunication1() {
-    errs() << "Entering bitstream pipe communication...\n";
+    errs() << "Entering pipe communication...\n";
+
     int passSequence = 0;
     while (passSequence != -1) {
       std::pair<std::string, std::vector<float>> p1("embedding",
@@ -205,50 +159,14 @@ struct PosetRL : public ModulePass,
       // errs() << "Populating features...\n";
       MLRunner->populateFeatures(p1);
 
-      int res = MLRunner->evaluate<int>();
+      using T = int;
+      int res = *static_cast<T*>(MLRunner->evaluateH<T>());
       processMLAdvice(res);
       passSequence = res;
     }
     errs() << "Episode completed\n";
   }
 
-  void initPipeCommunication2() {
-    errs() << "Entering JSON pipe communication...\n";
-
-    // auto out = MLRunner->evaluate<double>();
-    while (true) {
-      std::pair<std::string, std::vector<float>> p1("embedding",
-                                                    getEmbeddings());
-      errs() << "Populating features...\n";
-      MLRunner->populateFeatures(p1);
-      errs() << "Features populated END...\n";
-      auto out = MLRunner->evaluate<int>();
-      if (out == -1)
-        break;
-      processMLAdvice(out);
-    }
-  }
-
-  // void initPipeCommunication3() {
-  //   errs() << "Entering protobuf pipe communication...\n";
-  //   posetrl::EmbeddingResponse response;
-  //   ProtobufSerializer serializer(&response);
-  //   Embedding emb = getEmbeddings();
-
-  //   for (unsigned long i = 0; i < emb.size(); i++) {
-  //     errs() << emb[i] << " ";
-  //   }
-  //   errs() << "\n";
-
-  //   serializer.setFeature("embedding", emb);
-
-  //   error_code EC;
-  //   raw_fd_ostream pipe("pipe", EC);
-
-  //   pipe << serializer.getSerializedData();
-  //   pipe.flush();
-  //   pipe.close();
-  // }
   void processMLInputs() {
     std::vector<void *> InputBuffers;
     auto embedding = getEmbeddings();
@@ -309,7 +227,7 @@ struct PosetRL : public ModulePass,
     int passSequence = 0;
     while (passSequence != -1) {
       processMLInputs();
-      int res = static_cast<int>(MLRunner->evaluate<int64_t>());
+      int res = static_cast<int>(MLRunner->evaluate<int>());
       processMLAdvice(res);
       passSequence = res;
     }

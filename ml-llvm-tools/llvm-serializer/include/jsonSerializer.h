@@ -15,7 +15,6 @@ public:
   JsonSerializer() : BaseSerializer(BaseSerializer::Kind::Json) {
     errs() << "In JsonSerializer constructor...\n";
     errs() << "End JsonSerializer constructor...\n";
-    f = std::vector<float>();
   };
 
   static bool classof(const BaseSerializer *S) {
@@ -38,7 +37,6 @@ public:
   void cleanDataStructures() override {
     errs() << "In JsonSerializer cleanDataStructures...\n";
     J = json::Object();
-    f = std::vector<float>();
   }
 
 private:
@@ -46,10 +44,7 @@ private:
   void *desJson(json::Value *V);
 
 private:
-  json::Object *Reply;
-  json::Value *CurrValue;
   json::Object J;
-  std::vector<float> f;
 };
 
 #endif

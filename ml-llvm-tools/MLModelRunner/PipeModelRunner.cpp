@@ -34,6 +34,7 @@ PipeModelRunner::PipeModelRunner(StringRef OutboundName, StringRef InboundName,
                                  LLVMContext *Ctx)
     : MLModelRunner(Kind::Pipe, SerializerType, Ctx),
       InEC(sys::fs::openFileForRead(InboundName, Inbound)) {
+  errs() << "In PipeModelRunner constructor...\n";
   this->InboundName = InboundName.str();
   errs() << "InboundName: " << InboundName.str() << "\n";
   if (InEC) {
@@ -49,6 +50,7 @@ PipeModelRunner::PipeModelRunner(StringRef OutboundName, StringRef InboundName,
       return;
     }
   }
+  errs() << "End PipeModelRunner constructor...\n";
 }
 
 PipeModelRunner::~PipeModelRunner() {
@@ -84,17 +86,32 @@ void PipeModelRunner::send(void *data) {
   size_t message_length = dataString->size();
   const char *message_length_ptr =
       reinterpret_cast<const char *>(&message_length);
+  errs() << "Message length: " << message_length << "\n";
+  errs() << "Data string: " << *dataString << "\n";
+  errs() << "DataString.size(): " << dataString->size() << "\n";
   OutStream->write(message_length_ptr, sizeof(size_t));
   OutStream->write(dataString->data(), dataString->size());
   OutStream->flush();
 }
 
 void *PipeModelRunner::receive() {
+  errs() << "In PipeModelRunner receive...\n";
   auto hdr = readNBytes(8);
+  errs() << "Read header...\n";
   size_t MessageLength = 0;
   memcpy(&MessageLength, hdr.data(), sizeof(MessageLength));
   // Read message
   auto OutputBuffer = new std::string(readNBytes(MessageLength));
+  errs() << "OutputBuffer size: " << OutputBuffer->size() << "\n";
+  errs() << "OutputBuffer: " << *OutputBuffer << "\n";
+  
+  int *data = reinterpret_cast<int *>(OutputBuffer->data());
+
+  this->MessageLength = MessageLength;
+  for(int i = 0; i < 3; i++) {
+    errs() << "data[" << i << "]: " << data[i] << "\n";
+  }
+  errs() << "End PipeModelRunner receive...\n";
   return OutputBuffer;
 }
 
@@ -103,5 +120,6 @@ void *PipeModelRunner::evaluateUntyped() {
   auto *data = Serializer->getSerializedData();
   send(data);
   auto *reply = receive();
+  errs() << "In PipeModelRunner::evaluateUntyped() received data...\n";
   return Serializer->deserializeUntyped(reply);
 }

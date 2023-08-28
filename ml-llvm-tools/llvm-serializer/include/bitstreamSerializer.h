@@ -21,8 +21,8 @@ public:
     rawData = vector<const void *>();
 
 #define TEMPORARY_STORAGE_INIT(TYPE)                                           \
-  std::map<std::string, TYPE *> features##TYPE = {};                           \
-  std::map<std::string, std::vector<TYPE *>> featuresVector##TYPE = {};
+  features##TYPE = {};                                                         \
+  featuresVector##TYPE = {};
     SUPPORTED_TYPES(TEMPORARY_STORAGE_INIT)
 #undef TEMPORARY_STORAGE_INIT
   };
@@ -45,12 +45,16 @@ public:
     delete it.second;                                                          \
   }                                                                            \
   features##TYPE.clear();                                                      \
+  features##TYPE = {};                                                         \
   for (auto &it : featuresVector##TYPE) {                                      \
     delete it.second;                                                          \
   }                                                                            \
-  featuresVector##TYPE.clear();
+  featuresVector##TYPE.clear();                                                \
+  featuresVector##TYPE = {};
     SUPPORTED_TYPES(TEMPORARY_STORAGE_CLEAN)
 #undef TEMPORARY_STORAGE_CLEAN
+
+    errs() << "End BitstreamSerializer cleanDataStructures...\n";
   }
 
 private:

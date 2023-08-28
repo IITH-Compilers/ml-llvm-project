@@ -15,9 +15,12 @@ using namespace std;
 
 void BitstreamSerializer::setFeature(const std::string &name,
                                      const int &value) {
+  if(name.substr(0, 5) == "regID") {
+    // errs() << name << ": " << value << "\n";
+  }
   auto *valuePtr = new int(value);
   featuresint[name] = valuePtr;
-  tensorSpecs.push_back(TensorSpec::createSpec<int8_t>(name, {1}));
+  tensorSpecs.push_back(TensorSpec::createSpec<int>(name, {1}));
   rawData.push_back(valuePtr);
 }
 
@@ -51,7 +54,7 @@ void BitstreamSerializer::setFeature(const std::string &name,
   auto *valuePtr = new bool(value);
   featuresbool[name] = valuePtr;
   tensorSpecs.push_back(TensorSpec::createSpec<uint8_t>(name, {1}));
-  rawData.push_back(&valuePtr);
+  rawData.push_back(valuePtr);
 }
 
 void BitstreamSerializer::setFeature(const std::string &name,
@@ -59,7 +62,7 @@ void BitstreamSerializer::setFeature(const std::string &name,
   auto *valuePtr = new std::vector<int>(value);
   featuresVectorint[name] = valuePtr;
   tensorSpecs.push_back(
-      TensorSpec::createSpec<int8_t>(name, {static_cast<long>(value.size())}));
+      TensorSpec::createSpec<int>(name, {static_cast<long>(valuePtr->size())}));
   rawData.push_back(valuePtr->data());
 }
 
@@ -68,7 +71,7 @@ void BitstreamSerializer::setFeature(const std::string &name,
   auto *valuePtr = new std::vector<float>(value);
   featuresVectorfloat[name] = valuePtr;
   tensorSpecs.push_back(
-      TensorSpec::createSpec<float>(name, {static_cast<long>(value.size())}));
+      TensorSpec::createSpec<float>(name, {static_cast<long>(valuePtr->size())}));
   rawData.push_back(valuePtr->data());
 }
 
@@ -77,7 +80,7 @@ void BitstreamSerializer::setFeature(const std::string &name,
   auto *valuePtr = new std::vector<double>(value);
   featuresVectordouble[name] = valuePtr;
   tensorSpecs.push_back(
-      TensorSpec::createSpec<double>(name, {static_cast<long>(value.size())}));
+      TensorSpec::createSpec<double>(name, {static_cast<long>(valuePtr->size())}));
   rawData.push_back(valuePtr->data());
 }
 
@@ -92,7 +95,7 @@ void BitstreamSerializer::setFeature(const std::string &name,
 }
 
 void *BitstreamSerializer::getSerializedData() {
-  // errs() << "In BitstreamSerializer getSerializedData...\n";
+  errs() << "In BitstreamSerializer getSerializedData...\n";
   std::unique_ptr<raw_ostream> OS =
       std::make_unique<raw_string_ostream>(Buffer);
   json::OStream J(*OS);
@@ -105,6 +108,7 @@ void *BitstreamSerializer::getSerializedData() {
   });
   J.flush();
   OS->write("\n", 1);
+  errs() << "rawData.size(): " << rawData.size() << "\n";
   for (size_t I = 0; I < rawData.size(); ++I) {
     OS->write(reinterpret_cast<const char *>(rawData[I]),
               tensorSpecs[I].getTotalTensorBufferSize());
@@ -112,6 +116,7 @@ void *BitstreamSerializer::getSerializedData() {
   OS->write("\n", 1);
   OS->flush();
   auto *out = new std::string(Buffer);
+  errs() << "Buffer: " << Buffer << "\n";
   cleanDataStructures();
   return out;
 }

@@ -20,6 +20,7 @@
 #include <future>
 #include <memory>
 #include <string>
+#include <type_traits>
 
 namespace llvm {
 class LLVMContext;
@@ -30,6 +31,31 @@ public:
   MLModelRunner(const MLModelRunner &) = delete;
   MLModelRunner &operator=(const MLModelRunner &) = delete;
   virtual ~MLModelRunner() = default;
+
+  template <typename T> void* evaluateH() {
+    void* res = evaluateUntyped();
+    errs() << "EvaluateH: after deserialize\n";
+    // check if T is_same as int, float, double etc and call appropriate
+    // functions like evaluateInt, evaluateFloat etc
+    if (std::is_same<T, int>::value) {
+      return reinterpret_cast<int *>(res);
+    } else if (std::is_same<T, float>::value) {
+      return reinterpret_cast<float *>(res);
+    } else if (std::is_same<T, double>::value) {
+      return reinterpret_cast<double *>(res);
+    } else if (std::is_same<T, std::vector<int>>::value) {
+      return new std::vector<int>((int *)res,
+                              (int *)res + MessageLength / sizeof(int));
+    } else if (std::is_same<T, std::vector<float>>::value) {
+      return new std::vector<float>((float *)res,
+                                (float *)res + MessageLength / sizeof(float));
+    } else if (std::is_same<T, std::vector<double>>::value) {
+      return new std::vector<double>(
+          (double *)res, (double *)res + MessageLength / sizeof(double));
+    } else {
+      llvm_unreachable("Unsupported type");
+    }
+  }
 
   template <typename T> T evaluate() {
     return *reinterpret_cast<T *>(evaluateUntyped());
@@ -86,8 +112,41 @@ protected:
 
 protected:
   std::unique_ptr<BaseSerializer> Serializer;
+  size_t MessageLength;
   //   std::vector<std::vector<char *>> OwnedBuffers;
 private:
+  // vector check
+  template <typename T> struct IsStdVector : std::false_type {};
+
+  template <typename T, typename Alloc>
+  struct IsStdVector<std::vector<T, Alloc>> : std::true_type {};
+
+  template <typename T>
+  static constexpr bool is_std_vector_v = IsStdVector<T>::value;
+
+  // vector element type
+  template <typename T> struct VectorElementType;
+
+  template <typename F> struct VectorElementType<std::vector<F>> {
+    using type = F;
+  };
+
+  template <typename T>
+  using VectorElementTypeT = typename VectorElementType<T>::type;
+
+  // vector element size
+  template <typename T> struct VectorElementTypeSize {
+    static constexpr size_t value = 0;
+  };
+
+  template <typename F> struct VectorElementTypeSize<std::vector<F>> {
+    static constexpr size_t value = sizeof(F);
+  };
+
+  template <typename T> size_t getVectorElementSize() {
+    return VectorElementTypeSize<T>::value;
+  }
+
   void initSerializer() {
     switch (SerializerType) {
     case BaseSerializer::Kind::Json:

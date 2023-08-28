@@ -143,7 +143,7 @@ class PPOConfig(PGConfig):
             #"dataset": "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_aarch64_new_data/",
             "dataset": "/home/ai20btech11004/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/LTS-ll-files_train_mlra_x86_split_data",
             "graphs_num": 10000,
-            "action_space_size": RegisterActionSpace("X86", "/home/ai20btech11004/ML-Register-Allocation/llvm/lib/CodeGen/MLRegAlloc/config_json").ac_sp_normlize_size,
+            "action_space_size": RegisterActionSpace("X86", "/home/cs20btech11024/repos/ML-Register-Allocation/llvm/lib/CodeGen/MLRegAlloc/config_json").ac_sp_normlize_size,
             "check_point": None,
             "episode_number": 10000,
             "GPU_ID": '0',

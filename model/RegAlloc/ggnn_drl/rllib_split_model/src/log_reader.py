@@ -82,21 +82,29 @@ def read_tensor(fs: io.BufferedReader, ts: TensorSpec) -> TensorValue:
 def pretty_print_tensor_value(tv: TensorValue):
     print(f'{tv.spec().name}: {",".join([str(v) for v in tv])}')
 
-
+i = 0
 def read_header(f: io.BufferedReader):
-    # while True:
-    #     x = f.readline()
-    #     if not x:
-    #         raise ValueError("Unexpected end of file")
-    #     if x.startswith(b"---"):
-    #         break
-    #     print(x)
-    # # print(x)
-    header = json.loads(f.readline())
-    # print(header)
-    # exit(0)
+    # global i
+    # if i == 1:
+    #   x = f.read(3)
+    #   print(x)
+    #   x = f.read(3)
+    #   print(x)
+    #   x = f.read(3)
+    #   print(x)
+    #   x = f.read(3)
+    #   print(x)
+    #   x = f.read(3)
+    #   print(x)
+    #   x = f.read(3)
+    #   print(x)
+    #   x = f.read(13)
+    #   print(x)
+    #   exit(0)
+    # i += 1
+    line = f.readline()
+    header = json.loads(line)
     tensor_specs = [TensorSpec.from_dict(ts) for ts in header["features"]]
-    print("len(tensor_specs): ", len(tensor_specs))
     score_spec = TensorSpec.from_dict(header["score"]) if "score" in header else None
     advice_spec = TensorSpec.from_dict(header["advice"]) if "advice" in header else None
     return tensor_specs, score_spec, advice_spec
@@ -109,29 +117,24 @@ def read_one_observation(
     tensor_specs: List[TensorSpec],
     score_spec: Optional[TensorSpec],
 ):
-    # print(event_str)
-    event = json.loads(event_str)
+    # event = json.loads(event_str)
     # print('JSON: ', event)  #DEBUG
-    if "context" in event:
-        context = event["context"]
-        # print('CTX', context) # DEBUG
-        event = json.loads(f.readline())
-    observation_id = int(event["observation"])
+    # if "context" in event:
+    #     context = event["context"]
+    #     # print('CTX', context) # DEBUG
+    #     event = json.loads(f.readline())
+    # observation_id = int(event["observation"])
     features = []
-    # print("len(tensor_specs): ", len(tensor_specs))
-    # exit(0)
     for ts in tensor_specs:
         features.append(read_tensor(f, ts))
-    x = f.readline()
-    # print(x)
-    # exit(0)
-    score = None
-    if score_spec is not None:
-        score_header = json.loads(f.readline())
-        assert int(score_header["outcome"]) == observation_id
-        score = read_tensor(f, score_spec)
-        f.readline()
-    return context, observation_id, features, score
+    f.readline()
+    # score = None
+    # if score_spec is not None:
+    #     score_header = json.loads(f.readline())
+    #     assert int(score_header["outcome"]) == observation_id
+    #     score = read_tensor(f, score_spec)
+    #     f.readline()
+    return context, None, features, None
 
 
 def read_stream(fname: str):
@@ -147,19 +150,18 @@ def read_stream(fname: str):
             )
             yield context, observation_id, features, score
 
-def read_stream2(fname: str):
-    with io.BufferedReader(io.FileIO(fname, "rb")) as f:
-        context = None
-        while True:
-            tensor_specs, score_spec, _ = read_header(f)
-            event_str = f.readline()
-            # print("Event: ", event_str)
-            if not event_str:
-                break
-            context, observation_id, features, score = read_one_observation(
-                context, event_str, f, tensor_specs, score_spec
-            )
-            yield context, observation_id, features, score
+def read_stream2(f: io.BufferedReader):
+    context = None
+    while True:
+        tensor_specs, score_spec, _ = read_header(f)
+        # event_str = f.readline()
+        # print("Event: ", event_str)
+        # if not event_str:
+            # break
+        context, observation_id, features, score = read_one_observation(
+            context, '', f, tensor_specs, score_spec
+        )
+        yield context, observation_id, features, score
 
 def main(args):
     last_context = None

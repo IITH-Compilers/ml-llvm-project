@@ -21,5 +21,4 @@ target_include_directories(LLVMMLRegAlloc PUBLIC /home/cs20btech11024/.local/inc
 
 configure_file (./Config.h.cmake Config.h @ONLY)
 
-target_link_libraries(LLVMMLRegAlloc LLVMSymbolic LLVMMLRegAllocInference)
-
+target_link_libraries(LLVMMLRegAlloc LLVMSymbolic LLVMMLRegAllocInference LLVMgRPCModelRunner)

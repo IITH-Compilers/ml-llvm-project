@@ -231,7 +231,7 @@ class service_server(
 
 def print_inter_graphs(inter_graphs):
     for regProf in inter_graphs.regProf:
-        print(regProf.regID, regProf.cls, regProf.color, regProf.spillWeight, regProf.interferences ,end=" ")
+        print(regProf.regID, regProf.cls, regProf.color, regProf.spillWeight, regProf.useDistances ,end=" ")
         print()
     # if len(regProf.vectors) > 0:
     #     print(type(regProf.vectors[-1]["vec"][0]), end=" ")
@@ -269,57 +269,61 @@ def run_pipe_communication(data_format="json"):
 
     tc = None
     fc = None
+    read_stream_iter = None
+    
 
     ########################################
-    def get_inter_graphs_via_json():
-        next_event = fc.readline()
-        # print(next_event)
-        if next_event == b"":
-            out = {"action": "Exit"}
-            print(out)
-            tc.write(json.dumps(out).encode("utf-8"))
-            tc.flush()
-            return 0
-        inter_graphs = json.loads(next_event)
+    # def get_inter_graphs_via_json():
+    #     next_event = fc.readline()
+    #     # print(next_event)
+    #     if next_event == b"":
+    #         out = {"action": "Exit"}
+    #         print(out)
+    #         tc.write(json.dumps(out).encode("utf-8"))
+    #         tc.flush()
+    #         return 0
+    #     inter_graphs = json.loads(next_event)
 
-        if "exited" in inter_graphs.keys():
-            if inter_graphs["exited"]:
-                close_pipes()
-                init_pipes()
-                return 0
+    #     if "exited" in inter_graphs.keys():
+    #         if inter_graphs["exited"]:
+    #             close_pipes()
+    #             init_pipes()
+    #             return 0
 
-        if "fileName" not in inter_graphs.keys():
-            inter_graphs["fileName"] = "test"
-        if "funcName" not in inter_graphs.keys():
-            inter_graphs["funcName"] = "test"
-        if "funid" not in inter_graphs.keys():
-            inter_graphs["funid"] = 0
+        # if "fileName" not in inter_graphs.keys():
+        #     inter_graphs["fileName"] = "test"
+        # if "funcName" not in inter_graphs.keys():
+        #     inter_graphs["funcName"] = "test"
+        # if "funid" not in inter_graphs.keys():
+        #     inter_graphs["funid"] = 0
 
-        # print(inter_graphs)
-        # print("regProf[-1] is : ", inter_graphs["regProf"][-1])
-        inter_graphs = NestedDict(inter_graphs)
-        return inter_graphs
+        # # print(inter_graphs)
+        # # print("regProf[-1] is : ", inter_graphs["regProf"][-1])
+        # inter_graphs = NestedDict(inter_graphs)
+        # return inter_graphs
 
-    read_stream_iter = None
-
-    def get_inter_graphs_via_bytes():
-        try:
+    def readObservation():
+        inter_graphs = {
+            "regProf": [],
+            "new": False,
+            "result": False,
+            "fileName": "test",
+            "funcName": "test",
+            "funid": 0,
+        }
+        if data_format == "bytes":
+            hdr = fc.read(8)
+            print(hdr)
+            print("hdr: ", int.from_bytes(hdr, "little"))
             context, observation_id, features, score = next(read_stream_iter)
             features: list[log_reader.TensorValue] = features
             # features is a list of TensorValue. Extract regProfMap from it.
             # print(features[0])
-            inter_graphs = {
-                "regProf": [],
-                "new": False,
-                "result": False,
-                "fileName": "test",
-                "funcName": "test",
-                "funid": 0,
-            }
 
             curr = None
             for tv in features:
-                if tv.spec().name == "regID":
+                spec_name = tv.spec().name.split("_")[0]
+                if spec_name == "regID":
                     if curr is not None:
                         inter_graphs["regProf"].append(curr)
                         # print(curr)
@@ -337,21 +341,21 @@ def run_pipe_communication(data_format="json"):
                     }
                     curr["regID"] = tv[0]
                     print("regID: ", curr["regID"])
-                elif tv.spec().name == "cls":
+                elif spec_name == "cls":
                     curr["cls"] = "".join([chr(c) for c in tv])
-                elif tv.spec().name == "color":
+                elif spec_name == "color":
                     curr["color"] = tv[0]
-                elif tv.spec().name == "spillWeights":
+                elif spec_name == "positionalSpillWeights":
                     curr["positionalSpillWeights"] = [float(v) for v in tv]
-                elif tv.spec().name == "spillWeight":
+                elif spec_name == "spillWeight":
                     curr["spillWeight"] = tv[0]
-                elif tv.spec().name == "interferences":
+                elif spec_name == "interferences":
                     curr["interferences"] = [int(v) for v in tv]
-                elif tv.spec().name == "splitSlots":
+                elif spec_name == "splitSlots":
                     curr["splitSlots"] = [int(v) for v in tv]
-                elif tv.spec().name == "useDistances":
+                elif spec_name == "useDistances":
                     curr["useDistances"] = [int(v) for v in tv]
-                elif tv.spec().name == "vectors":
+                elif spec_name == "vectors":
                     curr["vectors"] = []
                     curr_vec = None
                     for i in range(0, len(tv)):
@@ -362,34 +366,91 @@ def run_pipe_communication(data_format="json"):
                         curr_vec.append(tv[i])
                     if curr_vec is not None:
                         curr["vectors"].append({"vec": curr_vec})
-                        # curr["vectors"].append({"vec": [float(v) for v in tv[i : i + 300]]})
-                # elif tv.spec().name == "frwdInterferences":
-                #     curr["frwdInterferences"] = [int(v) for v in tv]
-                elif tv.spec().name == "result":
+                elif spec_name == "result":
                     inter_graphs["result"] = tv[0]
-                elif tv.spec().name == "new":
+                elif spec_name == "new":
                     inter_graphs["new"] = tv[0]
-            # print("regProf[-1] is : ", inter_graphs["regProf"][-1])
             if curr is not None:
                 inter_graphs["regProf"].append(curr)
-            inter_graphs = NestedDict(inter_graphs)
-            # print regid, cls, color of all regProfs
+            inter_graphs = NestedDict(inter_graphs)                
+        elif data_format == "json":
+            hdr = fc.read(8)
+            size = int.from_bytes(hdr, "little")
+            print("hdr: ", size)
+            msg = fc.read(size)
+            features = json.loads(msg.decode("utf-8"))
+            # print(list(features.keys()))
+            features_dict = dict()
+            for k1, v in features.items():
+                if k1 == "new" or k1 == "result":
+                    inter_graphs[k1] = v
+                    continue
+                k, reg_id = k1.split("_")
+                if reg_id not in features_dict.keys():
+                    features_dict[reg_id] = {
+                        "regID": reg_id,  # int
+                        "cls": None,  # str
+                        "color": None,  # int
+                        "positionalSpillWeights": None,  # float list
+                        "spillWeight": None,  # float
+                        "interferences": None,  # int list
+                        "splitSlots": None,  # int list
+                        "useDistances": None,  # int list
+                        "vectors": None,  # list of float list with each vec size 100
+                    }
+                if k == "vectors":
+                    curr_vec = None
+                    features_dict[reg_id]["vectors"] = []
+                    for i in range(0, len(v)):
+                        if i % 100 == 0:
+                            if curr_vec is not None:
+                                features_dict[reg_id]["vectors"].append({"vec": curr_vec})
+                            curr_vec = []
+                        curr_vec.append(v[i])
+                    if curr_vec is not None:
+                        features_dict[reg_id]["vectors"].append({"vec": curr_vec})
+                else:
+                  features_dict[reg_id][k] = v
+            for reg_id, features in features_dict.items():
+                curr = features
+                inter_graphs["regProf"].append(curr)
+            
 
-            return inter_graphs
-        except StopIteration:
-            return None
+
+            inter_graphs = NestedDict(inter_graphs)
+
+        elif data_format == "protobuf":
+            pass
+        return inter_graphs
+    
 
     def send_data_to_compiler(data):
-        tc.write(json.dumps(data).encode("utf-8"))
-        tc.write(b"\n")
-        tc.flush()
-        return
-        if data_format == "json":
-            tc.write(json.dumps(data).encode("utf-8"))
-            tc.write(b"\n")
-            tc.flush()
-        elif data_format == "bytes":
+        msg = []
+        if data['action'] == 'Split':
+            msg.append(0)
+            msg.append(data['regidx'])
+            msg.append(data['payload'])
+        elif data['action'] == 'Color':
+            msg.append(1)
+            for x in data['color']:
+                for k, v in x.items():
+                    msg.append(int(k))
+                    msg.append(int(v))
+        elif data['action'] == 'Exit':
+            msg.append(-1)
+
+        if data_format == "bytes":
+          msg = b''.join([x.to_bytes(4, 'little', signed=True) for x in msg])
+          hdr = int(len(msg)).to_bytes(8, 'little')
+        elif data_format == "json":
+            msg = json.dumps({"out": msg}).encode("utf-8")
+            hdr = int(len(msg)).to_bytes(8, "little")
+        elif data_format == "protobuf":
             pass
+        out = hdr + msg
+        print("out: ", out)
+        tc.write(out)
+        tc.flush()
     # #########################################
 
     def close_pipes():
@@ -407,30 +468,25 @@ def run_pipe_communication(data_format="json"):
     print("Inference model created....")
     # print(inference_model)
 
+    tc = io.BufferedWriter(io.FileIO(to_compiler, "wb"))
+    print("rl4realpipe.in created....")
+
+    fc = io.BufferedReader(io.FileIO(from_compiler, "rb"))
+    print("rl4realpipe.out created....")
     while True:
         print("Entered while loop...")
 
-        tc = io.BufferedWriter(io.FileIO(to_compiler, "wb"))
-        print("rl4realpipe.in created....")
 
-        fc = io.BufferedReader(io.FileIO(from_compiler, "rb"))
-        print("rl4realpipe.out created....")
+        if read_stream_iter is None:
+                read_stream_iter = log_reader.read_stream2(fc)
 
-        if data_format == "json":
-            inter_graphs = get_inter_graphs_via_json()
-            if not inter_graphs:
-                continue
-        elif data_format == "bytes":
-            if read_stream_iter is None:
-                read_stream_iter = log_reader.read_stream2(from_compiler)
-            inter_graphs = get_inter_graphs_via_bytes()
-
-            print_inter_graphs(inter_graphs)
+        inter_graphs = None
+        inter_graphs = readObservation()
+        print_inter_graphs(inter_graphs)
             
-        
-        assert len(inter_graphs.regProf) > 0, "Graphs has no nodes"
 
         if inter_graphs.new:
+            assert len(inter_graphs.regProf) > 0, "Graphs has no nodes"
             inter_graphs_list = []
             if type(inter_graphs) is not list:
                 inter_graphs_list.append(inter_graphs)
@@ -440,8 +496,9 @@ def run_pipe_communication(data_format="json"):
                 print("Exiting from inference")
                 out = {"action": "Exit"}
                 send_data_to_compiler(out)
-                break
+                # break
         elif inter_graphs.result:
+            assert len(inter_graphs.regProf) > 0, "Graphs has no nodes"
             if not inference_model.update_obs(inter_graphs):
                 print("Current split failed")
                 inference_model.setCurrentNodeAsNotVisited()
