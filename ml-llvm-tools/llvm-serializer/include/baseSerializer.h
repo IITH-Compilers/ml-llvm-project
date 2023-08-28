@@ -7,11 +7,13 @@
 #include <string>
 #include <vector>
 
+using namespace std;
+
 #define SUPPORTED_TYPES(M)                                                     \
   M(int)                                                                       \
   M(float)                                                                     \
   M(double)                                                                    \
-  M(std::string)                                                               \
+  M(string)                                                               \
   M(bool)
 
 class BaseSerializer {

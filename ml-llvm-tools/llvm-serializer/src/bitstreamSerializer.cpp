@@ -15,54 +15,70 @@ using namespace std;
 
 void BitstreamSerializer::setFeature(const std::string &name,
                                      const int &value) {
+  auto *valuePtr = new int(value);
+  featuresint[name] = valuePtr;
   tensorSpecs.push_back(TensorSpec::createSpec<int8_t>(name, {1}));
-  rawData.push_back(&value);
+  rawData.push_back(valuePtr);
 }
 
 void BitstreamSerializer::setFeature(const std::string &name,
                                      const float &value) {
+  auto *valuePtr = new float(value);
+  featuresfloat[name] = valuePtr;
   tensorSpecs.push_back(TensorSpec::createSpec<float>(name, {1}));
-  rawData.push_back(&value);
+  rawData.push_back(valuePtr);
 }
 
 void BitstreamSerializer::setFeature(const std::string &name,
                                      const double &value) {
+  auto *valuePtr = new double(value);
+  featuresdouble[name] = valuePtr;
   tensorSpecs.push_back(TensorSpec::createSpec<double>(name, {1}));
-  rawData.push_back(&value);
+  rawData.push_back(valuePtr);
 }
 
 void BitstreamSerializer::setFeature(const std::string &name,
                                      const std::string &value) {
+  auto *valuePtr = new std::string(value);
+  featuresstring[name] = valuePtr;
   long size = value.length();
   tensorSpecs.push_back(TensorSpec::createSpec<uint8_t>(name, {size}));
-  rawData.push_back((void *)value.c_str());
+  rawData.push_back((void *)valuePtr->c_str());
 }
 
 void BitstreamSerializer::setFeature(const std::string &name,
                                      const bool &value) {
+  auto *valuePtr = new bool(value);
+  featuresbool[name] = valuePtr;
   tensorSpecs.push_back(TensorSpec::createSpec<uint8_t>(name, {1}));
-  rawData.push_back(&value);
+  rawData.push_back(&valuePtr);
 }
 
 void BitstreamSerializer::setFeature(const std::string &name,
                                      const std::vector<int> &value) {
+  auto *valuePtr = new std::vector<int>(value);
+  featuresVectorint[name] = valuePtr;
   tensorSpecs.push_back(
       TensorSpec::createSpec<int8_t>(name, {static_cast<long>(value.size())}));
-  rawData.push_back(value.data());
+  rawData.push_back(valuePtr->data());
 }
 
 void BitstreamSerializer::setFeature(const std::string &name,
                                      const std::vector<float> &value) {
+  auto *valuePtr = new std::vector<float>(value);
+  featuresVectorfloat[name] = valuePtr;
   tensorSpecs.push_back(
       TensorSpec::createSpec<float>(name, {static_cast<long>(value.size())}));
-  rawData.push_back(value.data());
+  rawData.push_back(valuePtr->data());
 }
 
 void BitstreamSerializer::setFeature(const std::string &name,
                                      const std::vector<double> &value) {
+  auto *valuePtr = new std::vector<double>(value);
+  featuresVectordouble[name] = valuePtr;
   tensorSpecs.push_back(
       TensorSpec::createSpec<double>(name, {static_cast<long>(value.size())}));
-  rawData.push_back(value.data());
+  rawData.push_back(valuePtr->data());
 }
 
 void BitstreamSerializer::setFeature(const std::string &name,

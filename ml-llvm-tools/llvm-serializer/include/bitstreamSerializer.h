@@ -1,8 +1,8 @@
 #ifndef BITSTREAM_SERIALIZER_H
 #define BITSTREAM_SERIALIZER_H
 
-#include "baseSerializer.h"
 #include "TensorSpec.h"
+#include "baseSerializer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
 #include <set>
@@ -19,8 +19,12 @@ public:
     Buffer = "";
     tensorSpecs = vector<TensorSpec>();
     rawData = vector<const void *>();
-    featureNames = std::map<std::string, std::pair<unsigned, void *>>();
-    featureNamesSet = std::set<std::string>();
+
+#define TEMPORARY_STORAGE_INIT(TYPE)                                           \
+  std::map<std::string, TYPE *> features##TYPE = {};                           \
+  std::map<std::string, std::vector<TYPE *>> featuresVector##TYPE = {};
+    SUPPORTED_TYPES(TEMPORARY_STORAGE_INIT)
+#undef TEMPORARY_STORAGE_INIT
   };
 #define SET_FEATURE(TYPE)                                                      \
   void setFeature(const std::string &, const TYPE &) override;                 \
@@ -35,8 +39,18 @@ public:
     Buffer = "";
     tensorSpecs = vector<TensorSpec>();
     rawData = vector<const void *>();
-    featureNames = std::map<std::string, std::pair<unsigned, void *>>();
-    featureNamesSet = std::set<std::string>();
+
+#define TEMPORARY_STORAGE_CLEAN(TYPE)                                          \
+  for (auto &it : features##TYPE) {                                            \
+    delete it.second;                                                          \
+  }                                                                            \
+  features##TYPE.clear();                                                      \
+  for (auto &it : featuresVector##TYPE) {                                      \
+    delete it.second;                                                          \
+  }                                                                            \
+  featuresVector##TYPE.clear();
+    SUPPORTED_TYPES(TEMPORARY_STORAGE_CLEAN)
+#undef TEMPORARY_STORAGE_CLEAN
   }
 
 private:
@@ -44,8 +58,11 @@ private:
   vector<TensorSpec> tensorSpecs;
   vector<const void *> rawData;
   string Buffer;
-  // std::unique_ptr<raw_ostream> OS;
-  std::map<std::string, std::pair<unsigned, void *>> featureNames;
-  std::set<std::string> featureNamesSet;
+
+#define TEMPORARY_STORAGE_DEF(TYPE)                                            \
+  std::map<std::string, TYPE *> features##TYPE;                                \
+  std::map<std::string, std::vector<TYPE> *> featuresVector##TYPE;
+  SUPPORTED_TYPES(TEMPORARY_STORAGE_DEF)
+#undef TEMPORARY_STORAGE_DEF
 };
 #endif
