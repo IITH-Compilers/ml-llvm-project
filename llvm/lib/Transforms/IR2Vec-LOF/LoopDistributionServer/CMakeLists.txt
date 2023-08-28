@@ -6,7 +6,7 @@ InteractiveModelRunner.cpp
 TensorSpec.cpp
 
 LINK_COMPONENTS
-gRPC
+# gRPC
 DEPENDS
 intrinsics_gen
 )

@@ -60,6 +60,13 @@ import operator
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--use_pipe", action='store_true', help = "Use pipe communication", required=False, default=False)
+parser.add_argument(
+    "--data_format",
+    type=str,
+    choices=["json", "protobuf", "bytes"],
+    help="Data format to use for communication",
+)
+
 
 class DistributionInference:
     def __init__(self, model_path):
@@ -231,8 +238,8 @@ class DistributionInference:
                     actionfile.write(str(test_file) + "\n")
                 assert response is not None, 'Allocation is not preset.'
                 break
-        print("response: {}".format(response))
-    
+        response = env.partition_seq
+        print("response: {}".format(response))        
         return reward, response
 
     def run_predict_multiple_loops(self, rdgs):
@@ -334,20 +341,41 @@ if __name__ == "__main__":
             print("Opened the write pipe")
             fc = io.BufferedReader(io.FileIO(from_compiler, "rb"))
             print("Opened the read pipe")
-            tensor_specs, _, advice_spec = log_reader.read_header(fc)
-            # print("Tensor and Advice spec", self.tensor_specs, self.advice_spec)
-            # result = readObservation(fc)
             
-            inference_obj.advice_spec = advice_spec
-            inference_obj.tc = tc
-            inference_obj.fc = fc
-            inference_obj.temp_rootname = temp_rootname                        
-            next_event = fc.readline()
-            rdgs = (json.loads(next_event))["RDGs"]
-            # seqs = inference_obj.run_predict_multiple_loops(rdgs)[0]
-            seqs = inference_obj.run_predict(rdgs)
-            seqs = json.dumps(seqs)
-            # print("Predicted seqs", seqs, type(seqs))        
+            if args.data_format == "json":
+                hdr = fc.read(8)
+                print("hdr: ",hdr)
+                size = int.from_bytes(hdr, "little")
+                print("size: ", size)
+                msg = fc.read(size)
+                rdg = json.loads(msg.decode('utf-8'))["RDG"]
+                print("rdg: ", rdg)
+                # print(embedding)
+                _, seq = inference_obj.run_predict(rdg)
+                print("Sequence", seq)
+                f: io.BufferedWriter = tc
+                message = json.dumps({"out": seq}).encode("utf-8")
+                print("message: ", message)
+                hdr = int(len(message)).to_bytes(length=8, byteorder='little')
+                out = hdr + message
+                
+                f.write(out)
+                f.flush()
+                        
+            # tensor_specs, _, advice_spec = log_reader.read_header(fc)
+            # # print("Tensor and Advice spec", self.tensor_specs, self.advice_spec)
+            # # result = readObservation(fc)
+            
+            # inference_obj.advice_spec = advice_spec
+            # inference_obj.tc = tc
+            # inference_obj.fc = fc
+            # inference_obj.temp_rootname = temp_rootname                        
+            # next_event = fc.readline()
+            # rdgs = (json.loads(next_event))["RDGs"]
+            # # seqs = inference_obj.run_predict_multiple_loops(rdgs)[0]
+            # seqs = inference_obj.run_predict(rdgs)
+            # seqs = json.dumps(seqs)
+            # # print("Predicted seqs", seqs, type(seqs))        
         
 
 

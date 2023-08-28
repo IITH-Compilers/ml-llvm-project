@@ -141,6 +141,7 @@ class DistributeLoopEnv(MultiAgentEnv):
             self.fc = None
             self.tensor_specs = None
             self.advice_spec =  None
+        self.partition_seq = None
     
     def reward_formula(self, distributedLoopCost, OriginalLoopCost):
         reward = 0
@@ -650,8 +651,8 @@ class DistributeLoopEnv(MultiAgentEnv):
         #     assert(False, 'Not valid task selected')
 
     def startServer(self,filePath, functionName, loopId, serverAddress):
-        optPath = "/home/cs20mtech12003/ML-Loop-Distribution/build_release/bin/opt"
-        clangPath = "/home/cs20mtech12003/ML-Loop-Distribution/build_release/bin/clang"
+        optPath = "/home/cs20mtech12003/ml-llvm-project/build_loopdist/bin/opt"
+        clangPath = "/home/cs20mtech12003/ml-llvm-project/build_loopdist/bin/clang"
 
         cmd = optPath + " -LoopDistributionServer -loopID " + loopId + " -funcName " + functionName + " -lc-function " + functionName + " -lc-lID " + loopId + " -server_address "+ serverAddress + " -S " + filePath + " -o /dev/null"
 
@@ -712,7 +713,8 @@ class DistributeLoopEnv(MultiAgentEnv):
                 partition_seq[i] = 102
                 
         print("Partition Sequence after: ",partition, partition_seq)
-        self.sendResponse(self.tc, partition_seq, self.advice_spec)
+        self.partition_seq = partition_seq
+        # self.sendResponse(self.tc, partition_seq, self.advice_spec)
     
     def killServer(self):
     

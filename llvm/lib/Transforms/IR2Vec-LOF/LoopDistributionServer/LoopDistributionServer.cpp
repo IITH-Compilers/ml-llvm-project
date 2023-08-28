@@ -34,11 +34,11 @@ static cl::opt<unsigned int> loopID("loopID", cl::desc("Loop ID"),
                                     cl::value_desc("Loop ID"), cl::Hidden,
                                     cl::Optional, cl::init(0));
 
-static cl::opt<bool> usePipe("use-pipe", cl::desc("Use pipe for inference"), cl::Hidden,
+static cl::opt<bool> usePipe("use-pipe-loop-dist", cl::desc("Use pipe for inference"), cl::Hidden,
                                     cl::Optional, cl::init(false));
 
 static cl::opt<std::string> server_address(
-    "server_address", cl::Hidden,
+    "server_address_loop_dist", cl::Hidden,
     cl::desc("Starts the server in the given address, format <ip>:<port>"),
     cl::init("0.0.0.0:50051"));
 

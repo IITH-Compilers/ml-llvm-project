@@ -39,7 +39,7 @@ using namespace llvm;
 
 static cl::opt<bool> usePipe("use-pipe-inf", cl::desc("Use pipe for inference"),
                              cl::Hidden, cl::Optional, cl::init(false));
-static cl::opt<bool> useOnnx("use-onnx", cl::desc("Use onnx for inference"), cl::Hidden,
+static cl::opt<bool> useOnnx("use-onnx-cld", cl::desc("Use onnx for inference"), cl::Hidden,
                                     cl::Optional, cl::init(false));
 
 
@@ -129,7 +129,7 @@ void custom_loop_distribution::canonicalizeLoopsWithLoads() {
 
 void custom_loop_distribution::initPipeCommunication(std::vector<std::string> RDG_List) {
 
-  std::string basename = "/home/cs20mtech12003/ML-Loop-Distribution/model/ggnn_drl/static_v4/src/loopdistppipe";
+  std::string basename = "/home/cs20mtech12003/ml-llvm-project/model/ggnn_drl/static_v4/src/loopdistppipe";
   
   BaseSerializer::Kind SerializerType;
   SerializerType = BaseSerializer::Kind::Json;
@@ -141,9 +141,11 @@ void custom_loop_distribution::initPipeCommunication(std::vector<std::string> RD
     std::pair<std::string, std::string> p1("RDG", rdg);
     MLRunner->populateFeatures(p1);
     errs() << "Features populated END...\n";
-    auto out = MLRunner->evaluate<std::vector<int>>();
-    
-    std::vector<int> distSequence = out;
+    auto out = MLRunner->evaluate<std::vector<int*>>();
+    std::vector<int> distSequence;
+    for(auto x : out) {
+      distSequence.push_back(*x);
+    }
     std::string partition;
     for (int i = 0; i < 100; i++) {
       int element = distSequence[i];
