@@ -63,7 +63,7 @@ public:
 
   void setRequest(void *request) { Serializer->setRequest(request); }
 
-  void setResponse(void *response) { Serializer->setResponse(response); }
+  void setResponse(void *response) { Serializer->setResponse(response); }  
 
 protected:
   MLModelRunner(LLVMContext &Ctx, Kind Type,

@@ -37,13 +37,18 @@ public:
   virtual void *getSerializedData() = 0;
   virtual void *deserializeUntyped(void *data) = 0;
 
+  virtual void *getRequest() {};
+
+  virtual void *getResponse() {};
+
+  virtual void cleanDataStructures() = 0;
+
 protected:
   BaseSerializer(Kind Type) : Type(Type) {
     llvm::errs() << "In BaseSerializer constructor...\n";
     assert(Type != Kind::Unknown);
     llvm::errs() << "End BaseSerializer constructor...\n";
   }
-  virtual void cleanDataStructures() = 0;
   const Kind Type;
 
   void *RequestVoid;
