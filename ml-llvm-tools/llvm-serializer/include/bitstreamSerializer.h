@@ -31,7 +31,7 @@ public:
   void *getSerializedData() override;
 
   void cleanDataStructures() override {
-    errs() << "In BitstreamSerializer cleanDataStructures...\n";
+    // errs() << "In BitstreamSerializer cleanDataStructures...\n";
     Buffer = "";
     tensorSpecs = vector<TensorSpec>();
     rawData = vector<const void *>();

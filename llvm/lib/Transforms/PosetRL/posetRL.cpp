@@ -16,8 +16,8 @@
 #include <cstdlib>
 #include <fstream>
 // gRPC includes
-#include "grpc/posetRL/posetRL.pb.h"
 #include "grpc/posetRL/posetRL.grpc.pb.h"
+#include "grpc/posetRL/posetRL.pb.h"
 // #include "grpc/posetRL/posetRL.pb.h"
 #include <google/protobuf/text_format.h>
 // #include <grpcpp/grpcpp.h>
@@ -27,11 +27,10 @@
 #include "MLModelRunner/MLModelRunner.h"
 #include "MLModelRunner/MLModelRunnerWithTensorSpec.h"
 #include "MLModelRunner/ONNXModelRunner/ONNXModelRunner.h"
-#include "MLModelRunner/gRPCModelRunner.h"
 #include "MLModelRunner/PipeModelRunner.h"
+#include "MLModelRunner/gRPCModelRunner.h"
 
 #include "grpcpp/impl/codegen/status.h"
-
 
 using namespace llvm;
 using namespace grpc;
@@ -50,15 +49,18 @@ static cl::opt<bool>
 cl::opt<std::string> data_format(
     "data-format", cl::Hidden, cl::init("protobuf"),
     cl::desc("Data format to use for communication with python model"));
-static cl::opt<bool>
-    useONNX("use-onnx", cl::Hidden,
-            cl::desc("Use ONNX for inferencing model"),
-            cl::init(false));
+static cl::opt<bool> useONNX("use-onnx", cl::Hidden,
+                             cl::desc("Use ONNX for inferencing model"),
+                             cl::init(false));
 
 static cl::opt<std::string> server_address(
     "server_address", cl::Hidden,
     cl::desc("Starts the server in the given address, format <ip>:<port>"),
-    cl::init("0.0.0.0:50051"));
+    cl::init("127.0.0.1:50051"));
+
+cl::opt<std::string> pipe_name("pipe-name", cl::Hidden,
+                               cl::init("posetrl_pipe"),
+                               cl::desc("Name for pipe file"));
 
 namespace {
 struct PosetRL : public ModulePass,
@@ -85,8 +87,9 @@ struct PosetRL : public ModulePass,
       for (size_t i = 0; i < DefaultFeatureSpec.getElementCount(); i++)
         feature_data.push_back((float_t)(i + 0.5));
 
-      std::string basename = "/home/cs20btech11024/repos/ml-llvm-project/"
-                             "Model/RLLib-PhaseOrder/temppipe";
+      std::string basename = "/Pramana/ML_LLVM_Tools/ml-llvm-project/"
+                             "Model/RLLib-PhaseOrder/" +
+                             pipe_name;
       std::vector<TensorSpec> Features;
       // std::vector<void*> InputBuffers;
 
@@ -111,8 +114,7 @@ struct PosetRL : public ModulePass,
       }
 
       MLRunner = std::make_unique<PipeModelRunner>(
-          M.getContext(), basename + ".out", basename + ".in",
-          SerializerType);
+          M.getContext(), basename + ".out", basename + ".in", SerializerType);
 
       posetRLgRPC::EmbeddingResponse response;
       posetRLgRPC::ActionRequest request;
@@ -120,8 +122,6 @@ struct PosetRL : public ModulePass,
       MLRunner->setRequest(&response);
       MLRunner->setResponse(&request);
       errs() << "end set MLRunner request and response...\n";
-
-      
 
       errs() << "Using pipe communication...\n";
       if (data_format == "json")
@@ -143,16 +143,15 @@ struct PosetRL : public ModulePass,
     } else {
       if (training) {
         MLRunner = std::make_unique<gRPCModelRunner<
-            posetRLgRPC::PosetRLService::Service, posetRLgRPC::PosetRLService::Stub,
-            posetRLgRPC::EmbeddingResponse, posetRLgRPC::ActionRequest>>(
-            M.getContext(), server_address, this);
+            posetRLgRPC::PosetRLService::Service,
+            posetRLgRPC::PosetRLService::Stub, posetRLgRPC::EmbeddingResponse,
+            posetRLgRPC::ActionRequest>>(M.getContext(), server_address, this);
         // errs() << "To be Implemented\n";
         // exit(0);
-
-      } else {
+      } else if (useONNX) {
         errs() << "Onnx model runner...\n";
-        Agent agent("/home/cs20btech11024/repos/ML-Phase-Ordering/Model/"
-                    "RLLib-PhaseOrder/poset-RL-onnx-model/model.onnx",
+        Agent agent("/Pramana/ML_LLVM_Tools/ml-llvm-project/"
+                    "onnx_checkpoints_posetrl/posetrl_model.onnx",
                     ActionMaskSize + EmbeddingSize);
         std::map<std::string, Agent *> agents;
         agents["agent"] = &agent;
@@ -164,9 +163,19 @@ struct PosetRL : public ModulePass,
         for (auto a : Sequence)
           errs() << a << " ";
         errs() << "\n";
+      } else {
+        posetRLgRPC::EmbeddingResponse request;
+        posetRLgRPC::ActionRequest response;
+        MLRunner = std::make_unique<gRPCModelRunner<
+            posetRLgRPC::PosetRLService, posetRLgRPC::PosetRLService::Stub,
+            posetRLgRPC::EmbeddingResponse, posetRLgRPC::ActionRequest>>(
+            M.getContext(), server_address, &request, &response);
+        MLRunner->setRequest(&request);
+        MLRunner->setResponse(&response);
+        initPipeCommunication2();
       }
     }
-
+    errs() << "Compilation Done for modeule: " << M.getName() << "\n";
     return true;
   }
   void initPipeCommunication4() {
@@ -205,7 +214,8 @@ struct PosetRL : public ModulePass,
     errs() << "Entering bitstream pipe communication...\n";
     int passSequence = 0;
     while (passSequence != -1) {
-      std::pair<std::string, std::vector<float>> p1("embedding", getEmbeddings());
+      std::pair<std::string, std::vector<float>> p1("embedding",
+                                                    getEmbeddings());
       // errs() << "Populating features...\n";
       MLRunner->populateFeatures(p1);
 
@@ -219,19 +229,18 @@ struct PosetRL : public ModulePass,
   void initPipeCommunication2() {
     errs() << "Entering JSON pipe communication...\n";
 
-    
     // auto out = MLRunner->evaluate<double>();
-    while(true) {
-      std::pair<std::string, std::vector<float>> p1("embedding", getEmbeddings());
-      errs() << "Populating features...\n";
+    while (true) {
+      auto emb = getEmbeddings();
+      std::pair<std::string, std::vector<float>> p1("embedding", emb);
+      // errs() << "Populating features...\n";
       MLRunner->populateFeatures(p1);
-      errs() << "Features populated END...\n";
-      auto out = MLRunner->evaluate<int>();
-      if(out == -1)
+      // errs() << "Features populated END...\n";
+      int out = MLRunner->evaluate<int>();
+      if (out == -1)
         break;
       processMLAdvice(out);
     }
- 
   }
 
   // void initPipeCommunication3() {
@@ -293,8 +302,9 @@ struct PosetRL : public ModulePass,
     for (size_t i = 0; i < DefaultFeatureSpec.getElementCount(); i++)
       feature_data.push_back((float_t)(i + 0.5));
 
-    std::string basename = "/home/cs20btech11024/ML-Phase-Ordering/Model/"
-                           "RLLib-PhaseOrder/temppipe";
+    std::string basename = "/Pramana/ML_LLVM_Tools/ml-llvm-project/"
+                           "Model/RLLib-PhaseOrder/" +
+                           pipe_name;
     std::vector<TensorSpec> Features;
     // std::vector<void*> InputBuffers;
 
@@ -331,9 +341,10 @@ struct PosetRL : public ModulePass,
     // M->print(os, nullptr);
     // os.close();
 
-    auto Ir2vec = IR2Vec::Embeddings(
-        *M, IR2Vec::IR2VecMode::FlowAware,
-        "/home/cs20btech11024/repos/ml-llvm-project/IR2Vec/vocabulary/seedEmbeddingVocab-300-llvm10.txt");
+    auto Ir2vec =
+        IR2Vec::Embeddings(*M, IR2Vec::IR2VecMode::FlowAware,
+                           "/Pramana/ML_LLVM_Tools/ml-llvm-project/IR2Vec/"
+                           "vocabulary/seedEmbeddingVocab-300-llvm10.txt");
 
     auto ProgVector = Ir2vec.getProgramVector();
     Embedding Vector(ProgVector.begin(), ProgVector.end());
@@ -379,8 +390,8 @@ struct PosetRL : public ModulePass,
 
       return grpc::Status::OK;
     }
-
-    processMLAdvice(request->action());
+    else if(request->action() != 0)
+      processMLAdvice(request->action());
 
     Embedding emb = getEmbeddings();
     for (unsigned long i = 0; i < emb.size(); i++) {

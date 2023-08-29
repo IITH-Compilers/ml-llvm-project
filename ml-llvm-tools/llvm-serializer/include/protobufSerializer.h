@@ -18,6 +18,12 @@ public:
   void setRequest(void *Request) override;
   void setResponse(void *Response) override;
 
+  void *getRequest() override { return Request; }
+  
+  void *getResponse() override {
+    return Response;
+  }
+
 #define SET_FEATURE(TYPE)                                                      \
   virtual void setFeature(const std::string &, const TYPE &) override;         \
   virtual void setFeature(const std::string &, const std::vector<TYPE> &)      \

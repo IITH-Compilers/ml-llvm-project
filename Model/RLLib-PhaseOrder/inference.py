@@ -40,9 +40,10 @@ from Environment_pipe import PhaseOrder
 from ray.rllib.models import ModelCatalog
 from model import CustomPhaseOrderModel
 from ray.tune.registry import register_env
+from datetime import datetime
 
 import sys
-sys.path.append('/home/cs20btech11024/repos/ML-Phase-Ordering/ml-llvm-tools/MLModelRunner/gRPCModelRunner/Python-Utilities')
+sys.path.append('/Pramana/ML_LLVM_Tools/ml-llvm-project/ml-llvm-tools/MLModelRunner/gRPCModelRunner/Python-Utilities/')
 import posetRL_pb2_grpc, posetRL_pb2
 
 from Filesystem import *
@@ -176,7 +177,7 @@ class PhaseOrderInference:
 
         self.config = config
 
-        # self.train_agent.export_policy_model("/home/cs20btech11018/repos/ML-Phase-Ordering/Model/RLLib-PhaseOrder/poset-RL-onnx-model", onnx=int(os.getenv("ONNX_OPSET", "11")))
+        # torch.onnx.export(self.train_agent.get_policy().model, ({"obs": torch.randn(1, 334)}, {}), f="/Pramana/ML_LLVM_Tools/ml-llvm-project/onnx_checkpoints_posetrl/posetrl_model.onnx", verbose=True, input_names=["obs"], output_names=["output"])
 
     def dot_to_json(self, dot_):
         py_dot_graph = pydot.graph_from_dot_data(dot_)[0]
@@ -229,9 +230,8 @@ class service_server(posetRL_pb2_grpc.PosetRLService):
             else:
                 self.env.embedding = np.array(request.embedding)
                 self.state, reward, done, response  = self.env.step(self.action)
-                        
             if not done:
-                self.action = self.inference_obj.train_agent.compute_action(self.state)        
+                self.action = self.inference_obj.train_agent.compute_action(self.state) 
                 reply=posetRL_pb2.ActionRequest(action=self.action.item())
             else:
                 reply=posetRL_pb2.ActionRequest(action=-1)
@@ -269,7 +269,7 @@ if __name__ == "__main__":
                                 ])
 
         # RegisterAllocationInference_pb2_grpc.add_RegisterAllocationInferenceServicer_to_server(service_server(inference_obj),server)
-        posetRL_pb2_grpc.add_PosetRLServicer_to_server(service_server(inference_obj),server)
+        posetRL_pb2_grpc.add_PosetRLServiceServicer_to_server(service_server(inference_obj),server)
         # server.add_insecure_port('localhost:' + str(sys.argv[1]))
         server.add_insecure_port('127.0.0.1:50051')
 
@@ -277,9 +277,17 @@ if __name__ == "__main__":
         print("Server Running")        
         server.wait_for_termination()
     else:
-        f = open("timetaken.txt", "w")
+        now = datetime.now()
+        date_time = now.strftime("%m-%d-%Y-%H-%M-%S")
+        file_name = "timetaken-spec06-posetrl-orignal-" + date_time + ".txt"
+        repeat_count = 3
         for file in os.listdir(args.test_dir):
-            start = time.time()
-            reward, response = inference_obj.run_predict(file)
-            end = time.time()
-            f.write("Time taken for {} is {}\n".format(file, end - start))
+            f = open(file_name, "a")
+            count = 0            
+            while count < repeat_count:
+                start = time.time()
+                reward, response = inference_obj.run_predict(file)
+                end = time.time()
+                f.write("Time taken for {} is {}\n".format(file, end - start))
+                count+=1
+            f.close()
