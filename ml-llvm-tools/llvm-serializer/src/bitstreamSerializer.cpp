@@ -116,11 +116,14 @@ void *BitstreamSerializer::getSerializedData() {
   OS->write("\n", 1);
   OS->flush();
   auto *out = new std::string(Buffer);
-  errs() << "Buffer: " << Buffer << "\n";
+  // errs() << "Buffer: " << Buffer << "\n";
   cleanDataStructures();
   return out;
 }
 
 void *BitstreamSerializer::deserializeUntyped(void *data) {
-  return reinterpret_cast<std::string *>(data)->data();
+  // set the message length
+  auto* res = reinterpret_cast<std::string *>(data);
+  this->MessageLength = res->size();
+  return res->data();
 }

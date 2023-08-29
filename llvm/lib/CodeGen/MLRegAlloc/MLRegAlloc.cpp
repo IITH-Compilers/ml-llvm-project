@@ -13,13 +13,19 @@
 #include "Config.h"
 #include "InterferenceCache.h"
 #include "LiveDebugVariables.h"
+#include "MLModelRunner/ONNXModelRunner/ONNXModelRunner.h"
 #include "MLModelRunner/PipeModelRunner.h"
 #include "RegAllocBase.h"
 #include "SpillPlacement.h"
 #include "Spiller.h"
 #include "SplitKit.h"
+#include "multi_agent_env.h"
 #include "serializer/baseSerializer.h"
 // #include "inference/includes/multi_agent_env.h"
+#include "grpc/RegisterAllocation/RegisterAllocation.grpc.pb.h"
+#include "grpc/RegisterAllocation/RegisterAllocation.pb.h"
+#include "grpc/RegisterAllocationInference/RegisterAllocationInference.grpc.pb.h"
+#include "grpc/RegisterAllocationInference/RegisterAllocationInference.pb.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
@@ -97,10 +103,6 @@
 #include <tuple>
 #include <utility>
 #include <vector>
-#include "grpc/RegisterAllocation/RegisterAllocation.grpc.pb.h"
-#include "grpc/RegisterAllocation/RegisterAllocation.pb.h"
-#include "grpc/RegisterAllocationInference/RegisterAllocationInference.grpc.pb.h"
-#include "grpc/RegisterAllocationInference/RegisterAllocationInference.pb.h"
 // #include "Service/RegisterAllocationInference/RegisterAllocationInference.h"
 
 #define DIS_SANITY_CHECK 1
@@ -319,51 +321,65 @@ void MLRA::processMLInputs(SmallSetVector<unsigned, 8> *updatedRegIdxs,
   } else
     regIdxs = *updatedRegIdxs;
 
-  for(auto& reg : regIdxs) {
-    auto& rp = regProfMap[reg];
-    if(IsStart) {
-      if(rp.cls == "Phy" && rp.frwdInterferences.begin() == rp.frwdInterferences.end()) {
+  for (auto &reg : regIdxs) {
+    auto &rp = regProfMap[reg];
+    if (IsStart) {
+      if (rp.cls == "Phy" &&
+          rp.frwdInterferences.begin() == rp.frwdInterferences.end()) {
         continue;
       }
     }
-    errs() << reg << " " << rp.cls << " " << rp.color << " " << rp.spillWeight << " ";
+    errs() << reg << " " << rp.cls << " " << rp.color << " " << rp.spillWeight
+           << " ";
     errs() << "[";
-    for(auto& val : rp.useDistances) {
+    for (auto &val : rp.useDistances) {
       errs() << val << " ";
     }
     errs() << "]\n";
     std::pair<std::string, int> regID("regID_" + std::to_string(reg), reg);
-    std::pair<std::string, std::string> cls("cls_" + std::to_string(reg), rp.cls);
+    std::pair<std::string, std::string> cls("cls_" + std::to_string(reg),
+                                            rp.cls);
     std::pair<std::string, int> color("color_" + std::to_string(reg), rp.color);
-    std::pair<std::string, std::vector<float>> spillWeights("positionalSpillWeights_" + std::to_string(reg), std::vector<float>(rp.spillWeights.begin(), rp.spillWeights.end()));
-    
-    std::pair<std::string, float> spillWeight("spillWeight_" + std::to_string(reg), rp.spillWeight);
-    if(rp.spillWeight == INFINITY) 
+    std::pair<std::string, std::vector<float>> spillWeights(
+        "positionalSpillWeights_" + std::to_string(reg),
+        std::vector<float>(rp.spillWeights.begin(), rp.spillWeights.end()));
+
+    std::pair<std::string, float> spillWeight(
+        "spillWeight_" + std::to_string(reg), rp.spillWeight);
+    if (rp.spillWeight == INFINITY)
       spillWeight.second = -1.0f;
 
-    std::pair<std::string, std::vector<int>> interferences("interferences_" + std::to_string(reg), std::vector<int>(rp.interferences.begin(), rp.interferences.end()));
-    std::pair<std::string, std::vector<int>> splitSlots("splitSlots_" + std::to_string(reg), std::vector<int>(rp.splitSlots.begin(), rp.splitSlots.end()));
-    std::pair<std::string, std::vector<int>> useDistances("useDistances_" + std::to_string(reg), std::vector<int>(rp.useDistances.begin(), rp.useDistances.end()));
+    std::pair<std::string, std::vector<int>> interferences(
+        "interferences_" + std::to_string(reg),
+        std::vector<int>(rp.interferences.begin(), rp.interferences.end()));
+    std::pair<std::string, std::vector<int>> splitSlots(
+        "splitSlots_" + std::to_string(reg),
+        std::vector<int>(rp.splitSlots.begin(), rp.splitSlots.end()));
+    std::pair<std::string, std::vector<int>> useDistances(
+        "useDistances_" + std::to_string(reg),
+        std::vector<int>(rp.useDistances.begin(), rp.useDistances.end()));
 
-    std::pair<std::string, std::vector<float>> vecRep("vectors_" + std::to_string(reg), std::vector<float>());
+    std::pair<std::string, std::vector<float>> vecRep(
+        "vectors_" + std::to_string(reg), std::vector<float>());
 
-    for(auto vec : rp.vecRep) {
-      for(auto val : vec) {
+    for (auto vec : rp.vecRep) {
+      for (auto val : vec) {
         vecRep.second.push_back(val);
       }
     }
-    
-    MLRunner->populateFeatures(regID, cls, color, spillWeights, spillWeight, interferences, splitSlots, useDistances, vecRep);
+
+    MLRunner->populateFeatures(regID, cls, color, spillWeights, spillWeight,
+                               interferences, splitSlots, useDistances, vecRep);
   }
 
   // Add result, new bool variables in the Features vector
   std::pair<std::string, int> result("result", 0);
   std::pair<std::string, int> newBool("new", 0);
-  if(IsStart) {
+  if (IsStart) {
     result.second = 1;
     newBool.second = 1;
   } else {
-    if(regIdxs.size() > 0) {
+    if (regIdxs.size() > 0) {
       numSplits++;
       result.second = 1;
     } else {
@@ -2467,26 +2483,25 @@ void MLRA::initPipeCommunication() {
     return;
   }
 
-  MLRunner = std::make_unique<PipeModelRunner>(basename + ".out", basename + ".in", SerializerType);
+  MLRunner = std::make_unique<PipeModelRunner>(
+      basename + ".out", basename + ".in", SerializerType);
 
-  auto getJsonObj = [](std::vector<int>& reply) -> json::Object {
+  auto getJsonObj = [](std::vector<int> &reply) -> json::Object {
     json::Object jsonObject;
-    if(reply[0] == 0) {
+    if (reply[0] == 0) {
       jsonObject["action"] = "Split";
       jsonObject["regidx"] = reply[1];
       jsonObject["payload"] = reply[2];
-    }
-    else if(reply[0] == 1) {
+    } else if (reply[0] == 1) {
       jsonObject["action"] = "Color";
       json::Array colorArray;
-      for(int i = 1; i < reply.size(); i=i+2) {
+      for (int i = 1; i < reply.size(); i = i + 2) {
         json::Object colorObj;
-        colorObj[std::to_string(reply[i])] = reply[i+1];
+        colorObj[std::to_string(reply[i])] = reply[i + 1];
         colorArray.push_back(json::Value(std::move(colorObj)));
       }
       jsonObject["color"] = json::Value(std::move(colorArray));
-    }
-    else if(reply[0] == -1) {
+    } else if (reply[0] == -1) {
       jsonObject["action"] = "Exit";
     }
     return jsonObject;
@@ -2534,15 +2549,21 @@ void MLRA::initPipeCommunication() {
     }
 
     // auto reply = MLRunner->evaluate2();
-    using T = std::vector<int>;
-    auto reply = std::move(*static_cast<T*>(MLRunner->evaluateH<T>()));
+    // using T = std::vector<int>;
+    // auto reply = std::move(*static_cast<T *>(MLRunner->evaluateH<T>()));
+    // auto reply = MLRunner->evaluate2<std::vector<int>>();
 
-    errs() << "Reply: ";
-    for (auto i : reply)
-      errs() << i << ", ";
+    size_t size;
+    int *out;
+    MLRunner->evaluate<int *>(out, size);
+    std::vector<int> reply(out, out + size);
+    errs() << "Reply:: ";
+    for (auto x : reply)
+      errs() << x << " ";
     errs() << "\n";
 
     json::Object res = getJsonObj(reply);
+    // json::Object res = json::Object();
 
     if (res["action"].getAsString()->str() == "Color") {
       errs() << "Received color from model\n";
@@ -2655,9 +2676,28 @@ void MLRA::inference() {
   }
   // serializeRegProfWithPipelining(regProfMap);
   if (enable_rl_inference_engine) {
-    // DriverService *inference_driver = new DriverService(this);
-    // std::map<unsigned, unsigned> colour_map;
-    std::map<std::string, int64_t> colorMap;
+    errs() << "In RL inference engine\n";
+#define nodeSelectionModelPath                                                 \
+  "/home/cs20btech11024/repos/ml-llvm-project/model/RegAlloc/ggnn_drl/"        \
+  "rllib_split_model/src/node_select_model_inference/model.onnx"
+#define taskSelectionModelPath                                                 \
+  "/home/cs20btech11024/repos/ml-llvm-project/model/RegAlloc/ggnn_drl/"        \
+  "rllib_split_model/src/select_task_model_inference/model.onnx"
+#define nodeColouringModelPath                                                 \
+  "/home/cs20btech11024/repos/ml-llvm-project/model/RegAlloc/ggnn_drl/"        \
+  "rllib_split_model/src/node_colour_model_inference/model.onnx"
+#define nodeSplitingModelPath                                                  \
+  "/home/cs20btech11024/repos/ml-llvm-project/model/RegAlloc/ggnn_drl/"        \
+  "rllib_split_model/src/node_split_model_inference/model.onnx"
+
+    std::map<std::string, Agent *> agentMap;
+    agentMap[NODE_SELECTION_AGENT] = new Agent(nodeSelectionModelPath);
+    agentMap[TASK_SELECTION_AGENT] = new Agent(taskSelectionModelPath);
+    agentMap[COLOR_NODE_AGENT] = new Agent(nodeColouringModelPath);
+    agentMap[SPLIT_NODE_AGENT] = new Agent(nodeSplitingModelPath);
+
+    MLRunner = std::make_unique<ONNXModelRunner>(this, agentMap);
+
 
     bool emptyGraph = true;
     int count = 0;
@@ -2701,6 +2741,13 @@ void MLRA::inference() {
       return;
     }
 
+    errs() << "Before calling model \n";
+    MLRunner->evaluate<int>();
+
+    std::map<std::string, int64_t> colorMap;
+    for (auto pair : this->nid_colour) {
+      colorMap[std::to_string(pair.first)] = pair.second;
+    }
     // inference_driver->getInfo(regProfMap, colorMap);
     LLVM_DEBUG(errs() << "Processing funtion: " << MF->getName() << "\n");
     LLVM_DEBUG(errs() << "Colour Map: \n");

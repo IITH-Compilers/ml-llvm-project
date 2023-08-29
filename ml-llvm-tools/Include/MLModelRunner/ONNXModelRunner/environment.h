@@ -16,7 +16,8 @@ typedef signed Action;
 
 class Environment {
   bool done = false;
-  std::string nextAgent;
+  std::string nextAgent = "";
+protected:
   std::map<std::string, Observation> obsMap;
 
 public:

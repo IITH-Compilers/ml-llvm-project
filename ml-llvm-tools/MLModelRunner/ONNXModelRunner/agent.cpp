@@ -11,10 +11,9 @@
 #include <cmath>
 #include <iterator>
 
-Agent::Agent(std::string modelPath, int input_size) {
+Agent::Agent(std::string modelPath) {
   // Create model object here
   this->model = new ONNXModel(modelPath.c_str());
-  this->input_size = input_size;
 }
 
 unsigned Agent::computeAction(Observation &input) {

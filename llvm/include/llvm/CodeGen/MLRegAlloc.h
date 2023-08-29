@@ -9,7 +9,6 @@
 #include "SpillPlacement.h"
 #include "Spiller.h"
 #include "SplitKit.h"
-#include "driver.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
@@ -195,7 +194,7 @@ private:
   //   // SmallMapVector<unsigned, SmallVector<SlotIndex, 8>, 8> overlapsEnd;
   // };
   // SmallMapVector<unsigned, RegisterProfile, 16> regProfMap;
-  RegisterProfileMap regProfMap;
+  // RegisterProfileMap regProfMap;
   std::unique_ptr<MLModelRunner> MLRunner;
   json::Object JO;
   std::vector<TensorSpec> FeatureSpecs;

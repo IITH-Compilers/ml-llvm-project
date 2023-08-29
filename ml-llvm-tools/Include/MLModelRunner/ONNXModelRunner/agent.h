@@ -22,8 +22,7 @@
 class Agent {
 public:
   ONNXModel *model;
-  int input_size;
-  Agent(std::string model_path, int input_size);
+  Agent(std::string model_path);
   unsigned computeAction(Observation &obs);
 };
 

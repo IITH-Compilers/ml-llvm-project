@@ -25,7 +25,7 @@ Graph::Graph(std::vector<std::vector<int>> &edges, const RegisterProfileMap &reg
       llvm::SmallVector<unsigned, 8> temp_vec;
       temp_vec.insert(temp_vec.begin(), edges[i][1]);
       this->adjacencyList.insert({int(edges[i][0]), temp_vec});
-      LLVM_DEBUG(errs() << "Adding edge to adjaceccy list: " << edges[i][0] << " --- " << edges[i][1] << "\n");
+      // LLVM_DEBUG(errs() << "Adding edge to adjaceccy list: " << edges[i][0] << " --- " << edges[i][1] << "\n");
     } else {
       // LLVM_DEBUG(errs() << "line 29: \n");
       // LLVM_DEBUG(errs() << "Before ----------------------------------\n");
@@ -35,7 +35,7 @@ Graph::Graph(std::vector<std::vector<int>> &edges, const RegisterProfileMap &reg
 
       llvm::SmallVector<unsigned, 8> temp_vec =
           this->adjacencyList[int(edges[i][0])];
-      LLVM_DEBUG(errs() << "Adding edge to adjaceccy list: " << edges[i][0] << " --- " << edges[i][1] << "\n");
+      // LLVM_DEBUG(errs() << "Adding edge to adjaceccy list: " << edges[i][0] << " --- " << edges[i][1] << "\n");
       temp_vec.insert(temp_vec.end(), int(edges[i][1]));
       // LLVM_DEBUG(errs() << "line 35: temp_vec size = " << temp_vec.size() << "\n");
       // errs() << "adjList size : " << adjacencyList.size() << " --- "
@@ -85,7 +85,7 @@ void Graph::getColorOfVisitedAdjNodes(
 llvm::SmallVector<unsigned, 8> Graph::getAdjNodes(unsigned node_idx) {
   if (adjacencyList.find(node_idx) == adjacencyList.end()) {
     LLVM_DEBUG(errs() << "NodeId not in map is: " << node_idx << "\n");
-    assert(false && "Node not found in adjacencyList");
+    // assert(false && "Node not found in adjacencyList");
   }
   return adjacencyList[node_idx];
 }
@@ -116,8 +116,8 @@ void Graph::get_eligibleNodes(std::vector<int> &eligibleNodes) {
   for (int i = 0; i < this->discovered.size(); i++) {
     if (!this->discovered[i]) {
       eligibleNodes.insert(eligibleNodes.end(), i);
-      LLVM_DEBUG(LLVM_DEBUG(dbgs() << "Adding node to eligible list: " << i
-      << "\n"));
+      // LLVM_DEBUG(LLVM_DEBUG(dbgs() << "Adding node to eligible list: " << i
+      // << "\n"));
     }
   }
 }
@@ -155,6 +155,10 @@ bool Graph::all_discovered() {
     if (!this->discovered[i]) {
       return false;
     }
+  }
+  if (discovered.size() == 0) {
+    errs() << "Discovered list size: "<< discovered.size() << "\n";
+    exit(0);;
   }
   return true;
 }

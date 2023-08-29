@@ -7,7 +7,6 @@ add_llvm_component_library(LLVMMLRegAllocInference
 multi_agent_env.cpp
 topological_sort.cpp
 X86_register_config_objects.cpp
-# driver.cpp
 
 LINK_COMPONENTS
 LLVMONNXModelRunner

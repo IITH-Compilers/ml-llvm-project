@@ -42,5 +42,5 @@ void ONNXModelRunner::computeAction(Observation obs) {
 void *ONNXModelRunner::evaluateUntyped() {
   Observation obs = env->reset();
   computeAction(obs);
-  return nullptr;
+  return new int(0);
 }

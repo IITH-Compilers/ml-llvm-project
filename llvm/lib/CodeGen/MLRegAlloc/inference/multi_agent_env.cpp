@@ -8,27 +8,30 @@
 using namespace llvm;
 
 Observation MultiAgentEnv::reset() {
-  // RegisterProfileMap regProfMap_new;
+  // RegisterProfileMap regProfMapHelper_new;
   this->clearDataStructures();
-  LLVM_DEBUG(errs() << "RegProgMap size at reset: " << this->regProfMap.size()
+  LLVM_DEBUG(errs() << "RegProgMap size at reset: " << this->regProfMapHelper.size()
                     << "\n");
+  errs() << "RegProgMap size at reset: " << this->regProfMapHelper.size()
+         << "\n";
   for (auto &rpi : regProfMap) {
     auto rp = rpi.second;
     if (rp.cls == "Phy" &&
         rp.frwdInterferences.begin() == rp.frwdInterferences.end()) {
       continue;
     }
-    this->regProfMap.insert({rpi.first, rpi.second});
+    errs() << "Adding node: " << rpi.first << "\n";
+    this->regProfMapHelper.insert({rpi.first, rpi.second});
   }
 
-  LLVM_DEBUG(errs() << "rp size = " << this->regProfMap.size() << "\n");
+  LLVM_DEBUG(errs() << "rp size = " << this->regProfMapHelper.size() << "\n");
   LLVM_DEBUG(errs() << "noderep size = " << this->nodeRepresentation.size()
                     << "\n");
   // assert(false);
-  // this->regProfMap = &regProfMap_new;
+  // this->regProfMapHelper = &regProfMapHelper_new;
   int idx = 0;
   // this->nodeRepresentation.clear();
-  for (auto rpi : (this->regProfMap)) {
+  for (auto rpi : (this->regProfMapHelper)) {
     RegisterProfile &rp = rpi.second;
     // errs( << "Node mat size: " << rpi.first << " "
     //                   << rp.vecRep.size() << " " << rp.cls << "\n");
@@ -50,7 +53,7 @@ Observation MultiAgentEnv::reset() {
     idx++;
   }
   LLVM_DEBUG(errs() << "Added nodes to maps line 38\n");
-  LLVM_DEBUG(errs() << "rp size = " << this->regProfMap.size() << "\n");
+  LLVM_DEBUG(errs() << "rp size = " << this->regProfMapHelper.size() << "\n");
   LLVM_DEBUG(errs() << "Added nodes to maps line 41\n");
   LLVM_DEBUG(errs() << "noderep size = " << this->nodeRepresentation.size()
                     << "\n");
@@ -75,7 +78,7 @@ Observation MultiAgentEnv::reset() {
   LLVM_DEBUG(errs() << "1. noderep size = " << this->nodeRepresentation.size()
                     << "\n");
   // assert(false);
-  this->graph_topology = new Graph(this->edges, this->regProfMap);
+  this->graph_topology = new Graph(this->edges, this->regProfMapHelper);
   this->registerAS = new RegisterActionSpace();
   LLVM_DEBUG(errs() << "2. noderep size = " << this->nodeRepresentation.size()
                     << "\n");
@@ -83,13 +86,14 @@ Observation MultiAgentEnv::reset() {
   Observation nodeSelectionObs(selectNodeObsSize);
   this->selectNodeObsConstructor(nodeSelectionObs);
   this->setNextAgent(NODE_SELECTION_AGENT);
-  // this->setCurrentObservation(nodeSelectionObs, NODE_SELECTION_AGENT);
+
+  this->setCurrentObservation(nodeSelectionObs, NODE_SELECTION_AGENT);
   return nodeSelectionObs;
 }
 
 void MultiAgentEnv::clearDataStructures() {
   this->setDone();
-  this->regProfMap.clear();
+  this->regProfMapHelper.clear();
   this->edge_count = 0;
   this->nid_idx.clear();
   this->idx_nid.clear();
@@ -121,27 +125,35 @@ void MultiAgentEnv::clearDataStructures() {
 }
 
 Observation MultiAgentEnv::step(Action action) {
+  errs() << "Action: " << action << "\n";
   if (this->getNextAgent() == NODE_SELECTION_AGENT) {
-    this->select_node_step(action);
+    errs() << "Selected node is: " << action << "\n";
+    return std::move(this->select_node_step(action));
   } else if (this->getNextAgent() == TASK_SELECTION_AGENT) {
-    this->select_task_step(action);
+    return this->select_task_step(action);
     if (this->getNextAgent() == SPLIT_NODE_AGENT) {
       auto splitNodeObs = this->getCurrentObservation(SPLIT_NODE_AGENT);
     }
+    errs() << "Selected Task is: " << action << "\n";
   } else if (this->getNextAgent() == COLOR_NODE_AGENT) {
-    this->colour_node_step(action);
+    return this->colour_node_step(action);
+    errs() << "Node coloured is: " << action << "\n";
+    
   } else if (this->getNextAgent() == SPLIT_NODE_AGENT) {
     splitStepCount++;
-    this->split_node_step(action);
+    return this->split_node_step(action);
+    errs() << "Node spliting is: " << action << "\n";
   } else {
     llvm_unreachable("Unexpected agent found");
   }
   LLVM_DEBUG(errs() << "Next Agent is: " << this->getNextAgent() << "\n");
   if (this->graph_topology->all_discovered() &&
       this->getNextAgent() == NODE_SELECTION_AGENT) {
-    LLVM_DEBUG(errs() << "Next Agent before Done is called: "
-                      << this->getNextAgent() << "\n");
-    LLVM_DEBUG(errs() << "Discovered All\n");
+    // LLVM_DEBUG(errs() << "Next Agent before Done is called: "
+    //                   << this->getNextAgent() << "\n");
+    // LLVM_DEBUG(errs() << "Discovered All\n");
+    // errs() << "Exiting form onnx\n";
+    // exit(0);
     this->setDone();
     LLVM_DEBUG(errs() << "nodeRepresentation size before done: "
                       << this->nodeRepresentation.size() << "\n");
@@ -151,12 +163,12 @@ Observation MultiAgentEnv::step(Action action) {
   }
 }
 
-void MultiAgentEnv::update_env(RegisterProfileMap *regProfMap,
+void MultiAgentEnv::update_env(RegisterProfileMap *regProfMapHelper,
                                SmallSetVector<unsigned, 8> updatedRegIdxs) {
 
   SmallVector<unsigned, 2> newNodeIdxs;
   int newNodeCount = 0;
-  for (auto rpi : *regProfMap) {
+  for (auto rpi : *regProfMapHelper) {
     RegisterProfile rp = rpi.second;
     if (rp.cls == "Phy" &&
         rp.frwdInterferences.begin() == rp.frwdInterferences.end()) {
@@ -166,7 +178,7 @@ void MultiAgentEnv::update_env(RegisterProfileMap *regProfMap,
       }
       continue;
     }
-    if (this->regProfMap.find(rpi.first) == this->regProfMap.end()) {
+    if (this->regProfMapHelper.find(rpi.first) == this->regProfMapHelper.end()) {
       newNodeIdxs.insert(newNodeIdxs.end(), rpi.first);
       this->nid_idx[rpi.first] =
           this->graph_topology->node_number + newNodeCount;
@@ -183,7 +195,7 @@ void MultiAgentEnv::update_env(RegisterProfileMap *regProfMap,
     // else if (std::find(updatedRegIdxs.begin(), updatedRegIdxs.end(),
     //  rpi.first) != updatedRegIdxs.end()) {
     else {
-      // this->regProfMap[rpi.first].interferences = rp.interferences;
+      // this->regProfMapHelper[rpi.first].interferences = rp.interferences;
       int nodeIdxTemp = nid_idx[rpi.first];
       auto currAdjList = graph_topology->getAdjNodes(nodeIdxTemp);
       std::set<int> s;
@@ -204,24 +216,24 @@ void MultiAgentEnv::update_env(RegisterProfileMap *regProfMap,
   }
   auto splitedNodeIdx = this->nid_idx[current_node_id];
   this->graph_topology->removeNode(splitedNodeIdx);
-  this->regProfMap.erase(current_node_id);
+  this->regProfMapHelper.erase(current_node_id);
   LLVM_DEBUG(errs() << "Remove node successfuly: " << current_node_id << " "
                     << splitedNodeIdx << "\n");
   // SmallVector<IR2Vec::Vector, 12> currentNodeMatrix =
-  //     this->regProfMap[current_node_id].vecRep;
+  //     this->regProfMapHelper[current_node_id].vecRep;
   IR2Vec::Vector CPY_INST_VEC(IR2Vec_size, 0.001);
   // SmallVector<IR2Vec::Vector, 12> V1(currentNodeMatrix.begin(),
   // currentNodeMatrix.begin() + splitPoint + 1); SmallVector<IR2Vec::Vector,
   // 12> V2(currentNodeMatrix.begin() + 1, currentNodeMatrix.end());
   LLVM_DEBUG(errs() << "Created node vector maxtrix successfuly\n");
   int newNodecount = 0;
-  for (auto rpi : *regProfMap) {
+  for (auto rpi : *regProfMapHelper) {
     RegisterProfile rp = rpi.second;
     if (rp.cls == "Phy" &&
         rp.frwdInterferences.begin() == rp.frwdInterferences.end()) {
       continue;
     }
-    if (this->regProfMap.find(rpi.first) == this->regProfMap.end()) {
+    if (this->regProfMapHelper.find(rpi.first) == this->regProfMapHelper.end()) {
       newNodecount += 1;
       // nid_idx.insert(std::pair<unsigned, unsigned>(
       //     rpi.first, graph_topology->node_number));
@@ -246,8 +258,8 @@ void MultiAgentEnv::update_env(RegisterProfileMap *regProfMap,
       LLVM_DEBUG(errs() << "Adding node to adj list: " << rpi.first << "\n");
       this->graph_topology->addNode(rp);
 
-      this->regProfMap.insert({rpi.first, rpi.second});
-      LLVM_DEBUG(errs() << "Adding nodeId to map regProfMap: " << rpi.first
+      this->regProfMapHelper.insert({rpi.first, rpi.second});
+      LLVM_DEBUG(errs() << "Adding nodeId to map regProfMapHelper: " << rpi.first
                         << "\n");
       SmallVector<IR2Vec::Vector, 12> newNodeMatrix;
       IR2Vec::Vector nodeVec(IR2Vec_size);
@@ -270,7 +282,7 @@ void MultiAgentEnv::update_env(RegisterProfileMap *regProfMap,
                         << rpi.first << "\n");
     }
     // else {
-    //   this->regProfMap[rpi.first] = rpi.second;
+    //   this->regProfMapHelper[rpi.first] = rpi.second;
     // }
   }
   LLVM_DEBUG(errs() << "Updated node interferences successfuly\n");
@@ -281,16 +293,16 @@ void MultiAgentEnv::update_env(RegisterProfileMap *regProfMap,
   LLVM_DEBUG(errs() << "Updated ghaph edges successfuly\n");
 }
 
-Observation &MultiAgentEnv::select_node_step(unsigned action) {
+Observation MultiAgentEnv::select_node_step(unsigned action) {
   this->current_node_id = this->idx_nid[action];
   LLVM_DEBUG(errs() << "Node selected is: " << this->current_node_id << " --- "
                     << action << "\n");
-  auto pos = this->regProfMap.find(this->current_node_id);
-  if (pos == this->regProfMap.end()) {
+  auto pos = this->regProfMapHelper.find(this->current_node_id);
+  if (pos == this->regProfMapHelper.end()) {
     LLVM_DEBUG(errs() << "current_node_id = " << this->current_node_id << " "
                       << action << "\n");
-    LLVM_DEBUG(errs() << (this->regProfMap[current_node_id]).cls << " "
-                      << (this->regProfMap[current_node_id]).color);
+    LLVM_DEBUG(errs() << (this->regProfMapHelper[current_node_id]).cls << " "
+                      << (this->regProfMapHelper[current_node_id]).color);
     LLVM_DEBUG(errs() << "\n");
     assert(false && "Some issue");
   }
@@ -300,7 +312,7 @@ Observation &MultiAgentEnv::select_node_step(unsigned action) {
   // this->current_node = pos->second;
   // }
 
-  this->current_node = this->regProfMap[this->current_node_id];
+  this->current_node = this->regProfMapHelper[this->current_node_id];
   // errs( << "Current node cls: " << this->current_node.cls <<
   // "\n");
   this->setNextAgent(TASK_SELECTION_AGENT);
@@ -311,7 +323,7 @@ Observation &MultiAgentEnv::select_node_step(unsigned action) {
   return selectTaskObs;
 }
 
-Observation &MultiAgentEnv::select_task_step(unsigned action) {
+Observation MultiAgentEnv::select_task_step(unsigned action) {
   if (action == 0) {
     LLVM_DEBUG(errs() << "Next is colouring agent\n");
     this->setNextAgent(COLOR_NODE_AGENT);
@@ -340,7 +352,7 @@ Observation &MultiAgentEnv::select_task_step(unsigned action) {
   }
 }
 
-Observation &MultiAgentEnv::colour_node_step(unsigned action) {
+Observation MultiAgentEnv::colour_node_step(unsigned action) {
   assert(this->nid_idx.find(this->current_node_id) != this->nid_idx.end() &&
          "Current nid not theit in nid_idx map");
   unsigned current_node_idx = this->nid_idx[this->current_node_id];
@@ -465,7 +477,7 @@ void MultiAgentEnv::selectNodeObsConstructor(Observation &obs) {
   obs[current_index + this->edge_count] = 1;
   current_index += MAX_EDGE_COUNT;
   // Set number of node in graph
-  unsigned node_count = this->regProfMap.size();
+  unsigned node_count = this->regProfMapHelper.size();
   assertObsSize(157);
   obs[current_index + node_count] = 1;
   current_index += max_node_number;
@@ -523,7 +535,7 @@ void MultiAgentEnv::createAnnotations(Observation &temp_annotations) {
 
 void MultiAgentEnv::computeAnnotations() {
   int current_idx = 0;
-  for (auto rpi : (this->regProfMap)) {
+  for (auto rpi : (this->regProfMapHelper)) {
     RegisterProfile rp = rpi.second;
     assert((current_idx < 600) && "exceeded annotations array size!!!!!!!\n");
     if (rp.cls == "Phy") {
@@ -543,8 +555,8 @@ void MultiAgentEnv::computeAnnotations() {
 }
 
 void MultiAgentEnv::printRegisterProfile() const {
-  LLVM_DEBUG(errs() << "\nPRinting regProfMap\n");
-  for (auto rpi : regProfMap) {
+  LLVM_DEBUG(errs() << "\nPRinting regProfMapHelper\n");
+  for (auto rpi : regProfMapHelper) {
     LLVM_DEBUG(errs() << "ID = " << rpi.first << "\n");
     auto rp = rpi.second;
     LLVM_DEBUG(errs() << "cls =" << rp.cls << "\n");
@@ -575,7 +587,7 @@ void MultiAgentEnv::printRegisterProfile() const {
 unsigned MultiAgentEnv::computeEdgesFromRP() {
   unsigned edge_count = 0;
   int node_idx = 0;
-  for (auto rpi : (this->regProfMap)) {
+  for (auto rpi : (this->regProfMapHelper)) {
     RegisterProfile rp = rpi.second;
     int src = node_idx;
     for (auto des_id : rp.interferences) {
@@ -595,7 +607,7 @@ unsigned MultiAgentEnv::updateEdgesFromRP() {
   unsigned edge_count = 0;
   // int node_idx = 0;
   LLVM_DEBUG(errs() << "Edges are:");
-  for (auto rpi : (this->regProfMap)) {
+  for (auto rpi : (this->regProfMapHelper)) {
     RegisterProfile rp = rpi.second;
     int src = nid_idx[rpi.first];
     auto tempInterferences = this->graph_topology->getAdjNodes(src);

@@ -132,8 +132,7 @@ struct PosetRL : public ModulePass,
       } else {
         errs() << "Onnx model runner...\n";
         Agent agent("/home/cs20btech11024/repos/ML-Phase-Ordering/Model/"
-                    "RLLib-PhaseOrder/poset-RL-onnx-model/model.onnx",
-                    ActionMaskSize + EmbeddingSize);
+                    "RLLib-PhaseOrder/poset-RL-onnx-model/model.onnx");
         std::map<std::string, Agent *> agents;
         agents["agent"] = &agent;
         MLRunner =
@@ -227,7 +226,7 @@ struct PosetRL : public ModulePass,
     int passSequence = 0;
     while (passSequence != -1) {
       processMLInputs();
-      int res = static_cast<int>(MLRunner->evaluate<int>());
+      int res = (MLRunner->evaluate<int>());
       processMLAdvice(res);
       passSequence = res;
     }

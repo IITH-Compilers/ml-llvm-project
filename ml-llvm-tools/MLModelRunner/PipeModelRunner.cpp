@@ -87,7 +87,6 @@ void PipeModelRunner::send(void *data) {
   const char *message_length_ptr =
       reinterpret_cast<const char *>(&message_length);
   errs() << "Message length: " << message_length << "\n";
-  errs() << "Data string: " << *dataString << "\n";
   errs() << "DataString.size(): " << dataString->size() << "\n";
   OutStream->write(message_length_ptr, sizeof(size_t));
   OutStream->write(dataString->data(), dataString->size());
@@ -107,7 +106,6 @@ void *PipeModelRunner::receive() {
   
   int *data = reinterpret_cast<int *>(OutputBuffer->data());
 
-  this->MessageLength = MessageLength;
   for(int i = 0; i < 3; i++) {
     errs() << "data[" << i << "]: " << data[i] << "\n";
   }

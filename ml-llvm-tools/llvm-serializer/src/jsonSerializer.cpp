@@ -12,7 +12,6 @@ void *JsonSerializer::getSerializedData() {
   llvm::raw_string_ostream OS(*ret);
   json::OStream(OS).value(data);
   cleanDataStructures();
-  errs() << "data from json func: " << *ret << "\n";
   return ret;
 }
 
@@ -41,10 +40,12 @@ void *JsonSerializer::desJson(json::Value *V) {
     if (auto x = V->getAsInteger()) {
       int *ret = new int();
       *ret = x.value();
+      this->MessageLength = sizeof(int);
       return ret;
     } else if (auto x = V->getAsNumber()) {
       float *ret = new float();
       *ret = x.value();
+      this->MessageLength = sizeof(float);
       return ret;
     } else {
       llvm::errs() << "Error in desJson: Number is not int, or double\n";
@@ -54,11 +55,13 @@ void *JsonSerializer::desJson(json::Value *V) {
   case json::Value::Kind::String: {
     std::string *ret = new std::string();
     *ret = V->getAsString()->str();
+    this->MessageLength = ret->size() * sizeof(char);
     return ret->data();
   }
   case json::Value::Kind::Boolean: {
     bool *ret = new bool();
     *ret = V->getAsBoolean().value();
+    this->MessageLength = sizeof(bool);
     return ret;
   }
   case json::Value::Kind::Array: {
@@ -76,12 +79,14 @@ void *JsonSerializer::desJson(json::Value *V) {
         for (auto it : *arr) {
           ret->push_back(it.getAsInteger().value());
         }
+        this->MessageLength = ret->size() * sizeof(int);
         return ret->data();
       } else if (auto x = first->getAsNumber()) {
         std::vector<float> *ret = new std::vector<float>();
         for (auto it : *arr) {
           ret->push_back(it.getAsNumber().value());
         }
+        this->MessageLength = ret->size() * sizeof(float);
         return ret->data();
       } else {
         llvm::errs() << "Error in desJson: Number is not int, or double\n";
@@ -93,6 +98,7 @@ void *JsonSerializer::desJson(json::Value *V) {
       for (auto it : *arr) {
         ret->push_back(it.getAsString()->str());
       }
+      this->MessageLength = ret->size() * sizeof(std::string);
       return ret->data();
     }
     case json::Value::Kind::Boolean: {
@@ -100,6 +106,7 @@ void *JsonSerializer::desJson(json::Value *V) {
       for (auto it : *arr) {
         ret->push_back(it.getAsBoolean().value());
       }
+      this->MessageLength = ret->size() * sizeof(uint8_t);
       return ret->data();
     }
     default: {

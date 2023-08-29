@@ -28,8 +28,6 @@
 
 class MultiAgentEnv : public Environment {
   int debug_ct=0;
-  std::map<std::string, Observation> obsMap;
-  RegisterProfileMap regProfMap;
   RegisterActionSpace *registerAS;
   RegisterProfile current_node;
   unsigned edge_count;
@@ -41,9 +39,9 @@ class MultiAgentEnv : public Environment {
   unsigned splitStepCount = 0;
   SmallVector<IR2Vec::Vector, 12> nodeRepresentation;
 
-  Observation& select_node_step(unsigned action);
-  Observation& select_task_step(unsigned action);
-  Observation& colour_node_step(unsigned action);
+  Observation select_node_step(unsigned action);
+  Observation select_task_step(unsigned action);
+  Observation colour_node_step(unsigned action);
 
   void getSplitPointProperties(Observation& usepointProperties);
   void createNodeSplitMask(Observation& mask);
@@ -73,7 +71,10 @@ protected:
     return obsMap[agentName];
   }
   // void updateEdges();
-
+protected:
+  RegisterProfileMap regProfMap;
+private:
+  RegisterProfileMap regProfMapHelper;
 public:
   Graph *graph_topology;  
   std::vector<std::vector<int>> edges;

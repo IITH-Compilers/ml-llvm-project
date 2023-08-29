@@ -37,7 +37,7 @@ public:
 
   virtual void *getSerializedData() = 0;
   virtual void *deserializeUntyped(void *data) = 0;
-
+  size_t getMessageLength() { return MessageLength; }
 protected:
   BaseSerializer(Kind Type) : Type(Type) {
     llvm::errs() << "In BaseSerializer constructor...\n";
@@ -46,8 +46,8 @@ protected:
   }
   virtual void cleanDataStructures() = 0;
   const Kind Type;
-
   void *RequestVoid;
   void *ResponseVoid;
+  size_t MessageLength;
 };
 #endif
