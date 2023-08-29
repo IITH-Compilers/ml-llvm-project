@@ -85,6 +85,7 @@ void Graph::getColorOfVisitedAdjNodes(
 llvm::SmallVector<unsigned, 8> Graph::getAdjNodes(unsigned node_idx) {
   if (adjacencyList.find(node_idx) == adjacencyList.end()) {
     LLVM_DEBUG(errs() << "NodeId not in map is: " << node_idx << "\n");
+    return {};
     // assert(false && "Node not found in adjacencyList");
   }
   return adjacencyList[node_idx];

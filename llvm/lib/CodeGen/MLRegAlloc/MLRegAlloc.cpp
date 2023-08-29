@@ -2745,7 +2745,9 @@ void MLRA::inference() {
     MLRunner->evaluate<int>();
 
     std::map<std::string, int64_t> colorMap;
+    errs() << "Returned color map: \n";
     for (auto pair : this->nid_colour) {
+      errs() << pair.first << " : " << pair.second << "\n";
       colorMap[std::to_string(pair.first)] = pair.second;
     }
     // inference_driver->getInfo(regProfMap, colorMap);

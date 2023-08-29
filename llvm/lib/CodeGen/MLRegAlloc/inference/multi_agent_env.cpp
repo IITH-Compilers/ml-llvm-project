@@ -125,23 +125,24 @@ void MultiAgentEnv::clearDataStructures() {
 }
 
 Observation MultiAgentEnv::step(Action action) {
+  Observation obs;
   errs() << "Action: " << action << "\n";
   if (this->getNextAgent() == NODE_SELECTION_AGENT) {
     errs() << "Selected node is: " << action << "\n";
-    return std::move(this->select_node_step(action));
+    obs = this->select_node_step(action);
   } else if (this->getNextAgent() == TASK_SELECTION_AGENT) {
-    return this->select_task_step(action);
+    obs = this->select_task_step(action);
     if (this->getNextAgent() == SPLIT_NODE_AGENT) {
       auto splitNodeObs = this->getCurrentObservation(SPLIT_NODE_AGENT);
     }
     errs() << "Selected Task is: " << action << "\n";
   } else if (this->getNextAgent() == COLOR_NODE_AGENT) {
-    return this->colour_node_step(action);
+    obs = this->colour_node_step(action);
     errs() << "Node coloured is: " << action << "\n";
     
   } else if (this->getNextAgent() == SPLIT_NODE_AGENT) {
     splitStepCount++;
-    return this->split_node_step(action);
+    obs = this->split_node_step(action);
     errs() << "Node spliting is: " << action << "\n";
   } else {
     llvm_unreachable("Unexpected agent found");
@@ -151,7 +152,7 @@ Observation MultiAgentEnv::step(Action action) {
       this->getNextAgent() == NODE_SELECTION_AGENT) {
     // LLVM_DEBUG(errs() << "Next Agent before Done is called: "
     //                   << this->getNextAgent() << "\n");
-    // LLVM_DEBUG(errs() << "Discovered All\n");
+    LLVM_DEBUG(errs() << "Discovered All\n");
     // errs() << "Exiting form onnx\n";
     // exit(0);
     this->setDone();
@@ -161,6 +162,7 @@ Observation MultiAgentEnv::step(Action action) {
     auto tmp = SmallVector<IR2Vec::Vector, 12>();
     this->nodeRepresentation.swap(tmp);
   }
+  return obs;
 }
 
 void MultiAgentEnv::update_env(RegisterProfileMap *regProfMapHelper,
