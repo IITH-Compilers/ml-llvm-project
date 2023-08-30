@@ -68,6 +68,7 @@ public:
                        "Override gRPC method instead");
     assert(request != nullptr && "Request cannot be null");
     grpc::ClientContext grpcCtx;
+    request = getRequest();
     auto status = stub_->getAdvice(&grpcCtx, *request, response);
     if (!status.ok()) {
       if (this->Ctx)
@@ -120,6 +121,14 @@ private:
     auto Stub_temp = Client::NewStub(channel);
     stub_ = Stub_temp.release();
     return 0;
+  }
+
+  Request *getRequest() {
+    return (Request *)Serializer->getRequest();
+  }
+
+  Response *getResponse() {
+    return (Response *)Serializer->getResponse();
   }
 };
 } // namespace llvm

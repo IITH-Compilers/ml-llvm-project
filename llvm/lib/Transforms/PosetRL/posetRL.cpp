@@ -27,7 +27,7 @@
 #include "MLModelRunner/MLModelRunner.h"
 #include "MLModelRunner/ONNXModelRunner/ONNXModelRunner.h"
 #include "MLModelRunner/PipeModelRunner.h"
-#include "MLModelRunner/gRPCModelRunner.h"
+// #include "MLModelRunner/gRPCModelRunner.h"
 
 #include "grpcpp/impl/codegen/status.h"
 
@@ -55,7 +55,11 @@ static cl::opt<bool> useONNX("use-onnx", cl::Hidden,
 static cl::opt<std::string> server_address(
     "server_address", cl::Hidden,
     cl::desc("Starts the server in the given address, format <ip>:<port>"),
-    cl::init("0.0.0.0:50051"));
+    cl::init("127.0.0.1:50051"));
+
+cl::opt<std::string> pipe_name("pipe-name", cl::Hidden,
+                               cl::init("posetrl_pipe"),
+                               cl::desc("Name for pipe file"));
 
 namespace {
 struct PosetRL : public ModulePass,
@@ -95,10 +99,10 @@ struct PosetRL : public ModulePass,
       initPipeCommunication();
     } else {
       if (training) {
-        MLRunner = std::make_unique<gRPCModelRunner<
-            posetRLgRPC::PosetRLService::Service,
-            posetRLgRPC::PosetRLService::Stub, posetRLgRPC::EmbeddingResponse,
-            posetRLgRPC::ActionRequest>>(server_address, this, &M.getContext());
+        // MLRunner = std::make_unique<gRPCModelRunner<
+        //     posetRLgRPC::PosetRLService::Service,
+        //     posetRLgRPC::PosetRLService::Stub, posetRLgRPC::EmbeddingResponse,
+        //     posetRLgRPC::ActionRequest>>(server_address, this, &M.getContext());
       } else {
         Agent agent("/Pramana/ML_LLVM_Tools/ml-llvm-project/"
                     "onnx_checkpoints_posetrl/posetrl_model.onnx");
@@ -111,7 +115,18 @@ struct PosetRL : public ModulePass,
         for (auto a : Sequence)
           errs() << a << " ";
         errs() << "\n";
-      }
+      } 
+      // else {
+      //   posetRLgRPC::EmbeddingResponse request;
+      //   posetRLgRPC::ActionRequest response;
+      //   MLRunner = std::make_unique<gRPCModelRunner<
+      //       posetRLgRPC::PosetRLService, posetRLgRPC::PosetRLService::Stub,
+      //       posetRLgRPC::EmbeddingResponse, posetRLgRPC::ActionRequest>>(
+      //       M.getContext(), server_address, &request, &response);
+      //   MLRunner->setRequest(&request);
+      //   MLRunner->setResponse(&response);
+      //   initPipeCommunication();
+      // }
     }
     return true;
   }

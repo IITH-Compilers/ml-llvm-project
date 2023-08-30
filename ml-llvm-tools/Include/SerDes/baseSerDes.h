@@ -8,6 +8,7 @@
 #include <vector>
 
 using namespace std;
+#define DEBUG_TYPE "serdes"
 
 #define SUPPORTED_TYPES(M)                                                     \
   M(int)                                                                       \
@@ -38,6 +39,10 @@ public:
   virtual void *getSerializedData() = 0;
   virtual void *deserializeUntyped(void *data) = 0;
   size_t getMessageLength() { return MessageLength; }
+
+  virtual void *getRequest() {};
+
+  virtual void *getResponse() {};
 
 protected:
 BaseSerDes(Kind Type) : Type(Type) { assert(Type != Kind::Unknown); }

@@ -9,9 +9,6 @@ message(STATUS "Using protobuf ${Protobuf_INCLUDE_DIRS}")
 
 add_llvm_component_library(LLVMMLRegAlloc
 MLRegAlloc.cpp
-InteractiveModelRunner.cpp
-TrainingLogger.cpp
-TensorSpec.cpp
 ../MLConfig.cpp
 
 DEPENDS 

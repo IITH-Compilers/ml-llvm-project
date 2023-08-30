@@ -44,3 +44,4 @@ add_llvm_component_library(LLVMipo
   DEPENDS
   intrinsics_gen
   )
+# target_link_libraries(LLVMipo PUBLIC LLVMgRPC)

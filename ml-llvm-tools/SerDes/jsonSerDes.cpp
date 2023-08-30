@@ -2,8 +2,11 @@
 #include "SerDes/jsonSerDes.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/Debug.h"
 #include <cstdint>
 #include <string>
+
+#define DEBUG_TYPE "json-serdes"
 
 void *JsonSerDes::getSerializedData() {
   auto tempJO = J;

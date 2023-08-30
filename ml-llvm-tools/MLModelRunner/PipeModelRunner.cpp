@@ -22,6 +22,8 @@
 #include <iostream>
 #include <string>
 
+#define DEBUG_TYPE "pipe-model-runner"
+
 using namespace llvm;
 
 static cl::opt<bool> DebugReply(

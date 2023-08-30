@@ -40,7 +40,8 @@ Observation PosetRLEnv::step(Action Action) {
   if (Actioncount >= 15)
     setDone();
 
-  std::vector<float> Obs;
+  // std::vector<float> Obs;
+  Observation Obs;
   std::copy(CurrActionMask.begin(), CurrActionMask.end(),
             std::back_inserter(Obs));
   std::copy(CurrEmbedding.begin(), CurrEmbedding.end(),
@@ -53,7 +54,8 @@ Observation PosetRLEnv::reset() {
   CurrEmbedding = getEmbeddings();
   CurrActionMask.assign(ActionMaskSize, 1);
 
-  std::vector<float> Obs;
+  // std::vector<float> Obs;
+  Observation Obs;
   std::copy(CurrActionMask.begin(), CurrActionMask.end(),
             std::back_inserter(Obs));
   std::copy(CurrEmbedding.begin(), CurrEmbedding.end(),

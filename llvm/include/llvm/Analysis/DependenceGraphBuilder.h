@@ -14,12 +14,15 @@
 #ifndef LLVM_ANALYSIS_DEPENDENCE_GRAPH_BUILDER_H
 #define LLVM_ANALYSIS_DEPENDENCE_GRAPH_BUILDER_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/EquivalenceClasses.h"
-#include "llvm/Analysis/DependenceAnalysis.h"
-#include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/Instructions.h"
+#include "llvm/ADT/SmallVector.h"
 
 namespace llvm {
+
+class BasicBlock;
+class DependenceInfo;
+class Instruction;
 
 /// This abstract builder class defines a set of high-level steps for creating
 /// DDG-like graphs. The client code is expected to inherit from this class and
@@ -28,6 +31,7 @@ namespace llvm {
 template <class GraphType> class AbstractDependenceGraphBuilder {
 protected:
   using BasicBlockListType = SmallVectorImpl<BasicBlock *>;
+  using InstructionListType = SmallVector<Instruction *, 2>;
 
 private:
   using NodeType = typename GraphType::NodeType;
@@ -38,8 +42,9 @@ public:
   using NodeListType = SmallVector<NodeType *, 4>;
 
   AbstractDependenceGraphBuilder(GraphType &G, DependenceInfo &D,
-                                 const BasicBlockListType &BBs)
-      : Graph(G), DI(D), BBList(BBs) {}
+                                 const BasicBlockListType &BBs,
+                                 const InstructionListType &RPHIList)
+      : Graph(G), DI(D), BBList(BBs), ReductionPHIList(RPHIList) {}
   virtual ~AbstractDependenceGraphBuilder() {}
 
   /// The main entry to the graph construction algorithm. It starts by
@@ -57,10 +62,16 @@ public:
     computeInstructionOrdinals();
     createFineGrainedNodes();
     createDefUseEdges();
-    createMemoryDependencyEdges();
+    // createMemoryDependencyEdges();
+    // computeMemoryDependences();
+
+    //  simplify();
+    // createAndConnectRootNode();
+    simplify_Inst();
     createAndConnectRootNode();
-    createPiBlocks();
-    sortNodesTopologically();
+    // //  createPiBlocks();
+    // createMergedPiBlocks();
+    //  sortNodesTopologically();
   }
 
   /// Compute ordinal numbers for each instruction and store them in a map for
@@ -81,6 +92,8 @@ public:
   /// in the graph nodes and create edges between them.
   void createMemoryDependencyEdges();
 
+  void computeMemoryDependences();
+
   /// Create a root node and add edges such that each node in the graph is
   /// reachable from the root.
   void createAndConnectRootNode();
@@ -91,6 +104,25 @@ public:
   /// program elements that need to stay together during codegen and turn
   /// the dependence graph into an acyclic graph.
   void createPiBlocks();
+
+  void createMergedPiBlocks();
+
+  /// Go through all the nodes in the graph and collapse any two nodes
+  /// 'a' and 'b' if all of the following are true:
+  ///   - the only edge from 'a' is a def-use edge to 'b' and
+  ///   - the only edge to 'b' is a def-use edge from 'a' and
+  ///   - there is no cyclic edge from 'b' to 'a' and
+  ///   - all instructions in 'a' and 'b' belong to the same basic block and
+  ///   - both 'a' and 'b' are simple (single or multi instruction) nodes.
+  void simplify();
+
+  void simplify_Inst();
+  void PhiNodeMerge(NodeType &SI, NodeType &PhiNode, Instruction &II,
+                    NodeListType &NodeDeletionList);
+  void NodeMergeRecursion(NodeType &SI, Instruction &II,
+                          NodeListType &NodeDeletionList);
+  void createDefUseEdgeMergedNode(NodeType &FinalNode, NodeType &MergingNode,
+                                  NodeListType &NodeDeletionList);
 
   /// Topologically sort the graph nodes.
   void sortNodesTopologically();
@@ -129,6 +161,18 @@ protected:
   /// and false otherwise.
   virtual bool shouldCreatePiBlocks() const { return true; }
 
+  /// Return true if graph simplification step is requested, and false
+  /// otherwise.
+  virtual bool shouldSimplify() const { return true; }
+
+  /// Return true if it's safe to merge the two nodes.
+  virtual bool areNodesMergeable(const NodeType &A,
+                                 const NodeType &B) const = 0;
+
+  /// Append the content of node \p B into node \p A and remove \p B and
+  /// the edge between \p A and \p B from the graph.
+  virtual void mergeNodes(NodeType &A, NodeType &B) = 0;
+
   /// Given an instruction \p I return its associated ordinal number.
   size_t getOrdinal(Instruction &I) {
     assert(InstOrdinalMap.find(&I) != InstOrdinalMap.end() &&
@@ -138,8 +182,9 @@ protected:
 
   /// Given a node \p N return its associated ordinal number.
   size_t getOrdinal(NodeType &N) {
-    assert(NodeOrdinalMap.find(&N) != NodeOrdinalMap.end() &&
-           "No ordinal computed for this node.");
+    //  assert(NodeOrdinalMap.find(&N) != NodeOrdinalMap.end() &&
+    //  ///////////////commented
+    // "No ordinal computed for this node."); /////////////////////commented
     return NodeOrdinalMap[&N];
   }
 
@@ -160,6 +205,8 @@ protected:
 
   /// The list of basic blocks to consider when building the graph.
   const BasicBlockListType &BBList;
+
+  const InstructionListType &ReductionPHIList;
 
   /// A mapping from instructions to the corresponding nodes in the graph.
   InstToNodeMap IMap;

@@ -463,6 +463,10 @@ FunctionPass *createCFIInstrInserter();
 /// Creates CFGuard longjmp target identification pass.
 /// \see CFGuardLongjmp.cpp
 FunctionPass *createCFGuardLongjmpPass();
+  /// Create IR Type Promotion pass. \see TypePromotion.cpp
+  FunctionPass *createTypePromotionPass();
+  
+   // FunctionPass *createcustom_loop_distribution();
 
 /// Create Hardware Loop pass. \see HardwareLoops.cpp
 FunctionPass *createHardwareLoopsPass();

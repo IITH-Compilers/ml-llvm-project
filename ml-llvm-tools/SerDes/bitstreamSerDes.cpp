@@ -10,6 +10,8 @@
 #include <string>
 #include <vector>
 
+#define DEBUG_TYPE "bitstream-serdes"
+
 using namespace llvm;
 using namespace std;
 

@@ -22,6 +22,7 @@ from ray.rllib.models.torch.torch_modelv2 import TorchModelV2
 from ray.rllib.models.torch.fcnet import FullyConnectedNetwork as TorchFC
 from ray.rllib.utils.framework import try_import_tf, try_import_torch
 from ray.rllib.utils.test_utils import check_learning_achieved
+from ray.rllib.utils.torch_ops import FLOAT_MIN, FLOAT_MAX
 import glob
 from tqdm import tqdm
 import traceback
@@ -32,7 +33,7 @@ from google.protobuf.json_format import MessageToJson
 import json
 
 import grpc
-sys.path.append('../../ml-llvm-tools/MLModelRunner/gRPCModelRunner/Python-Utilities')
+sys.path.append('/Pramana/ML_LLVM_Tools/ml-llvm-project/ml-llvm-tools/MLModelRunner/gRPCModelRunner/Python-Utilities/')
 import posetRL_pb2_grpc, posetRL_pb2
 from google.protobuf.empty_pb2 import Empty
 # pipe related imports
@@ -84,7 +85,7 @@ class PhaseOrder(gym.Env):
         self.cur_action_mask = [1] * self.action_space_size
         self.mode = "train"
         self.Obs = None
-        obs_space = Box(-100000.0, 100000.0,
+        obs_space = Box(FLOAT_MIN, FLOAT_MAX,
                         shape=(config["state_size"], ), dtype=np.float32)
         self.observation_space = Dict({"action_mask": Box(
             0, 1, shape=(self.action_space_size,)), "state": obs_space})
@@ -123,7 +124,7 @@ class PhaseOrder(gym.Env):
         self.use_pipe = config["use_pipe"]
         print("self.use_pipe {}".format(self.use_pipe))
         self.data_format = config["data_format"]
-        self.temp_rootname = "temppipe"
+        self.temp_rootname = "testpipe"
         to_compiler = self.temp_rootname + ".in"
         from_compiler = self.temp_rootname + ".out"
         self.from_compiler = from_compiler
@@ -255,8 +256,11 @@ class PhaseOrder(gym.Env):
                 raise
             else:
                 self.embedding = result
-        elif self.mode == 'inference' and self.use_grpc:
-            self.embedding = np.array(embedding)
+        elif self.use_grpc:
+            if self.mode == 'inference':
+                self.embedding = np.array(embedding)
+            else:
+                self.embedding = self.stable_grpc("Action", 0) # LLVMgRPC way
         else:
             self.embedding = self.getEmbedding(self.BaseIR)
 
@@ -395,7 +399,7 @@ class PhaseOrder(gym.Env):
     # Get next action (sub-sequence) to be applied on the LLVM IR
     def step(self, action_index):
         prev_embedding = self.embedding
-        # Reward, NextStateIR = self.getLocalReward(action_index)
+        
         Reward = 0
         done = False
         # Get embedding for New IR
@@ -409,17 +413,22 @@ class PhaseOrder(gym.Env):
             if self.use_pipe:
                 self.sendResponse(action_index)
                 result = self.readObservation()
-            else:
+            elif self.use_grpc:
                 print("In gRPC training flow")
                 result = self.stable_grpc("Action", action_index) # LLVMgRPC way
-            
+                # self.embedding = result
+                print("Result:", result)
+            else:
+                Reward, NextStateIR = self.getLocalReward(action_index)
+                result = self.getEmbedding(NextStateIR)
+                self.CurrIR = NextStateIR
+                # result = self.embedding
             if result is None:
                 raise Exception("result is None")
             else:
-                if self.use_pipe:
-                    self.embedding = result                   
-        # self.embedding = self.getEmbedding(NextStateIR)
-        # self.CurrIR = NextStateIR
+                # if self.use_pipe:
+                self.embedding = result                   
+        
         self.cur_action_mask[action_index] = 0
         self.action_count += 1
         self.cur_action_seq.append(action_index)
@@ -460,9 +469,9 @@ class PhaseOrder(gym.Env):
                 self.sendResponse(-1)
                 self.fc.close()
                 self.tc.close()
-                self.action_count = 0
+                
                 self.cur_action_seq = []
-
+            self.action_count = 0
 # quiet#        print("Reward {}".format(Reward))
         logging.info("Reward {}".format(Reward))
 # quiet#        print("Action {}".format(action_index))
@@ -668,8 +677,8 @@ class PhaseOrder(gym.Env):
         return config_path
 
     def startServer(self, filename, ip):
-        optPath = "/home/cs20btech11024/repos/ml-llvm-project/build_posetrl/bin/opt"
-        clangPath = "/home/cs20btech11024/repos/ml-llvm-project/build_posetrl/bin/clang"
+        optPath = "/Pramana/ML_LLVM_Tools/ml-llvm-project/build_posetrl/bin/opt"
+        clangPath = "/Pramana/ML_LLVM_Tools/ml-llvm-project/build_posetrl/bin/clang"
         filepath = self.train_Dir + "/" + filename
         newfilepath = self.assembly_file_path
         data_format = self.data_format

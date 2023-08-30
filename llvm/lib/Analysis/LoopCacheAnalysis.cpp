@@ -75,21 +75,23 @@ static Loop *getInnerMostLoop(const LoopVectorTy &Loops) {
 static bool isOneDimensionalArray(const SCEV &AccessFn, const SCEV &ElemSize,
                                   const Loop &L, ScalarEvolution &SE) {
   const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(&AccessFn);
-  if (!AR || !AR->isAffine())
+  if (!AR || !AR->isAffine()) {
     return false;
+  }
 
   assert(AR->getLoop() && "AR should have a loop");
 
   // Check that start and increment are not add recurrences.
   const SCEV *Start = AR->getStart();
   const SCEV *Step = AR->getStepRecurrence(SE);
-  if (isa<SCEVAddRecExpr>(Start) || isa<SCEVAddRecExpr>(Step))
+  if (isa<SCEVAddRecExpr>(Start) || isa<SCEVAddRecExpr>(Step)) {
     return false;
+  }
 
   // Check that start and increment are both invariant in the loop.
-  if (!SE.isLoopInvariant(Start, &L) || !SE.isLoopInvariant(Step, &L))
+  if (!SE.isLoopInvariant(Start, &L) || !SE.isLoopInvariant(Step, &L)) {
     return false;
-
+  }
   return AR->getStepRecurrence(SE) == &ElemSize;
 }
 
@@ -134,8 +136,8 @@ IndexedReference::IndexedReference(Instruction &StoreOrLoadInst,
 
   IsValid = delinearize(LI);
   if (IsValid)
-    LLVM_DEBUG(dbgs().indent(2) << "Succesfully delinearized: " << *this
-                                << "\n");
+    LLVM_DEBUG(dbgs().indent(2)
+               << "Succesfully delinearized: " << *this << "\n");
 }
 
 Optional<bool> IndexedReference::hasSpacialReuse(const IndexedReference &Other,
@@ -320,7 +322,6 @@ bool IndexedReference::delinearize(const LoopInfo &LI) {
   if (Loop *L = LI.getLoopFor(BB)) {
     const SCEV *AccessFn =
         SE.getSCEVAtScope(getPointerOperand(&StoreOrLoadInst), L);
-
     BasePointer = dyn_cast<SCEVUnknown>(SE.getPointerBase(AccessFn));
     if (BasePointer == nullptr) {
       LLVM_DEBUG(
@@ -358,7 +359,6 @@ bool IndexedReference::delinearize(const LoopInfo &LI) {
       return isSimpleAddRecurrence(*Subscript, *L);
     });
   }
-
   return false;
 }
 
@@ -386,8 +386,9 @@ bool IndexedReference::isConsecutive(const Loop &L, unsigned CLS) const {
   for (const SCEV *Subscript : Subscripts) {
     if (Subscript == LastSubscript)
       continue;
-    if (!isCoeffForLoopZeroOrInvariant(*Subscript, L))
+    if (!isCoeffForLoopZeroOrInvariant(*Subscript, L)) {
       return false;
+    }
   }
 
   // ...and the access stride is less than the cache line size.
@@ -416,20 +417,23 @@ bool IndexedReference::isCoeffForLoopZeroOrInvariant(const SCEV &Subscript,
 
 bool IndexedReference::isSimpleAddRecurrence(const SCEV &Subscript,
                                              const Loop &L) const {
-  if (!isa<SCEVAddRecExpr>(Subscript))
+  if (!isa<SCEVAddRecExpr>(Subscript)) {
     return false;
+  }
 
   const SCEVAddRecExpr *AR = cast<SCEVAddRecExpr>(&Subscript);
   assert(AR->getLoop() && "AR should have a loop");
 
-  if (!AR->isAffine())
+  if (!AR->isAffine()) {
     return false;
+  }
 
   const SCEV *Start = AR->getStart();
   const SCEV *Step = AR->getStepRecurrence(SE);
 
-  if (!SE.isLoopInvariant(Start, &L) || !SE.isLoopInvariant(Step, &L))
+  if (!SE.isLoopInvariant(Start, &L) || !SE.isLoopInvariant(Step, &L)) {
     return false;
+  }
 
   return true;
 }
@@ -471,16 +475,17 @@ CacheCost::CacheCost(const LoopVectorTy &Loops, const LoopInfo &LI,
 }
 
 std::unique_ptr<CacheCost>
-CacheCost::getCacheCost(Loop &Root, LoopStandardAnalysisResults &AR,
-                        DependenceInfo &DI, Optional<unsigned> TRT) {
+CacheCost ::getCacheCost(Loop &Root, LoopStandardAnalysisResults &AR,
+                         DependenceInfo &DI, Optional<unsigned> TRT) {
   if (Root.getParentLoop()) {
     LLVM_DEBUG(dbgs() << "Expecting the outermost loop in a loop nest\n");
     return nullptr;
   }
 
   LoopVectorTy Loops;
-  for (Loop *L : breadth_first(&Root))
+  for (Loop *L : breadth_first(&Root)) {
     Loops.push_back(L);
+  }
 
   if (!getInnerMostLoop(Loops)) {
     LLVM_DEBUG(dbgs() << "Cannot compute cache cost of loop nest with more "
@@ -488,7 +493,8 @@ CacheCost::getCacheCost(Loop &Root, LoopStandardAnalysisResults &AR,
     return nullptr;
   }
 
-  return std::make_unique<CacheCost>(Loops, AR.LI, AR.SE, AR.TTI, AR.AA, DI, TRT);
+  return std::make_unique<CacheCost>(Loops, AR.LI, AR.SE, AR.TTI, AR.AA, DI,
+                                     TRT);
 }
 
 void CacheCost::calculateCacheFootprint() {
@@ -558,8 +564,9 @@ bool CacheCost::populateReferenceGroups(ReferenceGroupsTy &RefGroups) const {
     }
   }
 
-  if (RefGroups.empty())
+  if (RefGroups.empty()) {
     return false;
+  }
 
   LLVM_DEBUG({
     dbgs() << "\nIDENTIFIED REFERENCE GROUPS:\n";
@@ -599,8 +606,8 @@ CacheCost::computeLoopCacheCost(const Loop &L,
     LoopCost += RefGroupCost * TripCountsProduct;
   }
 
-  LLVM_DEBUG(dbgs().indent(2) << "Loop '" << L.getName()
-                              << "' has cost=" << LoopCost << "\n");
+  LLVM_DEBUG(dbgs().indent(2)
+             << "Loop '" << L.getName() << "' has cost=" << LoopCost << "\n");
 
   return LoopCost;
 }

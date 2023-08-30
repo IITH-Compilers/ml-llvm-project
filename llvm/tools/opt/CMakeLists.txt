@@ -28,6 +28,13 @@ set(LLVM_LINK_COMPONENTS
   AddSizeAttr
   IR2Vec
   CollectMachineIR
+  Serializer
+  IML
+  RDG
+  LoopDistribution
+  custom_loop_distribution
+  LoopDistributionServer
+  LoopCost
   )
 
 add_llvm_tool(opt
