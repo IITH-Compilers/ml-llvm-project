@@ -23,6 +23,7 @@ protected:
 public:
   bool checkDone() { return done == true; };
   void setDone() { done = true; }
+  void resetDone() { done = false; }
   std::string getNextAgent() { return nextAgent; };
   void setNextAgent(std::string name) { nextAgent = name; }
   virtual Observation step(Action action) = 0;

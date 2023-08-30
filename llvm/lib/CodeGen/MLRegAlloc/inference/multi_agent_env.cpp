@@ -92,7 +92,7 @@ Observation MultiAgentEnv::reset() {
 }
 
 void MultiAgentEnv::clearDataStructures() {
-  this->setDone();
+  this->resetDone();
   this->regProfMapHelper.clear();
   this->edge_count = 0;
   this->nid_idx.clear();

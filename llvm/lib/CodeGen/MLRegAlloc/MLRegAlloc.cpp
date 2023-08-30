@@ -734,7 +734,7 @@ void MLRA::sendRegProfData(T *response,
   }
 }
 
-Observation &MLRA::split_node_step(unsigned action) {
+Observation MLRA::split_node_step(unsigned action) {
   unsigned splitRegIdx = this->current_node_id;
   splitPoint = action;
   SmallVector<unsigned, 2> NewVRegs;
@@ -2467,7 +2467,7 @@ void MLRA::training_flow() {
 
 void MLRA::initPipeCommunication() {
   std::string basename =
-      "/home/cs20btech11024/repos/ml-llvm-project/model/RegAlloc/"
+      "/home/cs20mtech12003/ml-llvm-project/model/RegAlloc/"
       "ggnn_drl/rllib_split_model/src/rl4realpipe";
 
   errs() << "Initializing pipe communication...\n";
@@ -2482,7 +2482,6 @@ void MLRA::initPipeCommunication() {
     errs() << "Invalid data format\n";
     return;
   }
-
   MLRunner = std::make_unique<PipeModelRunner>(basename + ".out",
                                                basename + ".in", SerDesType);
 
@@ -2678,16 +2677,16 @@ void MLRA::inference() {
   if (enable_rl_inference_engine) {
     errs() << "In RL inference engine\n";
 #define nodeSelectionModelPath                                                 \
-  "/home/cs20btech11024/repos/ml-llvm-project/model/RegAlloc/ggnn_drl/"        \
+  "/home/cs20mtech12003/ml-llvm-project/model/RegAlloc/ggnn_drl/"        \
   "rllib_split_model/src/node_select_model_inference/model.onnx"
 #define taskSelectionModelPath                                                 \
-  "/home/cs20btech11024/repos/ml-llvm-project/model/RegAlloc/ggnn_drl/"        \
+  "/home/cs20mtech12003/ml-llvm-project/model/RegAlloc/ggnn_drl/"        \
   "rllib_split_model/src/select_task_model_inference/model.onnx"
 #define nodeColouringModelPath                                                 \
-  "/home/cs20btech11024/repos/ml-llvm-project/model/RegAlloc/ggnn_drl/"        \
+  "/home/cs20mtech12003/ml-llvm-project/model/RegAlloc/ggnn_drl/"        \
   "rllib_split_model/src/node_colour_model_inference/model.onnx"
 #define nodeSplitingModelPath                                                  \
-  "/home/cs20btech11024/repos/ml-llvm-project/model/RegAlloc/ggnn_drl/"        \
+  "/home/cs20mtech12003/ml-llvm-project/model/RegAlloc/ggnn_drl/"        \
   "rllib_split_model/src/node_split_model_inference/model.onnx"
 
     std::map<std::string, Agent *> agentMap;

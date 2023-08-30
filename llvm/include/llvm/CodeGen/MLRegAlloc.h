@@ -264,7 +264,7 @@ private:
   unsigned getPhyRegForColor(LiveInterval &VirtReg, unsigned color,
                              SmallVector<unsigned, 4> &SplitVRegs);
             
-  Observation& split_node_step(unsigned action) override;
+  Observation split_node_step(unsigned action) override;
   void constructData(SmallSetVector<unsigned, 8> *updatedRegIdxs, bool IsStart = false);
   void constructTensorSpecs(SmallSetVector<unsigned, 8>* updatedRegIdxs, bool IsStart = false);
   void constructJson(SmallSetVector<unsigned, 8> *updatedRegIdxs, bool IsStart = false);
