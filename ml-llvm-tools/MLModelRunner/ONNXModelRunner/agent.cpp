@@ -37,6 +37,6 @@ unsigned Agent::computeAction(Observation &input) {
   // }
   LLVM_DEBUG(llvm::errs() << "\nmax value and index are " << *max << " " << argmaxVal
                << "\n");
-  llvm::errs() << "action: " << argmaxVal << "\n";
+  // llvm::errs() << "action: " << argmaxVal << "\n";
   return argmaxVal;
 }

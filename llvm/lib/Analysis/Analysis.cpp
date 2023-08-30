@@ -86,7 +86,7 @@ void llvm::initializeAnalysis(PassRegistry &Registry) {
   initializeMemorySSAWrapperPassPass(Registry);
   initializeMemorySSAPrinterLegacyPassPass(Registry);
   initializeRDGWrapperPassPass(Registry);
-  initializeInnerMostLoopPassPass(Registry);
+  // initializeInnerMostLoopPassPass(Registry);
 }
 
 void LLVMInitializeAnalysis(LLVMPassRegistryRef R) {

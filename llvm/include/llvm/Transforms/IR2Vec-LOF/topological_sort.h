@@ -20,14 +20,14 @@ public:
     Discovered.resize(Size, false);
     InDegree.resize(Size, 0);
     // print adjacency list
-    errs() << "Adjacency list:\n";
+    // errs() << "Adjacency list:\n";
     int Idx = 0;
-    for(auto l : this->AdjacencyList) {
-      errs() << Idx++ << ", " <<l.first << ": ";
-      for(auto n : l.second)
-        errs() << n << " ";
-      errs() << "\n";
-    }
+    // for(auto l : this->AdjacencyList) {
+    //   errs() << Idx++ << ", " <<l.first << ": ";
+    //   for(auto n : l.second)
+    //     errs() << n << " ";
+    //   errs() << "\n";
+    // }
 
     // compute in-degree
     for (auto l : AdjacencyList) {
@@ -47,5 +47,10 @@ public:
   void getEligibleNodes(SmallVector<int, 8> &EligibleNodes);
   bool allDiscovered();
   void updateVisitList(unsigned NodeIdx);
+  void clearDataStructure() {
+    Discovered.clear();
+    InDegree.clear();
+    AdjacencyList.clear();
+  }
 };
 #endif

@@ -258,9 +258,10 @@ bool RDGWrapperPass::computeRDG(Function &F) {
   // }
 
   // canonicalizeLoopsWithLoads(loadWorkList);
-
+  // errs()<< "IR2Vec-SCC-ir2vec\n";
+  
   auto ir2vec = IR2Vec::Embeddings(*F.getParent(),
-                                   IR2Vec::IR2VecMode::FlowAware, VOCAB_FILE);
+                                   IR2Vec::IR2VecMode::Symbolic, VOCAB_FILE);
   instVecMap = ir2vec.getInstVecMap();
   // for (auto II : instVecMap) { II.first->dump(); }
   LLVM_DEBUG(for (auto II
@@ -320,7 +321,7 @@ void RDGWrapperPass::populateDOTData(DataDependenceGraph &G,
       NumNodes++;
     }
   }
-  errs() << "NumNodes = " << NumNodes << "\n";
+  // errs() << "NumNodes = " << NumNodes << "\n";
   // rdg.NodeRepresentations.resize(NumNodes);
   // filling IR2Vec vectors
   for (auto *N : G) {

@@ -438,7 +438,7 @@ void initializeLoopDistributionWrapperPassPass(PassRegistry&);
 
 void initializecustom_loop_distributionPass(PassRegistry&);
 
-void initializeInnerMostLoopPassPass(PassRegistry &);
+// void initializeInnerMostLoopPassPass(PassRegistry &);
 
 void initializeLoopDistributionServerPassPass(PassRegistry &);
 

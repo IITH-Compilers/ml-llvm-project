@@ -45,9 +45,9 @@ public:
 
 protected:
   BaseSerializer(Kind Type) : Type(Type) {
-    llvm::errs() << "In BaseSerializer constructor...\n";
+    // llvm::errs() << "In BaseSerializer constructor...\n";
     assert(Type != Kind::Unknown);
-    llvm::errs() << "End BaseSerializer constructor...\n";
+    // llvm::errs() << "End BaseSerializer constructor...\n";
   }
   const Kind Type;
 

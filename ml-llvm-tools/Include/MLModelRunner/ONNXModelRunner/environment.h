@@ -20,6 +20,7 @@ class Environment {
 public:
   bool checkDone() { return done == true; };
   void setDone() { done = true; }
+  void resetDone() { done = false; }
   std::string getNextAgent() { return next_agent; };
   void setNextAgent(std::string name) { next_agent = name; }
   virtual Observation step(Action action) = 0;

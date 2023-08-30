@@ -10,8 +10,8 @@ Observation MultiAgentEnv::reset() {
   this->PrevNode = -1;
   this->CurrentNode = -1;
   int idx = 0;
-  errs() << "NodeRepresentation size = " << currRDG.NodeRepresentations.size()
-         << "\n";
+  // errs() << "NodeRepresentation size = " << currRDG.NodeRepresentations.size()
+  //        << "\n";
   this->NodeRepresentation.clear();
   for (auto &E : currRDG.NodeRepresentations) {
     this->NodeRepresentation.push_back(E.second);
@@ -20,7 +20,7 @@ Observation MultiAgentEnv::reset() {
     this->idx_nid[idx] = E.first;
     idx++;
   }
-  // this->resetDone();
+  this->resetDone();
 
   // delete this->GraphTopology;
   this->GraphTopology = new Graph(currRDG.AdjList, currRDG.NodeRepresentations.size());
@@ -53,11 +53,11 @@ void MultiAgentEnv::create_node_select_mask(SmallVector<int, 8> &Mask) {
   SmallVector<int, 8> EligibleNodes;
   this->GraphTopology->getEligibleNodes(EligibleNodes);
 
-  (errs() << "EligibleNodes = ");
-  for (auto Node : EligibleNodes) {
-    (errs() << Node << " ");
-  }
-  (errs() << "\n");
+  // (errs() << "EligibleNodes = ");
+  // for (auto Node : EligibleNodes) {
+  //   (errs() << Node << " ");
+  // }
+  // (errs() << "\n");
   LLVM_DEBUG(errs() << "\n");
   for (auto Node : EligibleNodes) {
     if (Node >= MAX_NODES_COUNT) {
@@ -77,15 +77,15 @@ void MultiAgentEnv::select_node_obs_constructor(Observation &Obs) {
   }
 
   // state
-  LLVM_DEBUG(errs() << "Initial node rep: ----------\n";
-  for(auto V : this->NodeRepresentation) {
-    errs() << "[ ";
-    for(auto e : V) {
-      errs() << e << " ";
-    }
-    errs() << "]\n\n";
-  });
-  errs() << "\n\n";
+  // LLVM_DEBUG(errs() << "Initial node rep: ----------\n";
+  // for(auto V : this->NodeRepresentation) {
+  //   errs() << "[ ";
+  //   for(auto e : V) {
+  //     errs() << e << " ";
+  //   }
+  //   errs() << "]\n\n";
+  // });
+  // errs() << "\n\n";
   for (auto V : this->NodeRepresentation) {
     for (auto e : V) {
       Obs[CurrIdx++] = e;
@@ -96,7 +96,7 @@ void MultiAgentEnv::select_node_obs_constructor(Observation &Obs) {
 Observation MultiAgentEnv::select_node_step(Action Action) {
   this->PrevNode = this->CurrentNode;
   this->CurrentNode = Action;
-  errs() << "current node: " << this->CurrentNode << "\n";
+  // errs() << "current node: " << this->CurrentNode << "\n";
   this->GraphTopology->updateVisitList(this->CurrentNode);
   LLVM_DEBUG(errs() << "select_node_step: line: " << 53 << "\n");
   int CurrIdx = 0;
@@ -142,6 +142,7 @@ Observation MultiAgentEnv::select_node_step(Action Action) {
 
 Observation MultiAgentEnv::select_distribution_step(Action Action) {
   LLVM_DEBUG(errs() << "****ENTERED select_distribution_step******\n");
+  // errs() << "****ENTERED select_distribution_step******\n";
   if (Action == 0) {
     // do not distribute => merge
     this->DistributionSeq =
@@ -150,8 +151,8 @@ Observation MultiAgentEnv::select_distribution_step(Action Action) {
     this->DistributionSeq =
         this->DistributionSeq + "|S" + std::to_string(this->CurrentNode + 1);
   }
-  errs() << "previous node: " << this->PrevNode << " and current node: "
-         << this->CurrentNode << "\n";
+  // errs() << "previous node: " << this->PrevNode << " and current node: "
+        //  << this->CurrentNode << "\n";
   Observation Obs(SELECT_NODE_OBS_SIZE);
   // Action mask
   SmallVector<int, 8> ActionMask(MAX_NODES_COUNT, 0);

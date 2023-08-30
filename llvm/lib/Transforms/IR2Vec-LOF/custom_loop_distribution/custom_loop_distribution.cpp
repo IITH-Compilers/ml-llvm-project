@@ -129,7 +129,7 @@ void custom_loop_distribution::canonicalizeLoopsWithLoads() {
 
 void custom_loop_distribution::initPipeCommunication(std::vector<std::string> RDG_List) {
 
-  std::string basename = "/home/cs20mtech12003/ml-llvm-project/model/ggnn_drl/static_v4/src/loopdistppipe";
+  std::string basename = "/Pramana/ML_LLVM_Tools/ml-llvm-project/model/ggnn_drl/static_v4/src/loopdistppipe";
   
   BaseSerializer::Kind SerializerType;
   SerializerType = BaseSerializer::Kind::Json;
@@ -140,14 +140,14 @@ void custom_loop_distribution::initPipeCommunication(std::vector<std::string> RD
   for(auto rdg: RDG_List) {
     std::pair<std::string, std::string> p1("RDG", rdg);
     MLRunner->populateFeatures(p1);
-    errs() << "Features populated END...\n";
+    // errs() << "Features populated END...\n";
     auto out = MLRunner->evaluate<std::vector<int*>>();
     std::vector<int> distSequence;
     for(auto x : out) {
       distSequence.push_back(*x);
     }
     std::string partition;
-    for (int i = 0; i < 100; i++) {
+    for (int i = 0; i < 200; i++) {
       int element = distSequence[i];
       if (element == -1)
         break;
@@ -158,7 +158,7 @@ void custom_loop_distribution::initPipeCommunication(std::vector<std::string> RD
       else
         partition.append("S" + std::to_string(element));      
     }
-    errs() << "Reseved partition:\n";
+    errs() << "Reseved partition: " << partition << "\n";
     distributed_seqs.push_back(partition);
   }
 }
@@ -214,6 +214,7 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
   //   return false;
   // F.dump();
   this->M = F.getParent();
+  // errs()<<"Before canonicolization: \n";
   canonicalizeLoopsWithLoads();
   // errs()<<"After canonicolization: \n";
   // F.dump();
@@ -230,10 +231,13 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
   // legacy::FunctionPassManager FPM(F.getParent());
   // FPM.add(R);
   // FPM.run(F);
-  // errs() << "*********************BEFORE compute RDG "
-            // "starts*****************************\n";
+  // errs() << "BEFORE compute RDG\n";
   R.computeRDG(F);
+  // errs() << "After compute RDG\n";
+
+  // errs() << "BEFORE getRDGInfo\n";
   RDGData data = R.getRDGInfo();
+  // errs() << "After getRDGInfo\n";
 
   // RDG_List.insert(RDG_List.end(), data.input_rdgs.begin(),
                   // data.input_rdgs.end());
@@ -247,7 +251,7 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
     errs() << l << "\n";
   });
 
-  SmallVector<std::string, 5> vf_seqs;
+  // SmallVector<std::string, 5> vf_seqs;
 
   if (usePipe) {
     std::vector<std::string> RDG_List;
@@ -259,7 +263,7 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
           "RDG_List, SCCgraphs and loops list should of same size.");
 
     if (RDG_List.size() == 0) {
-      errs() << "No RDGs\n";
+      // errs() << "No RDGs\n";
       return false;
     }
     LLVM_DEBUG(errs() << "Number rdg generated : " << RDG_List.size() << "\n");
@@ -301,11 +305,13 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
          "RDG_List, SCCgraphs and loops list should of same size.");
 
     if (RDG_List.size() == 0) {
-      errs() << "No RDGs\n";
+      // errs() << "No RDGs\n";
       return false;
     }
+    // errs() << "BEFORE Calling ONNX flow: " << RDG_List.size() << "\n";
     
-    for(auto rdg: RDG_List) {
+    for (auto rdg : RDG_List) {
+      // errs() << "Input RDG: " << rdg.NodeRepresentations.size() << "\n";
       Agent node_selection_agent(SELECT_NODE_MODEL_PATH, LD_OBS_SIZE);
       Agent distribution_agent(LD_MODEL_PATH, LD_OBS_SIZE);
       this->currRDG = rdg;
@@ -317,7 +323,9 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
       // runInference();
       MLRunner->evaluate<int64_t>();
       distributed_seqs.push_back(this->DistributionSeq);
+      errs() << "RDG: " << this->DistributionSeq << "\n";
     }
+    // errs() << "After Calling ONNX flow\n";
     // errs() << "Code is Commented\n";
     // exit(0);
   } else {
@@ -331,7 +339,7 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
           "RDG_List, SCCgraphs and loops list should of same size.");
 
     if (RDG_List.size() == 0) {
-      errs() << "No RDGs\n";
+      // errs() << "No RDGs\n";
       return false;
     }
     LLVM_DEBUG(errs() << "Number rdg generated : " << RDG_List.size() << "\n");
@@ -344,7 +352,7 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
     PyRun_SimpleString("import os");
 
     // errs() << "sys.path: " << MODEL_SRC << "\n";
-    PyRun_SimpleString("sys.path.append('/home/cs20mtech12003/ML-Loop-Distribution/model/ggnn_drl/static_v4/src')");
+    PyRun_SimpleString("sys.path.append('/Pramana/ML_LLVM_Tools/ml-llvm-project/model/ggnn_drl/static_v4/src')");
     // PyRun_SimpleString(std::string("sys.path.append(\"")
     //                       .append(MODEL_SRC)
     //                       .append("\")")
@@ -357,7 +365,7 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
 
     // Load the module object
     pModule = PyImport_Import(pName);
-
+    errs() << "Loaded module object\n";
     PyErr_Print();
 
     if (pModule == NULL) {
@@ -467,7 +475,7 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
   LLVM_DEBUG(errs() << "Function name=" << F.getName() << "\n");
   bool isdis = dist_helper.runwithAnalysis(SCCGraphs, loops, distributed_seqs,
                                            SE, LI, DT, AA, ORE, GetLAA, DI);
-
+  distributed_seqs.clear();
   // bool isdis =
   //     dist_helper.runwithAnalysis(SCCGraphs, loops, distributed_seqs,
   //     vf_seqs,

@@ -118,7 +118,7 @@ if __name__ == '__main__':
     graph.UpdateVisitList(listm[1])
     graph.UpdateVisitList(listm[2])
     listm = graph.findAllVertaxWithZeroWeights()
-    print(listm)
+    # print(listm)
     # print all topological ordering of the graph
     # printAllTopologicalOrders(graph)
 

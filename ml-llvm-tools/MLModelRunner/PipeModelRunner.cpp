@@ -33,7 +33,7 @@ PipeModelRunner::PipeModelRunner(LLVMContext &Ctx, StringRef OutboundName,
     : MLModelRunner(Ctx, Kind::Pipe, SerializerType),
       InEC(sys::fs::openFileForRead(InboundName, Inbound)) {
   this->InboundName = InboundName.str();
-  errs() << "InboundName: " << InboundName.str() << "\n";
+  // errs() << "InboundName: " << InboundName.str() << "\n";
   if (InEC) {
     Ctx.emitError("Cannot open inbound file: " + InEC.message());
     return;
@@ -94,7 +94,7 @@ void *PipeModelRunner::receive() {
 }
 
 void *PipeModelRunner::evaluateUntyped() {
-  llvm::errs() << "In PipeModelRunner evaluateUntyped...\n";
+  // llvm::errs() << "In PipeModelRunner evaluateUntyped...\n";
   auto *data = Serializer->getSerializedData();
   send(data);
   auto *reply = receive();

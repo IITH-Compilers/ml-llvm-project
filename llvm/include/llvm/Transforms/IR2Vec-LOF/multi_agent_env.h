@@ -17,8 +17,8 @@
 #define LD_OBS_SIZE int(603)
 #define SELECT_NODE_OBS_SIZE int(301000)
 
-#define LD_MODEL_PATH "/Pramana/RL4Real/tmp/loop_dist_onnx_models/distribution/model-1.onnx"
-#define SELECT_NODE_MODEL_PATH "/Pramana/RL4Real/tmp/loop_dist_onnx_models/select_node/model-1.onnx"
+#define LD_MODEL_PATH "/Pramana/ML_LLVM_Tools/ml-llvm-project/loop_dist_onnx_models/distribution/model-1.onnx"
+#define SELECT_NODE_MODEL_PATH "/Pramana/ML_LLVM_Tools/ml-llvm-project/loop_dist_onnx_models/select_node/model-1.onnx"
 
 #define MAX_NODES_COUNT int(1000)
 

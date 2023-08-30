@@ -158,7 +158,7 @@ class DistributeLoopEnv(MultiAgentEnv):
        
         if self.mode != 'inference':
             home_dir = self.home_dir
-            print(home_dir)
+            # print(home_dir)
         method_name = self.functionName
         loop_id = self.loopId
         ll_file_name = self.fileName
@@ -169,12 +169,12 @@ class DistributeLoopEnv(MultiAgentEnv):
         # key = "{filename}_{function_name}_{loopid}_{disSeq}".format(filename=ll_file_name, function_name=method_name, loopid=loop_id, disSeq=self.distribution)   
         # key = (ll_file_name, method_name, loop_id, '|'.join([ ','.join(sorted(seqdis.split(','))) for seqdis in self.distribution.split('|')]))   
         key = (ll_file_name, method_name, loop_id, '|'.join([ ','.join(list(map(lambda x: 'S{}'.format(x), sorted(seqdis.replace('S','').split(','))))) for seqdis in self.distribution.split('|')]))  
-        print(key)
+        # print(key)
 
         isFound = False
         try:
             if self.mode == 'train':
-                print(self.loopcost_cache)
+                # print(self.loopcost_cache)
                 
                 record = self.loopcost_cache.iloc[self.loopcost_cache.index.get_loc(key)]
                 OriginalLoopCost=record['Undsitributed Cost']
@@ -248,17 +248,15 @@ class DistributeLoopEnv(MultiAgentEnv):
                 # costly operation
                 # self.loopcost_cache.loc[key,['Distributed cost', 'Undsitributed Cost']] = [ distributedLoopCost, OriginalLoopCost]      
 
-        print("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa: {}".format(reward))
         return reward
 
     def getReward(self):
         return self.getReward_Static()
 
     def _select_distribution_step(self, action):
-        print("444444444444444444444444444 {}".format(self.functionName))
         dist_flag = [1] * 1
         if(action == 0):
-            print("DO NOT DISTRIBUTE (MERGE)")
+            # print("DO NOT DISTRIBUTE (MERGE)")
             # dist_flag = [1] * 1
             # print(self.obs.annotations)
             # if startNode:
@@ -272,7 +270,7 @@ class DistributeLoopEnv(MultiAgentEnv):
             # self.obs.addPairEdge(self.prev_node, self.cur_node)
             logging.info('DLOOP merge {prev_node} with {cur_node}'.format(prev_node=self.prev_node, cur_node=self.cur_node))
         else:
-            print("DISTRIBUTE")
+            # print("DISTRIBUTE")
             dist_flag = [0] * 1
             # print(self.obs.annotations)
             # if startNode:
@@ -285,8 +283,8 @@ class DistributeLoopEnv(MultiAgentEnv):
             self.distribution = "{}|{}".format(self.distribution, self.node_id)
             logging.info('DLOOP distribute {prev_node} with {cur_node}'.format(prev_node=self.prev_node, cur_node=self.cur_node))
 
-        print("previous node: {} and current node: {}".format(self.prev_node, self.cur_node))
-        print(dist_flag)
+        # print("previous node: {} and current node: {}".format(self.prev_node, self.cur_node))
+        # print(dist_flag)
 
         select_node_mask = self.createNodeSelectMask()
         state = self.obs
@@ -302,7 +300,6 @@ class DistributeLoopEnv(MultiAgentEnv):
         if len(possibleStartNodes) == 0 :
             if self.mode != 'inference':
                 reward_final = self.getDistributionReward()
-                print(reward_final)
                 if select_node_mask is None:
                     select_node_mask = [0]*self.max_number_nodes
             done_all = True
@@ -321,7 +318,7 @@ class DistributeLoopEnv(MultiAgentEnv):
         distribution_mask = [1] * 2
 
         select_node_obs = {'action_mask':np.array(select_node_mask), 'state':cur_obs}
-        distribution_obs = {'prev_Node':self.prev_node_obs, 'cur_Node':self.cur_node_obs, 'dist_flag':dist_flag, 'action_mask':np.array(distribution_mask)}
+        distribution_obs = {'prev_Node':self.prev_node_obs, 'cur_Node':self.cur_node_obs, 'dist_flag':np.array(dist_flag), 'action_mask':np.array(distribution_mask)}
     
         reward = {
             self.select_node_agent_id: 0,
@@ -381,14 +378,14 @@ class DistributeLoopEnv(MultiAgentEnv):
         # eligibleNodes = self.obs.graph_topology.get_eligibleNodes()
         eligibleNodes = self.obs.graph_topology.findAllVertaxWithZeroWeights()
 
-        print("len(eligibleNodes): {}".format(len(eligibleNodes)))
+        # print("len(eligibleNodes): {}".format(len(eligibleNodes)))
         
         assert len(eligibleNodes) < self.max_number_nodes, "Graph has more then maximum nodes allowed"
         for inx, x in enumerate(eligibleNodes):            
             if x in eligibleNodes:
                 mask[x] = 1
         if all(v == 0 for v in mask):
-            print("eligibleNodes", eligibleNodes)
+            # print("eligibleNodes", eligibleNodes)
             return None
             # assert False, "No node elegible to select"
             
@@ -400,23 +397,23 @@ class DistributeLoopEnv(MultiAgentEnv):
         self.prev_node = self.cur_node
         self.cur_node = action
 
-        print("current node: {}".format(self.cur_node))
+        # print("current node: {}".format(self.cur_node))
         update_status = self.obs.graph_topology.UpdateVisitList(self.cur_node)
         if not update_status:
             print("UpdateVisitList failed for {} graph at {} node".format(self.path, self.cur_node))
             assert False, 'discovered node visited.'
         self.node_id = self.obs.idx_nid[self.cur_node]
-        print("Node selected = {}, corresponding register id = {}".format(action, self.node_id))
+        # print("Node selected = {}, corresponding register id = {}".format(action, self.node_id))
         logging.info("Node selected = {}, corresponding register id = {}".format(action, self.node_id))
 
         if (self.prev_node == None):
             select_node_mask = self.createNodeSelectMask()
             state = self.obs
-            print("************************FROM MULTIAGENTENV.py***********************************************")
+            # print("************************FROM MULTIAGENTENV.py***********************************************")
             # print(state.shape)
             self.hidden_state =  self.ggnn(initial_node_representation=state.
             initial_node_representation, annotations=state.annotations, adjacency_lists=state.adjacency_lists)
-            print(self.hidden_state.shape)
+            # print(self.hidden_state.shape)
             # self.obs.initial_node_representation = self.hidden_state
             self.current_obs = self.hidden_state[self.cur_node][0:self.emb_size]
             if self.current_obs is not None and not isinstance(self.current_obs, np.ndarray):
@@ -464,7 +461,7 @@ class DistributeLoopEnv(MultiAgentEnv):
             # print("cur node: {}".format(np.array(self.cur_node_obs).shape))
             # print("cur obs: {}".format(np.array(self.cur_obs).shape))
             obs = {
-                self.distribution_agent_id: { 'action_mask': np.array(distribution_mask), 'prev_Node': np.array(self.prev_node_obs), 'curr_Node' : np.array(self.cur_node_obs), 'dist_flag':dist_flag},
+                self.distribution_agent_id: { 'action_mask': np.array(distribution_mask), 'prev_Node': np.array(self.prev_node_obs), 'curr_Node' : np.array(self.cur_node_obs), 'dist_flag':np.array(dist_flag)},
             }
 
         # self.cur_obs = hidden_state[node_index]
@@ -527,7 +524,7 @@ class DistributeLoopEnv(MultiAgentEnv):
 
         cur_obs = np.zeros((self.max_number_nodes, self.emb_size))
         cur_obs[0:node_mat.shape[0], :] = node_mat
-
+        cur_obs = cur_obs.astype(np.float32)
         obs = {
             self.select_node_agent_id: {'action_mask': np.array(select_node_mask), 'state': cur_obs}
         }
@@ -544,10 +541,10 @@ class DistributeLoopEnv(MultiAgentEnv):
         
         if graph is None:
             print("graph is None")
-        else:
-            print("graph is present")
+        # else:
+        #     print("graph is present")
 
-        print("path: {}".format(path))
+        # print("path: {}".format(path))
 
         self.topology = None # Have the graph formed from adjency list using dependence edges only
         self.distribution = ""
@@ -575,7 +572,7 @@ class DistributeLoopEnv(MultiAgentEnv):
             meta_ssa_dir = os.path.join(self.home_dir, 'llfiles/meta_ssa')
             input_file_path = os.path.join(meta_ssa_dir, self.fileName)
             self.serverAddress = "127.0.0.1:5005"
-            print("loopId: ",self.loopId," loop_id: ",self.loop_id)
+            # print("loopId: ",self.loopId," loop_id: ",self.loop_id)
             self.process = self.startServer(input_file_path,self.functionName,self.loop_id,self.serverAddress)
             if self.use_grpc:
                 self.channel = grpc.insecure_channel(
@@ -634,7 +631,6 @@ class DistributeLoopEnv(MultiAgentEnv):
     def step(self, action_dict):
         
         # assert(self.ggnn is not None, 'ggnn is None')
-        print("3333333333333333333333333")
         # print(self.select_node_agent_id)
         # print(self.distribution_agent_id)
         # print(action_dict)
@@ -666,7 +662,7 @@ class DistributeLoopEnv(MultiAgentEnv):
             response = self.stable_grpc(partition)
             jsonObj = MessageToJson(response)
             response = json.loads(jsonObj)
-            print("gRPC response: ",response)
+            # print("gRPC response: ",response)
             self.stable_grpc("Exit")
             OrignialloopCost = int(response['OrignialloopCost'])
             distributedLoopCost = int(response['distributedLoopCost'])            
@@ -675,7 +671,7 @@ class DistributeLoopEnv(MultiAgentEnv):
             # # seq = re.split(r',|-', seq)
             # seq = re.split('(\W)', seq)
             # print("Partition Sequence before: ",partition)
-            # partition_seq = [-1]*100
+            # partition_seq = [-1]*200
             # for i in range(len(seq)):
             #     if 'S' in seq[i]:
             #         element = int((seq[i])[1:])
@@ -692,7 +688,7 @@ class DistributeLoopEnv(MultiAgentEnv):
             OrignialloopCost = result[0].__getitem__(0)
             distributedLoopCost = result[0].__getitem__(1)
             print("Partition Sequence send", OrignialloopCost, distributedLoopCost)
-            self.sendResponse(self.tc, [-1]*100, self.advice_spec)                
+            self.sendResponse(self.tc, [-1]*200, self.advice_spec)                
         
         self.killServer()        
         return OrignialloopCost, distributedLoopCost
@@ -701,8 +697,8 @@ class DistributeLoopEnv(MultiAgentEnv):
         seq = partition.replace('|', '-')
         # seq = re.split(r',|-', seq)
         seq = re.split('(\W)', seq)
-        print("Partition Sequence before: ",partition)
-        partition_seq = [-1]*100
+        # print("Partition Sequence before: ",partition)
+        partition_seq = [-1]*200
         for i in range(len(seq)):
             if 'S' in seq[i]:
                 element = int((seq[i])[1:])
@@ -712,7 +708,7 @@ class DistributeLoopEnv(MultiAgentEnv):
             else:
                 partition_seq[i] = 102
                 
-        print("Partition Sequence after: ",partition, partition_seq)
+        # print("Partition Sequence after: ",partition, partition_seq)
         self.partition_seq = partition_seq
         # self.sendResponse(self.tc, partition_seq, self.advice_spec)
     

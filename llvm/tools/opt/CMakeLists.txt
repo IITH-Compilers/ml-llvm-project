@@ -29,7 +29,7 @@ set(LLVM_LINK_COMPONENTS
   AddSizeAttr
   IR2Vec
   Serializer
-  IML
+  # IML
   RDG
   LoopDistribution
   custom_loop_distribution

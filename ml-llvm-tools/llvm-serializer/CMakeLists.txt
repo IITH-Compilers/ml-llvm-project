@@ -4,6 +4,7 @@ project(
     llvm-serializer
     LANGUAGES C CXX)
 
+set(protobuf_MODULE_COMPATIBLE TRUE)
 find_package(Protobuf CONFIG REQUIRED)
 
 
@@ -11,7 +12,7 @@ add_llvm_library(LLVMSerializer
 ${CMAKE_CURRENT_SOURCE_DIR}/src/protobufSerializer.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/src/TensorSpec.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/src/jsonSerializer.cpp
-${CMAKE_CURRENT_SOURCE_DIR}/src/protobufSerializer.cpp
+# ${CMAKE_CURRENT_SOURCE_DIR}/src/protobufSerializer.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/src/bitstreamSerializer.cpp
 )
 
@@ -27,5 +28,5 @@ add_custom_command(
 
 target_link_libraries(LLVMSerializer PUBLIC protobuf::libprotobuf)
 target_include_directories(LLVMSerializer PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_include_directories(LLVMSerializer PUBLIC ${PROTOBUF_INCLUDE_DIRS})
+target_include_directories(LLVMSerializer PUBLIC ${Protobuf_INCLUDE_DIRS})
 

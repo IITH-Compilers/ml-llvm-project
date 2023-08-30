@@ -13,8 +13,8 @@ using namespace std;
 class JsonSerializer : public BaseSerializer {
 public:
   JsonSerializer() : BaseSerializer(BaseSerializer::Kind::Json) {
-    errs() << "In JsonSerializer constructor...\n";
-    errs() << "End JsonSerializer constructor...\n";
+    // errs() << "In JsonSerializer constructor...\n";
+    // errs() << "End JsonSerializer constructor...\n";
     f = std::vector<float>();
   };
 
@@ -36,7 +36,7 @@ public:
   void *getSerializedData() override;
 
   void cleanDataStructures() override {
-    errs() << "In JsonSerializer cleanDataStructures...\n";
+    // errs() << "In JsonSerializer cleanDataStructures...\n";
     J = json::Object();
     f = std::vector<float>();
   }

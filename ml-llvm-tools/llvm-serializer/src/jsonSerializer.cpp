@@ -11,12 +11,12 @@ void *JsonSerializer::getSerializedData() {
   llvm::raw_string_ostream OS(*ret);
   json::OStream(OS).value(data);
   cleanDataStructures();
-  errs() << "data from json func: " << *ret << "\n";
+  // errs() << "data from json func: " << *ret << "\n";
   return ret;
 }
 
 void *JsonSerializer::deserializeUntyped(void *data) {
-  errs() << "In JsonSerializer deserializeUntyped...\n";
+  // errs() << "In JsonSerializer deserializeUntyped...\n";
   auto dataStr = static_cast<std::string *>(data);
   Expected<json::Value> valueOrErr = json::parse(*dataStr);
   if (!valueOrErr) {

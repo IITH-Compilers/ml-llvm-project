@@ -40,7 +40,7 @@ struct HelloIR2Vec : public ModulePass {
         IR2Vec::Embeddings(M, IR2Vec::IR2VecMode::FlowAware, embeddings);
 
     auto pgmVec = ir2vec.getProgramVector();
-
+    errs() << "Hello IR2Vec Pass is called\n";
     for (auto val : pgmVec)
       outs() << val << "\t";
 

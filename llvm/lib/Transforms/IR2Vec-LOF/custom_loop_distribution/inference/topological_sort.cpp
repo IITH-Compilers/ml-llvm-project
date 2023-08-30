@@ -1,4 +1,4 @@
-#include "include/topological_sort.h"
+#include "llvm/Transforms/IR2Vec-LOF/topological_sort.h"
 #include "llvm/Support/raw_ostream.h"
 
 void Graph::getEligibleNodes(llvm::SmallVector<int, 8> &EligibleNodes) {

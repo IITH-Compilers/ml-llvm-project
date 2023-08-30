@@ -279,8 +279,8 @@ if __name__ == "__main__":
     else:
         now = datetime.now()
         date_time = now.strftime("%m-%d-%Y-%H-%M-%S")
-        file_name = "timetaken-spec06-posetrl-orignal-" + date_time + ".txt"
-        repeat_count = 3
+        file_name = "timetaken-spec17-posetrl-orignal-" + date_time + ".txt"
+        repeat_count = 2
         for file in os.listdir(args.test_dir):
             f = open(file_name, "a")
             count = 0            

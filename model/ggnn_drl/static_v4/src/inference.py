@@ -13,6 +13,12 @@ import sys
 
 # import sys
 # sys.path.append('/home/shalini/LOF_test/LD_VF/IR2Vec-LoopOptimizationFramework/model/ggnn_drl/static_v4/src')
+# print(os.system("conda init bash"))
+print(os.system("which conda"))
+print(os.environ['CONDA_DEFAULT_ENV'])
+
+# import importlib.machinery
+# print(importlib.machinery.all_suffixes())
 
 import ray
 from ray import tune
@@ -56,6 +62,7 @@ import log_reader
 from log_reader import TensorSpec
 from functools import reduce
 import operator
+from ray.rllib.utils.torch_ops import FLOAT_MIN, FLOAT_MAX
 
 
 parser = argparse.ArgumentParser()
@@ -105,9 +112,9 @@ class DistributionInference:
         ModelCatalog.register_custom_model("distribution_model", DistributionTask)
 
         box_obs = Box(
-                -10000000000000.0, 10000000000000.0, shape=(config["env_config"]["state_size"], ), dtype=np.float32)
+                FLOAT_MIN, FLOAT_MAX, shape=(config["env_config"]["state_size"], ), dtype=np.float32)
         box_obs_select_node = Box(
-                -10000000000000.0, 10000000000000.0, shape=(config["env_config"]["max_number_nodes"], config["env_config"]["state_size"]), dtype=np.float32)
+                FLOAT_MIN, FLOAT_MAX, shape=(config["env_config"]["max_number_nodes"], config["env_config"]["state_size"]), dtype=np.float32)
 
         obs_select_node = Dict({
             "action_mask": Box(0, 1, shape=(config["env_config"]["max_number_nodes"],)),
@@ -175,6 +182,14 @@ class DistributionInference:
         # checkpoint = "/home/cs20btech11024/repos/ML-Loop-Distribution/model/ggnn_drl/static_v4/model/dist-checkpoint-final.pth"
         self.trained_agent.restore(checkpoint)
 
+        # SELECT_NODE_MODEL_PATH = "/Pramana/ML_LLVM_Tools/ml-llvm-project/loop_dist_onnx_models/select_node/model-1.onnx"
+        # DISTRIBUTION_MODEL_PATH = "/Pramana/ML_LLVM_Tools/ml-llvm-project/loop_dist_onnx_models/distribution/model-1.onnx"
+        
+        # torch.onnx.export(self.trained_agent.get_policy("select_node_policy").model, ({"obs": torch.randn(1, 301000)}, {}), f=SELECT_NODE_MODEL_PATH, verbose=True, input_names=["obs"], output_names=["output"])
+
+        # torch.onnx.export(self.trained_agent.get_policy("distribution_policy").model, ({"obs": torch.randn(1, 603)}, {}), f=DISTRIBUTION_MODEL_PATH, verbose=True, input_names=["obs"], output_names=["output"])
+
+        # exit(0)
         self.config = config
         
         self.temp_rootname = "loopdistppipe"
@@ -217,7 +232,7 @@ class DistributionInference:
             for agent_id, agent_obs in obs.items():
                 policy_id = self.config['multiagent']['policy_mapping_fn'](agent_id)
                 action[agent_id] = self.trained_agent.compute_action(agent_obs, policy_id=policy_id)
-                print("action: {}".format(action[agent_id]))
+                # print("action: {}".format(action[agent_id]))
             obs, reward, done, response = env.step(action)
             done = done['__all__']
             # sum up reward for all agents
@@ -239,7 +254,6 @@ class DistributionInference:
                 assert response is not None, 'Allocation is not preset.'
                 break
         response = env.partition_seq
-        print("response: {}".format(response))        
         return reward, response
 
     def run_predict_multiple_loops(self, rdgs):
@@ -299,7 +313,6 @@ if __name__ == "__main__":
 
         rdgs = []
         for path in glob.glob(os.path.join(test_dir, '*.json')):
-            print(path)
             with open(path) as f:
                 # print(json.dumps(json.load(f)))
                 rdgs.append(json.load(f))
@@ -332,7 +345,7 @@ if __name__ == "__main__":
         tensor_specs = None
         advice_spec =  None
         ray.init()
-        trained_dist_model = "/home/cs20mtech12003/ray_results/experiment_2023-08-10_22-08-07/experiment_DistributeLoopEnv_491f4_00000_0_2023-08-10_22-08-07/checkpoint_000002/checkpoint-2"
+        trained_dist_model = "/Pramana/ML_LLVM_Tools/ray_results/experiment_2023-08-10_22-08-07/experiment_DistributeLoopEnv_491f4_00000_0_2023-08-10_22-08-07/checkpoint_000002/checkpoint-2"
         inference_obj = DistributionInference(trained_dist_model)
         
         while(True):
@@ -348,19 +361,22 @@ if __name__ == "__main__":
                 size = int.from_bytes(hdr, "little")
                 print("size: ", size)
                 msg = fc.read(size)
-                rdg = json.loads(msg.decode('utf-8'))["RDG"]
-                print("rdg: ", rdg)
+                msg = msg.decode('utf-8')
+                # print("msg: ", msg)
+                rdg = json.loads(msg)["RDG"]
                 # print(embedding)
                 _, seq = inference_obj.run_predict(rdg)
-                print("Sequence", seq)
+                # print("Sequence", seq)
                 f: io.BufferedWriter = tc
                 message = json.dumps({"out": seq}).encode("utf-8")
-                print("message: ", message)
+                # print("message: ", message)
                 hdr = int(len(message)).to_bytes(length=8, byteorder='little')
                 out = hdr + message
                 
                 f.write(out)
                 f.flush()
+            else:
+                assert False, "data_format arg is not set"
                         
             # tensor_specs, _, advice_spec = log_reader.read_header(fc)
             # # print("Tensor and Advice spec", self.tensor_specs, self.advice_spec)

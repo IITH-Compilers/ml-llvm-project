@@ -14,7 +14,7 @@
 #include "serializer/bitstreamSerializer.h"
 #include "serializer/jsonSerializer.h"
 // #include "llvm/IR/PassManager.h"
-#include "serializer/protobufSerializer.h"
+// #include "serializer/protobufSerializer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <future>
 #include <memory>
@@ -70,20 +70,20 @@ protected:
                 BaseSerializer::Kind SerializerType)
       : Ctx(Ctx), Type(Type), SerializerType(SerializerType) {
     assert(Type != Kind::Unknown);
-    errs() << "In MLModelRunner constructor...\n";
+    // errs() << "In MLModelRunner constructor...\n";
     // Serializer = std::make_unique<JsonSerializer>();
     switch (SerializerType) {
     case BaseSerializer::Kind::Json:
       Serializer = std::make_unique<JsonSerializer>();
       break;
-    case BaseSerializer::Kind::Protobuf:
-      Serializer = std::make_unique<ProtobufSerializer>();
-      break;
+    // case BaseSerializer::Kind::Protobuf:
+    //   Serializer = std::make_unique<ProtobufSerializer>();
+    //   break;
     case BaseSerializer::Kind::Bitstream:
       Serializer = std::make_unique<BitstreamSerializer>();
       break;
     }
-    errs() << "End MLModelRunner constructor...\n";
+    // errs() << "End MLModelRunner constructor...\n";
   }
   MLModelRunner(LLVMContext &Ctx, Kind Type)
       : Ctx(Ctx), Type(Type), SerializerType(BaseSerializer::Kind::Unknown) {

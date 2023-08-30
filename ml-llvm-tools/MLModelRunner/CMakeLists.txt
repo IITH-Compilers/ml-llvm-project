@@ -2,7 +2,7 @@
 add_subdirectory(Utils)
 add_subdirectory(gRPCModelRunner)
 add_subdirectory(ONNXModelRunner)
-
+set(protobuf_MODULE_COMPATIBLE TRUE)
 find_package(Protobuf CONFIG REQUIRED)
 # file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../Include/MLModelRunner DESTINATION ${LLVM_INCLUDE_DIR})
 
@@ -94,4 +94,4 @@ set_property(TARGET LLVMMLModelRunner PROPERTY CXX_STANDARD 17)
 
 target_link_libraries(LLVMMLModelRunner PUBLIC LLVMSerializer)
 target_include_directories(LLVMMLModelRunner PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../llvm-serializer/include)
-target_include_directories(LLVMMLModelRunner PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../Include/MLModelRunner)
+target_include_directories(LLVMMLModelRunner PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../Include/MLModelRunner ${Protobuf_INCLUDE_DIRS})
