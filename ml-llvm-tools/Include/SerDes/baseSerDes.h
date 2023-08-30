@@ -34,13 +34,14 @@ public:
     llvm::errs() << "In BaseSerializer setRequest...\n";
   };
   virtual void setResponse(void *Response){};
-
   virtual void *getSerializedData() = 0;
   virtual void *deserializeUntyped(void *data) = 0;
   size_t getMessageLength() { return MessageLength; }
+  virtual void *getRequest(){};
+  virtual void *getResponse(){};
 
 protected:
-BaseSerDes(Kind Type) : Type(Type) { assert(Type != Kind::Unknown); }
+  BaseSerDes(Kind Type) : Type(Type) { assert(Type != Kind::Unknown); }
   virtual void cleanDataStructures() = 0;
   const Kind Type;
   void *RequestVoid;

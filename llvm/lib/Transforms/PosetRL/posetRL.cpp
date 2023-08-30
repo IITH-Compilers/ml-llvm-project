@@ -55,7 +55,11 @@ static cl::opt<bool> useONNX("use-onnx", cl::Hidden,
 static cl::opt<std::string> server_address(
     "server_address", cl::Hidden,
     cl::desc("Starts the server in the given address, format <ip>:<port>"),
-    cl::init("0.0.0.0:50051"));
+    cl::init("127.0.0.1:50051"));
+
+cl::opt<std::string> pipe_name("pipe-name", cl::Hidden,
+                               cl::init("posetrl_pipe"),
+                               cl::desc("Name for pipe file"));
 
 namespace {
 struct PosetRL : public ModulePass,
@@ -69,7 +73,7 @@ struct PosetRL : public ModulePass,
     if (usePipe) {
       // data_format can take values: protobuf, json, bytes
       std::string basename =
-          "/home/venkat/ml-llvm-project/Model/RLLib-PhaseOrder/temppipe";
+          "/home/venkat/ml-llvm-project/Model/RLLib-PhaseOrder/" + pipe_name;
 
       BaseSerDes::Kind SerDesType;
       if (data_format == "json")
@@ -99,7 +103,7 @@ struct PosetRL : public ModulePass,
             posetRLgRPC::PosetRLService::Service,
             posetRLgRPC::PosetRLService::Stub, posetRLgRPC::EmbeddingResponse,
             posetRLgRPC::ActionRequest>>(server_address, this, &M.getContext());
-      } else {
+      } else if (useONNX) {
         Agent agent("/Pramana/ML_LLVM_Tools/ml-llvm-project/"
                     "onnx_checkpoints_posetrl/posetrl_model.onnx");
         std::map<std::string, Agent *> agents;
@@ -111,6 +115,16 @@ struct PosetRL : public ModulePass,
         for (auto a : Sequence)
           errs() << a << " ";
         errs() << "\n";
+      } else {
+        posetRLgRPC::EmbeddingResponse request;
+        posetRLgRPC::ActionRequest response;
+        MLRunner = std::make_unique<gRPCModelRunner<
+            posetRLgRPC::PosetRLService, posetRLgRPC::PosetRLService::Stub,
+            posetRLgRPC::EmbeddingResponse, posetRLgRPC::ActionRequest>>(
+            server_address, &request, &response, &M.getContext());
+        MLRunner->setRequest(&request);
+        MLRunner->setResponse(&response);
+        initPipeCommunication();
       }
     }
     return true;
@@ -163,8 +177,9 @@ struct PosetRL : public ModulePass,
     // errs() << "Action requested: " << request->action() << "\n";
     if (request->action() == -1) {
       return grpc::Status::OK;
-    }
-    processMLAdvice(request->action());
+    } else if (request->action() != 0)
+      processMLAdvice(request->action());
+
     Embedding emb = getEmbeddings();
     for (unsigned long i = 0; i < emb.size(); i++) {
       response->add_embedding(emb[i]);
