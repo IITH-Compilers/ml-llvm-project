@@ -1,5 +1,4 @@
 link_directories("${ONNXRUNTIME_ROOTDIR}/lib")
-
 set(LLVM_LINK_COMPONENTS
   AllTargetsAsmParsers
   AllTargetsCodeGens
@@ -28,7 +27,6 @@ set(LLVM_LINK_COMPONENTS
   PosetRL
   AddSizeAttr
   IR2Vec
-  Serializer
   CollectMachineIR
   )
 
@@ -50,5 +48,3 @@ export_executable_symbols(opt)
 if(LLVM_BUILD_EXAMPLES)
     target_link_libraries(opt PRIVATE ExampleIRTransforms)
 endif(LLVM_BUILD_EXAMPLES)
-
-target_link_libraries(opt PRIVATE LLVMSerializer)

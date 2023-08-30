@@ -1,5 +1,5 @@
-#ifndef BASE_SERIALIZER_H
-#define BASE_SERIALIZER_H
+#ifndef BASE_SERDES_H
+#define BASE_SERDES_H
 
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -13,10 +13,10 @@ using namespace std;
   M(int)                                                                       \
   M(float)                                                                     \
   M(double)                                                                    \
-  M(string)                                                               \
+  M(string)                                                                    \
   M(bool)
 
-class BaseSerializer {
+class BaseSerDes {
 public:
   // setRepeatedField as pushback
   // setFeature as setFeature, setAttribute
@@ -38,12 +38,9 @@ public:
   virtual void *getSerializedData() = 0;
   virtual void *deserializeUntyped(void *data) = 0;
   size_t getMessageLength() { return MessageLength; }
+
 protected:
-  BaseSerializer(Kind Type) : Type(Type) {
-    llvm::errs() << "In BaseSerializer constructor...\n";
-    assert(Type != Kind::Unknown);
-    llvm::errs() << "End BaseSerializer constructor...\n";
-  }
+BaseSerDes(Kind Type) : Type(Type) { assert(Type != Kind::Unknown); }
   virtual void cleanDataStructures() = 0;
   const Kind Type;
   void *RequestVoid;

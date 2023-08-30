@@ -10,11 +10,10 @@
 #ifndef LLVM_MLMODELRUNNER_H
 #define LLVM_MLMODELRUNNER_H
 
-#include "serializer/baseSerializer.h"
-#include "serializer/bitstreamSerializer.h"
-#include "serializer/jsonSerializer.h"
-#include "serializer/protobufSerializer.h"
-#include "llvm/IR/PassManager.h"
+#include "SerDes/baseSerDes.h"
+#include "SerDes/bitstreamSerDes.h"
+#include "SerDes/jsonSerDes.h"
+#include "SerDes/protobufSerDes.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdlib>
@@ -48,19 +47,18 @@ public:
       return reinterpret_cast<double *>(res);
     }
     if (std::is_same<T, std::vector<int>>::value) {
-      return new std::vector<int>((int *)res,
-                                  (int *)res + Serializer->getMessageLength() /
-                                                   sizeof(int));
+      return new std::vector<int>(
+          (int *)res, (int *)res + SerDes->getMessageLength() / sizeof(int));
     }
     if (std::is_same<T, std::vector<float>>::value) {
-      return new std::vector<float>(
-          (float *)res,
-          (float *)res + Serializer->getMessageLength() / sizeof(float));
+      return new std::vector<float>((float *)res,
+                                    (float *)res + SerDes->getMessageLength() /
+                                                       sizeof(float));
     }
     if (std::is_same<T, std::vector<double>>::value) {
       return new std::vector<double>(
           (double *)res,
-          (double *)res + Serializer->getMessageLength() / sizeof(double));
+          (double *)res + SerDes->getMessageLength() / sizeof(double));
     }
     llvm_unreachable("Unsupported type");
   }
@@ -68,8 +66,8 @@ public:
   // template <typename T> T evaluate() {
   //   if (std::is_pointer<T>::value) {
   //     using BaseType = typename std::remove_pointer<T>::type;
-  //     T ret = new BaseType[Serializer->getMessageLength()];
-  //     memcpy(ret, evaluateUntyped(), Serializer->getMessageLength());
+  //     T ret = new BaseType[SerDes->getMessageLength()];
+  //     memcpy(ret, evaluateUntyped(), SerDes->getMessageLength());
   //     return ret;
   //   }
   //   return *reinterpret_cast<T *>(evaluateUntyped());
@@ -80,11 +78,10 @@ public:
     using BaseType = VectorElementTypeT<T>;
     void *res = evaluateUntyped();
     errs() << "Evaluate2: after deserialize\n";
-    errs() << "Evaluate2: Serializer->getMessageLength(): "
-           << Serializer->getMessageLength() << "\n";
+    errs() << "Evaluate2: SerDes->getMessageLength(): "
+           << SerDes->getMessageLength() << "\n";
     T ret((BaseType *)(res),
-          (BaseType *)(res) +
-              Serializer->getMessageLength() / sizeof(BaseType));
+          (BaseType *)(res) + SerDes->getMessageLength() / sizeof(BaseType));
     return ret;
   }
 
@@ -99,13 +96,13 @@ public:
       void>::type
   evaluate(T &data, size_t &dataSize) {
     using BaseType = typename std::remove_pointer<T>::type;
-    void* res = evaluateUntyped();
+    void *res = evaluateUntyped();
     errs() << "Evaluate: after deserialize\n";
-    errs() << "Evaluate: Serializer->getMessageLength(): "
-           << Serializer->getMessageLength() << "\n";
-    T ret = static_cast<T>(malloc(Serializer->getMessageLength()));
-    memcpy(ret, res, Serializer->getMessageLength());
-    dataSize = Serializer->getMessageLength()/sizeof(BaseType);
+    errs() << "Evaluate: SerDes->getMessageLength(): "
+           << SerDes->getMessageLength() << "\n";
+    T ret = static_cast<T>(malloc(SerDes->getMessageLength()));
+    memcpy(ret, res, SerDes->getMessageLength());
+    dataSize = SerDes->getMessageLength() / sizeof(BaseType);
     data = ret;
   }
 
@@ -122,7 +119,7 @@ public:
     TFAOT
   };
   Kind getKind() const { return Type; }
-  BaseSerializer::Kind getSerializerKind() const { return SerializerType; }
+  BaseSerDes::Kind getSerDesKind() const { return SerDesType; }
 
   virtual void requestExit() = 0;
   std::promise<void> *exit_requested;
@@ -130,36 +127,36 @@ public:
   template <typename T, typename... Types>
   void populateFeatures(std::pair<std::string, T> &var1,
                         std::pair<std::string, Types> &...var2) {
-    Serializer->setFeature(var1.first, var1.second);
+    SerDes->setFeature(var1.first, var1.second);
     populateFeatures(var2...);
   }
 
   void populateFeatures() {}
 
-  void setRequest(void *request) { Serializer->setRequest(request); }
+  void setRequest(void *request) { SerDes->setRequest(request); }
 
-  void setResponse(void *response) { Serializer->setResponse(response); }
+  void setResponse(void *response) { SerDes->setResponse(response); }
 
 protected:
-  MLModelRunner(Kind Type, BaseSerializer::Kind SerializerType,
+  MLModelRunner(Kind Type, BaseSerDes::Kind SerDesType,
                 LLVMContext *Ctx = nullptr)
-      : Ctx(Ctx), Type(Type), SerializerType(SerializerType) {
+      : Ctx(Ctx), Type(Type), SerDesType(SerDesType) {
     assert(Type != Kind::Unknown);
-    initSerializer();
+    initSerDes();
   }
   MLModelRunner(Kind Type, LLVMContext *Ctx = nullptr)
-      : Ctx(Ctx), Type(Type), SerializerType(BaseSerializer::Kind::Unknown) {
-    Serializer = nullptr;
+      : Ctx(Ctx), Type(Type), SerDesType(BaseSerDes::Kind::Unknown) {
+    SerDes = nullptr;
   };
 
   virtual void *evaluateUntyped() = 0;
 
   LLVMContext *Ctx;
   const Kind Type;
-  const BaseSerializer::Kind SerializerType;
+  const BaseSerDes::Kind SerDesType;
 
 protected:
-  std::unique_ptr<BaseSerializer> Serializer;
+  std::unique_ptr<BaseSerDes> SerDes;
   //   std::vector<std::vector<char *>> OwnedBuffers;
 private:
   // vector check
@@ -194,19 +191,19 @@ private:
     return VectorElementTypeSize<T>::value;
   }
 
-  void initSerializer() {
-    switch (SerializerType) {
-    case BaseSerializer::Kind::Json:
-      Serializer = std::make_unique<JsonSerializer>();
+  void initSerDes() {
+    switch (SerDesType) {
+    case BaseSerDes::Kind::Json:
+      SerDes = std::make_unique<JsonSerDes>();
       break;
-    case BaseSerializer::Kind::Protobuf:
-      Serializer = std::make_unique<ProtobufSerializer>();
+    case BaseSerDes::Kind::Protobuf:
+      SerDes = std::make_unique<ProtobufSerDes>();
       break;
-    case BaseSerializer::Kind::Bitstream:
-      Serializer = std::make_unique<BitstreamSerializer>();
+    case BaseSerDes::Kind::Bitstream:
+      SerDes = std::make_unique<BitstreamSerDes>();
       break;
-    case BaseSerializer::Kind::Unknown:
-      Serializer = nullptr;
+    case BaseSerDes::Kind::Unknown:
+      SerDes = nullptr;
       break;
     }
   }

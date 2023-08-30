@@ -31,7 +31,6 @@ public:
 
 Observation PosetRLEnv::step(Action Action) {
   Sequence.push_back(Action);
-  errs() << "Action: " << Action << "\n";
   applySeq(Action);
 
   Actioncount += 1;

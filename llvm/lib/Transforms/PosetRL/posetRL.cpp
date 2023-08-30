@@ -25,7 +25,6 @@
 #include <vector>
 
 #include "MLModelRunner/MLModelRunner.h"
-#include "MLModelRunner/MLModelRunnerWithTensorSpec.h"
 #include "MLModelRunner/ONNXModelRunner/ONNXModelRunner.h"
 #include "MLModelRunner/PipeModelRunner.h"
 #include "MLModelRunner/gRPCModelRunner.h"
@@ -65,79 +64,48 @@ struct PosetRL : public ModulePass,
   static char ID;
   PosetRL() : ModulePass(ID) {}
   bool runOnModule(Module &M) override {
-    for (Function &F : M) {
-    }
     this->M = &M;
     // Establish pipe communication
     if (usePipe) {
       // data_format can take values: protobuf, json, bytes
-      const char *const DecisionName = "advisor_decision";
-      const TensorSpec DecisionSpec =
-          TensorSpec::createSpec<int64_t>(DecisionName, {1});
+      std::string basename =
+          "/home/venkat/ml-llvm-project/Model/RLLib-PhaseOrder/temppipe";
 
-      const char *const DefaultFeatureName = "feature_default";
-      const TensorSpec DefaultFeatureSpec =
-          TensorSpec::createSpec<float_t>(DefaultFeatureName, {300});
-
-      std::vector<float_t> feature_data;
-      for (size_t i = 0; i < DefaultFeatureSpec.getElementCount(); i++)
-        feature_data.push_back((float_t)(i + 0.5));
-
-      std::string basename = "/home/cs20btech11024/repos/ml-llvm-project/"
-                             "Model/RLLib-PhaseOrder/temppipe";
-      std::vector<TensorSpec> Features;
-      // std::vector<void*> InputBuffers;
-
-      // if (InteractiveIncludeDefault){
-      Features.push_back(DefaultFeatureSpec);
-      // Features.push_back(DefaultFeatureSpec2);
-
-      // InputBuffers.push_back(feature_data.data());
-
-      std::cout << "DEBUG1\n" << std::endl;
-
-      BaseSerializer::Kind SerializerType;
+      BaseSerDes::Kind SerDesType;
       if (data_format == "json")
-        SerializerType = BaseSerializer::Kind::Json;
+        SerDesType = BaseSerDes::Kind::Json;
       else if (data_format == "protobuf")
-        SerializerType = BaseSerializer::Kind::Protobuf;
+        SerDesType = BaseSerDes::Kind::Protobuf;
       else if (data_format == "bytes")
-        SerializerType = BaseSerializer::Kind::Bitstream;
+        SerDesType = BaseSerDes::Kind::Bitstream;
       else {
         errs() << "Invalid data format\n";
         exit(1);
       }
 
       MLRunner = std::make_unique<PipeModelRunner>(
-          basename + ".out", basename + ".in", SerializerType, &M.getContext());
-
+          basename + ".out", basename + ".in", SerDesType, &M.getContext());
       posetRLgRPC::EmbeddingResponse response;
       posetRLgRPC::ActionRequest request;
-      errs() << "set MLRunner request and response...\n";
+      // errs() << "set MLRunner request and response...\n";
       MLRunner->setRequest(&response);
       MLRunner->setResponse(&request);
-      errs() << "end set MLRunner request and response...\n";
-
-      errs() << "Using pipe communication...\n";
-      initPipeCommunication1();
+      // errs() << "end set MLRunner request and response...\n";
+      // errs() << "Using pipe communication...\n";
+      initPipeCommunication();
     } else {
       if (training) {
         MLRunner = std::make_unique<gRPCModelRunner<
             posetRLgRPC::PosetRLService::Service,
             posetRLgRPC::PosetRLService::Stub, posetRLgRPC::EmbeddingResponse,
             posetRLgRPC::ActionRequest>>(server_address, this, &M.getContext());
-        // errs() << "To be Implemented\n";
-        // exit(0);
-
       } else {
-        errs() << "Onnx model runner...\n";
-        Agent agent("/home/cs20btech11024/repos/ML-Phase-Ordering/Model/"
-                    "RLLib-PhaseOrder/poset-RL-onnx-model/model.onnx");
+        Agent agent("/Pramana/ML_LLVM_Tools/ml-llvm-project/"
+                    "onnx_checkpoints_posetrl/posetrl_model.onnx");
         std::map<std::string, Agent *> agents;
         agents["agent"] = &agent;
         MLRunner =
             std::make_unique<ONNXModelRunner>(this, agents, &M.getContext());
-        // runInference();
         MLRunner->evaluate<int>();
         errs() << "Sequence: ";
         for (auto a : Sequence)
@@ -145,113 +113,33 @@ struct PosetRL : public ModulePass,
         errs() << "\n";
       }
     }
-
     return true;
   }
-  void initPipeCommunication1() {
-    errs() << "Entering pipe communication...\n";
-
+  void initPipeCommunication() {
     int passSequence = 0;
     while (passSequence != -1) {
       std::pair<std::string, std::vector<float>> p1("embedding",
                                                     getEmbeddings());
-      // errs() << "Populating features...\n";
       MLRunner->populateFeatures(p1);
-
-      using T = int;
-      int res = *static_cast<T*>(MLRunner->evaluateH<T>());
+      int res = MLRunner->evaluate<int>();
       processMLAdvice(res);
       passSequence = res;
+      errs() << "Sequence: " << passSequence << "\t";
     }
-    errs() << "Episode completed\n";
   }
 
-  void processMLInputs() {
-    std::vector<void *> InputBuffers;
-    auto embedding = getEmbeddings();
-    InputBuffers.push_back(embedding.data());
-    // MLRunner->feedInputBuffers(InputBuffers);
-  }
-
-  void processMLAdvice(int advice) {
-    errs() << "Runner result: " << advice << '\n';
-    applySeq(advice);
-  }
-
-  // void grpcCommunication() {
-
-  //   auto request = new posetRL::EmbeddingResponse();
-  //   auto response = new posetRL::ActionRequest();
-
-  //   MLRunner = std::make_unique<gRPCModelRunner<
-  //     posetRL::PosetRL, posetRL::PosetRL::Stub,
-  //     posetRL::EmbeddingResponse, posetRL::ActionRequest>>(
-  //     M->getContext(), server_address, request, response);
-
-  //   auto reply = MLRunner->evaluate<posetRL::ActionRequest>();
-  //   processMLAdvice(reply.action());
-  // }
-
-  void initPipeCommunication() {
-    const char *const DecisionName = "advisor_decision";
-    const TensorSpec DecisionSpec =
-        TensorSpec::createSpec<int64_t>(DecisionName, {1});
-
-    const char *const DefaultFeatureName = "feature_default";
-    const TensorSpec DefaultFeatureSpec =
-        TensorSpec::createSpec<float_t>(DefaultFeatureName, {300});
-
-    std::vector<float_t> feature_data;
-    for (size_t i = 0; i < DefaultFeatureSpec.getElementCount(); i++)
-      feature_data.push_back((float_t)(i + 0.5));
-
-    std::string basename = "/home/cs20btech11024/ML-Phase-Ordering/Model/"
-                           "RLLib-PhaseOrder/temppipe";
-    std::vector<TensorSpec> Features;
-    // std::vector<void*> InputBuffers;
-
-    // if (InteractiveIncludeDefault){
-    Features.push_back(DefaultFeatureSpec);
-    // Features.push_back(DefaultFeatureSpec2);
-
-    // InputBuffers.push_back(feature_data.data());
-
-    std::cout << "DEBUG1\n" << std::endl;
-
-    MLRunner = std::make_unique<PipeModelRunner>(
-        basename + ".out", basename + ".in", BaseSerializer::Kind::Json,
-        &M->getContext());
-    errs() << "DEBUG2\n";
-
-    int passSequence = 0;
-    while (passSequence != -1) {
-      processMLInputs();
-      int res = (MLRunner->evaluate<int>());
-      processMLAdvice(res);
-      passSequence = res;
-    }
-    errs() << "Episode completed\n";
-  }
+  inline void processMLAdvice(int advice) { applySeq(advice); }
 
   Embedding getEmbeddings() override {
-
-    // redirecting the module to a file
-    // std::error_code EC;
-    // static int count = 0;
-    // std::string path = to_string(count++) + ".ll";
-    // llvm::raw_fd_ostream os(path.c_str(), EC, llvm::sys::fs::OF_None);
-    // M->print(os, nullptr);
-    // os.close();
-
     auto Ir2vec =
         IR2Vec::Embeddings(*M, IR2Vec::IR2VecMode::FlowAware,
-                           "/home/cs20btech11024/repos/ml-llvm-project/IR2Vec/"
+                           "/Pramana/ML_LLVM_Tools/ml-llvm-project/IR2Vec/"
                            "vocabulary/seedEmbeddingVocab-300-llvm10.txt");
-
     auto ProgVector = Ir2vec.getProgramVector();
     Embedding Vector(ProgVector.begin(), ProgVector.end());
     return Vector;
   }
+
   void applySeq(Action Action) override {
     PassManagerBuilder Builder;
     Builder.OptLevel = 2;
@@ -268,50 +156,21 @@ struct PosetRL : public ModulePass,
     }
   }
 
-  // void runInference() {
-  //   InferenceEngine driver;
-  //   driver.setEnvironment(this);
-  //   Observation Obs = reset();
-  //   Agent agent("/home/cs20btech11024/repos/ML-Phase-Ordering/Model/"
-  //               "RLLib-PhaseOrder/poset-RL-onnx-model/model.onnx",
-  //               ActionMaskSize + EmbeddingSize);
-  //   driver.addAgent(&agent, "agent");
-  //   driver.computeAction(Obs);
-  // }
-
   grpc::Status
   applyActionGetEmbeddings(grpc::ServerContext *context,
                            const ::posetRLgRPC::ActionRequest *request,
                            ::posetRLgRPC::EmbeddingResponse *response) {
-    errs() << "Action requested: " << request->action() << "\n";
+    // errs() << "Action requested: " << request->action() << "\n";
     if (request->action() == -1) {
-      errs() << "Before: server exit requested\n";
-      // MLRunner->requestExit();
-      // MLRunner->exit_requested->set_value();
-      errs() << "After: server exit requested\n";
-
       return grpc::Status::OK;
     }
-
     processMLAdvice(request->action());
-
     Embedding emb = getEmbeddings();
     for (unsigned long i = 0; i < emb.size(); i++) {
       response->add_embedding(emb[i]);
     }
-
     return grpc::Status::OK;
   }
-  // ::grpc::Status getEmbedding(::grpc::ServerContext *context,
-  //                             const ::google::protobuf::Empty *request,
-  //                             ::posetRLgRPC::EmbeddingResponse *response) {
-  //   Embedding emb = getEmbeddings();
-
-  //   for (unsigned long i = 0; i < emb.size(); i++) {
-  //     response->add_embedding(emb[i]);
-  //   }
-  //   return grpc::Status::OK;
-  // }
 
 private:
   Module *M;
@@ -319,18 +178,7 @@ private:
 };
 } // namespace
 char PosetRL::ID = 0;
-// static RegisterPass<PosetRL> X("poset-rl", "poset sequence pass");
-
-// static void registerMyPass(const PassManagerBuilder &,
-//                            legacy::PassManagerBase &PM) {
-//     PM.add(new PosetRL());
-// }
-// static RegisterStandardPasses
-//     RegisterMyPass(PassManagerBuilder::EP_ModuleOptimizerEarly,
-//                    registerMyPass);
-
 INITIALIZE_PASS_BEGIN(PosetRL, "poset-rl", "poset sequence pass", false, false)
-
 INITIALIZE_PASS_END(PosetRL, "poset-rl", "poset sequence pass", false, false)
 
 ModulePass *llvm::createPosetRLPass() { return new PosetRL(); }

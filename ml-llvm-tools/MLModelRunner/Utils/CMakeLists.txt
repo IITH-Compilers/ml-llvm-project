@@ -1,1 +1,1 @@
-add_llvm_component_library(LLVMMLModelRunnerUtils TensorSpec.cpp TrainingLogger.cpp)
+add_llvm_component_library(LLVMMLModelRunnerUtils TrainingLogger.cpp)

@@ -11,9 +11,8 @@
 #define PipeModelRunner_H
 
 #include "MLModelRunner/MLModelRunner.h"
-#include "MLModelRunner/MLModelRunnerWithTensorSpec.h"
 #include "MLModelRunner/Utils/TrainingLogger.h"
-#include "serializer/baseSerializer.h"
+#include "SerDes/baseSerDes.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/Support/FileSystem.h"
@@ -46,7 +45,7 @@ namespace llvm {
 class PipeModelRunner : public MLModelRunner {
 public:
   PipeModelRunner(StringRef OutboundName, StringRef InboundName,
-                  BaseSerializer::Kind Kind, LLVMContext *Ctx = nullptr);
+                  BaseSerDes::Kind Kind, LLVMContext *Ctx = nullptr);
 
   static bool classof(const MLModelRunner *R) {
     return R->getKind() == MLModelRunner::Kind::Pipe;

@@ -1,15 +1,6 @@
-
 add_subdirectory(Utils)
 add_subdirectory(gRPCModelRunner)
 add_subdirectory(ONNXModelRunner)
-
-find_package(Protobuf CONFIG REQUIRED)
-# file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../Include/MLModelRunner DESTINATION ${LLVM_INCLUDE_DIR})
-
-add_custom_target(copy-mlmodelrunner-include ALL
-COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/../Include/MLModelRunner ${LLVM_INCLUDE_DIR}/MLModelRunner
-DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/../Include/MLModelRunner
-)
 
 # For up-to-date instructions for installing the TFLite dependency, refer to
 # the bot setup script: https://github.com/google/ml-compiler-opt/blob/main/buildbot/buildbot_init.sh
@@ -57,7 +48,6 @@ if (NOT TENSORFLOW_AOT_PATH STREQUAL "")
 #   endif()
 endif()
 
-
 if (DEFINED LLVM_HAVE_TF_AOT OR LLVM_HAVE_TFLITE)
   message(STATUS "Enabling TF_AOT/TFLITE-based passes")
 
@@ -72,15 +62,13 @@ add_llvm_component_library(LLVMMLModelRunner
 PipeModelRunner.cpp
 
 DEPENDS
-copy-mlmodelrunner-include
 ${MLDeps}
 
 LINK_LIBS
 ${MLLinkDeps}
 LLVMMLModelRunnerUtils
 LLVMgRPCModelRunner
-# LLVMONNXModelRunner
-
+LLVMONNXModelRunner
 )
 
 
@@ -91,7 +79,3 @@ LLVMONNXModelRunner
 # LLVMTFModelRunner
 )
 set_property(TARGET LLVMMLModelRunner PROPERTY CXX_STANDARD 17)
-
-target_link_libraries(LLVMMLModelRunner PUBLIC LLVMSerializer)
-target_include_directories(LLVMMLModelRunner PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../llvm-serializer/include)
-target_include_directories(LLVMMLModelRunner PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../Include/MLModelRunner)

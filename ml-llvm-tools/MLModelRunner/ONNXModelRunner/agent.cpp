@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MLModelRunner/ONNXModelRunner/agent.h" 
+#include "MLModelRunner/ONNXModelRunner/agent.h"
 #include <algorithm>
 #include <cmath>
 #include <iterator>
@@ -18,11 +18,10 @@ Agent::Agent(std::string modelPath) {
 
 unsigned Agent::computeAction(Observation &input) {
   // Call model on input
-  LLVM_DEBUG(llvm::errs() << "input.size() = " << input.size() << "\n");
   assert(input.size() > 0);
   llvm::SmallVector<float, 100> model_input(input.begin(), input.end());
   llvm::SmallVector<float, 100> model_output;
-  
+
   this->model->run(model_input, model_output);
 
   // select action from model output
@@ -30,11 +29,12 @@ unsigned Agent::computeAction(Observation &input) {
                               model_output.end()); // [2, 4)
   int argmaxVal = std::distance(model_output.begin(), max);
 
-  LLVM_DEBUG(llvm::errs() << "---------------MODEL OUTPUT VECTOR:----------------\n");
+  LLVM_DEBUG(
+      llvm::errs() << "---------------MODEL OUTPUT VECTOR:----------------\n");
   for (auto e : model_output) {
     LLVM_DEBUG(llvm::errs() << e << " ");
   }
-  LLVM_DEBUG(llvm::errs() << "\nmax value and index are " << *max << " " << argmaxVal
-               << "\n");
+  LLVM_DEBUG(llvm::errs() << "\nmax value and index are " << *max << " "
+                          << argmaxVal << "\n");
   return argmaxVal;
 }

@@ -1,8 +1,8 @@
 #ifndef BITSTREAM_SERIALIZER_H
 #define BITSTREAM_SERIALIZER_H
 
-#include "TensorSpec.h"
-#include "baseSerializer.h"
+#include "SerDes/TensorSpec.h"
+#include "SerDes/baseSerDes.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
 #include <set>
@@ -13,9 +13,9 @@
 using namespace llvm;
 using namespace std;
 
-class BitstreamSerializer : public BaseSerializer {
+class BitstreamSerDes : public BaseSerDes {
 public:
-  BitstreamSerializer() : BaseSerializer(Kind::Bitstream) {
+  BitstreamSerDes() : BaseSerDes(Kind::Bitstream) {
     Buffer = "";
     tensorSpecs = vector<TensorSpec>();
     rawData = vector<const void *>();
@@ -35,7 +35,6 @@ public:
   void *getSerializedData() override;
 
   void cleanDataStructures() override {
-    errs() << "In BitstreamSerializer cleanDataStructures...\n";
     Buffer = "";
     tensorSpecs = vector<TensorSpec>();
     rawData = vector<const void *>();
@@ -53,8 +52,6 @@ public:
   featuresVector##TYPE = {};
     SUPPORTED_TYPES(TEMPORARY_STORAGE_CLEAN)
 #undef TEMPORARY_STORAGE_CLEAN
-
-    errs() << "End BitstreamSerializer cleanDataStructures...\n";
   }
 
 private:

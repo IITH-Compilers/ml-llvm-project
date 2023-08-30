@@ -1,18 +1,18 @@
 #ifndef PROTOBUF_SERIALIZER_H
 #define PROTOBUF_SERIALIZER_H
 
-#include "baseSerializer.h"
+#include "SerDes/baseSerDes.h"
 #include "google/protobuf/extension_set.h"
 #include "google/protobuf/message.h"
 
 using namespace google::protobuf;
 
-class ProtobufSerializer : public BaseSerializer {
+class ProtobufSerDes : public BaseSerDes {
 public:
-  ProtobufSerializer() : BaseSerializer(Kind::Protobuf){};
+  ProtobufSerDes() : BaseSerDes(Kind::Protobuf){};
 
-  static bool classof(const BaseSerializer *S) {
-    return S->getKind() == BaseSerializer::Kind::Protobuf;
+  static bool classof(const BaseSerDes *S) {
+    return S->getKind() == BaseSerDes::Kind::Protobuf;
   }
 
   void setRequest(void *Request) override;

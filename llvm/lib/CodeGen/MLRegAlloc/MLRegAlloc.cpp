@@ -16,11 +16,11 @@
 #include "MLModelRunner/ONNXModelRunner/ONNXModelRunner.h"
 #include "MLModelRunner/PipeModelRunner.h"
 #include "RegAllocBase.h"
+#include "SerDes/baseSerDes.h"
 #include "SpillPlacement.h"
 #include "Spiller.h"
 #include "SplitKit.h"
 #include "multi_agent_env.h"
-#include "serializer/baseSerializer.h"
 // #include "inference/includes/multi_agent_env.h"
 #include "grpc/RegisterAllocation/RegisterAllocation.grpc.pb.h"
 #include "grpc/RegisterAllocation/RegisterAllocation.pb.h"
@@ -2471,20 +2471,20 @@ void MLRA::initPipeCommunication() {
       "ggnn_drl/rllib_split_model/src/rl4realpipe";
 
   errs() << "Initializing pipe communication...\n";
-  BaseSerializer::Kind SerializerType;
+  BaseSerDes::Kind SerDesType;
   if (data_format == "json") {
-    SerializerType = BaseSerializer::Kind::Json;
+    SerDesType = BaseSerDes::Kind::Json;
   } else if (data_format == "bytes") {
-    SerializerType = BaseSerializer::Kind::Bitstream;
+    SerDesType = BaseSerDes::Kind::Bitstream;
   } else if (data_format == "protobuf") {
-    SerializerType = BaseSerializer::Kind::Protobuf;
+    SerDesType = BaseSerDes::Kind::Protobuf;
   } else {
     errs() << "Invalid data format\n";
     return;
   }
 
-  MLRunner = std::make_unique<PipeModelRunner>(
-      basename + ".out", basename + ".in", SerializerType);
+  MLRunner = std::make_unique<PipeModelRunner>(basename + ".out",
+                                               basename + ".in", SerDesType);
 
   auto getJsonObj = [](std::vector<int> &reply) -> json::Object {
     json::Object jsonObject;
@@ -2697,7 +2697,6 @@ void MLRA::inference() {
     agentMap[SPLIT_NODE_AGENT] = new Agent(nodeSplitingModelPath);
 
     MLRunner = std::make_unique<ONNXModelRunner>(this, agentMap);
-
 
     bool emptyGraph = true;
     int count = 0;

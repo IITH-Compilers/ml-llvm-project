@@ -22,7 +22,7 @@ class gRPCModelRunner : public MLModelRunner {
 public:
   gRPCModelRunner(std::string server_address, grpc::Service *s,
                   LLVMContext *Ctx = nullptr) // For server mode
-      : MLModelRunner(MLModelRunner::Kind::gRPC, BaseSerializer::Kind::Protobuf,
+      : MLModelRunner(MLModelRunner::Kind::gRPC, BaseSerDes::Kind::Protobuf,
                       Ctx),
         server_address(server_address), request(nullptr), response(nullptr),
         server_mode(true) {
@@ -32,7 +32,7 @@ public:
   gRPCModelRunner(std::string server_address, Request *request,
                   Response *response,
                   LLVMContext *Ctx = nullptr) // For client mode
-      : MLModelRunner(MLModelRunner::Kind::gRPC, BaseSerializer::Kind::Protobuf,
+      : MLModelRunner(MLModelRunner::Kind::gRPC, BaseSerDes::Kind::Protobuf,
                       Ctx),
         server_address(server_address), request(request), response(response),
         server_mode(false) {
@@ -42,7 +42,7 @@ public:
   gRPCModelRunner(std::string server_address, Request *request,
                   Response *response, bool server_mode = false,
                   grpc::Service *s = nullptr, LLVMContext *Ctx = nullptr)
-      : MLModelRunner(MLModelRunner::Kind::gRPC, BaseSerializer::Kind::Protobuf,
+      : MLModelRunner(MLModelRunner::Kind::gRPC, BaseSerDes::Kind::Protobuf,
                       Ctx),
         server_address(server_address), request(request), response(response),
         server_mode(server_mode) {

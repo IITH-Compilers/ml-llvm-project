@@ -1,11 +1,11 @@
-#include "jsonSerializer.h"
-#include "baseSerializer.h"
+#include "SerDes/baseSerDes.h"
+#include "SerDes/jsonSerDes.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
 #include <string>
 
-void *JsonSerializer::getSerializedData() {
+void *JsonSerDes::getSerializedData() {
   auto tempJO = J;
   auto data = json::Value(std::move(tempJO));
   auto *ret = new std::string();
@@ -15,24 +15,23 @@ void *JsonSerializer::getSerializedData() {
   return ret;
 }
 
-void *JsonSerializer::deserializeUntyped(void *data) {
-  errs() << "In JsonSerializer deserializeUntyped...\n";
+void *JsonSerDes::deserializeUntyped(void *data) {
+  LLVM_DEBUG(errs() << "In JsonSerDes deserializeUntyped...\n");
   auto dataStr = static_cast<std::string *>(data);
-  llvm::errs() << "dataStr: " << *dataStr << "\n";
+  LLVM_DEBUG(llvm::errs() << "dataStr: " << *dataStr << "\n");
   Expected<json::Value> valueOrErr = json::parse(*dataStr);
   if (!valueOrErr) {
     llvm::errs() << "Error parsing JSON: " << valueOrErr.takeError() << "\n";
     exit(1);
   }
   json::Object *ret = valueOrErr->getAsObject();
-  errs() << "Got the ret object...\n";
   auto val = ret->get("out");
-  errs() << "Got the final array...\n";
-  errs() << "End JsonSerializer deserializeUntyped...\n";
+  LLVM_DEBUG(errs() << "Got the final array...\n";
+             errs() << "End JsonSerDes deserializeUntyped...\n");
   return desJson(val);
 }
 
-void *JsonSerializer::desJson(json::Value *V) {
+void *JsonSerDes::desJson(json::Value *V) {
   switch (V->kind()) {
   case json::Value::Kind::Null:
     return nullptr;
@@ -118,7 +117,7 @@ void *JsonSerializer::desJson(json::Value *V) {
   }
 }
 
-// void *JsonSerializer::desJson(json::Value *V) {
+// void *JsonSerDes::desJson(json::Value *V) {
 
 //   switch (V->kind()) {
 //   case json::Value::Kind::Null:

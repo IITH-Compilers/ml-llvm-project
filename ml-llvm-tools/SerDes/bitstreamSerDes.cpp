@@ -1,4 +1,4 @@
-#include "bitstreamSerializer.h"
+#include "SerDes/bitstreamSerDes.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/JSON.h"
@@ -13,18 +13,15 @@
 using namespace llvm;
 using namespace std;
 
-void BitstreamSerializer::setFeature(const std::string &name,
+void BitstreamSerDes::setFeature(const std::string &name,
                                      const int &value) {
-  if(name.substr(0, 5) == "regID") {
-    // errs() << name << ": " << value << "\n";
-  }
   auto *valuePtr = new int(value);
   featuresint[name] = valuePtr;
   tensorSpecs.push_back(TensorSpec::createSpec<int>(name, {1}));
   rawData.push_back(valuePtr);
 }
 
-void BitstreamSerializer::setFeature(const std::string &name,
+void BitstreamSerDes::setFeature(const std::string &name,
                                      const float &value) {
   auto *valuePtr = new float(value);
   featuresfloat[name] = valuePtr;
@@ -32,7 +29,7 @@ void BitstreamSerializer::setFeature(const std::string &name,
   rawData.push_back(valuePtr);
 }
 
-void BitstreamSerializer::setFeature(const std::string &name,
+void BitstreamSerDes::setFeature(const std::string &name,
                                      const double &value) {
   auto *valuePtr = new double(value);
   featuresdouble[name] = valuePtr;
@@ -40,7 +37,7 @@ void BitstreamSerializer::setFeature(const std::string &name,
   rawData.push_back(valuePtr);
 }
 
-void BitstreamSerializer::setFeature(const std::string &name,
+void BitstreamSerDes::setFeature(const std::string &name,
                                      const std::string &value) {
   auto *valuePtr = new std::string(value);
   featuresstring[name] = valuePtr;
@@ -49,7 +46,7 @@ void BitstreamSerializer::setFeature(const std::string &name,
   rawData.push_back((void *)valuePtr->c_str());
 }
 
-void BitstreamSerializer::setFeature(const std::string &name,
+void BitstreamSerDes::setFeature(const std::string &name,
                                      const bool &value) {
   auto *valuePtr = new bool(value);
   featuresbool[name] = valuePtr;
@@ -57,7 +54,7 @@ void BitstreamSerializer::setFeature(const std::string &name,
   rawData.push_back(valuePtr);
 }
 
-void BitstreamSerializer::setFeature(const std::string &name,
+void BitstreamSerDes::setFeature(const std::string &name,
                                      const std::vector<int> &value) {
   auto *valuePtr = new std::vector<int>(value);
   featuresVectorint[name] = valuePtr;
@@ -66,36 +63,36 @@ void BitstreamSerializer::setFeature(const std::string &name,
   rawData.push_back(valuePtr->data());
 }
 
-void BitstreamSerializer::setFeature(const std::string &name,
+void BitstreamSerDes::setFeature(const std::string &name,
                                      const std::vector<float> &value) {
   auto *valuePtr = new std::vector<float>(value);
   featuresVectorfloat[name] = valuePtr;
-  tensorSpecs.push_back(
-      TensorSpec::createSpec<float>(name, {static_cast<long>(valuePtr->size())}));
+  tensorSpecs.push_back(TensorSpec::createSpec<float>(
+      name, {static_cast<long>(valuePtr->size())}));
   rawData.push_back(valuePtr->data());
 }
 
-void BitstreamSerializer::setFeature(const std::string &name,
+void BitstreamSerDes::setFeature(const std::string &name,
                                      const std::vector<double> &value) {
   auto *valuePtr = new std::vector<double>(value);
   featuresVectordouble[name] = valuePtr;
-  tensorSpecs.push_back(
-      TensorSpec::createSpec<double>(name, {static_cast<long>(valuePtr->size())}));
+  tensorSpecs.push_back(TensorSpec::createSpec<double>(
+      name, {static_cast<long>(valuePtr->size())}));
   rawData.push_back(valuePtr->data());
 }
 
-void BitstreamSerializer::setFeature(const std::string &name,
+void BitstreamSerDes::setFeature(const std::string &name,
                                      const std::vector<std::string> &value) {
   llvm_unreachable("Currently std::vector<std::string> not supported");
 }
 
-void BitstreamSerializer::setFeature(const std::string &name,
+void BitstreamSerDes::setFeature(const std::string &name,
                                      const std::vector<bool> &value) {
   llvm_unreachable("Currently std::vector<bool> not supported");
 }
 
-void *BitstreamSerializer::getSerializedData() {
-  errs() << "In BitstreamSerializer getSerializedData...\n";
+void *BitstreamSerDes::getSerializedData() {
+  LLVM_DEBUG(errs() << "In BitstreamSerDes getSerializedData...\n");
   std::unique_ptr<raw_ostream> OS =
       std::make_unique<raw_string_ostream>(Buffer);
   json::OStream J(*OS);
@@ -108,7 +105,7 @@ void *BitstreamSerializer::getSerializedData() {
   });
   J.flush();
   OS->write("\n", 1);
-  errs() << "rawData.size(): " << rawData.size() << "\n";
+  LLVM_DEBUG(errs() << "rawData.size(): " << rawData.size() << "\n");
   for (size_t I = 0; I < rawData.size(); ++I) {
     OS->write(reinterpret_cast<const char *>(rawData[I]),
               tensorSpecs[I].getTotalTensorBufferSize());
@@ -116,14 +113,13 @@ void *BitstreamSerializer::getSerializedData() {
   OS->write("\n", 1);
   OS->flush();
   auto *out = new std::string(Buffer);
-  // errs() << "Buffer: " << Buffer << "\n";
   cleanDataStructures();
   return out;
 }
 
-void *BitstreamSerializer::deserializeUntyped(void *data) {
+void *BitstreamSerDes::deserializeUntyped(void *data) {
   // set the message length
-  auto* res = reinterpret_cast<std::string *>(data);
+  auto *res = reinterpret_cast<std::string *>(data);
   this->MessageLength = res->size();
   return res->data();
 }

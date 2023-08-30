@@ -1,7 +1,7 @@
 #ifndef JSON_SERIALIZER_H
 #define JSON_SERIALIZER_H
 
-#include "baseSerializer.h"
+#include "SerDes/baseSerDes.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/raw_ostream.h"
 #include <string>
@@ -10,15 +10,12 @@
 using namespace llvm;
 using namespace std;
 
-class JsonSerializer : public BaseSerializer {
+class JsonSerDes : public BaseSerDes {
 public:
-  JsonSerializer() : BaseSerializer(BaseSerializer::Kind::Json) {
-    errs() << "In JsonSerializer constructor...\n";
-    errs() << "End JsonSerializer constructor...\n";
-  };
+  JsonSerDes() : BaseSerDes(BaseSerDes::Kind::Json){};
 
-  static bool classof(const BaseSerializer *S) {
-    return S->getKind() == BaseSerializer::Kind::Json;
+  static bool classof(const BaseSerDes *S) {
+    return S->getKind() == BaseSerDes::Kind::Json;
   }
 
 #define SET_FEATURE(TYPE)                                                      \
@@ -34,10 +31,7 @@ public:
 
   void *getSerializedData() override;
 
-  void cleanDataStructures() override {
-    errs() << "In JsonSerializer cleanDataStructures...\n";
-    J = json::Object();
-  }
+  void cleanDataStructures() override { J = json::Object(); }
 
 private:
   void *deserializeUntyped(void *data) override;

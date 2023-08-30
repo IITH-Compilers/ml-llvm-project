@@ -9,17 +9,19 @@
 #include "MLModelRunner/ONNXModelRunner/onnx.h"
 #include "onnxruntime_cxx_api.h"
 
+#include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <assert.h>
-#include <numeric>
 #include <iostream>
+#include <numeric>
 
 ONNXModel::ONNXModel(const char *model_path) : model_path(model_path) {
   env = new Ort::Env(ORT_LOGGING_LEVEL_WARNING, "test");
   session = new Ort::Session(*env, model_path, Ort::SessionOptions{nullptr});
 }
 
-void ONNXModel::run(llvm::SmallVector<float, 100> &input, llvm::SmallVector<float, 100> &output){
+void ONNXModel::run(llvm::SmallVector<float, 100> &input,
+                    llvm::SmallVector<float, 100> &output) {
   Ort::AllocatorWithDefaultOptions allocator;
   auto inputName = session->GetInputNameAllocated(0, allocator);
   auto inputNameStr = inputName.get();
@@ -49,10 +51,13 @@ void ONNXModel::run(llvm::SmallVector<float, 100> &input, llvm::SmallVector<floa
                                     inputTensor, 1, &outputNameStr, 1);
   assert(outputTensors.size() == 1 && outputTensors.front().IsTensor());
 
-  auto outputDims = outputTensors.front().GetTensorTypeAndShapeInfo().GetShape()[1];
+  auto outputDims =
+      outputTensors.front().GetTensorTypeAndShapeInfo().GetShape()[1];
 
   auto outVal = outputTensors.front().GetTensorMutableData<float>();
 
-  output = llvm::SmallVector<float, 100>(outVal, outVal+outputDims);
-  std::replace_if(output.begin(), output.end(), [](double x){ return std::isnan(x); }, -1.17549e+038);
+  output = llvm::SmallVector<float, 100>(outVal, outVal + outputDims);
+  std::replace_if(
+      output.begin(), output.end(), [](double x) { return std::isnan(x); },
+      -1.17549e+038);
 }
