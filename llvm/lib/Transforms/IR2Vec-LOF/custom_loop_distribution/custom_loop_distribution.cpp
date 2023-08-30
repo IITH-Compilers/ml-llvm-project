@@ -290,8 +290,36 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
     //   errs() << seq << " ";
     // errs() << "\n";
     // /******************************************************/
-    errs() << "Code is Commented\n";
-    exit(0);
+
+    
+    SmallVector<DOTData, 5> RDG_List;
+    RDG_List.insert(RDG_List.end(), data.input_rdgs.begin(),
+                    data.input_rdgs.end());
+
+    assert(RDG_List.size() == SCCGraphs.size() &&
+         RDG_List.size() == loops.size() &&
+         "RDG_List, SCCgraphs and loops list should of same size.");
+
+    if (RDG_List.size() == 0) {
+      errs() << "No RDGs\n";
+      return false;
+    }
+    
+    for(auto rdg: RDG_List) {
+      Agent node_selection_agent(SELECT_NODE_MODEL_PATH, LD_OBS_SIZE);
+      Agent distribution_agent(LD_MODEL_PATH, LD_OBS_SIZE);
+      this->currRDG = rdg;
+      std::map<std::string, Agent *> agents;
+      agents[SELECT_NODE_AGENT] = &node_selection_agent;
+      agents[DISTRIBUTION_AGENT] = &distribution_agent;
+      MLRunner =
+          std::make_unique<ONNXModelRunner>(M->getContext(), this, agents);
+      // runInference();
+      MLRunner->evaluate<int64_t>();
+      distributed_seqs.push_back(this->DistributionSeq);
+    }
+    // errs() << "Code is Commented\n";
+    // exit(0);
   } else {
 
     std::vector<std::string> RDG_List;

@@ -15,12 +15,15 @@
 
 // #include "llvm/Transforms/InteractiveModelRunner.h"
 #include "MLModelRunner/PipeModelRunner.h"
+#include "MLModelRunner/ONNXModelRunner/ONNXModelRunner.h"
 
 #include "serializer/baseSerializer.h"
 
+#include "llvm/Transforms/IR2Vec-LOF/multi_agent_env.h"
+
 namespace llvm {
 
-class custom_loop_distribution : public FunctionPass {
+class custom_loop_distribution : public FunctionPass, public MultiAgentEnv {
 
 public:
   static char ID;

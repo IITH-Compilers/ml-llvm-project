@@ -1,48 +1,51 @@
-#include "include/multi_agent_env.h"
-#include "utils.h"
+#include "llvm/Transforms/IR2Vec-LOF/multi_agent_env.h"
+// #include "utils.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
 
-void MultiAgentEnv::reset(DOTData &Rdg) {
+Observation MultiAgentEnv::reset() {
   this->DistributionSeq = "";
   this->PrevNode = -1;
   this->CurrentNode = -1;
   int idx = 0;
-  errs() << "NodeRepresentation size = " << Rdg.NodeRepresentations.size()
+  errs() << "NodeRepresentation size = " << currRDG.NodeRepresentations.size()
          << "\n";
   this->NodeRepresentation.clear();
-  for (auto &E : Rdg.NodeRepresentations) {
+  for (auto &E : currRDG.NodeRepresentations) {
     this->NodeRepresentation.push_back(E.second);
 
     this->nid_idx[E.first] = idx;
     this->idx_nid[idx] = E.first;
     idx++;
   }
-  this->resetDone();
+  // this->resetDone();
 
   // delete this->GraphTopology;
-  this->GraphTopology = new Graph(Rdg.AdjList, Rdg.NodeRepresentations.size());
+  this->GraphTopology = new Graph(currRDG.AdjList, currRDG.NodeRepresentations.size());
 
   Observation Obs(SELECT_NODE_OBS_SIZE);
   this->select_node_obs_constructor(Obs);
   this->setNextAgent(SELECT_NODE_AGENT);
-  this->setCurrentObservation(Obs, SELECT_NODE_AGENT);
+  // this->setCurrentObservation(Obs, SELECT_NODE_AGENT);
+  return Obs;
 }
 
-void MultiAgentEnv::step(Action Action) {
+Observation MultiAgentEnv::step(Action Action) {
   LLVM_DEBUG(errs() << "this->next agnt = " << this->getNextAgent() << "\n");
+  Observation Obs;
   if (this->getNextAgent() == SELECT_NODE_AGENT)
-    this->select_node_step(Action);
+    Obs  = this->select_node_step(Action);
   else if (this->getNextAgent() == DISTRIBUTION_AGENT) {
-    this->select_distribution_step(Action);
+    Obs = this->select_distribution_step(Action);
   }
   if (this->GraphTopology->allDiscovered() &&
       this->getNextAgent() == SELECT_NODE_AGENT) {
     this->setDone();
     LLVM_DEBUG(errs() << "************ALL NODES DISCOVERED***************\n");
   }
+  return Obs;
 }
 
 void MultiAgentEnv::create_node_select_mask(SmallVector<int, 8> &Mask) {
@@ -90,7 +93,7 @@ void MultiAgentEnv::select_node_obs_constructor(Observation &Obs) {
   }
 }
 
-void MultiAgentEnv::select_node_step(Action Action) {
+Observation MultiAgentEnv::select_node_step(Action Action) {
   this->PrevNode = this->CurrentNode;
   this->CurrentNode = Action;
   errs() << "current node: " << this->CurrentNode << "\n";
@@ -108,8 +111,9 @@ void MultiAgentEnv::select_node_step(Action Action) {
 
     this->select_node_obs_constructor(Obs);
     
-    setCurrentObservation(Obs, SELECT_NODE_AGENT);
+    // setCurrentObservation(Obs, SELECT_NODE_AGENT);
     this->DistributionSeq = "S" + std::to_string(this->CurrentNode + 1);
+    return Obs;
   } else {
     Observation Obs(LD_OBS_SIZE);
     // Action mask
@@ -128,13 +132,15 @@ void MultiAgentEnv::select_node_step(Action Action) {
     for (auto e : this->NodeRepresentation[this->PrevNode]) {
       Obs[CurrIdx++] = e;
     }
-    setCurrentObservation(Obs, DISTRIBUTION_AGENT);
+    // setCurrentObservation(Obs, DISTRIBUTION_AGENT);
     setNextAgent(DISTRIBUTION_AGENT);
+    return Obs;
   }
-  printIdx(119);
+  // printIdx(119);
+  
 }
 
-void MultiAgentEnv::select_distribution_step(Action Action) {
+Observation MultiAgentEnv::select_distribution_step(Action Action) {
   LLVM_DEBUG(errs() << "****ENTERED select_distribution_step******\n");
   if (Action == 0) {
     // do not distribute => merge
@@ -165,7 +171,8 @@ void MultiAgentEnv::select_distribution_step(Action Action) {
       Obs[CurrIdx++] = e;
     }
   }
-  setCurrentObservation(Obs, SELECT_NODE_AGENT);
+  // setCurrentObservation(Obs, SELECT_NODE_AGENT);
   setNextAgent(SELECT_NODE_AGENT);
   printIdx(148);
+  return Obs;
 }

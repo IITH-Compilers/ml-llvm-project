@@ -17,6 +17,9 @@
 #define LD_OBS_SIZE int(603)
 #define SELECT_NODE_OBS_SIZE int(301000)
 
+#define LD_MODEL_PATH "/Pramana/RL4Real/tmp/loop_dist_onnx_models/distribution/model-1.onnx"
+#define SELECT_NODE_MODEL_PATH "/Pramana/RL4Real/tmp/loop_dist_onnx_models/select_node/model-1.onnx"
+
 #define MAX_NODES_COUNT int(1000)
 
 using namespace llvm;
@@ -27,14 +30,14 @@ private:
   int PrevNode;
   Graph* GraphTopology;
   SmallVector<IR2Vec::Vector, 12> NodeRepresentation;
-  std::string DistributionSeq;
   std::map<int, int> nid_idx;
   std::map<int, int> idx_nid;
 
 public:
+  std::string DistributionSeq;
   MultiAgentEnv() {}
-  void reset(DOTData &RDGList);
-  void step(Action Action) override;
+  Observation reset() override;
+  Observation step(Action Action) override;
   void select_node_step(Action Action);
   void select_distribution_step(Action Action);
 
@@ -42,5 +45,6 @@ public:
 
   void create_node_select_mask(SmallVector<int, 8> &Mask);
   const std::string &getDistributionSeq() const { return DistributionSeq; }
+  DOTData currRDG;
 };
 #endif
