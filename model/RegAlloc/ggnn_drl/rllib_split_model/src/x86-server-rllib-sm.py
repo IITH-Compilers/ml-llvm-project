@@ -229,15 +229,11 @@ class service_server(
             )
             return reply
 
+
 def print_inter_graphs(inter_graphs):
     for regProf in inter_graphs.regProf:
         print(regProf.regID, regProf.cls, regProf.color, regProf.spillWeight, regProf.useDistances ,end=" ")
         print()
-    # if len(regProf.vectors) > 0:
-    #     print(type(regProf.vectors[-1]["vec"][0]), end=" ")
-    #     print(regProf.vectors[-1]["vec"][0:5], end=" ")
-    #     print("len(vectors[-1]): ", len(regProf.vectors[-1]["vec"]), end=" ")
-    # print("len(vectors): ", len(regProf.vectors))
 
 def run_pipe_communication(data_format="json"):
     model_path = "/home/cs20btech11024/ray_results/experiment_2023-08-15_11-18-36/experiment_HierarchicalGraphColorEnv_60869_00000_0_2023-08-15_11-18-36/checkpoint_000002"
@@ -259,6 +255,7 @@ def run_pipe_communication(data_format="json"):
     from_compiler = temp_rootname + ".out"
 
     def init_pipes():
+        print('Initiating pipes...')
         if os.path.exists(to_compiler):
             os.remove(to_compiler)
         if os.path.exists(from_compiler):
@@ -269,38 +266,8 @@ def run_pipe_communication(data_format="json"):
 
     tc = None
     fc = None
+    global read_stream_iter 
     read_stream_iter = None
-    
-
-    ########################################
-    # def get_inter_graphs_via_json():
-    #     next_event = fc.readline()
-    #     # print(next_event)
-    #     if next_event == b"":
-    #         out = {"action": "Exit"}
-    #         print(out)
-    #         tc.write(json.dumps(out).encode("utf-8"))
-    #         tc.flush()
-    #         return 0
-    #     inter_graphs = json.loads(next_event)
-
-    #     if "exited" in inter_graphs.keys():
-    #         if inter_graphs["exited"]:
-    #             close_pipes()
-    #             init_pipes()
-    #             return 0
-
-        # if "fileName" not in inter_graphs.keys():
-        #     inter_graphs["fileName"] = "test"
-        # if "funcName" not in inter_graphs.keys():
-        #     inter_graphs["funcName"] = "test"
-        # if "funid" not in inter_graphs.keys():
-        #     inter_graphs["funid"] = 0
-
-        # # print(inter_graphs)
-        # # print("regProf[-1] is : ", inter_graphs["regProf"][-1])
-        # inter_graphs = NestedDict(inter_graphs)
-        # return inter_graphs
 
     def readObservation():
         inter_graphs = {
@@ -312,6 +279,9 @@ def run_pipe_communication(data_format="json"):
             "funid": 0,
         }
         if data_format == "bytes":
+            global read_stream_iter
+            if read_stream_iter is None:
+                read_stream_iter = log_reader.read_stream2(fc)
             hdr = fc.read(8)
             print(hdr)
             print("hdr: ", int.from_bytes(hdr, "little"))
@@ -453,88 +423,79 @@ def run_pipe_communication(data_format="json"):
         tc.flush()
     # #########################################
 
-    def close_pipes():
-        if tc is not None:
-            tc.close()
-        if fc is not None:
-            fc.close()
-
     init_pipes()
 
     ray.init()
-
     inference_model = inference.RollOutInference(args)
     inference_model.env.use_pipe = True
     print("Inference model created....")
-    # print(inference_model)
 
     tc = io.BufferedWriter(io.FileIO(to_compiler, "wb"))
     print("rl4realpipe.in created....")
 
     fc = io.BufferedReader(io.FileIO(from_compiler, "rb"))
     print("rl4realpipe.out created....")
+
     while True:
-        print("Entered while loop...")
+        try:
+            print("Entered while loop...")
+            inter_graphs = None
+            inter_graphs = readObservation()
+            print_inter_graphs(inter_graphs)
+                
+            if inter_graphs.new:
+                assert len(inter_graphs.regProf) > 0, "Graphs has no nodes"
+                inter_graphs_list = []
+                if type(inter_graphs) is not list:
+                    inter_graphs_list.append(inter_graphs)
+                inference_model.setGraphInEnv(inter_graphs_list)
+                status = inference_model.setGraphInEnv(inter_graphs_list)
+                if status is None:
+                    print("Exiting from inference")
+                    out = {"action": "Exit"}
+                    send_data_to_compiler(out)
+                    # break
+            elif inter_graphs.result:
+                assert len(inter_graphs.regProf) > 0, "Graphs has no nodes"
+                if not inference_model.update_obs(inter_graphs):
+                    print("Current split failed")
+                    inference_model.setCurrentNodeAsNotVisited()
+                inference_model.updateSelectNodeObs()
 
-
-        if read_stream_iter is None:
-                read_stream_iter = log_reader.read_stream2(fc)
-
-        inter_graphs = None
-        inter_graphs = readObservation()
-        print_inter_graphs(inter_graphs)
-            
-
-        if inter_graphs.new:
-            assert len(inter_graphs.regProf) > 0, "Graphs has no nodes"
-            inter_graphs_list = []
-            if type(inter_graphs) is not list:
-                inter_graphs_list.append(inter_graphs)
-            inference_model.setGraphInEnv(inter_graphs_list)
-            status = inference_model.setGraphInEnv(inter_graphs_list)
-            if status is None:
-                print("Exiting from inference")
-                out = {"action": "Exit"}
-                send_data_to_compiler(out)
-                # break
-        elif inter_graphs.result:
-            assert len(inter_graphs.regProf) > 0, "Graphs has no nodes"
-            if not inference_model.update_obs(inter_graphs):
-                print("Current split failed")
+            else:
                 inference_model.setCurrentNodeAsNotVisited()
-            inference_model.updateSelectNodeObs()
+                inference_model.updateSelectNodeObs()
 
-        else:
-            inference_model.setCurrentNodeAsNotVisited()
-            inference_model.updateSelectNodeObs()
+            action, count = inference_model.compute_action()
+            select_node_agent = "select_node_agent_{}".format(count)
+            select_task_agent = "select_task_agent_{}".format(count)
+            split_agent = "split_node_agent_{}".format(count)
+            color_agent = "colour_node_agent_id"
 
-        action, count = inference_model.compute_action()
-        select_node_agent = "select_node_agent_{}".format(count)
-        select_task_agent = "select_task_agent_{}".format(count)
-        split_agent = "split_node_agent_{}".format(count)
-        color_agent = "colour_node_agent_id"
+            # current_sample_done = False
+            if inference_model.getLastTaskDone() == 1:
+                out = {
+                    "action": "Split",
+                    "regidx": int(action[select_node_agent]),
+                    "payload": int(action[split_agent]),
+                }
+            elif inference_model.getLastTaskDone() == 0:
+                print("Returned colour map is:", action[color_agent])
+                out = {
+                    "action": "Color",
+                    "color": action[color_agent],
+                    "funcName": inter_graphs.funcName,
+                }
+            print(out)
+            send_data_to_compiler(out)
+        except Exception as e:
+            init_pipes()
+            tc = io.BufferedWriter(io.FileIO(to_compiler, "wb"))
+            print("rl4realpipe.in created....")
 
-        # current_sample_done = False
-        if inference_model.getLastTaskDone() == 1:
-            out = {
-                "action": "Split",
-                "regidx": int(action[select_node_agent]),
-                "payload": int(action[split_agent]),
-            }
-        elif inference_model.getLastTaskDone() == 0:
-            print("Returned colour map is:", action[color_agent])
-            out = {
-                "action": "Color",
-                "color": action[color_agent],
-                "funcName": inter_graphs.funcName,
-            }
-        # else:
-        #   out = {
-        #     "action" : "Exit"
-        #   }
-        #   current_sample_done = True
-        print(out)
-        send_data_to_compiler(out)
+            fc = io.BufferedReader(io.FileIO(from_compiler, "rb"))
+            print("rl4realpipe.out created....")
+            read_stream_iter = None
 
 
 class Server:

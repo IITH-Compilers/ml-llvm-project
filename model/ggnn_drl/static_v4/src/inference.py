@@ -332,6 +332,8 @@ if __name__ == "__main__":
                 rdg = ''.join(chr(int(x)) for x in features[0])
                 print('rdg: ', rdg)
                 return rdg
+
+
         def sendResponse(f: io.BufferedWriter, seq):
             if args.data_format == "json":
                 msg = json.dumps({"out": seq}).encode("utf-8")
@@ -349,14 +351,24 @@ if __name__ == "__main__":
         from_compiler = temp_rootname + ".out"
         # print("to_compiler", to_compiler)
         # print("from_compiler", from_compiler)
-        if os.path.exists(to_compiler):
-            os.remove(to_compiler)
-        if os.path.exists(from_compiler):
-            os.remove(from_compiler)
-        os.mkfifo(to_compiler, 0o666)
-        os.mkfifo(from_compiler, 0o666)
+        def init_pipes():
+            if os.path.exists(to_compiler):
+                os.remove(to_compiler)
+            if os.path.exists(from_compiler):
+                os.remove(from_compiler)
+
+            os.mkfifo(to_compiler, 0o666)
+            os.mkfifo(from_compiler, 0o666)
         tc = None
         fc = None
+
+        def init_buffers_communication():
+            global tc, fc
+            tc = io.BufferedWriter(io.FileIO(to_compiler, "wb"))
+            print("Opened the write pipe")
+            fc = io.BufferedReader(io.FileIO(from_compiler, "rb"))
+            print("Opened the read pipe")
+
         tensor_specs = None
         advice_spec =  None
         ray.init()
@@ -364,16 +376,19 @@ if __name__ == "__main__":
         trained_dist_model = "/Pramana/RL4Real/tmp/loop_dist_checkpoint/checkpoint-2"
         inference_obj = DistributionInference(trained_dist_model)
         
-        tc = io.BufferedWriter(io.FileIO(to_compiler, "wb"))
-        print("Opened the write pipe")
-        fc = io.BufferedReader(io.FileIO(from_compiler, "rb"))
-        print("Opened the read pipe")
+        init_pipes()
+        init_buffers_communication()
         while(True):
-            print("Entered while loop...")        
-            rdg = readObservation(fc)   
-            _, seq = inference_obj.run_predict(rdg)
-            print("Sequence", seq)
-            sendResponse(tc, seq)
+            try:
+              print("Entered while loop...")        
+              rdg = readObservation(fc)   
+              _, seq = inference_obj.run_predict(rdg)
+              print("Sequence", seq)
+              sendResponse(tc, seq)
+            except Exception as e:
+                init_pipes()
+                init_buffers_communication()
+                read_stream_iter = None
         
 
 

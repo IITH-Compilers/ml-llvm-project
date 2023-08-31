@@ -124,7 +124,7 @@ class PhaseOrder(gym.Env):
         self.use_pipe = config["use_pipe"]
         print("self.use_pipe {}".format(self.use_pipe))
         self.data_format = config["data_format"]
-        self.temp_rootname = "testpipe"
+        self.temp_rootname = "posetrl_pipe"
         to_compiler = self.temp_rootname + ".in"
         from_compiler = self.temp_rootname + ".out"
         self.from_compiler = from_compiler
