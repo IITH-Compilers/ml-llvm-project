@@ -10,6 +10,11 @@
 #define ONNX_MODELRUNNER_UTILS_H
 #include <vector>
 
-typedef std::vector<float> Observation;
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Debug.h"
+
+#define DEBUG_TYPE "rl-inference-engine"
+
+typedef llvm::SmallVector<float, 100> Observation;
 
 #endif // ONNX_MODELRUNNER_UTILS_H

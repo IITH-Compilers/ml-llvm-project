@@ -49,6 +49,7 @@
 #include "llvm/Transforms/Vectorize.h"
 #include "llvm/Transforms/Vectorize/LoopVectorize.h"
 #include "llvm/Transforms/Vectorize/SLPVectorizer.h"
+#include "llvm/Transforms/IR2Vec-LOF/custom_loop_distribution.h"
 
 using namespace llvm;
 
@@ -76,6 +77,18 @@ RunLoopRerolling("reroll-loops", cl::Hidden,
 
 static cl::opt<bool> RunNewGVN("enable-newgvn", cl::init(false), cl::Hidden,
                                cl::desc("Run the NewGVN pass"));
+
+static cl::opt<bool>
+Runcustom_loop_distribution("cld", cl::init(false), cl::Hidden,
+                    cl::desc("costomized loop-distribution pass"));
+
+static cl::opt<bool>
+RunNoPreDistributionPasses("No-PreDistributionPasses", cl::init(false), cl::Hidden,
+                    cl::desc("Apply pre-distribution passes"));
+
+static cl::opt<bool>
+RunNoPostDistributionPasses("No-PostDistributionPasses", cl::init(false), cl::Hidden,
+                    cl::desc("Apply post-distribution passes"));
 
 // Experimental option to use CFL-AA
 enum class CFLAAType { None, Steensgaard, Andersen, Both };
@@ -158,6 +171,10 @@ cl::opt<bool> EnableOrderFileInstrumentation(
 static cl::opt<bool>
     EnableMatrix("enable-matrix", cl::init(false), cl::Hidden,
                  cl::desc("Enable lowering of the matrix intrinsics"));
+
+static cl::opt<bool>
+    EnableFusion("enable-fusion", cl::init(false), cl::Hidden,
+                 cl::desc("LOF:Enable LLVM fusion"));
 
 PassManagerBuilder::PassManagerBuilder() {
     OptLevel = 2;
@@ -475,8 +492,8 @@ void PassManagerBuilder::addFunctionSimplificationPasses(
 
   if (OptLevel > 1) {
     MPM.add(createMergedLoadStoreMotionPass()); // Merge ld/st in diamonds
-    MPM.add(NewGVN ? createNewGVNPass()
-                   : createGVNPass(DisableGVNLoadPRE)); // Remove redundancies
+    // MPM.add(NewGVN ? createNewGVNPass()
+    //                : createGVNPass(DisableGVNLoadPRE)); // Remove redundancies
   }
   MPM.add(createMemCpyOptPass());             // Remove memcpy / form memset
   MPM.add(createSCCPPass());                  // Constant prop with SCCP
@@ -1426,6 +1443,7 @@ void PassManagerBuilder::populateModulePassManager(
       MPM.add(createPosetRLPass());
       return;
   }
+  if(!RunNoPreDistributionPasses){
   if (!PGOSampleUse.empty()) {
     MPM.add(createPruneEHPass());
     // In ThinLTO mode, when flattened profile is used, all the available
@@ -1603,6 +1621,9 @@ void PassManagerBuilder::populateModulePassManager(
   if (RunInliner) {
     MPM.add(createGlobalOptimizerPass());
     MPM.add(createGlobalDCEPass());
+    if(EnableFusion){
+	    MPM.add(createLoopFusePass());
+    }
   }
 
   // If we are planning to perform ThinLTO later, let's not bloat the code with
@@ -1667,13 +1688,21 @@ void PassManagerBuilder::populateModulePassManager(
   // rotated form due to GVN or other transformations, and the vectorizer relies
   // on the rotated form. Disable header duplication at -Oz.
   MPM.add(createLoopRotatePass(SizeLevel == 2 ? 0 : -1));
+  }
 
   // Distribute loops to allow partial vectorization.  I.e. isolate dependences
   // into separate loop that would otherwise inhibit vectorization.  This is
   // currently only performed for loops marked with the metadata
   // llvm.loop.distribute=true or when -enable-loop-distribute is specified.
-  MPM.add(createLoopDistributePass());
+  if(!Runcustom_loop_distribution && !RunNoPreDistributionPasses && !RunNoPostDistributionPasses) {
+  	MPM.add(createLoopDistributePass());
+  } 
+  
+  if(Runcustom_loop_distribution) {
+    MPM.add(createcustom_loop_distributionPass());
+  }
 
+  if(!RunNoPostDistributionPasses) {
   MPM.add(createLoopVectorizePass(!LoopsInterleaved, !LoopVectorize));
 
   // Eliminate loads by forwarding stores from the previous iteration to loads
@@ -1788,6 +1817,7 @@ void PassManagerBuilder::populateModulePassManager(
     MPM.add(createCanonicalizeAliasesPass());
     // Rename anon globals to be able to handle them in the summary
     MPM.add(createNameAnonGlobalPass());
+  }
   }
 }
 
@@ -1907,6 +1937,9 @@ void PassManagerBuilder::addLTOOptimizationPasses(legacy::PassManagerBase &PM) {
   if (OptLevel > 1)
     PM.add(createTailCallEliminationPass());
 
+  if (RunInliner)
+    PM.add(createLoopFusePass());
+
   // Infer attributes on declarations, call sites, arguments, etc.
   PM.add(createPostOrderFunctionAttrsLegacyPass()); // Add nocapture.
   // Run a few AA driven optimizations here and now, to cleanup the code.
@@ -1914,8 +1947,8 @@ void PassManagerBuilder::addLTOOptimizationPasses(legacy::PassManagerBase &PM) {
 
   PM.add(createLICMPass(LicmMssaOptCap, LicmMssaNoAccForPromotionCap));
   PM.add(createMergedLoadStoreMotionPass()); // Merge ld/st in diamonds.
-  PM.add(NewGVN ? createNewGVNPass()
-                : createGVNPass(DisableGVNLoadPRE)); // Remove redundancies.
+  // PM.add(NewGVN ? createNewGVNPass()
+  //               : createGVNPass(DisableGVNLoadPRE)); // Remove redundancies.
   PM.add(createMemCpyOptPass());            // Remove dead memcpys.
 
   // Nuke dead stores.

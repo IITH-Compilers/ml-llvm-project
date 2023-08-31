@@ -1,3 +1,6 @@
+set(protobuf_MODULE_COMPATIBLE TRUE)
+find_package(Protobuf CONFIG REQUIRED)
+
 add_llvm_component_library(LLVMipo
   AlwaysInliner.cpp
   ArgumentPromotion.cpp
@@ -44,3 +47,5 @@ add_llvm_component_library(LLVMipo
   DEPENDS
   intrinsics_gen
   )
+
+target_include_directories(LLVMipo PUBLIC ${LLVM_MAIN_INCLUDE_DIRS} ${Protobuf_INCLUDE_DIRS})

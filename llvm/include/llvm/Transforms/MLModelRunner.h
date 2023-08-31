@@ -29,8 +29,8 @@ public:
   MLModelRunner &operator=(const MLModelRunner &) = delete;
   virtual ~MLModelRunner() = default;
 
-  template <typename T> T evaluate() {
-    return *reinterpret_cast<T *>(evaluateUntyped());
+  template <typename T> T* evaluate() {
+    return reinterpret_cast<T *>(evaluateUntyped());
   }
 
   template <typename T, typename I> T *getTensor(I FeatureID) {

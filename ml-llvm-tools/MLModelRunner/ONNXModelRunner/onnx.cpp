@@ -14,6 +14,7 @@
 #include <assert.h>
 #include <iostream>
 #include <numeric>
+#include <iostream>
 
 ONNXModel::ONNXModel(const char *model_path) : model_path(model_path) {
   env = new Ort::Env(ORT_LOGGING_LEVEL_WARNING, "test");

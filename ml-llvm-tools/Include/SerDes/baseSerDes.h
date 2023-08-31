@@ -8,6 +8,7 @@
 #include <vector>
 
 using namespace std;
+#define DEBUG_TYPE "serdes"
 
 #define SUPPORTED_TYPES(M)                                                     \
   M(int)                                                                       \
