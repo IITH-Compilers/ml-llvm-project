@@ -5,7 +5,7 @@
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
 
-Observation MultiAgentEnv::reset() {
+Observation LDEnv::reset() {
   this->DistributionSeq = "";
   this->PrevNode = -1;
   this->CurrentNode = -1;
@@ -32,7 +32,7 @@ Observation MultiAgentEnv::reset() {
   return Obs;
 }
 
-Observation MultiAgentEnv::step(Action Action) {
+Observation LDEnv::step(Action Action) {
   LLVM_DEBUG(errs() << "this->next agnt = " << this->getNextAgent() << "\n");
   Observation Obs;
   if (this->getNextAgent() == SELECT_NODE_AGENT)
@@ -48,7 +48,7 @@ Observation MultiAgentEnv::step(Action Action) {
   return Obs;
 }
 
-void MultiAgentEnv::create_node_select_mask(SmallVector<int, 8> &Mask) {
+void LDEnv::create_node_select_mask(SmallVector<int, 8> &Mask) {
   std::fill(Mask.begin(), Mask.end(), 0);
   SmallVector<int, 8> EligibleNodes;
   this->GraphTopology->getEligibleNodes(EligibleNodes);
@@ -68,7 +68,7 @@ void MultiAgentEnv::create_node_select_mask(SmallVector<int, 8> &Mask) {
   }
 }
 
-void MultiAgentEnv::select_node_obs_constructor(Observation &Obs) {
+void LDEnv::select_node_obs_constructor(Observation &Obs) {
   int CurrIdx = 0;
   SmallVector<int, 8> ActionMask(MAX_NODES_COUNT, 0);
   this->create_node_select_mask(ActionMask);
@@ -93,7 +93,7 @@ void MultiAgentEnv::select_node_obs_constructor(Observation &Obs) {
   }
 }
 
-Observation MultiAgentEnv::select_node_step(Action Action) {
+Observation LDEnv::select_node_step(Action Action) {
   this->PrevNode = this->CurrentNode;
   this->CurrentNode = Action;
   errs() << "current node: " << this->CurrentNode << "\n";
@@ -140,7 +140,7 @@ Observation MultiAgentEnv::select_node_step(Action Action) {
   
 }
 
-Observation MultiAgentEnv::select_distribution_step(Action Action) {
+Observation LDEnv::select_distribution_step(Action Action) {
   LLVM_DEBUG(errs() << "****ENTERED select_distribution_step******\n");
   if (Action == 0) {
     // do not distribute => merge

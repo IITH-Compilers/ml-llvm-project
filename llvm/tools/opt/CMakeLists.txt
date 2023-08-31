@@ -28,7 +28,6 @@ set(LLVM_LINK_COMPONENTS
   AddSizeAttr
   IR2Vec
   CollectMachineIR
-  Serializer
   IML
   RDG
   LoopDistribution

@@ -25,7 +25,7 @@
 using namespace llvm;
 
 
-class MultiAgentEnv : public Environment {
+class LDEnv : public Environment {
 private:
   int CurrentNode;
   int PrevNode;
@@ -36,7 +36,7 @@ private:
 
 public:
   std::string DistributionSeq;
-  MultiAgentEnv() {}
+  LDEnv() {}
   Observation reset() override;
   Observation step(Action Action) override;
   Observation select_node_step(Action Action);

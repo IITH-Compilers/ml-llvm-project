@@ -37,9 +37,11 @@ using namespace llvm;
 
 static cl::opt<bool> usePipe("use-pipe-inf", cl::desc("Use pipe for inference"),
                              cl::Hidden, cl::Optional, cl::init(false));
-static cl::opt<bool> useOnnx("use-onnx-cld", cl::desc("Use onnx for inference"), cl::Hidden,
-                                    cl::Optional, cl::init(false));
+static cl::opt<bool> useOnnx("use-onnx-cld", cl::desc("Use onnx for inference"),
+                             cl::Hidden, cl::Optional, cl::init(false));
 
+static cl::opt<std::string> data_format("ld-data-format", cl::Hidden,
+                                        cl::init("protobuf"));
 
 custom_loop_distribution::custom_loop_distribution() : FunctionPass(ID) {
   initializecustom_loop_distributionPass(*PassRegistry::getPassRegistry());
@@ -125,25 +127,35 @@ void custom_loop_distribution::canonicalizeLoopsWithLoads() {
   }
 }
 
-void custom_loop_distribution::initPipeCommunication(std::vector<std::string> RDG_List) {
+void custom_loop_distribution::initPipeCommunication(
+    std::vector<std::string> RDG_List) {
 
-  std::string basename = "/home/cs20mtech12003/ml-llvm-project/model/ggnn_drl/static_v4/src/loopdistppipe";
-  
+  std::string basename = "/home/cs20btech11024/repos/ml-llvm-project/model/ggnn_drl/static_v4/src/loopdistppipe";
+
   BaseSerDes::Kind SerDesType;
-  SerDesType = BaseSerDes::Kind::Json;
+  if (data_format == "json") {
+    SerDesType = BaseSerDes::Kind::Json;
+  } else if (data_format == "bytes") {
+    SerDesType = BaseSerDes::Kind::Bitstream;
+  } else if (data_format == "protobuf") {
+    SerDesType = BaseSerDes::Kind::Protobuf;
+  } else {
+    errs() << "Invalid data format\n";
+    return;
+  }
 
   MLRunner = std::make_unique<PipeModelRunner>(
-           basename + ".out", basename + ".in", SerDesType, &M->getContext());
+      basename + ".out", basename + ".in", SerDesType, &M->getContext());
 
-  for(auto rdg: RDG_List) {
+  for (auto rdg : RDG_List) {
     std::pair<std::string, std::string> p1("RDG", rdg);
     MLRunner->populateFeatures(p1);
     errs() << "Features populated END...\n";
-    int* out;
+    int *out;
     size_t size;
-    MLRunner->evaluate<int*>(out, size);
+    MLRunner->evaluate<int *>(out, size);
     std::vector<int> distSequence;
-    for(int i = 0; i < size; i ++) {
+    for (int i = 0; i < size; i++) {
       distSequence.push_back(out[i]);
     }
     std::string partition;
@@ -156,14 +168,15 @@ void custom_loop_distribution::initPipeCommunication(std::vector<std::string> RD
       else if (element == 102)
         partition.append("|");
       else
-        partition.append("S" + std::to_string(element));      
+        partition.append("S" + std::to_string(element));
     }
-    errs() << "Reseved partition:\n";
+    errs() << "Reseved partition:" << partition << "\n";
     distributed_seqs.push_back(partition);
   }
 }
 
-// void custom_loop_distribution::initPipeCommunication(std::vector<std::string> RDG_List) {
+// void custom_loop_distribution::initPipeCommunication(std::vector<std::string>
+// RDG_List) {
 //     const char *const DecisionName = "advisor_decision";
 //     const TensorSpec DecisionSpec =
 //         TensorSpec::createSpec<int64_t>(DecisionName, {100});
@@ -172,16 +185,18 @@ void custom_loop_distribution::initPipeCommunication(std::vector<std::string> RD
 //     const TensorSpec DefaultFeatureSpec =
 //         TensorSpec::createSpec<int64_t>(DefaultFeatureName, {2});
 
-//     std::vector<uint64_t> feature_data;  
-//     for(size_t i=0; i<DefaultFeatureSpec.getElementCount(); i++) 
+//     std::vector<uint64_t> feature_data;
+//     for(size_t i=0; i<DefaultFeatureSpec.getElementCount(); i++)
 //         feature_data.push_back((uint64_t) (1));
-    
-//     // std::string basename = "../../../../../model/ggnn_drl/static_v4/src/loopdistppipe";
-//     std::string basename = "/home/cs20mtech12003/ML-Loop-Distribution/model/ggnn_drl/static_v4/src/loopdistppipe";
+
+//     // std::string basename =
+//     "../../../../../model/ggnn_drl/static_v4/src/loopdistppipe"; std::string
+//     basename =
+//     "/home/cs20mtech12003/ML-Loop-Distribution/model/ggnn_drl/static_v4/src/loopdistppipe";
 //     std::vector<TensorSpec> Features;
 //     Features.push_back(DefaultFeatureSpec);
 //     std::unique_ptr<InteractiveModelRunner> AOTRunner;
-    
+
 //     errs() << "DEBUG2\n";
 
 //     for(auto rdg: RDG_List) {
@@ -202,7 +217,7 @@ void custom_loop_distribution::initPipeCommunication(std::vector<std::string> RD
 //         else if (element == 102)
 //           partition.append("|");
 //         else
-//           partition.append("S" + std::to_string(element));      
+//           partition.append("S" + std::to_string(element));
 //       }
 //       errs() << "Reseved partition:\n";
 //       distributed_seqs.push_back(partition);
@@ -231,12 +246,12 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
   // FPM.add(R);
   // FPM.run(F);
   // errs() << "*********************BEFORE compute RDG "
-            // "starts*****************************\n";
+  // "starts*****************************\n";
   R.computeRDG(F);
   RDGData data = R.getRDGInfo();
 
   // RDG_List.insert(RDG_List.end(), data.input_rdgs.begin(),
-                  // data.input_rdgs.end());
+  // data.input_rdgs.end());
   SCCGraphs.insert(SCCGraphs.end(), data.SCCGraphs.begin(),
                    data.SCCGraphs.end());
   loops.insert(loops.end(), data.loops.begin(), data.loops.end());
@@ -255,8 +270,8 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
                     data.input_rdgs_str.end());
 
     assert(RDG_List.size() == SCCGraphs.size() &&
-          RDG_List.size() == loops.size() &&
-          "RDG_List, SCCgraphs and loops list should of same size.");
+           RDG_List.size() == loops.size() &&
+           "RDG_List, SCCgraphs and loops list should of same size.");
 
     if (RDG_List.size() == 0) {
       errs() << "No RDGs\n";
@@ -264,8 +279,7 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
     }
     LLVM_DEBUG(errs() << "Number rdg generated : " << RDG_List.size() << "\n");
     initPipeCommunication(RDG_List);
-  }
-  else if (useOnnx) {
+  } else if (useOnnx) {
     /******************************************************/
     // SmallVector<DOTData, 5> RDG_List;
     // RDG_List.insert(RDG_List.end(), data.input_rdgs.begin(),
@@ -279,7 +293,8 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
     //   errs() << "No RDGs\n";
     //   return false;
     // }
-    // LLVM_DEBUG(errs() << "Number rdg generated : " << RDG_List.size() << "\n");
+    // LLVM_DEBUG(errs() << "Number rdg generated : " << RDG_List.size() <<
+    // "\n");
 
     // MultiAgentEnv *Env = new MultiAgentEnv();
     // DriverService *DriverInference = new DriverService(Env);
@@ -291,21 +306,20 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
     // errs() << "\n";
     // /******************************************************/
 
-    
     SmallVector<DOTData, 5> RDG_List;
     RDG_List.insert(RDG_List.end(), data.input_rdgs.begin(),
                     data.input_rdgs.end());
 
     assert(RDG_List.size() == SCCGraphs.size() &&
-         RDG_List.size() == loops.size() &&
-         "RDG_List, SCCgraphs and loops list should of same size.");
+           RDG_List.size() == loops.size() &&
+           "RDG_List, SCCgraphs and loops list should of same size.");
 
     if (RDG_List.size() == 0) {
       errs() << "No RDGs\n";
       return false;
     }
-    
-    for(auto rdg: RDG_List) {
+
+    for (auto rdg : RDG_List) {
       Agent node_selection_agent(SELECT_NODE_MODEL_PATH);
       Agent distribution_agent(LD_MODEL_PATH);
       this->currRDG = rdg;
@@ -327,8 +341,8 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
                     data.input_rdgs_str.end());
 
     assert(RDG_List.size() == SCCGraphs.size() &&
-          RDG_List.size() == loops.size() &&
-          "RDG_List, SCCgraphs and loops list should of same size.");
+           RDG_List.size() == loops.size() &&
+           "RDG_List, SCCgraphs and loops list should of same size.");
 
     if (RDG_List.size() == 0) {
       errs() << "No RDGs\n";
@@ -344,7 +358,8 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
     PyRun_SimpleString("import os");
 
     // errs() << "sys.path: " << MODEL_SRC << "\n";
-    PyRun_SimpleString("sys.path.append('/home/cs20mtech12003/ML-Loop-Distribution/model/ggnn_drl/static_v4/src')");
+    PyRun_SimpleString("sys.path.append('/home/cs20mtech12003/"
+                       "ML-Loop-Distribution/model/ggnn_drl/static_v4/src')");
     // PyRun_SimpleString(std::string("sys.path.append(\"")
     //                       .append(MODEL_SRC)
     //                       .append("\")")
@@ -390,9 +405,8 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
           PyObject *distModelPath = PyUnicode_FromString(DIST_INFERENCE_MODEL);
           // PyObject *vfModelPath = PyUnicode_FromString(VF_INFERENCE_MODEL);
 
-          PyObject *arglist =
-              PyTuple_Pack(2, my_list, distModelPath);
-              // PyTuple_Pack(3, my_list, distModelPath, vfModelPath);
+          PyObject *arglist = PyTuple_Pack(2, my_list, distModelPath);
+          // PyTuple_Pack(3, my_list, distModelPath, vfModelPath);
 
           if (!arglist) {
             errs() << "no arglist\n";

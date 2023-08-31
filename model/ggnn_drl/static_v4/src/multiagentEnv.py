@@ -596,8 +596,10 @@ class DistributeLoopEnv(MultiAgentEnv):
                 result = self.readObservation()
                 element = result[0].__getitem__(0)
                 print("Pipe init result:", element)
+                exit(0)
         
     def readObservation(self):
+        
         next_event = self.fc.readline()
         # if not next_event:
         #     break

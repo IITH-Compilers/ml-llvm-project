@@ -26,7 +26,6 @@ import utils #_1
 from ray.rllib.models import ModelCatalog
 from model import SelectNodeNetwork, DistributionTask 
 import logging
-from ray.rllib.agents.dqn.simple_q_torch_policy import SimpleQTorchPolicy
 # from ray.tune.registry import get_trainable_cls, _global_registry, ENV_CREATOR
 # from ray.rllib.evaluation.worker_set import WorkerSet
 # from ray.rllib.utils.spaces.space_utils import flatten_to_single_ndarray
@@ -172,7 +171,6 @@ class DistributionInference:
         # train_agent = DQNTrainer(config=config)
         # print('Hi 2')
         checkpoint = model_path
-        # checkpoint = "/home/cs20btech11024/repos/ML-Loop-Distribution/model/ggnn_drl/static_v4/model/dist-checkpoint-final.pth"
         self.trained_agent.restore(checkpoint)
 
         self.config = config
@@ -265,7 +263,7 @@ class DistributionInference:
 def predict_loop_distribution(rdgs : list, trained_dist_model : str):
     print("trained_dist_model: {}".format(trained_dist_model))
     sys.argv.append("")
-    sys.path.insert(0, "/home/cs20btech11024/repos/ML-Loop-Distribution/model/ggnn_drl/static_v4/src")
+    sys.path.insert(0, "/home/cs20btech11024/repos/ml-llvm-project/model/ggnn_drl/static_v4/src")
     ray.init()
 
     inference_obj = DistributionInference(trained_dist_model)
@@ -280,6 +278,7 @@ def predict_loop_distribution(rdgs : list, trained_dist_model : str):
     
     return seqs
 
+    
 if __name__ == "__main__":
     args = parser.parse_args()
     # parser.add_argument("--test_dir", help = "Path to test directory")
@@ -316,6 +315,35 @@ if __name__ == "__main__":
     
     else:
         # pipes opening
+        read_stream_iter = None
+
+        def readObservation(fc: io.BufferedReader):
+            if args.data_format == "json":
+                hdr = fc.read(8)
+                size = int.from_bytes(hdr, "little")
+                msg = fc.read(size)
+                return json.loads(msg.decode('utf-8'))["RDG"]
+            elif args.data_format == "bytes":
+                global read_stream_iter
+                if read_stream_iter is None:
+                    read_stream_iter = log_reader.read_stream2(fc)
+                hdr = fc.read(8)
+                context, observation_id, features, score = next(read_stream_iter)
+                rdg = ''.join(chr(int(x)) for x in features[0])
+                print('rdg: ', rdg)
+                return rdg
+        def sendResponse(f: io.BufferedWriter, seq):
+            if args.data_format == "json":
+                msg = json.dumps({"out": seq}).encode("utf-8")
+                hdr = int(len(msg)).to_bytes(length=8, byteorder='little')
+            elif args.data_format == "bytes":
+                msg = b''.join([x.to_bytes(4, byteorder='little', signed=True) for x in seq])
+                hdr = int(len(msg)).to_bytes(length=8, byteorder='little')
+                
+            out = hdr + msg
+            f.write(out)
+            f.flush()
+
         temp_rootname = "loopdistppipe"
         to_compiler = temp_rootname + ".in"
         from_compiler = temp_rootname + ".out"
@@ -332,50 +360,20 @@ if __name__ == "__main__":
         tensor_specs = None
         advice_spec =  None
         ray.init()
-        trained_dist_model = "/home/cs20mtech12003/ray_results/experiment_2023-08-10_22-08-07/experiment_DistributeLoopEnv_491f4_00000_0_2023-08-10_22-08-07/checkpoint_000002/checkpoint-2"
+        # trained_dist_model = "/home/cs20mtech12003/ray_results/experiment_2023-08-10_22-08-07/experiment_DistributeLoopEnv_491f4_00000_0_2023-08-10_22-08-07/checkpoint_000002/checkpoint-2"
+        trained_dist_model = "/Pramana/RL4Real/tmp/loop_dist_checkpoint/checkpoint-2"
         inference_obj = DistributionInference(trained_dist_model)
         
+        tc = io.BufferedWriter(io.FileIO(to_compiler, "wb"))
+        print("Opened the write pipe")
+        fc = io.BufferedReader(io.FileIO(from_compiler, "rb"))
+        print("Opened the read pipe")
         while(True):
-            print("Creating pipe files", to_compiler, from_compiler)
-            tc = io.BufferedWriter(io.FileIO(to_compiler, "wb"))
-            print("Opened the write pipe")
-            fc = io.BufferedReader(io.FileIO(from_compiler, "rb"))
-            print("Opened the read pipe")
-            
-            if args.data_format == "json":
-                hdr = fc.read(8)
-                print("hdr: ",hdr)
-                size = int.from_bytes(hdr, "little")
-                print("size: ", size)
-                msg = fc.read(size)
-                rdg = json.loads(msg.decode('utf-8'))["RDG"]
-                print("rdg: ", rdg)
-                # print(embedding)
-                _, seq = inference_obj.run_predict(rdg)
-                print("Sequence", seq)
-                f: io.BufferedWriter = tc
-                message = json.dumps({"out": seq}).encode("utf-8")
-                print("message: ", message)
-                hdr = int(len(message)).to_bytes(length=8, byteorder='little')
-                out = hdr + message
-                
-                f.write(out)
-                f.flush()
-                        
-            # tensor_specs, _, advice_spec = log_reader.read_header(fc)
-            # # print("Tensor and Advice spec", self.tensor_specs, self.advice_spec)
-            # # result = readObservation(fc)
-            
-            # inference_obj.advice_spec = advice_spec
-            # inference_obj.tc = tc
-            # inference_obj.fc = fc
-            # inference_obj.temp_rootname = temp_rootname                        
-            # next_event = fc.readline()
-            # rdgs = (json.loads(next_event))["RDGs"]
-            # # seqs = inference_obj.run_predict_multiple_loops(rdgs)[0]
-            # seqs = inference_obj.run_predict(rdgs)
-            # seqs = json.dumps(seqs)
-            # # print("Predicted seqs", seqs, type(seqs))        
+            print("Entered while loop...")        
+            rdg = readObservation(fc)   
+            _, seq = inference_obj.run_predict(rdg)
+            print("Sequence", seq)
+            sendResponse(tc, seq)
         
 
 

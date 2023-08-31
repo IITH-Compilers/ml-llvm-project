@@ -10,19 +10,15 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IR2Vec-LOF/LoopCost.h"
 #include "llvm/Transforms/IR2Vec-LOF/LoopDistribution.h"
+#include "MLModelRunner/MLModelRunner.h"
 
 // grpc includes
 // #include "grpc/LoopDistribution/LoopDistribution.grpc.pb.h"
 // #include "grpc/gRPCUtil.h"
 #include <bits/stdint-intn.h>
 #include <cstdint>
-// #include <google/protobuf/text_format.h>
-// #include <grpcpp/grpcpp.h>
-
-// temporary includes
 #include "llvm/Transforms/Vectorize.h"
 
-#include "llvm/Transforms/InteractiveModelRunner.h"
 
 using namespace llvm;
 
@@ -161,44 +157,44 @@ struct LoopDistributionServerPass
 
     // std::cout << "DEBUG1\n" << std::endl;
 
-    AOTRunner = std::make_unique<InteractiveModelRunner>(
-      M->getContext(), Features, DecisionSpec,
-      basename + ".out",
-      basename + ".in");
-    errs() << "DEBUG2\n";
+    // AOTRunner = std::make_unique<InteractiveModelRunner>(
+    //   M->getContext(), Features, DecisionSpec,
+    //   basename + ".out",
+    //   basename + ".in");
+    // errs() << "DEBUG2\n";
               
-    std::vector<void*> InputBuffers;
-    // auto embedding = getEmbeddings();
-    // errs() << "Embedding size:" << embedding.size() << "\n";
-    InputBuffers.push_back(feature_data.data());
-    AOTRunner->feedInputBuffers(InputBuffers);
-    // int res = static_cast<int>(AOTRunner->evaluate<int64_t>());
-    auto res = AOTRunner->evaluate<int64_t>();
-    errs() << "Runner result:\n";
-    std::vector<int64_t> distSequence(res, res + 100);
-    std::string partition;
-    for (int i = 0; i < 100; i++) {
-      int64_t element = distSequence[i];
-      if (element == -1)
-        break;
-      else if (element == 101)
-        partition.append(",");
-      else if (element == 102)
-        partition.append("|");
-      else
-        partition.append("S" + std::to_string(element));      
-    }
+    // std::vector<void*> InputBuffers;
+    // // auto embedding = getEmbeddings();
+    // // errs() << "Embedding size:" << embedding.size() << "\n";
+    // InputBuffers.push_back(feature_data.data());
+    // AOTRunner->feedInputBuffers(InputBuffers);
+    // // int res = static_cast<int>(AOTRunner->evaluate<int64_t>());
+    // auto res = AOTRunner->evaluate<int64_t>();
+    // errs() << "Runner result:\n";
+    // std::vector<int64_t> distSequence(res, res + 100);
+    // std::string partition;
+    // for (int i = 0; i < 100; i++) {
+    //   int64_t element = distSequence[i];
+    //   if (element == -1)
+    //     break;
+    //   else if (element == 101)
+    //     partition.append(",");
+    //   else if (element == 102)
+    //     partition.append("|");
+    //   else
+    //     partition.append("S" + std::to_string(element));      
+    // }
 
-    DistributedLoopCost = this->distributeLoopAndGetLoopCostHelper(partition);
-    errs() << "Orignal and Distributed Loop costs are: " << OriginalLoopCost << " " << DistributedLoopCost << "\n";
+    // DistributedLoopCost = this->distributeLoopAndGetLoopCostHelper(partition);
+    // errs() << "Orignal and Distributed Loop costs are: " << OriginalLoopCost << " " << DistributedLoopCost << "\n";
 
-    feature_data[0] = OriginalLoopCost;
-    feature_data[1] = DistributedLoopCost;
-    InputBuffers[0] = feature_data.data();
-    AOTRunner->feedInputBuffers(InputBuffers);
+    // feature_data[0] = OriginalLoopCost;
+    // feature_data[1] = DistributedLoopCost;
+    // InputBuffers[0] = feature_data.data();
+    // AOTRunner->feedInputBuffers(InputBuffers);
     auto res2 = AOTRunner->evaluate<int64_t>();
 
-    errs() << "Episode completed: " << *res2 << "\n";
+    errs() << "Episode completed: " << res2 << "\n";
     // AOTRunner->feedInputBuffers(InputBuffers);
     // int res = static_cast<int>(AOTRunner->evaluate<int64_t>());
     // errs() << "Runner result: " << res <<'\n';

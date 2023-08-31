@@ -39,21 +39,6 @@ public:
     SetStub();
   }
 
-  gRPCModelRunner(std::string server_address, Request *request,
-                  Response *response, bool server_mode = false,
-                  grpc::Service *s = nullptr, LLVMContext *Ctx = nullptr)
-      : MLModelRunner(MLModelRunner::Kind::gRPC, BaseSerDes::Kind::Protobuf,
-                      Ctx),
-        server_address(server_address), request(request), response(response),
-        server_mode(server_mode) {
-    if (server_mode) {
-      assert(s != nullptr && "Service cannot be null in server mode");
-      RunService(s);
-    } else {
-      SetStub();
-    }
-  }
-
   // void *getStub() { return stub_; }
   void requestExit() override {
     errs() << "Exit from grpc\n";
@@ -70,11 +55,12 @@ public:
     grpc::ClientContext grpcCtx;
     request = getRequest();
     auto status = stub_->getAdvice(&grpcCtx, *request, response);
-    if (!status.ok()) {
-      if (this->Ctx)
-        this->Ctx->emitError("gRPC failed: " + status.error_message());
-    }
-    return response;
+    request->Clear();
+    if (!status.ok())
+      Ctx->emitError("gRPC failed: " + status.error_message());
+    auto *action = new int(); // Hard wired for PosetRL case, should be fixed
+    *action = response->action();
+    return action;
   }
 
   // void send(const std::string & str) override {
@@ -123,13 +109,9 @@ private:
     return 0;
   }
 
-  Request *getRequest() {
-    return (Request *)Serializer->getRequest();
-  }
+  Request *getRequest() { return (Request *)SerDes->getRequest(); }
 
-  Response *getResponse() {
-    return (Response *)Serializer->getResponse();
-  }
+  Response *getResponse() { return (Response *)SerDes->getResponse(); }
 };
 } // namespace llvm
 

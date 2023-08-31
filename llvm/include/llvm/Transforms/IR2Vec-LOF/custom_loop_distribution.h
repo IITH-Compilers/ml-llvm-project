@@ -18,7 +18,7 @@
 
 namespace llvm {
 
-class custom_loop_distribution : public FunctionPass, public MultiAgentEnv {
+class custom_loop_distribution : public FunctionPass, public LDEnv {
 
 public:
   static char ID;
