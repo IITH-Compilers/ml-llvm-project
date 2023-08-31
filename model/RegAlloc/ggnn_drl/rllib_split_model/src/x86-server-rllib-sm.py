@@ -1,7 +1,7 @@
 import sys
 
 sys.path.append(
-    "/home/cs20mtech12003/ml-llvm-project/ml-llvm-tools/MLModelRunner/gRPCModelRunner/Python-Utilities"
+    "/Pramana/ML_LLVM_Tools/ml-llvm-project/ml-llvm-tools/MLModelRunner/gRPCModelRunner/Python-Utilities"
 )
 import RegisterAllocationInference_pb2_grpc, RegisterAllocationInference_pb2
 
@@ -19,7 +19,7 @@ import types
 
 # sys.path.append(os.path.realpath('../../model/RegAlloc/ggnn_drl/rllib_split_model/src'))
 sys.path.append(
-    "/home/cs20mtech12003/ml-llvm-project/model/RegAlloc/ggnn_drl/rllib_split_model/src"
+    "/Pramana/ML_LLVM_Tools/ml-llvm-project/model/RegAlloc/ggnn_drl/rllib_split_model/src"
 )
 # import inference
 import rollout as inference
@@ -239,7 +239,7 @@ def print_inter_graphs(inter_graphs):
     #     print("len(vectors[-1]): ", len(regProf.vectors[-1]["vec"]), end=" ")
     # print("len(vectors): ", len(regProf.vectors))
 
-def run_pipe_communication(data_format="json"):
+def run_pipe_communication(data_format="json", pipe_name=None):
     model_path = "/Pramana/ML_LLVM_Tools/RL4ReAl-checkpoint/checkpoint_000002/"
     args = {
         "no_render": True,
@@ -253,8 +253,10 @@ def run_pipe_communication(data_format="json"):
         "arch": "X86",
     }
     args = Namespace(**args)
-
-    temp_rootname = "rl4realpipe"
+    if pipe_name:
+        temp_rootname = pipe_name
+    else:
+        temp_rootname = "rl4realpipe"
     to_compiler = temp_rootname + ".in"
     from_compiler = temp_rootname + ".out"
 
@@ -603,10 +605,15 @@ if __name__ == "__main__":
         choices=["json", "protobuf", "bytes"],
         help="Data format to use for communication",
     )
+    parser.add_argument(
+        "--pipe_name",
+        type=str,
+        help="Data format to use for communication",
+    )
     args = parser.parse_args()
     print(args)
     if args.use_pipe:
-        run_pipe_communication(args.data_format)
+        run_pipe_communication(args.data_format, args.pipe_name)
     else:
         if args.server_port is None:
             print("Please specify server address for gRPC communication")

@@ -20,7 +20,7 @@ Observation MultiAgentEnv::reset() {
         rp.frwdInterferences.begin() == rp.frwdInterferences.end()) {
       continue;
     }
-    errs() << "Adding node: " << rpi.first << "\n";
+    // errs() << "Adding node: " << rpi.first << "\n";
     this->regProfMapHelper.insert({rpi.first, rpi.second});
   }
 
@@ -126,24 +126,24 @@ void MultiAgentEnv::clearDataStructures() {
 
 Observation MultiAgentEnv::step(Action action) {
   Observation obs;
-  errs() << "Action: " << action << "\n";
+  // errs() << "Action: " << action << "\n";
   if (this->getNextAgent() == NODE_SELECTION_AGENT) {
-    errs() << "Selected node is: " << action << "\n";
+    // errs() << "Selected node is: " << action << "\n";
     obs = this->select_node_step(action);
   } else if (this->getNextAgent() == TASK_SELECTION_AGENT) {
     obs = this->select_task_step(action);
     if (this->getNextAgent() == SPLIT_NODE_AGENT) {
       auto splitNodeObs = this->getCurrentObservation(SPLIT_NODE_AGENT);
     }
-    errs() << "Selected Task is: " << action << "\n";
+    // errs() << "Selected Task is: " << action << "\n";
   } else if (this->getNextAgent() == COLOR_NODE_AGENT) {
     obs = this->colour_node_step(action);
-    errs() << "Node coloured is: " << action << "\n";
+    // errs() << "Node coloured is: " << action << "\n";
     
   } else if (this->getNextAgent() == SPLIT_NODE_AGENT) {
     splitStepCount++;
     obs = this->split_node_step(action);
-    errs() << "Node spliting is: " << action << "\n";
+    // errs() << "Node spliting is: " << action << "\n";
   } else {
     llvm_unreachable("Unexpected agent found");
   }

@@ -111,9 +111,9 @@ class PPOConfig(PGConfig):
         self.model["vf_share_layers"] = False
         self._disable_preprocessor_api = False
 
-        self.num_gpus = 1
+        self.num_gpus = 0
         self.num_cpus_per_worker = 1
-        self.num_gpus_per_worker = .1
+        self.num_gpus_per_worker = 0
         self.num_envs_per_worker = 1
         self.rollout_fragment_length = "auto"
         # __sphinx_doc_end__
@@ -137,13 +137,13 @@ class PPOConfig(PGConfig):
             "intermediate_data": './temp',
             # "build_path": "/home/cs20mtech12003/ML-Register-Allocation/AarchBuild_UPMM",
             "build_path": "/home/ai20btech11004/ML-Register-Allocation/build_x86",
-            "Register_config": "/home/ai20btech11004/ML-Register-Allocation/llvm/lib/CodeGen/MLRegAlloc/config_json",
+            "Register_config": "/Pramana/ML_LLVM_Tools/ml-llvm-project/llvm/lib/CodeGen/MLRegAlloc/config_json",
             "log_path": "/home/ai20btech11004/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src/log",
             #"dataset": "/raid/cs17m20P100001/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_new_data/",
             #"dataset": "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_aarch64_new_data/",
             "dataset": "/home/ai20btech11004/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/LTS-ll-files_train_mlra_x86_split_data",
             "graphs_num": 10000,
-            "action_space_size": RegisterActionSpace("X86", "/home/cs20btech11024/repos/ML-Register-Allocation/llvm/lib/CodeGen/MLRegAlloc/config_json").ac_sp_normlize_size,
+            "action_space_size": RegisterActionSpace("X86", "/Pramana/ML_LLVM_Tools/ml-llvm-project/llvm/lib/CodeGen/MLRegAlloc/config_json").ac_sp_normlize_size,
             "check_point": None,
             "episode_number": 10000,
             "GPU_ID": '0',

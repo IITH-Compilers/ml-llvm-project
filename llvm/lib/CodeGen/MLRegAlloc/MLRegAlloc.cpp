@@ -178,6 +178,10 @@ static cl::opt<bool>
             cl::desc("Use pipe based interation with python model"),
             cl::init(false));
 
+cl::opt<std::string> mlra_pipe_name("mlra-pipe-name", cl::Hidden,
+                               cl::init("rl4realpipe"),
+                               cl::desc("Name for pipe file"));
+
 // add string command line argument for structing data to be protobuf, json or
 // bytes
 static cl::opt<std::string> data_format("mlra-data-format", cl::Hidden,
@@ -550,8 +554,8 @@ void MLRA::constructJson(SmallSetVector<unsigned, 8> *updatedRegIdxs,
         continue;
       }
     }
-    errs() << reg << " " << rp.cls << " " << rp.color << " " << rp.spillWeight
-           << "\n";
+    // errs() << reg << " " << rp.cls << " " << rp.color << " " << rp.spillWeight
+    //        << "\n";
     json::Object regprof;
     regprof["regID"] = reg;
     regprof["cls"] = rp.cls;
@@ -696,8 +700,8 @@ void MLRA::sendRegProfData(T *response,
     // interferences
     // if (rp.frwdInterferences.begin() == rp.frwdInterferences.end())
     //   continue;
-    errs() << reg << " " << rp.cls << " " << rp.color << " " << rp.spillWeight
-           << "\n";
+    // errs() << reg << " " << rp.cls << " " << rp.color << " " << rp.spillWeight
+    //        << "\n";
 
     auto regprofResponse = response->add_regprof();
     regprofResponse->set_regid(reg);
@@ -742,8 +746,8 @@ Observation MLRA::split_node_step(unsigned action) {
   //                       "SPLITTING==================================\n";
   //             MF->dump(); errs() << "====================================="
   //                                   "=======================\n");
-  errs() << "Tring to split: " << splitRegIdx << " at point: " << splitPoint
-         << "\n";
+  // errs() << "Tring to split: " << splitRegIdx << " at point: " << splitPoint
+        //  << "\n";
   if (splitVirtReg(splitRegIdx, splitPoint, NewVRegs)) {
     SmallSetVector<unsigned, 8> updatedRegIdxs;
     updateRegisterProfileAfterSplit(splitRegIdx, NewVRegs, updatedRegIdxs);
@@ -2467,8 +2471,8 @@ void MLRA::training_flow() {
 
 void MLRA::initPipeCommunication() {
   std::string basename =
-      "/home/cs20mtech12003/ml-llvm-project/model/RegAlloc/"
-      "ggnn_drl/rllib_split_model/src/rl4realpipe";
+      "/Pramana/ML_LLVM_Tools/ml-llvm-project/model/RegAlloc/"
+      "ggnn_drl/rllib_split_model/src/" + mlra_pipe_name;
 
   errs() << "Initializing pipe communication...\n";
   BaseSerDes::Kind SerDesType;
@@ -2526,7 +2530,7 @@ void MLRA::initPipeCommunication() {
       // constructData(nullptr, true);
       processMLInputs(nullptr, true);
 
-      errs() << "Call model first time\n";
+      // errs() << "Call model first time\n";
 
       for (auto it = MF->begin(); it != MF->end(); it++) {
         if (it->isEHFuncletEntry() || it->isEHPad() || it->isEHScopeEntry() ||
@@ -2540,11 +2544,11 @@ void MLRA::initPipeCommunication() {
         }
       }
       isGraphSet = true;
-      errs() << "Processing funtion: " << MF->getName() << "\n";
+      // errs() << "Processing funtion: " << MF->getName() << "\n";
     } else {
       JO["new"] = false;
       this->IsNew = false;
-      errs() << "Call model again\n";
+      // errs() << "Call model again\n";
     }
 
     // auto reply = MLRunner->evaluate2();
@@ -2556,16 +2560,16 @@ void MLRA::initPipeCommunication() {
     int *out;
     MLRunner->evaluate<int *>(out, size);
     std::vector<int> reply(out, out + size);
-    errs() << "Reply:: ";
-    for (auto x : reply)
-      errs() << x << " ";
-    errs() << "\n";
+    // errs() << "Reply:: ";
+    // for (auto x : reply)
+    //   errs() << x << " ";
+    // errs() << "\n";
 
     json::Object res = getJsonObj(reply);
     // json::Object res = json::Object();
 
     if (res["action"].getAsString()->str() == "Color") {
-      errs() << "Received color from model\n";
+      // errs() << "Received color from model\n";
       std::string ucf = "";
       for (auto i : unsupportedClsFreq) {
         ucf += "\n " + i.first.str() + " - " + std::to_string(i.second);
@@ -2575,7 +2579,7 @@ void MLRA::initPipeCommunication() {
         return;
       }
 
-      errs() << "Before filling color map\n";
+      // errs() << "Before filling color map\n";
 
       std::map<std::string, int64_t> colorMap;
       unsigned numSpills = 0;
@@ -2605,9 +2609,9 @@ void MLRA::initPipeCommunication() {
       int splitPoint = res["payload"].getAsInteger().value();
       SmallVector<unsigned, 2> NewVRegs;
 
-      errs() << "**************STARTING SPLITTING********************\n";
-      errs() << "Splitting regidx: " << splitRegIdx << " at " << splitPoint
-             << "\n";
+      // errs() << "**************STARTING SPLITTING********************\n";
+      // errs() << "Splitting regidx: " << splitRegIdx << " at " << splitPoint
+      //        << "\n";
 
       if (splitVirtReg(splitRegIdx, splitPoint, NewVRegs)) {
         SmallSetVector<unsigned, 8> updatedRegIdxs;
@@ -2616,8 +2620,8 @@ void MLRA::initPipeCommunication() {
           dumpInterferenceGraph(std::to_string(SplitCounter));
         if (enable_mlra_checks)
           verifyRegisterProfile();
-        errs() << "Splitting done\n";
-        errs() << "**********************************\n";
+        // errs() << "Splitting done\n";
+        // errs() << "**********************************\n";
         if (res["action"].getAsString()->str() == "Split")
           processMLInputs(&updatedRegIdxs);
         else
@@ -2677,17 +2681,13 @@ void MLRA::inference() {
   if (enable_rl_inference_engine) {
     errs() << "In RL inference engine\n";
 #define nodeSelectionModelPath                                                 \
-  "/home/cs20mtech12003/ml-llvm-project/model/RegAlloc/ggnn_drl/"        \
-  "rllib_split_model/src/node_select_model_inference/model.onnx"
+  "/Pramana/ML_LLVM_Tools/RL4ReAl-onnx-checkpoint/SELECT_NODE_MODEL_PATH.onnx"
 #define taskSelectionModelPath                                                 \
-  "/home/cs20mtech12003/ml-llvm-project/model/RegAlloc/ggnn_drl/"        \
-  "rllib_split_model/src/select_task_model_inference/model.onnx"
+  "/Pramana/ML_LLVM_Tools/RL4ReAl-onnx-checkpoint/SELECT_TASK_MODEL_PATH.onnx"
 #define nodeColouringModelPath                                                 \
-  "/home/cs20mtech12003/ml-llvm-project/model/RegAlloc/ggnn_drl/"        \
-  "rllib_split_model/src/node_colour_model_inference/model.onnx"
+  "/Pramana/ML_LLVM_Tools/RL4ReAl-onnx-checkpoint/COLOR_NODE_MODEL_PATH.onnx"
 #define nodeSplitingModelPath                                                  \
-  "/home/cs20mtech12003/ml-llvm-project/model/RegAlloc/ggnn_drl/"        \
-  "rllib_split_model/src/node_split_model_inference/model.onnx"
+  "/Pramana/ML_LLVM_Tools/RL4ReAl-onnx-checkpoint/SPLIT_NODE_MODEL_PATH.onnx"
 
     std::map<std::string, Agent *> agentMap;
     agentMap[NODE_SELECTION_AGENT] = new Agent(nodeSelectionModelPath);
@@ -2739,13 +2739,13 @@ void MLRA::inference() {
       return;
     }
 
-    errs() << "Before calling model \n";
+    // errs() << "Before calling model \n";
     MLRunner->evaluate<int>();
 
     std::map<std::string, int64_t> colorMap;
-    errs() << "Returned color map: \n";
+    // errs() << "Returned color map: \n";
     for (auto pair : this->nid_colour) {
-      errs() << pair.first << " : " << pair.second << "\n";
+      // errs() << pair.first << " : " << pair.second << "\n";
       colorMap[std::to_string(pair.first)] = pair.second;
     }
     // inference_driver->getInfo(regProfMap, colorMap);
