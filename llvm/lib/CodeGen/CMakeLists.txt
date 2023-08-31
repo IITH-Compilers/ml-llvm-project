@@ -1,26 +1,26 @@
-if (DEFINED LLVM_HAVE_TF_AOT OR LLVM_HAVE_TFLITE)
-  include(TensorFlowCompile)
-  set(LLVM_RAEVICT_MODEL_PATH_DEFAULT "models/regalloc-eviction")
+# if (DEFINED LLVM_HAVE_TF_AOT OR LLVM_HAVE_TFLITE)
+#   include(TensorFlowCompile)
+#   set(LLVM_RAEVICT_MODEL_PATH_DEFAULT "models/regalloc-eviction")
 
-  set(LLVM_RAEVICT_MODEL_CURRENT_URL "<UNSPECIFIED>" CACHE STRING "URL to download the LLVM register allocator eviction model")
+#   set(LLVM_RAEVICT_MODEL_CURRENT_URL "<UNSPECIFIED>" CACHE STRING "URL to download the LLVM register allocator eviction model")
 
-  if (DEFINED LLVM_HAVE_TF_AOT)
-    tf_find_and_compile(
-      ${LLVM_RAEVICT_MODEL_PATH}
-      ${LLVM_RAEVICT_MODEL_CURRENT_URL}
-      ${LLVM_RAEVICT_MODEL_PATH_DEFAULT}
-      "../Analysis/models/gen-regalloc-eviction-test-model.py"
-      serve
-      action
-      RegallocEvictModel
-      llvm::RegallocEvictModel
-    )
-  endif()
+#   if (DEFINED LLVM_HAVE_TF_AOT)
+#     tf_find_and_compile(
+#       ${LLVM_RAEVICT_MODEL_PATH}
+#       ${LLVM_RAEVICT_MODEL_CURRENT_URL}
+#       ${LLVM_RAEVICT_MODEL_PATH_DEFAULT}
+#       "../Analysis/models/gen-regalloc-eviction-test-model.py"
+#       serve
+#       action
+#       RegallocEvictModel
+#       llvm::RegallocEvictModel
+#     )
+#   endif()
 
-  if (LLVM_HAVE_TFLITE)
-    list(APPEND MLLinkDeps ${tensorflow_c_api} ${tensorflow_fx})
-  endif()
-endif()
+#   if (LLVM_HAVE_TFLITE)
+#     list(APPEND MLLinkDeps ${tensorflow_c_api} ${tensorflow_fx})
+#   endif()
+# endif()
 
 # This provides the implementation of MVT and LLT.
 # Be careful to append deps on this, since Targets' tablegens depend on this.
@@ -265,11 +265,11 @@ add_llvm_component_library(LLVMCodeGen
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/CodeGen
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/CodeGen/PBQP
 
-  LINK_LIBS ${LLVM_PTHREAD_LIB} ${MLLinkDeps}
+  LINK_LIBS ${LLVM_PTHREAD_LIB} #${MLLinkDeps}
 
   DEPENDS
   intrinsics_gen
-  ${MLDeps}
+  # ${MLDeps}
 
   LINK_COMPONENTS
   Analysis
@@ -285,6 +285,8 @@ add_llvm_component_library(LLVMCodeGen
   Target
   TargetParser
   TransformUtils
+  MLModelRunner
+  Serializer
   )
 
 add_subdirectory(SelectionDAG)

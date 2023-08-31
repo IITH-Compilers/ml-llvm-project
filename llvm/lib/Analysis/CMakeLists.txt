@@ -1,27 +1,29 @@
-if (DEFINED LLVM_HAVE_TF_AOT OR LLVM_HAVE_TFLITE)
-  include(TensorFlowCompile)
-  set(LLVM_INLINER_MODEL_PATH_DEFAULT "models/inliner-Oz")
+# if (DEFINED LLVM_HAVE_TF_AOT OR LLVM_HAVE_TFLITE)
+#   include(TensorFlowCompile)
+#   set(LLVM_INLINER_MODEL_PATH_DEFAULT "models/inliner-Oz")
 
-  set(LLVM_INLINER_MODEL_CURRENT_URL "<UNSPECIFIED>" CACHE STRING "URL to download the LLVM inliner model")
+#   set(LLVM_INLINER_MODEL_CURRENT_URL "<UNSPECIFIED>" CACHE STRING "URL to download the LLVM inliner model")
 
-  if (DEFINED LLVM_HAVE_TF_AOT)
-    tf_find_and_compile(
-      ${LLVM_INLINER_MODEL_PATH}
-      ${LLVM_INLINER_MODEL_CURRENT_URL}
-      ${LLVM_INLINER_MODEL_PATH_DEFAULT}
-      "models/gen-inline-oz-test-model.py"
-      serve
-      action
-      InlinerSizeModel
-      llvm::InlinerSizeModel
-    )
-  endif()
+#   if (DEFINED LLVM_HAVE_TF_AOT)
+#     tf_find_and_compile(
+#       ${LLVM_INLINER_MODEL_PATH}
+#       ${LLVM_INLINER_MODEL_CURRENT_URL}
+#       ${LLVM_INLINER_MODEL_PATH_DEFAULT}
+#       "models/gen-inline-oz-test-model.py"
+#       serve
+#       action
+#       InlinerSizeModel
+#       llvm::InlinerSizeModel
+#     )
+#   endif()
 
-  if (LLVM_HAVE_TFLITE)
-    list(APPEND MLLinkDeps
-      tensorflow-lite::tensorflow-lite)
-  endif()
-endif()
+#   if (LLVM_HAVE_TFLITE)
+#     list(APPEND MLLinkDeps
+#       tensorflow-lite::tensorflow-lite)
+#   endif()
+# endif()
+
+include_directories(${TENSORFLOW_AOT_PATH}/include)
 
 add_llvm_component_library(LLVMAnalysis
   AliasAnalysis.cpp
@@ -140,17 +142,20 @@ add_llvm_component_library(LLVMAnalysis
   ValueTracking.cpp
   VectorUtils.cpp
   VFABIDemangling.cpp
-  ${GeneratedMLSources}
+  # ${GeneratedMLSources}
+
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Analysis
+  ${LLVM_BUILD_DIR}/tools/ml-llvm-tools
 
   DEPENDS
   intrinsics_gen
-  ${MLDeps}
+  LLVMMLModelRunner
+  # ${MLDeps}
 
-  LINK_LIBS
-  ${MLLinkDeps}
+  # LINK_LIBS
+  # ${MLLinkDeps}
 
   LINK_COMPONENTS
   BinaryFormat
@@ -159,4 +164,8 @@ add_llvm_component_library(LLVMAnalysis
   ProfileData
   Support
   TargetParser
+  MLModelRunner
+  Serializer
   )
+  target_link_libraries(LLVMAnalysis PUBLIC LLVMMLModelRunner)
+
