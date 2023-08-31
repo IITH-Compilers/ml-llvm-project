@@ -1,7 +1,7 @@
 import sys
 
 sys.path.append(
-    "/home/cs20btech11024/repos/ML-Register-Allocation/ml-llvm-tools/llvm-grpc/Python-Utilities"
+    "/home/cs20mtech12003/ml-llvm-project/ml-llvm-tools/MLModelRunner/gRPCModelRunner/Python-Utilities"
 )
 import RegisterAllocationInference_pb2_grpc, RegisterAllocationInference_pb2
 
@@ -19,7 +19,7 @@ import types
 
 # sys.path.append(os.path.realpath('../../model/RegAlloc/ggnn_drl/rllib_split_model/src'))
 sys.path.append(
-    "/home/cs20btech11024/repos/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src"
+    "/home/cs20mtech12003/ml-llvm-project/model/RegAlloc/ggnn_drl/rllib_split_model/src"
 )
 # import inference
 import rollout as inference
@@ -71,7 +71,7 @@ class service_server(
         # model_path = '/home/venkat/ray_results/X86_C5_200kEps_16_06_22/checkpoint-10219' # used for debuginh runtime and compile time issues
         # model_path = '/home/venkat/ray_results/X86_C1_200kEps_17-07-22/checkpoint-19700'
         # model_path = '/home/cs20btech11024/ray_results/G_table3/checkpoint-8052'
-        model_path = "/home/cs20btech11024/ray_results/experiment_2023-08-15_11-18-36/experiment_HierarchicalGraphColorEnv_60869_00000_0_2023-08-15_11-18-36/checkpoint_000002"
+        model_path = "/Pramana/ML_LLVM_Tools/RL4ReAl-checkpoint/checkpoint_000002/"
         args = {
             "no_render": True,
             "checkpoint": model_path,
@@ -208,7 +208,7 @@ class service_server(
                     payload=action[split_agent],
                 )
             elif self.inference_model.getLastTaskDone() == 0:
-                print("Returned colour map is:", action[color_agent])
+                # print("Returned colour map is:", action[color_agent])
                 reply = RegisterAllocationInference_pb2.Data(
                     message="Color",
                     color=action[color_agent],
@@ -240,7 +240,7 @@ def print_inter_graphs(inter_graphs):
     # print("len(vectors): ", len(regProf.vectors))
 
 def run_pipe_communication(data_format="json"):
-    model_path = "/home/cs20btech11024/ray_results/experiment_2023-08-15_11-18-36/experiment_HierarchicalGraphColorEnv_60869_00000_0_2023-08-15_11-18-36/checkpoint_000002"
+    model_path = "/Pramana/ML_LLVM_Tools/RL4ReAl-checkpoint/checkpoint_000002/"
     args = {
         "no_render": True,
         "checkpoint": model_path,
@@ -453,11 +453,19 @@ def run_pipe_communication(data_format="json"):
         tc.flush()
     # #########################################
 
-    def close_pipes():
+    def close_pipes(tc, fc):
         if tc is not None:
             tc.close()
         if fc is not None:
             fc.close()
+            
+    def open_pipe():
+        tc = io.BufferedWriter(io.FileIO(to_compiler, "wb"))
+        print("rl4realpipe.in created....")
+
+        fc = io.BufferedReader(io.FileIO(from_compiler, "rb"))
+        print("rl4realpipe.out created....")
+        return tc, fc
 
     init_pipes()
 
@@ -474,67 +482,88 @@ def run_pipe_communication(data_format="json"):
     fc = io.BufferedReader(io.FileIO(from_compiler, "rb"))
     print("rl4realpipe.out created....")
     while True:
-        print("Entered while loop...")
+        try:
+            print("Entered while loop...")
 
 
-        if read_stream_iter is None:
-                read_stream_iter = log_reader.read_stream2(fc)
+            if read_stream_iter is None:
+                    tc, fc = open_pipe()
+                    print("Init read_stream_iter")
+                    read_stream_iter = log_reader.read_stream2(fc)
 
-        inter_graphs = None
-        inter_graphs = readObservation()
-        print_inter_graphs(inter_graphs)
-            
+            inter_graphs = None
+            inter_graphs = readObservation()
+            print_inter_graphs(inter_graphs)
+                
 
-        if inter_graphs.new:
-            assert len(inter_graphs.regProf) > 0, "Graphs has no nodes"
-            inter_graphs_list = []
-            if type(inter_graphs) is not list:
-                inter_graphs_list.append(inter_graphs)
-            inference_model.setGraphInEnv(inter_graphs_list)
-            status = inference_model.setGraphInEnv(inter_graphs_list)
-            if status is None:
-                print("Exiting from inference")
-                out = {"action": "Exit"}
-                send_data_to_compiler(out)
-                # break
-        elif inter_graphs.result:
-            assert len(inter_graphs.regProf) > 0, "Graphs has no nodes"
-            if not inference_model.update_obs(inter_graphs):
-                print("Current split failed")
+            if inter_graphs.new:
+                assert len(inter_graphs.regProf) > 0, "Graphs has no nodes"
+                inter_graphs_list = []
+                if type(inter_graphs) is not list:
+                    inter_graphs_list.append(inter_graphs)
+                inference_model.setGraphInEnv(inter_graphs_list)
+                status = inference_model.setGraphInEnv(inter_graphs_list)
+                if status is None:
+                    print("Exiting from inference")
+                    out = {"action": "Exit"}
+                    send_data_to_compiler(out)
+                    read_stream_iter = None
+                    # break
+            elif inter_graphs.result:
+                assert len(inter_graphs.regProf) > 0, "Graphs has no nodes"
+                if not inference_model.update_obs(inter_graphs):
+                    print("Current split failed")
+                    inference_model.setCurrentNodeAsNotVisited()
+                inference_model.updateSelectNodeObs()
+
+            else:
                 inference_model.setCurrentNodeAsNotVisited()
-            inference_model.updateSelectNodeObs()
+                inference_model.updateSelectNodeObs()
 
-        else:
-            inference_model.setCurrentNodeAsNotVisited()
-            inference_model.updateSelectNodeObs()
+            action, count = inference_model.compute_action()
+            select_node_agent = "select_node_agent_{}".format(count)
+            select_task_agent = "select_task_agent_{}".format(count)
+            split_agent = "split_node_agent_{}".format(count)
+            color_agent = "colour_node_agent_id"
 
-        action, count = inference_model.compute_action()
-        select_node_agent = "select_node_agent_{}".format(count)
-        select_task_agent = "select_task_agent_{}".format(count)
-        split_agent = "split_node_agent_{}".format(count)
-        color_agent = "colour_node_agent_id"
-
-        # current_sample_done = False
-        if inference_model.getLastTaskDone() == 1:
-            out = {
-                "action": "Split",
-                "regidx": int(action[select_node_agent]),
-                "payload": int(action[split_agent]),
-            }
-        elif inference_model.getLastTaskDone() == 0:
-            print("Returned colour map is:", action[color_agent])
-            out = {
-                "action": "Color",
-                "color": action[color_agent],
-                "funcName": inter_graphs.funcName,
-            }
-        # else:
-        #   out = {
-        #     "action" : "Exit"
-        #   }
-        #   current_sample_done = True
-        print(out)
-        send_data_to_compiler(out)
+            # current_sample_done = False
+            if inference_model.getLastTaskDone() == 1:
+                out = {
+                    "action": "Split",
+                    "regidx": int(action[select_node_agent]),
+                    "payload": int(action[split_agent]),
+                }
+            elif inference_model.getLastTaskDone() == 0:
+                # print("Returned colour map is:", action[color_agent])
+                out = {
+                    "action": "Color",
+                    "color": action[color_agent],
+                    "funcName": inter_graphs.funcName,
+                }
+            else:
+            #   out = {
+            #     "action" : "Exit"
+            #   }
+            #   current_sample_done = True
+                print("No last action")
+            done = False
+            
+            if out['action'] == "Color":
+                done = True
+            send_data_to_compiler(out)
+            if done:                
+                print("Setting read_stream_iter to None")
+                read_stream_iter = None
+                close_pipes(tc, fc)
+        except Exception as e:            
+            # print("Exception:", e)
+            tc, fc = open_pipe()
+        
+        # init_pipes()            
+        # tc = io.BufferedWriter(io.FileIO(to_compiler, "wb"))            
+        # print("Opened the write pipe")            
+        # fc = io.BufferedReader(io.FileIO(from_compiler, "rb"))            
+        # print("Opened the read pipe")
 
 
 class Server:

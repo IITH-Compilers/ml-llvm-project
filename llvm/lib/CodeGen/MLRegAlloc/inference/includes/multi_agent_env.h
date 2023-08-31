@@ -88,7 +88,7 @@ public:
 
   void update_env(RegisterProfileMap *regProfMap, SmallSetVector<unsigned, 8> updatedRegIdxs);\
   void selectNodeObsConstructor(Observation &obs);
-  virtual Observation &split_node_step(unsigned action) = 0;
+  virtual Observation split_node_step(unsigned action) = 0;
   unsigned getNodeIdx(unsigned nodeId) { return nid_idx[nodeId];}
 
   MultiAgentEnv(){
