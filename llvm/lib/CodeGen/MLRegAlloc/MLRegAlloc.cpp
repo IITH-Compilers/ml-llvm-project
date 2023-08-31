@@ -315,7 +315,7 @@ grpc::Status MLRA::codeGen(grpc::ServerContext *context,
 
 void MLRA::processMLInputs(SmallSetVector<unsigned, 8> *updatedRegIdxs,
                            bool IsStart) {
-  errs() << "Inside processMLInputs\n";
+  // errs() << "Inside processMLInputs\n";
   regIdxs.clear();
 
   if (!updatedRegIdxs) {
@@ -333,13 +333,13 @@ void MLRA::processMLInputs(SmallSetVector<unsigned, 8> *updatedRegIdxs,
         continue;
       }
     }
-    errs() << reg << " " << rp.cls << " " << rp.color << " " << rp.spillWeight
-           << " ";
-    errs() << "[";
-    for (auto &val : rp.useDistances) {
-      errs() << val << " ";
-    }
-    errs() << "]\n";
+    // errs() << reg << " " << rp.cls << " " << rp.color << " " << rp.spillWeight
+    //        << " ";
+    // errs() << "[";
+    // for (auto &val : rp.useDistances) {
+    //   errs() << val << " ";
+    // }
+    // errs() << "]\n";
     std::pair<std::string, int> regID("regID_" + std::to_string(reg), reg);
     std::pair<std::string, std::string> cls("cls_" + std::to_string(reg),
                                             rp.cls);
@@ -480,8 +480,8 @@ void MLRA::constructTensorSpecs(SmallSetVector<unsigned, 8> *updatedRegIdxs,
         continue;
       }
     }
-    errs() << reg << " " << rp.cls << " " << rp.color << " " << rp.spillWeight
-           << "\n";
+    // errs() << reg << " " << rp.cls << " " << rp.color << " " << rp.spillWeight
+    //        << "\n";
     int *regid = new int;
     *regid = reg;
     InputBuffers.push_back(regid);
@@ -624,8 +624,8 @@ void MLRA::serializeRegProfData(
 
       continue;
     }
-    errs() << rpm.first << " " << rp.cls << " " << rp.color << " "
-           << rp.spillWeight << "\n";
+    // errs() << rpm.first << " " << rp.cls << " " << rp.color << " "
+    //        << rp.spillWeight << "\n";
     auto regprofResponse = response->add_regprof();
     regprofResponse->set_regid(rpm.first);
 
@@ -2471,10 +2471,10 @@ void MLRA::training_flow() {
 
 void MLRA::initPipeCommunication() {
   std::string basename =
-      "/Pramana/ML_LLVM_Tools/ml-llvm-project/model/RegAlloc/"
+      "/home/cs20mtech12003/ml-llvm-project/model/RegAlloc/"
       "ggnn_drl/rllib_split_model/src/" + mlra_pipe_name;
 
-  errs() << "Initializing pipe communication...\n";
+  // errs() << "Initializing pipe communication...\n";
   BaseSerDes::Kind SerDesType;
   if (data_format == "json") {
     SerDesType = BaseSerDes::Kind::Json;
@@ -2512,7 +2512,7 @@ void MLRA::initPipeCommunication() {
 
   bool isGraphSet = false;
   while (true) {
-    errs() << "Entered while loop\n";
+    // errs() << "Entered while loop\n";
     if (!isGraphSet) {
       this->IsNew = true;
       int count = 0;
@@ -2524,7 +2524,7 @@ void MLRA::initPipeCommunication() {
         count++;
       }
       if (count < 120 || count > 500) {
-        errs() << "regProf size is not between 120 and 500\n";
+        // errs() << "regProf size is not between 120 and 500\n";
         return;
       }
       // constructData(nullptr, true);
@@ -2629,7 +2629,7 @@ void MLRA::initPipeCommunication() {
       } else {
         // JO["result"] = false;
         this->CommuResult = false;
-        errs() << "Splitting failed\n";
+        // errs() << "Splitting failed\n";
         std::pair<std::string, bool> result("result", 0);
         std::pair<std::string, bool> newBool("new", 0);
         MLRunner->populateFeatures(result, newBool);
@@ -2763,9 +2763,9 @@ void MLRA::inference() {
     allocatePhysRegsViaRL();
     return;
   }
-  errs() << "In MLRA::inference\n";
+  // errs() << "In MLRA::inference\n";
   if (usePipe) {
-    errs() << "Entered initpipe\n";
+    // errs() << "Entered initpipe\n";
     initPipeCommunication();
     return;
   }

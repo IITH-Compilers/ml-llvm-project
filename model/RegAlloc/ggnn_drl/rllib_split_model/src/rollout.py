@@ -25,7 +25,7 @@ from ray.tune.utils import merge_dicts
 from ray.tune.registry import get_trainable_cls, _global_registry, ENV_CREATOR
 
 import sys
-sys.path.append('/home/cs20btech11024/repos/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src')
+sys.path.append('/home/cs20mtech12003/ml-llvm-project/model/RegAlloc/ggnn_drl/rllib_split_model/src')
 from multiagentEnv import HierarchicalGraphColorEnv
 import utils_1
 from register_action_space import RegisterActionSpace
@@ -439,13 +439,13 @@ class RollOutInference:
                 "intermediate_data": './temp',
                 "build_path": "/home/cs20mtech12003/ML-Register-Allocation/X86Build_UPMM",
                 # "build_path": "/home/cs20mtech12003/ML-Register-Allocation/AArch64Build",
-                "Register_config": "/home/cs20btech11024/repos/ML-Register-Allocation/llvm/lib/CodeGen/MLRegAlloc/config_json",
+                "Register_config": "/home/cs20mtech12003/ml-llvm-project/llvm/lib/CodeGen/MLRegAlloc/config_json",
                 "log_path": "/home/cs20mtech12003/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src/log",
                 #"dataset": "/raid/cs17m20P100001/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_new_data/",
                 "dataset": "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_generated_at_05-05-22/",
                 # "dataset": "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_aarch64_new_data/",
                 "graphs_num": 10000,
-                "action_space_size": RegisterActionSpace("X86", "/home/cs20btech11024/repos/ML-Register-Allocation/llvm/lib/CodeGen/MLRegAlloc/config_json").ac_sp_normlize_size,
+                "action_space_size": RegisterActionSpace("X86", "/home/cs20mtech12003/ml-llvm-project/llvm/lib/CodeGen/MLRegAlloc/config_json").ac_sp_normlize_size,
                 "check_point": None,
                 "episode_number": 49999,
                 "GPU_ID": '0',
@@ -468,6 +468,7 @@ class RollOutInference:
         
             }       
         config["num_gpus"]=0
+        config["num_gpus_per_worker"]=0
         ModelCatalog.register_custom_model("select_node_model", SelectNodeNetwork)
         ModelCatalog.register_custom_model("select_task_model", SelectTaskNetwork)
         ModelCatalog.register_custom_model("colour_node_model", ColorNetwork)

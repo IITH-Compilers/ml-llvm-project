@@ -260,7 +260,7 @@ bool RDGWrapperPass::computeRDG(Function &F) {
   // canonicalizeLoopsWithLoads(loadWorkList);
 
   auto ir2vec = IR2Vec::Embeddings(*F.getParent(),
-                                   IR2Vec::IR2VecMode::FlowAware, VOCAB_FILE);
+                                   IR2Vec::IR2VecMode::Symbolic, VOCAB_FILE);
   instVecMap = ir2vec.getInstVecMap();
   // for (auto II : instVecMap) { II.first->dump(); }
   LLVM_DEBUG(for (auto II

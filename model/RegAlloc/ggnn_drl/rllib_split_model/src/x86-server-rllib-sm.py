@@ -285,7 +285,7 @@ def run_pipe_communication(data_format="json", pipe_name=None):
             if read_stream_iter is None:
                 read_stream_iter = log_reader.read_stream2(fc)
             hdr = fc.read(8)
-            print(hdr)
+            # print(hdr)
             print("hdr: ", int.from_bytes(hdr, "little"))
             context, observation_id, features, score = next(read_stream_iter)
             features: list[log_reader.TensorValue] = features
@@ -420,7 +420,7 @@ def run_pipe_communication(data_format="json", pipe_name=None):
         elif data_format == "protobuf":
             pass
         out = hdr + msg
-        print("out: ", out)
+        # print("out: ", out)
         tc.write(out)
         tc.flush()
     # #########################################
@@ -457,7 +457,7 @@ def run_pipe_communication(data_format="json", pipe_name=None):
 
     while True:
         try:
-            print("Entered while loop...")
+            # print("Entered while loop...")
             inter_graphs = None
             inter_graphs = readObservation()
             print_inter_graphs(inter_graphs)
@@ -621,7 +621,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--pipe_name",
         type=str,
-        help="Data format to use for communication",
+        help="Pipe Name",
     )
     args = parser.parse_args()
     print(args)

@@ -97,9 +97,9 @@ public:
   evaluate(T &data, size_t &dataSize) {
     using BaseType = typename std::remove_pointer<T>::type;
     void *res = evaluateUntyped();
-    errs() << "Evaluate: after deserialize\n";
-    errs() << "Evaluate: SerDes->getMessageLength(): "
-           << SerDes->getMessageLength() << "\n";
+    // errs() << "Evaluate: after deserialize\n";
+    // errs() << "Evaluate: SerDes->getMessageLength(): "
+    //        << SerDes->getMessageLength() << "\n";
     T ret = static_cast<T>(malloc(SerDes->getMessageLength()));
     memcpy(ret, res, SerDes->getMessageLength());
     dataSize = SerDes->getMessageLength() / sizeof(BaseType);
