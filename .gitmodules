@@ -1,8 +1,4 @@
-[submodule "grpc"]
-	path = grpc
-	url = https://github.com/grpc/grpc
-	branch = v1.34.0
-[submodule "LLVM_GRPC"]
-	path = LLVM_GRPC
-	url = https://github.com/anilavakundu/LLVM_GRPC.git
-	branch = register-allocation-CLEAN
+[submodule "IR2Vec"]
+	path = IR2Vec
+	url = git@github.com:IITH-Compilers/IR2Vec.git
+	branch = llvm10
