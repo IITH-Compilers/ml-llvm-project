@@ -213,9 +213,12 @@ class DistributionInference:
             # print("state {}".format(obs))
             action = {}
             for agent_id, agent_obs in obs.items():
+                # print("agent_id: {}".format(agent_id))
+                # print("agent_obs: {}".format(agent_obs))
                 policy_id = self.config['multiagent']['policy_mapping_fn'](agent_id)
                 action[agent_id] = self.trained_agent.compute_action(agent_obs, policy_id=policy_id)
                 print("action: {}".format(action[agent_id]))
+                
             obs, reward, done, response = env.step(action)
             done = done['__all__']
             # sum up reward for all agents
@@ -322,17 +325,20 @@ if __name__ == "__main__":
                 hdr = fc.read(8)
                 size = int.from_bytes(hdr, "little")
                 msg = fc.read(size)
-                return json.loads(msg.decode('utf-8'))["RDG"]
+                msg = json.loads(msg.decode('utf-8'))
+                if "Exit" in msg.keys():
+                    return "Exit"
+                return msg["RDG"]
             elif args.data_format == "bytes":
                 global read_stream_iter
                 if read_stream_iter is None:
                     read_stream_iter = log_reader.read_stream2(fc)
                 hdr = fc.read(8)
                 context, observation_id, features, score = next(read_stream_iter)
+                if features[0].spec().name == "Exit":
+                    return "Exit"
                 rdg = ''.join(chr(int(x)) for x in features[0])
-                print('rdg: ', rdg)
                 return rdg
-
 
         def sendResponse(f: io.BufferedWriter, seq):
             if args.data_format == "json":
@@ -342,6 +348,17 @@ if __name__ == "__main__":
                 msg = b''.join([x.to_bytes(4, byteorder='little', signed=True) for x in seq])
                 hdr = int(len(msg)).to_bytes(length=8, byteorder='little')
                 
+            out = hdr + msg
+            f.write(out)
+            f.flush()
+
+        def sendExitAck(f: io.BufferedWriter):
+            if args.data_format == "json":
+                msg = json.dumps({"out": 1}).encode("utf-8")
+                hdr = int(len(msg)).to_bytes(length=8, byteorder='little')
+            elif args.data_format == "bytes":
+                msg = int(1).to_bytes(length=4, byteorder='little', signed=True)
+                hdr = int(len(msg)).to_bytes(length=8, byteorder='little')
             out = hdr + msg
             f.write(out)
             f.flush()
@@ -359,6 +376,16 @@ if __name__ == "__main__":
 
             os.mkfifo(to_compiler, 0o666)
             os.mkfifo(from_compiler, 0o666)
+        
+        def close_pipes():
+            global tc, fc
+            tc.close()
+            fc.close()
+            os.remove(to_compiler)
+            os.remove(from_compiler)
+            tc = None
+            fc = None
+
         tc = None
         fc = None
 
@@ -381,11 +408,19 @@ if __name__ == "__main__":
         while(True):
             try:
               print("Entered while loop...")        
-              rdg = readObservation(fc)   
-              _, seq = inference_obj.run_predict(rdg)
+              msg = readObservation(fc)
+              if msg == "Exit":
+                  sendExitAck(tc)
+                  close_pipes()
+                  init_pipes()
+                  init_buffers_communication()
+                  read_stream_iter = None
+                  continue
+              _, seq = inference_obj.run_predict(msg)
               print("Sequence", seq)
               sendResponse(tc, seq)
             except Exception as e:
+                print("*****Exception occured*******: ", e)
                 init_pipes()
                 init_buffers_communication()
                 read_stream_iter = None

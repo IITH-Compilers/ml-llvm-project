@@ -451,7 +451,7 @@ def get_observations(graph):
         
         nodeId = node['id']
         properties = re.findall("{[^}]*}", node['label'])
-        print(properties)
+        print('properties:', properties)
         # properties = properties.split()
         logging.debug('Node idx={} | {}'.format(idx, properties))
 

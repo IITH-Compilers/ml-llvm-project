@@ -131,12 +131,12 @@ class DistributeLoopEnv(MultiAgentEnv):
             from_compiler = self.temp_rootname + ".out"
             # print("to_compiler", to_compiler)
             # print("from_compiler", from_compiler)
-            if os.path.exists(to_compiler):
-                os.remove(to_compiler)
-            if os.path.exists(from_compiler):
-                os.remove(from_compiler)
-            os.mkfifo(to_compiler, 0o666)
-            os.mkfifo(from_compiler, 0o666)
+            # if os.path.exists(to_compiler):
+            #     os.remove(to_compiler)
+            # if os.path.exists(from_compiler):
+            #     os.remove(from_compiler)
+            # os.mkfifo(to_compiler, 0o666)
+            # os.mkfifo(from_compiler, 0o666)
             self.tc = None
             self.fc = None
             self.tensor_specs = None
@@ -286,7 +286,7 @@ class DistributeLoopEnv(MultiAgentEnv):
             logging.info('DLOOP distribute {prev_node} with {cur_node}'.format(prev_node=self.prev_node, cur_node=self.cur_node))
 
         print("previous node: {} and current node: {}".format(self.prev_node, self.cur_node))
-        print(dist_flag)
+        print('dist_flag: ', dist_flag)
 
         select_node_mask = self.createNodeSelectMask()
         state = self.obs
@@ -321,7 +321,7 @@ class DistributeLoopEnv(MultiAgentEnv):
         distribution_mask = [1] * 2
 
         select_node_obs = {'action_mask':np.array(select_node_mask), 'state':cur_obs}
-        distribution_obs = {'prev_Node':self.prev_node_obs, 'cur_Node':self.cur_node_obs, 'dist_flag':dist_flag, 'action_mask':np.array(distribution_mask)}
+        distribution_obs = {'prev_Node':self.prev_node_obs, 'curr_Node':self.cur_node_obs, 'dist_flag':dist_flag, 'action_mask':np.array(distribution_mask)}
     
         reward = {
             self.select_node_agent_id: 0,

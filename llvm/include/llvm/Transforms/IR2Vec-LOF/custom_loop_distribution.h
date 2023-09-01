@@ -22,7 +22,7 @@ class custom_loop_distribution : public FunctionPass, public LDEnv {
 
 public:
   static char ID;
-
+  std::string FName;
   Module *M;
 
   SmallVector<std::string, 5> distributed_seqs;

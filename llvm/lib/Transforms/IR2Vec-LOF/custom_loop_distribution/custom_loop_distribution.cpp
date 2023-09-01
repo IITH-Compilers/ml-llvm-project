@@ -147,6 +147,7 @@ void custom_loop_distribution::initPipeCommunication(
   MLRunner = std::make_unique<PipeModelRunner>(
       basename + ".out", basename + ".in", SerDesType, &M->getContext());
 
+  int cnt = 1;
   for (auto rdg : RDG_List) {
     std::pair<std::string, std::string> p1("RDG", rdg);
     MLRunner->populateFeatures(p1);
@@ -154,6 +155,7 @@ void custom_loop_distribution::initPipeCommunication(
     int *out;
     size_t size;
     MLRunner->evaluate<int *>(out, size);
+    errs() << "Func name: " << this->FName << " : " << cnt++ << "\n";
     std::vector<int> distSequence;
     for (int i = 0; i < size; i++) {
       distSequence.push_back(out[i]);
@@ -173,6 +175,9 @@ void custom_loop_distribution::initPipeCommunication(
     errs() << "Reseved partition:" << partition << "\n";
     distributed_seqs.push_back(partition);
   }
+  std::pair<std::string, int> p1("Exit", 1);
+  MLRunner->populateFeatures(p1);
+  MLRunner->evaluate<int>();
 }
 
 // void custom_loop_distribution::initPipeCommunication(std::vector<std::string>
@@ -229,6 +234,7 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
   //   return false;
   // F.dump();
   this->M = F.getParent();
+  this->FName = F.getName();
   canonicalizeLoopsWithLoads();
   // errs()<<"After canonicolization: \n";
   // F.dump();
@@ -486,7 +492,7 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
   //     dist_helper.runwithAnalysis(SCCGraphs, loops, distributed_seqs,
   //     vf_seqs,
   //                                 SE, LI, DT, AA, ORE, GetLAA, DI);
-
+  distributed_seqs.clear();
   LLVM_DEBUG(if (isdis) { errs() << "Code is distributed..\n"; });
   return isdis;
 }
