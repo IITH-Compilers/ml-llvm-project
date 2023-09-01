@@ -99,23 +99,10 @@ def read_one_observation(
     tensor_specs: List[TensorSpec],
     score_spec: Optional[TensorSpec],
 ):
-    # event = json.loads(event_str)
-    # print('JSON: ', event)  #DEBUG
-    # if "context" in event:
-    #     context = event["context"]
-    #     # print('CTX', context) # DEBUG
-    #     event = json.loads(f.readline())
-    # observation_id = int(event["observation"])
     features = []
     for ts in tensor_specs:
         features.append(read_tensor(f, ts))
     f.readline()
-    # score = None
-    # if score_spec is not None:
-    #     score_header = json.loads(f.readline())
-    #     assert int(score_header["outcome"]) == observation_id
-    #     score = read_tensor(f, score_spec)
-    #     f.readline()
     return context, None, features, None
 
 
