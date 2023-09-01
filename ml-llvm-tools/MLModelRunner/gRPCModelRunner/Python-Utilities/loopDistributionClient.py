@@ -8,7 +8,7 @@ import LoopDistribution_pb2_grpc, LoopDistribution_pb2
 
 class LoopDistributionClient(object):
 
-    def __init__(self, hostip='127.0.0.1', hostport=5005):
+    def __init__(self, hostip='0.0.0.0', hostport=5005):
 
         self.host=hostip
         self.server_port = hostport
@@ -41,4 +41,4 @@ class LoopDistributionClient(object):
 if __name__ == '__main__':
     client = LoopDistributionClient()
     client.distributeLoopAndGetLoopCost(partition="S2|S1,S3,S4")
-    client.distributeLoopAndGetLoopCost(partition="Exit")
+    # client.distributeLoopAndGetLoopCost(partition="Exit")

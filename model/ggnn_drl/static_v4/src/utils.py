@@ -19,7 +19,7 @@ logger = logging.getLogger('utils.py')
 
 # LLVM_BUILD = '/home/shalini/LOF_test/LD_VF/IR2Vec-LoopOptimizationFramework/build_release/'
 # LLVM_BUILD = '/home/shalini/LOF_test/LD_VF/IR2Vec-LoopOptimizationFramework/debug_build/'
-LLVM_BUILD = '/home/cs20btech11018/repos/ML-Loop-Distribution/build_release/'
+LLVM_BUILD = '/home/cs20btech11018/repos/ml-llvm-project/build_release_2/'
 llvm = LLVM_BUILD
 opt = '{}bin/opt'.format(LLVM_BUILD)
 CLANG = '{}bin/clang'.format(LLVM_BUILD)
@@ -39,7 +39,7 @@ META_SSA_LL_DIR_CONST='{}/meta_ssa'.format(LL_DIR_CONST)
 # TrainingGraphs = "/home/shalini/LOF_test/LD_VF/IR2Vec-LoopOptimizationFramework/data/Opt_cld_O3_individualfile/mutation/tsvc_train/GIF_train_v4/graphs/loops/json/"
 # TrainingGraphs = "/home/shalini/LOF_test/LD_VF/IR2Vec-LoopOptimizationFramework/data/Opt_cld_O3_individualfile/mutation/spec_train/GIF_train_v4/graphs/loops/json/"
 # TrainingGraphs = "/home/shalini/LOF_test/LD_VF/IR2Vec-LoopOptimizationFramework/data/Opt_cld_O3_individualfile/mutation/temp/GIF_train_v4/graphs/loops/json/"
-TrainingGraphs = "/home/cs20btech11018/data/tsvc_train/generated_final/graphs/loops/json/"
+TrainingGraphs = "/Pramana/ML_LLVM_Tools/ml-llvm-project/data/tsvc_train/generated_final/graphs/loops/json/"
 TrainingGraphList = []
 
 # test_dir = "/home/shalini/LOF_test/LD_VF/IR2Vec-LoopOptimizationFramework/data/Opt_cld_O3_individualfile/mutation/tsvc_train/GIF_train_v4/graphs/loops/json/"

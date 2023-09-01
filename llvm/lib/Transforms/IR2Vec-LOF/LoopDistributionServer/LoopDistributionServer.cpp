@@ -11,9 +11,10 @@
 #include "llvm/Transforms/IR2Vec-LOF/LoopCost.h"
 #include "llvm/Transforms/IR2Vec-LOF/LoopDistribution.h"
 #include "MLModelRunner/MLModelRunner.h"
-
+#include "MLModelRunner/gRPCModelRunner.h"
 // grpc includes
-// #include "grpc/LoopDistribution/LoopDistribution.grpc.pb.h"
+#include "grpc/LoopDistribution/LoopDistribution.grpc.pb.h"
+#include "grpc/LoopDistribution/LoopDistribution.pb.h"
 // #include "grpc/gRPCUtil.h"
 #include <bits/stdint-intn.h>
 #include <cstdint>
@@ -45,8 +46,8 @@ static cl::opt<std::string> postDistributionPasses("postDistributionPasses",
 
 namespace {
 struct LoopDistributionServerPass
-    : public FunctionPass {
-      // public loopdistribution::LoopDistribution::Service,
+    : public FunctionPass ,
+      public loopdistribution::LoopDistribution::Service {
       // public gRPCUtil {
   static char ID;
   LoopDistributionServerPass() : FunctionPass(ID) { dist_helper = LoopDistribution(); }
@@ -73,37 +74,46 @@ struct LoopDistributionServerPass
       return LAA->getInfo(&L);
     };
 
+    loopdistribution::LoopDistributionResponse response;
+    loopdistribution::LoopDistributionRequest request;
     auto DI = DependenceInfo(&F, AA, SE, LI);
     this->DI = &DI;
     FileModified = false;
     if(usePipe)
       initPipeCommunication();
-    // else
-    //   RunService(this, server_address);
+    else {
+      errs() << "came here\n";
+       AOTRunner = std::make_unique<gRPCModelRunner<
+          loopdistribution::LoopDistribution,
+          loopdistribution::LoopDistribution::Stub,
+          loopdistribution::LoopDistributionRequest, loopdistribution::LoopDistributionResponse>>(
+          server_address,this);
+    }
 
     return FileModified;
   }
-  // grpc::Status distributeLoopAndGetLoopCost(
-  //     grpc::ServerContext *context,
-  //     const ::loopdistribution::LoopDistributionRequest *request,
-  //     ::loopdistribution::LoopDistributionResponse *response) override {
+  grpc::Status distributeLoopAndGetLoopCost(
+      grpc::ServerContext *context,
+      const ::loopdistribution::LoopDistributionRequest *request,
+      ::loopdistribution::LoopDistributionResponse *response) override {
 
-  //   std::string partition = request->partitionpattern();
+    errs() << "came here\n";
+    std::string partition = request->partitionpattern();
 
-  //   if (partition == "Exit") {
-  //     errs() << "server exit requested\n";
-  //     exit_requested->set_value();
-  //     return grpc::Status::OK;
-  //   }
-  //   errs() << "distribution request received for pattern " << partition << "\n";
+    if (partition == "Exit") {
+      errs() << "server exit requested\n";
+      AOTRunner->requestExit();
+      return grpc::Status::OK;
+    }
+    errs() << "distribution request received for pattern " << partition << "\n";
 
-  //   DistributedLoopCost = this->distributeLoopAndGetLoopCostHelper(partition);
+    DistributedLoopCost = this->distributeLoopAndGetLoopCostHelper(partition);
 
-  //   response->set_orignialloopcost(OriginalLoopCost);
-  //   response->set_distributedloopcost(DistributedLoopCost);
+    response->set_orignialloopcost(OriginalLoopCost);
+    response->set_distributedloopcost(DistributedLoopCost);
 
-  //   return grpc::Status::OK;
-  // }
+    return grpc::Status::OK;
+  }
 
   uint64_t distributeLoopAndGetLoopCostHelper(std::string partition) {
 

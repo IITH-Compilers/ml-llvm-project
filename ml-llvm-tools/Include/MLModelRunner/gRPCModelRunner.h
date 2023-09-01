@@ -51,16 +51,17 @@ public:
     if (server_mode)
       llvm_unreachable("evaluateUntyped not implemented for gRPCModelRunner; "
                        "Override gRPC method instead");
-    assert(request != nullptr && "Request cannot be null");
-    grpc::ClientContext grpcCtx;
-    request = getRequest();
-    auto status = stub_->getAdvice(&grpcCtx, *request, response);
-    request->Clear();
-    if (!status.ok())
-      Ctx->emitError("gRPC failed: " + status.error_message());
-    auto *action = new int(); // Hard wired for PosetRL case, should be fixed
-    *action = response->action();
-    return action;
+    // assert(request != nullptr && "Request cannot be null");
+    // grpc::ClientContext grpcCtx;
+    // request = getRequest();
+    // auto status = stub_->getAdvice(&grpcCtx, *request, response);
+    // request->Clear();
+    // if (!status.ok())
+    //   Ctx->emitError("gRPC failed: " + status.error_message());
+    // auto *action = new int(); // Hard wired for PosetRL case, should be fixed
+    // *action = response->action();
+    // return action;
+    return nullptr;
   }
 
   // void send(const std::string & str) override {

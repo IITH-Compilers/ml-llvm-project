@@ -121,8 +121,9 @@ class DistributeLoopEnv(MultiAgentEnv):
             self.grpc_rtt = 0
 
         self.speedup = 0        
-        self.use_grpc = False
-        self.use_pipe = not self.use_grpc
+        self.use_pipe = env_config['use_pipe']
+        self.use_grpc = not self.use_pipe
+
         
         if self.use_pipe:
             # pipes opening
@@ -582,6 +583,7 @@ class DistributeLoopEnv(MultiAgentEnv):
                         self.serverAddress)
                 self.stub = LoopDistribution_pb2_grpc.LoopDistributionStub(self.channel)
             
+            print("self use pipe: ", self.use_pipe)
             if self.use_pipe:
                 # Opening pipe files
                 to_compiler = self.temp_rootname + ".in"
@@ -653,10 +655,10 @@ class DistributeLoopEnv(MultiAgentEnv):
         #     assert(False, 'Not valid task selected')
 
     def startServer(self,filePath, functionName, loopId, serverAddress):
-        optPath = "/home/cs20mtech12003/ml-llvm-project/build_loopdist/bin/opt"
-        clangPath = "/home/cs20mtech12003/ml-llvm-project/build_loopdist/bin/clang"
+        optPath = "/home/cs20btech11018/repos/ml-llvm-project/build_release_2/bin/opt"
+        clangPath = "/home/cs20btech11018/repos/ml-llvm-project/build_release_2/bin/clang"
 
-        cmd = optPath + " -LoopDistributionServer -loopID " + loopId + " -funcName " + functionName + " -lc-function " + functionName + " -lc-lID " + loopId + " -server_address "+ serverAddress + " -S " + filePath + " -o /dev/null"
+        cmd = optPath + " -LoopDistributionServer -loopID " + loopId + " -funcName " + functionName + " -lc-function " + functionName + " -lc-lID " + loopId + " --server_address_loop_dist "+ serverAddress + " --ml-config-path /home/cs20btech11018/repos/ml-llvm-project/build_release_2/config " + " -S " + filePath + " -o /dev/null"
 
         print("server start command: ",cmd)
         pid = subprocess.Popen(cmd, executable='/bin/bash', shell=True, preexec_fn= os.setsid)
