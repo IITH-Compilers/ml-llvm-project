@@ -57,7 +57,7 @@ static cl::opt<std::string> server_address(
     cl::desc("Starts the server in the given address, format <ip>:<port>"),
     cl::init("127.0.0.1:50051"));
 
-cl::opt<std::string> pipe_name("pipe-name", cl::Hidden,
+static cl::opt<std::string> pipe_name("pipe-name", cl::Hidden,
                                cl::init("posetrl_pipe"),
                                cl::desc("Name for pipe file"));
 
