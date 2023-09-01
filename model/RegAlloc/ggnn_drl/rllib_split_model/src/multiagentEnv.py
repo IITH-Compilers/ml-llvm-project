@@ -66,7 +66,7 @@ def set_config(path):
 
 class HierarchicalGraphColorEnv(MultiAgentEnv):
     def __init__(self, env_config):
-        print("Env config", env_config)
+        # print("Env config", env_config)
         self.env_config = env_config
         self.colormap = None
         self.split_point = None
@@ -802,8 +802,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         userDistanceDiff = 0
         split_index = action
         split_point = split_index
-        print("****Split index****** {} {}".format( self.obs.split_points[self.cur_node], split_point))
-        print("Use distance length:", len(use_distances))
+        # print("****Split index****** {} {}".format( self.obs.split_points[self.cur_node], split_point))
+        # print("Use distance length:", len(use_distances))
         use_distance_list = self.obs.use_distances[self.cur_node]
         if action != len(use_distance_list) - 1:
             split_reward, split_done = self.step_splitTask(split_point)
