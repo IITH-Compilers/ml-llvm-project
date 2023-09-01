@@ -10,7 +10,6 @@
     llvm::errs() << "In setFeature of Tensorflow...\n";                        \
     std::string prefix = "feed_";                                              \
     const int Index = CompiledModel->LookupArgIndex(prefix+Name);                     \
-    llvm::errs() << "Index: " << Index << "\n";                                \
     if (Index >= 0)                                                            \
       *reinterpret_cast<TYPE *>(CompiledModel->arg_data(Index)) = Value;       \
   }                                                                            \
@@ -25,10 +24,10 @@ void TensorflowSerializer::setFeature(const std::string &Name,
   const int Index = CompiledModel->LookupArgIndex(prefix + Name);
   if (Index >= 0)
     *reinterpret_cast<int64_t *>(CompiledModel->arg_data(Index)) = Value;
-  llvm::errs() << "Index: " << Index << " ArgName: " << prefix + Name
-               << " Value: "
-               << *reinterpret_cast<int64_t *>(CompiledModel->arg_data(Index))
-               << "\n";
+  // llvm::errs() << "Index: " << Index << " ArgName: " << prefix + Name
+  //              << " Value: "
+  //              << *reinterpret_cast<int64_t *>(CompiledModel->arg_data(Index))
+  //              << "\n";
 }
 void TensorflowSerializer::setFeature(const std::string &Name,
                                       const std::vector<int64_t> &Value) {}
