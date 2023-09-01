@@ -41,6 +41,7 @@ import logging
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--train-iterations", type=int, default=1)
+parser.add_argument("--use-pipe", type=bool, default=False)
 
 checkpoint = None
 def experiment(config):
@@ -56,8 +57,8 @@ def experiment(config):
         print("Checkpoint restored") 
 
     # # export model using torch.onnx
-    SELECT_NODE_MODEL_PATH = "/home/cs20btech11024/onnx/select_node/model-1.onnx"
-    DISTRIBUTION_MODEL_PATH = "/home/cs20btech11024/onnx/distribution/model-1.onnx"
+    # SELECT_NODE_MODEL_PATH = "/home/cs20btech11024/onnx/select_node/model-1.onnx"
+    # DISTRIBUTION_MODEL_PATH = "/home/cs20btech11024/onnx/distribution/model-1.onnx"
 
 
     last_checkpoint = 0
@@ -77,9 +78,9 @@ def experiment(config):
 
     train_agent.stop()
 
-    torch.onnx.export(train_agent.get_policy("select_node_policy").model, ({"obs": torch.randn(1, 301000)}, {}), f=SELECT_NODE_MODEL_PATH, verbose=True, input_names=["obs"], output_names=["output"])
+    # torch.onnx.export(train_agent.get_policy("select_node_policy").model, ({"obs": torch.randn(1, 301000)}, {}), f=SELECT_NODE_MODEL_PATH, verbose=True, input_names=["obs"], output_names=["output"])
 
-    torch.onnx.export(train_agent.get_policy("distribution_policy").model, ({"obs": torch.randn(1, 603)}, {}), f=DISTRIBUTION_MODEL_PATH, verbose=True, input_names=["obs"], output_names=["output"])
+    # torch.onnx.export(train_agent.get_policy("distribution_policy").model, ({"obs": torch.randn(1, 603)}, {}), f=DISTRIBUTION_MODEL_PATH, verbose=True, input_names=["obs"], output_names=["output"])
 
 
 if __name__ == "__main__":
@@ -99,6 +100,7 @@ if __name__ == "__main__":
     config = DEFAULT_CONFIG.copy()
     # utils.get_parse_args()
     config["train-iterations"] = args.train_iterations
+    config["env_config"]["use_pipe"] = args.use_pipe
 
     # utils.get_parse_args()
 
@@ -106,7 +108,7 @@ if __name__ == "__main__":
     config["env_config"]["mode"] = "train"
     config["env_config"]["loop_cost"] = "LC"
     config["env_config"]["EPOCHS"] = 100
-    config["env_config"]["dataset"] = "/home/cs20btech11024/repos/ML-Loop-Distribution/data/tsvc_train/generated_final"
+    config["env_config"]["dataset"] = "/Pramana/ML_LLVM_Tools/ml-llvm-project/data/tsvc_train/generated_final"
 
     Curr_Dir = os.path.basename(normpath(config["env_config"]["dataset"]))
     # print("aaaaaaaaaaa{}".format(Curr_Dir))
