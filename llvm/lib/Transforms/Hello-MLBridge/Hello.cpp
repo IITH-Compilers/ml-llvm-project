@@ -5,24 +5,33 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Transforms/Hello-MLBridge/Hello.h"
 #include "MLModelRunner/MLModelRunner.h"
+#include "MLModelRunner/ONNXModelRunner/ONNXModelRunner.h"
 #include "MLModelRunner/PipeModelRunner.h"
 #include "MLModelRunner/gRPCModelRunner.h"
 #include "grpc/helloMLBridge/helloMLBridge.grpc.pb.h"
 #include "grpc/helloMLBridge/helloMLBridge.pb.h"
 #include "grpcpp/impl/codegen/status.h"
+#include "inference/HelloMLBridge_Env.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/PassSupport.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include <algorithm>
 #include <chrono>
 #include <google/protobuf/text_format.h>
 #include <iterator>
 #include <memory>
 #include <random>
+#include <string>
 
 using namespace llvm;
 using namespace grpc;
@@ -66,6 +75,7 @@ std::mt19937 gen(rd());
 std::uniform_real_distribution<float> dis(0.0, 1.0);
 
 struct HelloMLBridge : public ModulePass,
+                       public HelloMLBridgeEnv,
                        public helloMLBridgegRPC::HelloMLBridgeService::Service {
   static char ID; // Pass identification, replacement for typeid
 
@@ -128,9 +138,20 @@ struct HelloMLBridge : public ModulePass,
                             helloMLBridgegRPC::ActionRequest>>(
             server_address, this, &M.getContext());
       } else if (useONNX) {
-        // ONNX flow
-        errs() << "TO BE IMPLEMENTED\n";
-        exit(1);
+        Agent *agent = new Agent(
+            "/Pramana/ML_LLVM_Tools/hello-MLBridge/dummy-torch-model-" +
+            std::to_string(n) + ".onnx");
+        std::map<std::string, Agent *> agents;
+        agents["agent"] = agent;
+        auto StartTime = std::chrono::high_resolution_clock::now();
+        MLRunner = std::make_unique<ONNXModelRunner>(this, agents,
+                                                     &this->M->getContext());
+        populateFeatureVector();
+        int Out = MLRunner->evaluate<int>();
+        auto EndTime = std::chrono::high_resolution_clock::now();
+        auto Duration = std::chrono::duration_cast<std::chrono::microseconds>(
+            EndTime - StartTime);
+        outs() << n << " " << Duration.count() << "\n";
       } else {
         errs() << "Using 2nd gRPC flow...\n";
         auto StartTime = std::chrono::high_resolution_clock::now();
@@ -155,8 +176,7 @@ struct HelloMLBridge : public ModulePass,
 
         auto Duration = std::chrono::duration_cast<std::chrono::microseconds>(
             EndTime - StartTime);
-        outs() << "MLBridge returned: " << Out << "\n";
-        outs() << "Time taken: " << Duration.count() << " microseconds\n";
+        outs() << n << " " << Duration.count() << "\n";
       }
     }
     return false;
@@ -166,6 +186,7 @@ struct HelloMLBridge : public ModulePass,
   getTensor(grpc::ServerContext *context,
             const ::helloMLBridgegRPC::ActionRequest *request,
             ::helloMLBridgegRPC::TensorResponse *response) override {
+    outs() << "Received request\n";
     if (request->action() == -1) {
       return grpc::Status::OK;
     }
@@ -180,7 +201,6 @@ struct HelloMLBridge : public ModulePass,
 
 private:
   std::unique_ptr<MLModelRunner> MLRunner;
-  std::vector<float> FeatureVector;
   std::string basename;
   BaseSerDes::Kind SerDesType;
   Module *M;

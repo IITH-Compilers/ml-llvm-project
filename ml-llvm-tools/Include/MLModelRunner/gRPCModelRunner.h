@@ -63,21 +63,6 @@ public:
     return action;
   }
 
-  // void send(const std::string & str) override {
-  //   if (server_mode)
-  //     llvm_unreachable("evaluateUntyped not implemented for gRPCModelRunner;
-  //     "
-  //                      "Override gRPC method instead");
-
-  //   assert(request != nullptr && "Request cannot be null");
-  //   grpc::ClientContext grpcCtx;
-  //   auto status = stub_->getAdvice(&grpcCtx, *request, response);
-  //   if (!status.ok())
-  //     Ctx.emitError("gRPC failed: " + status.error_message());
-  // }
-
-  // std::string receive() override { return response->SerializeAsString(); }
-
 private:
   Stub *stub_;
   std::string server_address;
