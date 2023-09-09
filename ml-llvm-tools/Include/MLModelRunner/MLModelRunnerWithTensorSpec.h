@@ -12,7 +12,7 @@
 
 #include "MLModelRunner/MLModelRunner.h"
 #include "serializer/baseSerializer.h"
-#include "serializer/TensorSpec.h"
+#include "llvm/Transforms/TensorSpec.h"
 // #include "llvm/IR/PassManager.h"
 
 namespace llvm {

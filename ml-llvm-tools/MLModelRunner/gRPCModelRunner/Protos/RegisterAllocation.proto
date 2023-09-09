@@ -1,0 +1,51 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "io.grpc.examples.registerallocation";
+option java_outer_classname = "RegisterAllocationProto";
+option objc_class_prefix = "REG";
+
+package registerallocation;
+
+// General Register Allocation Service
+service RegisterAllocation {
+
+  // RPC function to get interference graphs
+  rpc getGraphs(Path) returns (GraphList) {}
+  // RPC function to send data for codegen
+  rpc codeGen(Data) returns (RegisterProfileList) {}
+}
+
+message Path {
+  string IRPath = 1;
+  string SeedEmbPath = 2;
+}
+
+message GraphList { bytes payload = 1; }
+
+message RegisterProfileList {
+  message RegisterProfile {
+    uint32 regID = 1;
+    float spillWeight = 2;
+    repeated uint32 interferences = 3;
+    repeated uint32 useDistances = 4;
+    repeated uint32 splitSlots = 5;
+    repeated float positionalSpillWeights = 6;
+  }
+  repeated RegisterProfile regProf = 1;
+  bool result = 2;
+  float cost = 3;
+}
+
+message Data {
+  message colorData {
+    string key = 1;
+    uint32 value = 2;
+  }
+  string message = 1;
+  uint32 regidx = 2;
+  int64 payload = 3;
+  repeated colorData color = 4;
+}
+
+message Empty {}

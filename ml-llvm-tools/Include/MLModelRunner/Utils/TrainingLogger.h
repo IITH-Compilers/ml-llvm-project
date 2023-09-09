@@ -55,7 +55,7 @@
 
 #include "llvm/Config/llvm-config.h"
 
-#include "serializer/TensorSpec.h"
+#include "llvm/Transforms/TensorSpec.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/JSON.h"

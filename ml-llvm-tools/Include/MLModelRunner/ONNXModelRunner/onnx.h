@@ -9,6 +9,8 @@
 #ifndef ONNX_MODELRUNNER_ONNX_H
 #define ONNX_MODELRUNNER_ONNX_H
 
+#include "llvm/ADT/SmallVector.h"
+
 #include <cstdint>
 #include <vector>
 
@@ -26,7 +28,7 @@ class ONNXModel {
 
 public:
   ONNXModel(const char *model_path);
-  float *run(std::vector<float> &input, std::vector<int64_t> &outputDims);
+  void run(llvm::SmallVector<float, 100> &input, llvm::SmallVector<float, 100> &output);
 };
 
 #endif // ONNX_MODELRUNNER_ONNX_H

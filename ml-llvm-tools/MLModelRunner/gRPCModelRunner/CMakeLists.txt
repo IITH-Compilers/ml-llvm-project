@@ -1,21 +1,6 @@
-# project(llvm-gRPC)
-# cmake_minimum_required(VERSION 3.13)
-
-include(AddLLVM)
-
-# set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_BUILD_TYPE RelWithDebInfo)
-
 set(protobuf_MODULE_COMPATIBLE TRUE)
-
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
-# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -fno-rtti")
- 
 find_package(Protobuf CONFIG REQUIRED)
-message(STATUS "Using protobuf ${Protobuf_VERSION}")
-message(STATUS "Using protobuf ${Protobuf_INCLUDE_DIRS}")
-
 set(_PROTOBUF_LIBPROTOBUF protobuf::libprotobuf)
 set(_REFLECTION gRPC::grpc++_reflection)
 if(CMAKE_CROSSCOMPILING)
@@ -41,14 +26,8 @@ endif()
 
 
 file(GLOB proto_list ${CMAKE_CURRENT_SOURCE_DIR}/Protos/*.proto)
-
 set(proto_dir ${CMAKE_CURRENT_SOURCE_DIR}/Protos)
-
 file(MAKE_DIRECTORY ${LLVM_INCLUDE_DIR}/grpc)
-
-#set(LLVM_GRPC_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/Include" CACHE PATH "llvm-gRPC include directories")
-
-# message(STATUS "include dirs:" ${LLVM_INCLUDE_DIR})
 
 
 foreach(proto ${proto_list})
@@ -91,10 +70,6 @@ foreach(proto ${proto_list})
   )
 endforeach()
 
-
-#file(GLOB service_src ${CMAKE_CURRENT_SOURCE_DIR}/Service/RegisterAllocation/*.cc)
-#file(GLOB inference_src ${CMAKE_CURRENT_SOURCE_DIR}/Service/RegisterAllocationInference/*.cc)
-
 # Building the library
 add_llvm_component_library(LLVMgRPCModelRunner
 	  ${cc_files}
@@ -109,16 +84,5 @@ target_link_libraries(LLVMgRPCModelRunner
 	          ${_PROTOBUF_LIBPROTOBUF}
 )
 
-# file(GLOB publicHeaders ${CMAKE_CURRENT_SOURCE_DIR}/Include/*.h)
-
-# add_custom_command(
-#    TARGET LLVMgRPCModelRunner POST_BUILD
-#    COMMAND ${CMAKE_COMMAND} -E copy
-#            ${publicHeaders}
-#            ${LLVM_INCLUDE_DIR}/grpc)
-
-
-# target_include_directories(LLVMgRPCModelRunner PRIVATE ${LLVM_INCLUDE_DIR})
 target_include_directories(LLVMgRPCModelRunner PRIVATE ${LLVM_INCLUDE_DIR}/Service)
-
 target_include_directories(LLVMgRPCModelRunner PUBLIC ${Protobuf_INCLUDE_DIRS})

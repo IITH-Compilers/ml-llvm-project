@@ -10,44 +10,33 @@
 #define GRPC_MODELRUNNER_H
 
 #include "MLModelRunner/MLModelRunner.h"
+#include "llvm/IR/LLVMContext.h"
 #include <future>
 #include <grpcpp/grpcpp.h>
 #include <memory>
 
-//grpc model runner requires service, stub, request and response
+// grpc model runner requires service, stub, request and response
 namespace llvm {
 template <class Client, class Stub, class Request, class Response>
 class gRPCModelRunner : public MLModelRunner {
 public:
-  gRPCModelRunner(LLVMContext &Ctx, std::string server_address,
-                  grpc::Service *s) // For server mode
-      : MLModelRunner(Ctx, MLModelRunner::Kind::gRPC,
-                      BaseSerializer::Kind::Protobuf),
+  gRPCModelRunner(std::string server_address, grpc::Service *s,
+                  LLVMContext *Ctx = nullptr) // For server mode
+      : MLModelRunner(MLModelRunner::Kind::gRPC, BaseSerDes::Kind::Protobuf,
+                      Ctx),
         server_address(server_address), request(nullptr), response(nullptr),
         server_mode(true) {
     RunService(s);
   }
 
-  gRPCModelRunner(LLVMContext &Ctx, std::string server_address,
-                  Request *request, Response *response) // For client mode
-      : MLModelRunner(Ctx, MLModelRunner::Kind::gRPC, BaseSerializer::Kind::Protobuf),
+  gRPCModelRunner(std::string server_address, Request *request,
+                  Response *response,
+                  LLVMContext *Ctx = nullptr) // For client mode
+      : MLModelRunner(MLModelRunner::Kind::gRPC, BaseSerDes::Kind::Protobuf,
+                      Ctx),
         server_address(server_address), request(request), response(response),
         server_mode(false) {
     SetStub();
-  }
-
-  gRPCModelRunner(LLVMContext &Ctx, std::string server_address,
-                  Request *request, Response *response,
-                  bool server_mode = false, grpc::Service *s = nullptr)
-      : MLModelRunner(Ctx, MLModelRunner::Kind::gRPC, BaseSerializer::Kind::Protobuf),
-        server_address(server_address), request(request), response(response),
-        server_mode(server_mode) {
-    if (server_mode) {
-      assert(s != nullptr && "Service cannot be null in server mode");
-      RunService(s);
-    } else {
-      SetStub();
-    }
   }
 
   // void *getStub() { return stub_; }
@@ -55,24 +44,30 @@ public:
     errs() << "Exit from grpc\n";
     exit_requested->set_value();
   }
-  
+
   std::promise<void> *exit_requested;
 
   void *evaluateUntyped() override {
     if (server_mode)
       llvm_unreachable("evaluateUntyped not implemented for gRPCModelRunner; "
                        "Override gRPC method instead");
-    assert(request != nullptr && "Request cannot be null");
-    grpc::ClientContext grpcCtx;
-    auto status = stub_->getAdvice(&grpcCtx, *request, response);
-    if (!status.ok())
-      Ctx.emitError("gRPC failed: " + status.error_message());
-    return response;
+    // assert(request != nullptr && "Request cannot be null");
+    // grpc::ClientContext grpcCtx;
+    // request = getRequest();
+    // auto status = stub_->getAdvice(&grpcCtx, *request, response);
+    // request->Clear();
+    // if (!status.ok())
+    //   Ctx->emitError("gRPC failed: " + status.error_message());
+    // auto *action = new int(); // Hard wired for PosetRL case, should be fixed
+    // *action = response->action();
+    // return action;
+    return nullptr;
   }
 
   // void send(const std::string & str) override {
   //   if (server_mode)
-  //     llvm_unreachable("evaluateUntyped not implemented for gRPCModelRunner; "
+  //     llvm_unreachable("evaluateUntyped not implemented for gRPCModelRunner;
+  //     "
   //                      "Override gRPC method instead");
 
   //   assert(request != nullptr && "Request cannot be null");
@@ -114,6 +109,10 @@ private:
     stub_ = Stub_temp.release();
     return 0;
   }
+
+  Request *getRequest() { return (Request *)SerDes->getRequest(); }
+
+  Response *getResponse() { return (Response *)SerDes->getResponse(); }
 };
 } // namespace llvm
 

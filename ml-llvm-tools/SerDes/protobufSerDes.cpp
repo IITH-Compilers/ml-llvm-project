@@ -1,74 +1,62 @@
-#include "serializer/protobufSerializer.h"
+#include "SerDes/protobufSerDes.h"
 #include "google/protobuf/descriptor.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
 #include <type_traits>
 
-inline void ProtobufSerializer::setFeature(const std::string &name,
+inline void ProtobufSerDes::setFeature(const std::string &name,
                                            const int &value) {
   Request->GetReflection()->SetInt32(
       Request, Request->GetDescriptor()->FindFieldByName(name), value);
 }
 
-inline void ProtobufSerializer::setFeature(const std::string &name,
-                                           const int64_t &value) {
-  Request->GetReflection()->SetInt64(
-      Request, Request->GetDescriptor()->FindFieldByName(name), value);
-}
-
-inline void ProtobufSerializer::setFeature(const std::string &name,
+inline void ProtobufSerDes::setFeature(const std::string &name,
                                            const float &value) {
   Request->GetReflection()->SetFloat(
       Request, Request->GetDescriptor()->FindFieldByName(name), value);
 }
 
-inline void ProtobufSerializer::setFeature(const std::string &name,
+inline void ProtobufSerDes::setFeature(const std::string &name,
                                            const double &value) {
   Request->GetReflection()->SetDouble(
       Request, Request->GetDescriptor()->FindFieldByName(name), value);
 }
 
-inline void ProtobufSerializer::setFeature(const std::string &name,
+inline void ProtobufSerDes::setFeature(const std::string &name,
                                            const std::string &value) {
   Request->GetReflection()->SetString(
       Request, Request->GetDescriptor()->FindFieldByName(name), value);
 }
 
-inline void ProtobufSerializer::setFeature(const std::string &name,
+inline void ProtobufSerDes::setFeature(const std::string &name,
                                            const bool &value) {
   Request->GetReflection()->SetBool(
       Request, Request->GetDescriptor()->FindFieldByName(name), value);
 }
-inline void ProtobufSerializer::setFeature(const std::string &name,
+
+inline void ProtobufSerDes::setFeature(const std::string &name,
                                            const std::vector<int> &value) {
   auto ref = Request->GetReflection()->MutableRepeatedField<int>(
       Request, Request->GetDescriptor()->FindFieldByName(name));
   ref->Add(value.begin(), value.end());
 }
 
-inline void ProtobufSerializer::setFeature(const std::string &name,
-                                           const std::vector<int64_t> &value) {
-  auto ref = Request->GetReflection()->MutableRepeatedField<int64_t>(
-      Request, Request->GetDescriptor()->FindFieldByName(name));
-  ref->Add(value.begin(), value.end());
-}
-
-inline void ProtobufSerializer::setFeature(const std::string &name,
+inline void ProtobufSerDes::setFeature(const std::string &name,
                                            const std::vector<float> &value) {
   auto ref = Request->GetReflection()->MutableRepeatedField<float>(
       Request, Request->GetDescriptor()->FindFieldByName(name));
   ref->Add(value.begin(), value.end());
 }
 
-inline void ProtobufSerializer::setFeature(const std::string &name,
+inline void ProtobufSerDes::setFeature(const std::string &name,
                                            const std::vector<double> &value) {
   auto ref = Request->GetReflection()->MutableRepeatedField<double>(
       Request, Request->GetDescriptor()->FindFieldByName(name));
   ref->Add(value.begin(), value.end());
 }
 
-void ProtobufSerializer::setFeature(const std::string &name,
+void ProtobufSerDes::setFeature(const std::string &name,
                                     const std::vector<std::string> &value) {
   auto reflection = Request->GetReflection();
   auto descriptor = Request->GetDescriptor();
@@ -78,29 +66,29 @@ void ProtobufSerializer::setFeature(const std::string &name,
   }
 }
 
-inline void ProtobufSerializer::setFeature(const std::string &name,
+inline void ProtobufSerDes::setFeature(const std::string &name,
                                            const std::vector<bool> &value) {
   auto ref = Request->GetReflection()->MutableRepeatedField<bool>(
       Request, Request->GetDescriptor()->FindFieldByName(name));
   ref->Add(value.begin(), value.end());
 }
 
-void *ProtobufSerializer::getSerializedData() {
+void *ProtobufSerDes::getSerializedData() {
   std::string *data = new std::string();
   Request->SerializeToString(data);
   cleanDataStructures();
   return data;
 }
 
-inline void ProtobufSerializer::setRequest(void *Request) {
+inline void ProtobufSerDes::setRequest(void *Request) {
   this->Request = reinterpret_cast<Message *>(Request);
 }
 
-inline void ProtobufSerializer::setResponse(void *Response) {
+inline void ProtobufSerDes::setResponse(void *Response) {
   this->Response = reinterpret_cast<Message *>(Response);
 }
 
-void *ProtobufSerializer::deserializeUntyped(void *data) {
+void *ProtobufSerDes::deserializeUntyped(void *data) {
   auto *dataString = reinterpret_cast<std::string *>(data);
   Response->ParseFromString(*dataString);
   llvm::errs() << Response->DebugString();
@@ -175,7 +163,7 @@ void *ProtobufSerializer::deserializeUntyped(void *data) {
   llvm_unreachable("Unknown type in protobuf serializer");
 }
 
-void ProtobufSerializer::cleanDataStructures() {
+void ProtobufSerDes::cleanDataStructures() {
   Request->Clear();
   Response->Clear();
 }

@@ -45,16 +45,8 @@ endfunction()
 # ${CMAKE_CURRENT_BINARY_DIR}. The generated header will define a C++ class
 # called ${cpp_class} - which may be a namespace-qualified class name.
 function(tf_compile model tag_set signature_def_key fname cpp_class hdr_file obj_file)
-  message("**********************************************************************")
   tf_get_absolute_path(${model} ${CMAKE_CURRENT_BINARY_DIR} LLVM_ML_MODELS_ABSOLUTE)
   message("Using model at " ${LLVM_ML_MODELS_ABSOLUTE})
-  message("TENSORFLOW_AOT_COMPILER is " ${TENSORFLOW_AOT_COMPILER})
-  message("LLVM_ML_MODELS_ABSOLUTE is " ${LLVM_ML_MODELS_ABSOLUTE})
-  message("tag_set is " ${tag_set})
-  message("signature_def_key is " ${signature_def_key})
-  message("prefix is " ${prefix})
-  message("cpp_class is " ${cpp_class})
-  message("LLVM_HOST_TRIPLE is " ${LLVM_HOST_TRIPLE})
   add_custom_command(OUTPUT ${obj_file} ${hdr_file}
     COMMAND ${TENSORFLOW_AOT_COMPILER} aot_compile_cpu
           --multithreading false
@@ -65,6 +57,7 @@ function(tf_compile model tag_set signature_def_key fname cpp_class hdr_file obj
           --cpp_class ${cpp_class}
           --target_triple ${LLVM_HOST_TRIPLE}
   )
+
   # Aggregate the objects so that results of different tf_compile calls may be
   # grouped into one target.
   set(GENERATED_OBJS ${GENERATED_OBJS} ${obj_file} PARENT_SCOPE)

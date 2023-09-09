@@ -7,13 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "MLModelRunner/ONNXModelRunner/ONNXModelRunner.h"
-#include "serializer/baseSerializer.h"
+#include "SerDes/baseSerDes.h"
 using namespace llvm;
 
-ONNXModelRunner::ONNXModelRunner(LLVMContext &Ctx, Environment *env,
-                                 std::map<std::string, Agent *> agents)
-    : MLModelRunner(Ctx, Kind::ONNX),
-      env(env), agents(agents) {}
+ONNXModelRunner::ONNXModelRunner(Environment *env,
+                                 std::map<std::string, Agent *> agents,
+                                 LLVMContext *Ctx)
+    : MLModelRunner(Kind::ONNX, Ctx), env(env), agents(agents) {}
 
 void ONNXModelRunner::addAgent(Agent *agent, std::string name) {
   if (agents.find(name) == agents.end()) {
@@ -42,5 +42,5 @@ void ONNXModelRunner::computeAction(Observation obs) {
 void *ONNXModelRunner::evaluateUntyped() {
   Observation obs = env->reset();
   computeAction(obs);
-  return nullptr;
+  return new int(0);
 }
