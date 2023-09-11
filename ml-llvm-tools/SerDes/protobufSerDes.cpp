@@ -12,6 +12,12 @@ inline void ProtobufSerDes::setFeature(const std::string &name,
 }
 
 inline void ProtobufSerDes::setFeature(const std::string &name,
+                                           const long &value) {
+  Request->GetReflection()->SetInt64(
+      Request, Request->GetDescriptor()->FindFieldByName(name), value);
+}
+
+inline void ProtobufSerDes::setFeature(const std::string &name,
                                            const float &value) {
   Request->GetReflection()->SetFloat(
       Request, Request->GetDescriptor()->FindFieldByName(name), value);
@@ -38,6 +44,13 @@ inline void ProtobufSerDes::setFeature(const std::string &name,
 inline void ProtobufSerDes::setFeature(const std::string &name,
                                            const std::vector<int> &value) {
   auto ref = Request->GetReflection()->MutableRepeatedField<int>(
+      Request, Request->GetDescriptor()->FindFieldByName(name));
+  ref->Add(value.begin(), value.end());
+}
+
+inline void ProtobufSerDes::setFeature(const std::string &name,
+                                           const std::vector<long> &value) {
+  auto ref = Request->GetReflection()->MutableRepeatedField<long>(
       Request, Request->GetDescriptor()->FindFieldByName(name));
   ref->Add(value.begin(), value.end());
 }
