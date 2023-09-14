@@ -2471,8 +2471,7 @@ void MLRA::training_flow() {
 
 void MLRA::initPipeCommunication() {
   std::string basename =
-      "/home/cs20mtech12003/ml-llvm-project/model/RegAlloc/"
-      "ggnn_drl/rllib_split_model/src/" + mlra_pipe_name;
+      "/tmp/" + mlra_pipe_name;
 
   // errs() << "Initializing pipe communication...\n";
   BaseSerDes::Kind SerDesType;
@@ -2550,20 +2549,14 @@ void MLRA::initPipeCommunication() {
       this->IsNew = false;
       // errs() << "Call model again\n";
     }
-
-    // auto reply = MLRunner->evaluate2();
-    // using T = std::vector<int>;
-    // auto reply = std::move(*static_cast<T *>(MLRunner->evaluateH<T>()));
-    // auto reply = MLRunner->evaluate2<std::vector<int>>();
-
     size_t size;
     int *out;
     MLRunner->evaluate<int *>(out, size);
     std::vector<int> reply(out, out + size);
-    // errs() << "Reply:: ";
-    // for (auto x : reply)
-    //   errs() << x << " ";
-    // errs() << "\n";
+    errs() << "Reply:: ";
+    for (auto x : reply)
+      errs() << x << " ";
+    errs() << "\n";
 
     json::Object res = getJsonObj(reply);
     // json::Object res = json::Object();
