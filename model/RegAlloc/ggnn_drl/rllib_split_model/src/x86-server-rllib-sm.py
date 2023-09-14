@@ -83,7 +83,7 @@ class service_server(
                 "********************FUNC NAME FROM GETINFO***************************"
             )
             print("request.funcName: ", request.funcName)
-            # print_inter_graphs(inter_graphs)
+            print_inter_graphs(inter_graphs)
             assert len(inter_graphs.regProf) > 0, "Graphs has no nodes"
 
             if inter_graphs.new:
@@ -288,7 +288,6 @@ def run_pipe_communication(data_format, pipe_name):
         return inter_graphs
 
     def encode_action(data):
-        print("Encoding data...")
         msg = []
         if data["action"] == "Split":
             msg.append(0)
@@ -303,20 +302,6 @@ def run_pipe_communication(data_format, pipe_name):
         elif data["action"] == "Exit":
             msg.append(-1)
         return msg
-        # if data_format == "bytes":
-        #     msg = b"".join([x.to_bytes(4, "little", signed=True) for x in msg])
-        #     hdr = int(len(msg)).to_bytes(8, "little")
-        # elif data_format == "json":
-        #     msg = json.dumps({"out": msg}).encode("utf-8")
-        #     hdr = int(len(msg)).to_bytes(8, "little")
-        # elif data_format == "protobuf":
-        #     pass
-        # out = hdr + msg
-        # # print("out: ", out)
-        # tc.write(out)
-        # tc.flush()
-
-
 
     # #########################################
 
