@@ -113,8 +113,7 @@ struct HelloMLBridge : public ModulePass,
   bool runOnModule(Module &M) override {
     this->M = &M;
     if (usePipe) {
-      basename = "/home/cs20btech11024/repos/ml-llvm-project/llvm/"
-                 "lib/Transforms/models/" +
+      basename = "/tmp/" +
                  pipe_name;
       if (data_format == "json")
         SerDesType = BaseSerDes::Kind::Json;

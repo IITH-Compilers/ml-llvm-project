@@ -35,7 +35,7 @@ args = parser.parse_args()
 
 
 def run_pipe_communication(data_format, pipe_name):
-    serdes = SerDes.SerDes(data_format, pipe_name)
+    serdes = SerDes.SerDes(data_format, "/tmp/" + pipe_name)
     print('Serdes init...')
     serdes.init()
     while True:

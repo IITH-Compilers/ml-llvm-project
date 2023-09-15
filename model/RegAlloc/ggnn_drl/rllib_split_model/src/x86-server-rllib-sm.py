@@ -153,19 +153,29 @@ class service_server(
             return reply
 
 
-def print_inter_graphs(inter_graphs):
+def print_inter_graphs(inter_graphs, f):
     for regProf in inter_graphs.regProf:
-        print(
-            regProf.regID,
-            regProf.cls,
-            regProf.color,
-            regProf.spillWeight,
-            regProf.useDistances,
-            end=" ",
+        f.write(
+            "{} {} {} {} {}\n".format(
+                regProf.regID,
+                regProf.cls,
+                regProf.color,
+                regProf.spillWeight,
+                regProf.useDistances,
+            )
         )
-        print()
+        # print(
+        #     regProf.regID,
+        #     regProf.cls,
+        #     regProf.color,
+        #     regProf.spillWeight,
+        #     regProf.useDistances,
+        #     end=" ",
+        # )
+        # print()
 
 def run_pipe_communication(data_format, pipe_name):
+    log_file = open(f'{data_format}_python.log', 'w')
     model_path = "/Pramana/ML_LLVM_Tools/RL4ReAl-checkpoint/checkpoint_000002/"
     args = {
         "no_render": True,
@@ -284,6 +294,9 @@ def run_pipe_communication(data_format, pipe_name):
         elif data_format == "protobuf":
             pass
         
+        list.sort(inter_graphs["regProf"], key=lambda x: x["regID"])
+        # sorted(inter_graphs["regProf"], key=lambda x: x["regID"])
+        
         inter_graphs = NestedDict(inter_graphs)
         return inter_graphs
 
@@ -315,9 +328,10 @@ def run_pipe_communication(data_format, pipe_name):
     while True:
         try:
             # print("Entered while loop...")
+            # input('Press enter to continue...')
             data = serdes.readObservation()
             inter_graphs = parseObservation(data)
-            print_inter_graphs(inter_graphs)
+            print_inter_graphs(inter_graphs, log_file)
 
             if inter_graphs.new:
                 assert len(inter_graphs.regProf) > 0, "Graphs has no nodes"

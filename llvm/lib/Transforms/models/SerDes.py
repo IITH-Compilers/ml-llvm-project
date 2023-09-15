@@ -12,6 +12,7 @@ class SerDes:
         self.tc = None
         self.fc = None
         self.read_stream_iter = None
+        self.log_file = open(f'{data_format}_pythonout.log', 'w')
 
         self.readObsMap = {
             "json": self.readObservationJson,
@@ -73,6 +74,7 @@ class SerDes:
         raise NotImplementedError
 
     def sendData(self, data):
+        self.log_file.write(f'{data}\n')
         self.sendDataMap[self.data_format](data)
 
     def sendDataJson(self, data):

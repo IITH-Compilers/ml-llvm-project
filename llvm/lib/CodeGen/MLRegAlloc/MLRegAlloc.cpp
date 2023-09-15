@@ -333,13 +333,13 @@ void MLRA::processMLInputs(SmallSetVector<unsigned, 8> *updatedRegIdxs,
         continue;
       }
     }
-    errs() << reg << " " << rp.cls << " " << rp.color << " " << rp.spillWeight
-           << " ";
-    errs() << "[";
-    for (auto &val : rp.useDistances) {
-      errs() << val << " ";
-    }
-    errs() << "]\n";
+    // errs() << reg << " " << rp.cls << " " << rp.color << " " << rp.spillWeight
+    //        << " ";
+    // errs() << "[";
+    // for (auto &val : rp.useDistances) {
+    //   errs() << val << " ";
+    // }
+    // errs() << "]\n";
     std::pair<std::string, int> regID("regID_" + std::to_string(reg), reg);
     std::pair<std::string, std::string> cls("cls_" + std::to_string(reg),
                                             rp.cls);
