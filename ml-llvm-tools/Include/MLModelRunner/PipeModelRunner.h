@@ -17,7 +17,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/TensorSpec.h"
+#include "llvm/Analysis/TensorSpec.h"
 #include <fstream>
 #include <memory>
 #include <system_error>

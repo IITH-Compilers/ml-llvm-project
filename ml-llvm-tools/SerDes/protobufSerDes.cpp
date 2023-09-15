@@ -3,6 +3,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
+#include <string>
 #include <type_traits>
 
 inline void ProtobufSerDes::setFeature(const std::string &name,
@@ -166,4 +167,14 @@ void *ProtobufSerDes::deserializeUntyped(void *data) {
 void ProtobufSerDes::cleanDataStructures() {
   Request->Clear();
   Response->Clear();
+}
+
+void ProtobufSerDes::setFeature(const std::string &name,
+                                    const int64_t &value) {
+  llvm_unreachable("Currently int64_t not supported");
+}
+
+void ProtobufSerDes::setFeature(const std::string &name,
+                                    const std::vector<int64_t> &value) {
+  llvm_unreachable("Currently std::vector<int64_t> not supported");
 }

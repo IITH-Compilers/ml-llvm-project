@@ -285,9 +285,7 @@ add_llvm_component_library(LLVMCodeGen
   Target
   TargetParser
   TransformUtils
-  MLModelRunner
-  Serializer
-  )
+)
 
 add_subdirectory(SelectionDAG)
 add_subdirectory(AsmPrinter)

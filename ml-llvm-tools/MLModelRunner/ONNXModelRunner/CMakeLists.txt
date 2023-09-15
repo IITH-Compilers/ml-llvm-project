@@ -46,4 +46,6 @@ agent.cpp
 ONNXModelRunner.cpp
 )
 
+
+include_directories(${TENSORFLOW_AOT_PATH}/include)
 target_link_libraries(LLVMONNXModelRunner PUBLIC onnxruntime)

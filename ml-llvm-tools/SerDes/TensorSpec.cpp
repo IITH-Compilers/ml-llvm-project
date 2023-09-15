@@ -20,7 +20,7 @@
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/TensorSpec.h"
+#include "llvm/Analysis/TensorSpec.h"
 #include <array>
 #include <cassert>
 #include <numeric>

@@ -64,7 +64,6 @@ llvm::getReleaseModeAdvisor(Module &M, ModuleAnalysisManager &MAM,
       InteractiveChannelBaseName.empty())
     return nullptr;
   std::unique_ptr<MLModelRunner> AOTRunner;
-  errs() << "created AOTRunner...\n";
   if (InteractiveChannelBaseName.empty()) {
     AOTRunner = std::make_unique<TFModelRunner<CompiledModelType>>(
         M.getContext(), DecisionName); // a TFModelRunner
@@ -73,10 +72,9 @@ llvm::getReleaseModeAdvisor(Module &M, ModuleAnalysisManager &MAM,
     if (InteractiveIncludeDefault)
       Features.push_back(DefaultDecisionSpec);
     AOTRunner = std::make_unique<PipeModelRunner>(
-        M.getContext(), InteractiveChannelBaseName + ".out",
-        InteractiveChannelBaseName + ".in"); // a PipeModelRunner
+        InteractiveChannelBaseName + ".out",
+        InteractiveChannelBaseName + ".in",BaseSerDes::Kind::Protobuf); // a PipeModelRunner
   }
-  errs() << "created TFModelRunner...\n";
   return std::make_unique<MLInlineAdvisor>(M, MAM, std::move(AOTRunner),
                                            GetDefaultAdvice);
 }

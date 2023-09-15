@@ -93,6 +93,16 @@ void BitstreamSerDes::setFeature(const std::string &name,
   llvm_unreachable("Currently std::vector<bool> not supported");
 }
 
+void BitstreamSerDes::setFeature(const std::string &name,
+                                     const int64_t &value) {
+  llvm_unreachable("Currently int64_t not supported");
+}
+
+void BitstreamSerDes::setFeature(const std::string &name,
+                                     const std::vector<int64_t> &value) {
+  llvm_unreachable("Currently std::vector<int64_t> not supported");
+}
+
 void *BitstreamSerDes::getSerializedData() {
   LLVM_DEBUG(errs() << "In BitstreamSerDes getSerializedData...\n");
   std::unique_ptr<raw_ostream> OS =

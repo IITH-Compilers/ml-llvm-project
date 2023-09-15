@@ -15,7 +15,7 @@
 #define TFMODELRUNNER_H
 
 #include "MLModelRunner/MLModelRunner.h"
-#include "MLModelRunner/Utils/TensorSpec.h"
+#include "SerDes/TensorSpec.h"
 #include "llvm/Support/ErrorHandling.h"
 
 #include <memory>
@@ -25,27 +25,20 @@ namespace llvm {
 
 /// TFModelRunner - TF Compiled model implementation of the
 /// MLModelRunner. It uses an AOT-compiled SavedModel for efficient execution.
-template <class TGen>
-class TFModelRunner final : public MLModelRunner {
+template <class TGen> class TFModelRunner final : public MLModelRunner {
 public:
   /// FeatureNames' type should be an indexed collection of std::string, like
   /// std::array or std::vector, that has a size() method.
-  template <class FType>
-  TFModelRunner(LLVMContext &Ctx, const FType &InputSpec,
-                StringRef DecisionName, StringRef FeedPrefix = "feed_",
+  TFModelRunner(LLVMContext &Ctx, StringRef DecisionName,
+                StringRef FeedPrefix = "feed_",
                 StringRef FetchPrefix = "fetch_")
-      : MLModelRunner(Ctx, MLModelRunner::Kind::TFAOT, InputSpec.size()),
+      : MLModelRunner(MLModelRunner::Kind::TFAOT,
+                      BaseSerDes::Kind::Tensorflow, &Ctx),
         CompiledModel(std::make_unique<TGen>()) {
-    assert(CompiledModel && "The CompiledModel should be valid");
 
-    for (size_t I = 0; I < InputSpec.size(); ++I) {
-      const int Index =
-          CompiledModel->LookupArgIndex(FeedPrefix.str() + InputSpec[I].name());
-      void *Buffer = nullptr;
-      if (Index >= 0)
-        Buffer = CompiledModel->arg_data(Index);
-      setUpBufferForTensor(I, InputSpec[I], Buffer);
-    }
+    SerDes->setRequest(CompiledModel.get());
+
+    assert(CompiledModel && "The CompiledModel should be valid");
 
     ResultIndex = CompiledModel->LookupResultIndex(FetchPrefix.str() +
                                                    DecisionName.str());
@@ -54,6 +47,10 @@ public:
 
   virtual ~TFModelRunner() = default;
 
+  virtual void requestExit() override {
+    llvm_unreachable("requestExit() is not supported in TFModelRunner");
+  }
+
   static bool classof(const MLModelRunner *R) {
     return R->getKind() == MLModelRunner::Kind::Release;
   }
@@ -61,6 +58,8 @@ public:
 private:
   void *evaluateUntyped() override {
     CompiledModel->Run();
+    errs() << "Model o/p: "
+           << *reinterpret_cast<bool*>(CompiledModel->result_data(ResultIndex));
     return CompiledModel->result_data(ResultIndex);
   }
 

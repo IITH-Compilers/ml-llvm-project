@@ -151,11 +151,7 @@ add_llvm_component_library(LLVMAnalysis
 
   DEPENDS
   intrinsics_gen
-  LLVMMLModelRunner
-  # ${MLDeps}
-
-  # LINK_LIBS
-  # ${MLLinkDeps}
+  LLVMMLBridge 
 
   LINK_COMPONENTS
   BinaryFormat
@@ -164,8 +160,7 @@ add_llvm_component_library(LLVMAnalysis
   ProfileData
   Support
   TargetParser
-  MLModelRunner
-  Serializer
+  MLBridge
   )
-  target_link_libraries(LLVMAnalysis PUBLIC LLVMMLModelRunner)
+ 
 
