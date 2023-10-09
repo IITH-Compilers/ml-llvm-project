@@ -10,10 +10,10 @@ find_package(Protobuf CONFIG REQUIRED)
 
 add_llvm_library(LLVMHelloMLBridge MODULE BUILDTREE_ONLY
   Hello.cpp
-  /home/cs20btech11024/repos/ml-llvm-project/build_release/include/grpc/helloMLBridge/helloMLBridge.grpc.pb.h
-  /home/cs20btech11024/repos/ml-llvm-project/build_release/include/grpc/helloMLBridge/helloMLBridge.pb.h
-  /home/cs20btech11024/repos/ml-llvm-project/build_release/include/grpc/helloMLBridge/helloMLBridge.grpc.pb.cc
-  /home/cs20btech11024/repos/ml-llvm-project/build_release/include/grpc/helloMLBridge/helloMLBridge.pb.cc
+  ${CMAKE_CURRENT_BINARY_DIR}/../../../include/grpc/helloMLBridge/helloMLBridge.grpc.pb.h
+  ${CMAKE_CURRENT_BINARY_DIR}/../../../include/grpc/helloMLBridge/helloMLBridge.pb.h
+  ${CMAKE_CURRENT_BINARY_DIR}/../../../include/grpc/helloMLBridge/helloMLBridge.grpc.pb.cc
+  ${CMAKE_CURRENT_BINARY_DIR}/../../../include/grpc/helloMLBridge/helloMLBridge.pb.cc
 
   # LINK_COMPONENTS
 
@@ -25,4 +25,4 @@ add_llvm_library(LLVMHelloMLBridge MODULE BUILDTREE_ONLY
   opt
   )
 
-target_include_directories(LLVMHelloMLBridge PUBLIC ${LLVM_MAIN_INCLUDE_DIRS} ${Protobuf_INCLUDE_DIRS})
+target_include_directories(LLVMHelloMLBridge PUBLIC ${LLVM_MAIN_INCLUDE_DIRS} ${Protobuf_INCLUDE_DIRS} )
