@@ -58,8 +58,6 @@ public:
 private:
   void *evaluateUntyped() override {
     CompiledModel->Run();
-    errs() << "Model o/p: "
-           << *reinterpret_cast<bool*>(CompiledModel->result_data(ResultIndex));
     return CompiledModel->result_data(ResultIndex);
   }
 

@@ -1,0 +1,4 @@
+
+INC = -I/home/cs20btech11018/anaconda3/envs/mlgo-new/lib/python3.10/site-packages/tensorflow/include
+LIB = -L/home/cs20btech11018/repos/ml-llvm-project/llvm/lib/Transforms/Hello-MLBridge/tf_model
+CXXFLAGS = -D_GLIBCXX_USE_CXX11_ABI=1
