@@ -224,10 +224,12 @@ public:
   /// generated.  The idea is to reduce the size of the IR in memory.
   void populateFunctionPassManager(legacy::FunctionPassManager &FPM);
   void customPopulateFunctionPassManager(legacy::FunctionPassManager &FPM, unsigned customSizeLevel, unsigned subSeqNum);
+  void customO3PopulateFunctionPassManager(legacy::FunctionPassManager &FPM, unsigned customSizeLevel, unsigned subSeqNum);
 
   /// populateModulePassManager - This sets up the primary pass manager.
   void populateModulePassManager(legacy::PassManagerBase &MPM);
   void customPopulateModulePassManager(legacy::PassManagerBase &MPM, unsigned customSizeLevel, unsigned subSeqNum);
+  void customO3PopulateModulePassManager(legacy::PassManagerBase &MPM, unsigned customSizeLevel, unsigned subSeqNum);
   void populateLTOPassManager(legacy::PassManagerBase &PM);
   void populateThinLTOPassManager(legacy::PassManagerBase &PM);
 };

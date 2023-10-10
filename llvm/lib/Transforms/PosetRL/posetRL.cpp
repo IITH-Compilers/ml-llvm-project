@@ -161,8 +161,8 @@ struct PosetRL : public ModulePass,
 
     legacy::FunctionPassManager FPM(M);
     legacy::PassManager MPM;
-    Builder.customPopulateFunctionPassManager(FPM, 34, Action);
-    Builder.customPopulateModulePassManager(MPM, 34, Action);
+    Builder.customO3PopulateFunctionPassManager(FPM, 34, Action);
+    Builder.customO3PopulateModulePassManager(MPM, 34, Action);
     // run the passes
     MPM.run(*M);
     for (auto &F : *M) {

@@ -544,6 +544,7 @@ void PassManagerBuilder::customPopulateModulePassManager(
     MPM.add(createForceFunctionAttrsLegacyPass());
   }
 
+  //How and why?
   if ((customSizeLevel == 34 || customSizeLevel == 40) && (subSeqNum == 29 || subSeqNum == 30 || subSeqNum == 31)) {
     // Allow forcing function attributes as a debugging and tuning aid.
     MPM.add(createForceFunctionAttrsLegacyPass());
@@ -762,6 +763,7 @@ void PassManagerBuilder::customPopulateModulePassManager(
     MPM.add(createGlobalOptimizerPass());
   }
 
+  //  GlobalsAAWrapperPass
   if ((customSizeLevel == 34 || customSizeLevel == 40) && subSeqNum == 23) {
     MPM.add(createGlobalDCEPass());
     MPM.add(createGlobalsAAWrapperPass());
@@ -2172,4 +2174,790 @@ void LLVMPassManagerBuilderPopulateLTOPassManager(LLVMPassManagerBuilderRef PMB,
     Builder->Inliner = createFunctionInliningPass();
 
   Builder->populateLTOPassManager(*LPM);
+}
+
+// void PassManagerBuilder::customO3PopulateModulePassManager(
+//     legacy::PassManagerBase &MPM, unsigned customSizeLevel, unsigned subSeqNum) {
+
+//   //How and why?
+//   if ((customSizeLevel == 34 || customSizeLevel == 40) && (subSeqNum == 29 || subSeqNum == 30 || subSeqNum == 31)) {
+//     // Allow forcing function attributes as a debugging and tuning aid.
+//     MPM.add(createForceFunctionAttrsLegacyPass());
+//   }
+
+//   // Add LibraryInfo if we have some.
+//   if (LibraryInfo)
+//     MPM.add(new TargetLibraryInfoWrapperPass(*LibraryInfo));
+
+//   addInitialAliasAnalysisPasses(MPM);
+
+//   if ((customSizeLevel == 34 || customSizeLevel == 40) && (subSeqNum == 29 || subSeqNum == 30 || subSeqNum == 31)){
+//     MPM.add(createInferFunctionAttrsLegacyPass());
+//     MPM.add(createIPSCCPPass());
+//     MPM.add(createCalledValuePropagationPass());
+//     MPM.add(createAttributorLegacyPass());
+//     MPM.add(createGlobalOptimizerPass());
+//   }
+
+//   if ((customSizeLevel == 34 || customSizeLevel == 40) && subSeqNum == 31){
+//     MPM.add(createPromoteMemoryToRegisterPass());
+//     MPM.add(createDeadArgEliminationPass());
+//   }
+//   // if (OptLevel > 2)
+//   //   MPM.add(createCallSiteSplittingPass());
+
+//   if ((customSizeLevel == 34 || customSizeLevel == 40) && subSeqNum == 5) {
+//     addInstructionCombiningPass(MPM);
+//   }
+
+//   if ((customSizeLevel == 34 || customSizeLevel == 40) && (subSeqNum == 23 || subSeqNum == 24 || subSeqNum == 25 || subSeqNum == 26 || subSeqNum == 27)) {
+//     MPM.add(createCFGSimplificationPass()); // Clean up after IPCP & DAE
+//     MPM.add(createPruneEHPass()); // Remove dead EH info
+//     bool RunInliner = false;
+//     if (Inliner) {
+//       MPM.add(Inliner);
+//       Inliner = nullptr;
+//       RunInliner = true;
+//     }
+//     MPM.add(createPostOrderFunctionAttrsLegacyPass());
+//     MPM.add(createSROAPass());
+//   }
+
+//   if ((customSizeLevel == 34 || customSizeLevel == 40) && (subSeqNum == 23 || subSeqNum == 24 || subSeqNum == 25)) {
+//     MPM.add(createEarlyCSEPass());
+//     MPM.add(createLowerExpectIntrinsicPass());
+//     MPM.add(createForceFunctionAttrsLegacyPass());
+//     MPM.add(createInferFunctionAttrsLegacyPass());
+//     MPM.add(createIPSCCPPass());
+//     MPM.add(createCalledValuePropagationPass());
+//     MPM.add(createAttributorLegacyPass());
+//     MPM.add(createGlobalOptimizerPass());
+//   }
+
+//   //  GlobalsAAWrapperPass
+//   if ((customSizeLevel == 34 || customSizeLevel == 40) && subSeqNum == 23) {
+//     MPM.add(createGlobalDCEPass());
+//     MPM.add(createGlobalsAAWrapperPass());
+//     MPM.add(createConstantMergePass());
+//   }
+
+//   if ((customSizeLevel == 34 || customSizeLevel == 40) && subSeqNum == 24) {
+//     MPM.add(createGlobalDCEPass());
+//     MPM.add(createGlobalsAAWrapperPass());
+//     MPM.add(createFloat2IntPass());
+//     MPM.add(createLowerConstantIntrinsicsPass());
+//   }
+
+//   if ((customSizeLevel == 34 || customSizeLevel == 40) && subSeqNum == 25) {
+//     MPM.add(createPromoteMemoryToRegisterPass());
+//     MPM.add(createDeadArgEliminationPass());
+//   }
+
+//   if ((customSizeLevel == 34 || customSizeLevel == 40) && (subSeqNum == 26 || subSeqNum == 27)) {
+//     MPM.add(createEarlyCSEPass(true /* Enable mem-ssa. */)); // Catch trivial redundancies
+//     // Speculative execution if the target has divergent branches; otherwise nop.
+//     MPM.add(createSpeculativeExecutionIfHasBranchDivergencePass());
+//     MPM.add(createJumpThreadingPass());         // Thread jumps.
+//     MPM.add(createCorrelatedValuePropagationPass()); // Propagate conditionals
+//   }
+
+//   if ((customSizeLevel == 34 || customSizeLevel == 40) && subSeqNum == 26) {
+//     MPM.add(createDeadStoreEliminationPass());
+//   }
+
+//   if ((customSizeLevel == 34 || customSizeLevel == 40) && (subSeqNum == 23 || subSeqNum == 24 || subSeqNum == 25 || subSeqNum == 26 || subSeqNum == 27)) {
+//     MPM.add(createBarrierNoopPass());
+//   }
+
+//   if ((customSizeLevel == 34 || customSizeLevel == 40) && (subSeqNum == 32 || subSeqNum == 33)) {
+//     MPM.add(createCFGSimplificationPass());
+//     MPM.add(createSROAPass());
+//     MPM.add(createEarlyCSEPass(true /* Enable mem-ssa. */)); // Catch trivial redundancies
+//     // Speculative execution if the target has divergent branches; otherwise nop.
+//     MPM.add(createSpeculativeExecutionIfHasBranchDivergencePass());
+//     MPM.add(createJumpThreadingPass());         // Thread jumps.
+//     MPM.add(createCorrelatedValuePropagationPass());
+//   }
+
+//   if ((customSizeLevel == 34 || customSizeLevel == 40) && subSeqNum == 32) {
+//     MPM.add(createDeadStoreEliminationPass());
+//   }
+
+//   if ((customSizeLevel == 34 || customSizeLevel == 40) && subSeqNum == 6) {
+//     addInstructionCombiningPass(MPM);
+//     MPM.add(createTailCallEliminationPass()); // Eliminate tail calls
+//   }
+
+//   if ((customSizeLevel == 34 || customSizeLevel == 40) && subSeqNum == 28) {
+//     MPM.add(createCFGSimplificationPass());      // Merge & remove BBs
+//     MPM.add(createReassociatePass());           // Reassociate expressions
+//   }
+
+//   if ((customSizeLevel == 34 || customSizeLevel == 40) && subSeqNum == 12) {
+//     MPM.add(createLICMPass(LicmMssaOptCap, LicmMssaNoAccForPromotionCap));
+//     MPM.add(createLoopUnswitchPass(SizeLevel || OptLevel < 3, DivergentTarget));
+//   }
+
+//   if ((customSizeLevel == 34 || customSizeLevel == 40) && (subSeqNum == 14 || subSeqNum == 15)) {
+//     MPM.add(createLoopRotatePass(SizeLevel == 2 ? 0 : -1));
+//     MPM.add(createLICMPass(LicmMssaOptCap, LicmMssaNoAccForPromotionCap));
+//     MPM.add(createAlignmentFromAssumptionsPass());
+//     MPM.add(createStripDeadPrototypesPass());
+//   }
+
+//   if ((customSizeLevel == 34 || customSizeLevel == 40) && subSeqNum == 14) {
+//     MPM.add(createGlobalDCEPass());
+//     MPM.add(createGlobalsAAWrapperPass());
+//     MPM.add(createConstantMergePass());
+//   }
+
+//   if ((customSizeLevel == 34 || customSizeLevel == 40) && subSeqNum == 15) {
+//     MPM.add(createGlobalDCEPass());
+//     MPM.add(createGlobalsAAWrapperPass());
+//     MPM.add(createFloat2IntPass());
+//     MPM.add(createLowerConstantIntrinsicsPass());
+//   }
+
+//   if ((customSizeLevel == 34 || customSizeLevel == 40) && subSeqNum == 16) {
+//     // Rotate Loop - disable header duplication at -Oz
+//     MPM.add(createLoopRotatePass(SizeLevel == 2 ? 0 : -1));
+//     // TODO: Investigate promotion cap for O1.
+//     MPM.add(createLICMPass(LicmMssaOptCap, LicmMssaNoAccForPromotionCap));
+//     MPM.add(createLoopUnswitchPass(SizeLevel || OptLevel < 3, DivergentTarget));
+//   }
+
+//   if ((customSizeLevel == 34 || customSizeLevel == 40) && ( subSeqNum == 7 || subSeqNum == 8)) {
+//     MPM.add(createIndVarSimplifyPass());        // Canonicalize indvars
+//     MPM.add(createLoopIdiomPass());             // Recognize idioms like memset.
+//     MPM.add(createLoopDeletionPass());          // Delete dead loops
+//     MPM.add(createSimpleLoopUnrollPass(OptLevel, DisableUnrollLoops,
+//                                      ForgetAllSCEVInLoopUnroll));
+//   }
+
+//   if ((customSizeLevel == 34 || customSizeLevel == 40) && subSeqNum == 8) {
+//     MPM.add(createMergedLoadStoreMotionPass()); // Merge ld/st in diamonds
+//     MPM.add(NewGVN ? createNewGVNPass()
+//                       : createGVNPass(DisableGVNLoadPRE)); // Remove redundancies
+//     MPM.add(createMemCpyOptPass());             // Remove memcpy / form memset
+//     MPM.add(createSCCPPass());                  // Constant prop with SCCP
+//     MPM.add(createBitTrackingDCEPass());        // Delete dead bit computations
+//   }
+
+//   if ((customSizeLevel == 34 || customSizeLevel == 40) && (subSeqNum == 3 || subSeqNum == 4)) {
+//     addInstructionCombiningPass(MPM);
+//     MPM.add(createJumpThreadingPass());         // Thread jumps.
+//     MPM.add(createCorrelatedValuePropagationPass());
+//   }
+//   if ((customSizeLevel == 34 || customSizeLevel == 40) && subSeqNum == 3) {
+//     MPM.add(createDeadStoreEliminationPass());  // Delete dead stores
+//   }  
+
+//   if ((customSizeLevel == 34 || customSizeLevel == 40) && subSeqNum == 9) {
+//     MPM.add(createLICMPass(LicmMssaOptCap, LicmMssaNoAccForPromotionCap));
+//     MPM.add(createAggressiveDCEPass());         // Delete dead instructions
+//   }
+
+//   if ((customSizeLevel == 34 || customSizeLevel == 40) && (subSeqNum == 0 || subSeqNum == 1 || subSeqNum == 2)) {
+//     addInstructionCombiningPass(MPM);
+//     MPM.add(createBarrierNoopPass());
+//     MPM.add(createEliminateAvailableExternallyPass());
+//     MPM.add(createReversePostOrderFunctionAttrsPass());
+//     MPM.add(createGlobalOptimizerPass());
+//   }
+
+//   if ((customSizeLevel == 34 || customSizeLevel == 40) && subSeqNum == 0) {
+//     MPM.add(createGlobalDCEPass());
+//     MPM.add(createGlobalsAAWrapperPass());
+//     MPM.add(createConstantMergePass());
+//   }
+
+//   if ((customSizeLevel == 34 || customSizeLevel == 40) && subSeqNum == 1) {
+//     MPM.add(createGlobalDCEPass());
+//     MPM.add(createGlobalsAAWrapperPass());
+//     MPM.add(createFloat2IntPass());
+//     MPM.add(createLowerConstantIntrinsicsPass());
+//   }
+
+//   if ((customSizeLevel == 34 || customSizeLevel == 40) && subSeqNum == 2) {
+//     MPM.add(createPromoteMemoryToRegisterPass());
+//     MPM.add(createDeadArgEliminationPass());
+//   }
+
+//   if ((customSizeLevel == 34 || customSizeLevel == 40) && subSeqNum == 29) {
+//     MPM.add(createGlobalDCEPass());
+//     MPM.add(createGlobalsAAWrapperPass());
+//     MPM.add(createConstantMergePass());
+//   }
+
+//   if ((customSizeLevel == 34 || customSizeLevel == 40) && subSeqNum == 30) {
+//     MPM.add(createGlobalDCEPass());
+//     MPM.add(createGlobalsAAWrapperPass());
+//     MPM.add(createFloat2IntPass());
+//     MPM.add(createLowerConstantIntrinsicsPass());
+//   }
+
+//   if ((customSizeLevel == 34 || customSizeLevel == 40) && subSeqNum == 17) {
+//     MPM.add(createLoopRotatePass(SizeLevel == 2 ? 0 : -1));
+//     MPM.add(createLoopDistributePass());
+//     MPM.add(createLoopVectorizePass(!LoopsInterleaved, !LoopVectorize));
+//   }
+
+//   if ((customSizeLevel == 34 || customSizeLevel == 40) && subSeqNum == 21) {
+//     MPM.add(createLoopLoadEliminationPass());
+//   }
+
+//   if ((customSizeLevel == 34 || customSizeLevel == 40) && subSeqNum == 22) {
+//     MPM.add(createCFGSimplificationPass(1, true, true, false, true));
+//   }
+
+//   if ((customSizeLevel == 34 || customSizeLevel == 40) && (subSeqNum == 10 || subSeqNum == 11)) {
+//     MPM.add(createLICMPass(LicmMssaOptCap, LicmMssaNoAccForPromotionCap));
+//     MPM.add(createAlignmentFromAssumptionsPass());
+//     MPM.add(createStripDeadPrototypesPass());
+//     MPM.add(createGlobalDCEPass());         // Remove dead fns and globals.
+//   }
+
+//   if ((customSizeLevel == 34 || customSizeLevel == 40) && subSeqNum == 10) {
+//     MPM.add(createGlobalsAAWrapperPass());
+//     MPM.add(createConstantMergePass());
+//   }
+
+//   if ((customSizeLevel == 34 || customSizeLevel == 40) && subSeqNum == 11) {
+//     MPM.add(createGlobalsAAWrapperPass());
+//     MPM.add(createFloat2IntPass());
+//     MPM.add(createLowerConstantIntrinsicsPass());
+//   }
+
+//   if ((customSizeLevel == 34 || customSizeLevel == 40) && subSeqNum == 13) {
+//     MPM.add(createLoopRotatePass(SizeLevel == 2 ? 0 : -1));
+//     MPM.add(createLICMPass(LicmMssaOptCap, LicmMssaNoAccForPromotionCap));
+//     MPM.add(createAggressiveDCEPass());         // Delete dead instructions
+//   }
+
+//   if ((customSizeLevel == 34 || customSizeLevel == 40) && subSeqNum == 18) {
+//     MPM.add(createLoopSinkPass());
+//     MPM.add(createInstSimplifyLegacyPass());
+//     MPM.add(createDivRemPairsPass());
+//     MPM.add(createCFGSimplificationPass());
+//   }
+
+//   if ((customSizeLevel == 34 || customSizeLevel == 40) && subSeqNum == 19){
+//     MPM.add(createLoopUnrollPass(OptLevel, DisableUnrollLoops,
+//                                ForgetAllSCEVInLoopUnroll));
+//   }
+
+//   if ((customSizeLevel == 34 || customSizeLevel == 40) && subSeqNum == 20){
+//     MPM.add(createSimpleLoopUnrollPass(OptLevel, DisableUnrollLoops,
+//                                      ForgetAllSCEVInLoopUnroll));
+//     MPM.add(createMergedLoadStoreMotionPass()); // Merge ld/st in diamonds
+//     MPM.add(NewGVN ? createNewGVNPass()
+//                       : createGVNPass(DisableGVNLoadPRE)); // Remove redundancies
+//     MPM.add(createMemCpyOptPass());             // Remove memcpy / form memset
+//     MPM.add(createSCCPPass());                  // Constant prop with SCCP
+//     MPM.add(createBitTrackingDCEPass());        // Delete dead bit computations
+//   }
+// }
+
+void PassManagerBuilder::customO3PopulateFunctionPassManager(
+    legacy::FunctionPassManager &FPM, unsigned customSizeLevel, unsigned subSeqNum) {
+  //if (((customSizeLevel==15 || customSizeLevel==17) && subSeqNum == 0) || (customSizeLevel==30 && subSeqNum < 4)) {
+  if (customSizeLevel==15 || customSizeLevel==17 || customSizeLevel==30 || customSizeLevel==34 || customSizeLevel==40) {
+    FPM.add(createEntryExitInstrumenterPass());
+  }
+
+  // Add LibraryInfo if we have some.
+  if (LibraryInfo)
+    FPM.add(new TargetLibraryInfoWrapperPass(*LibraryInfo));
+
+  //if (OptLevel == 0) return;
+
+  addInitialAliasAnalysisPasses(FPM);
+
+  if ((customSizeLevel==34 || customSizeLevel==40) && (subSeqNum == 29 || subSeqNum == 30 || subSeqNum == 31)){
+    FPM.add(createCFGSimplificationPass());
+    FPM.add(createSROAPass());
+    FPM.add(createEarlyCSEPass());
+    FPM.add(createLowerExpectIntrinsicPass());
+  }
+}
+
+void PassManagerBuilder::customO3PopulateModulePassManager(
+    legacy::PassManagerBase &MPM, unsigned customSizeLevel, unsigned subSeqNum) {
+
+  //How and why?
+  if ((customSizeLevel == 34 || customSizeLevel == 40) && (subSeqNum == 29 || subSeqNum == 30 || subSeqNum == 31)) {
+    // Allow forcing function attributes as a debugging and tuning aid.
+    MPM.add(createForceFunctionAttrsLegacyPass());
+  }
+
+  // Add LibraryInfo if we have some.
+  if (LibraryInfo)
+    MPM.add(new TargetLibraryInfoWrapperPass(*LibraryInfo));
+
+  addInitialAliasAnalysisPasses(MPM);
+
+  //looprotate
+
+  if(customSizeLevel == 34 && subSeqNum == 0)
+  {
+    addInstructionCombiningPass(MPM);
+  }
+  else if(customSizeLevel == 34 && subSeqNum == 1)
+  {
+    addInstructionCombiningPass(MPM);
+    MPM.add(createJumpThreadingPass());   
+    MPM.add(createCorrelatedValuePropagationPass());
+  }
+  else if(customSizeLevel == 34 && subSeqNum == 2)
+  {
+    addInstructionCombiningPass(MPM);
+    MPM.add(createLibCallsShrinkWrapPass());
+    MPM.add(createPGOMemOPSizeOptLegacyPass());
+    MPM.add(createTailCallEliminationPass());
+  }
+  else if(customSizeLevel == 34 && subSeqNum == 3)
+  {
+    addInstructionCombiningPass(MPM);
+    MPM.add(createJumpThreadingPass());
+    MPM.add(createCorrelatedValuePropagationPass());
+    MPM.add(createDeadStoreEliminationPass());
+  }
+  else if(customSizeLevel == 34 && subSeqNum == 4)
+  {
+    addInstructionCombiningPass(MPM);
+    MPM.add(createBarrierNoopPass());
+    MPM.add(createEliminateAvailableExternallyPass());
+    MPM.add(createReversePostOrderFunctionAttrsPass());
+    MPM.add(createGlobalOptimizerPass());
+    MPM.add(createPromoteMemoryToRegisterPass());
+    MPM.add(createDeadArgEliminationPass());
+  }
+  else if(customSizeLevel == 34 && subSeqNum == 5)
+  {
+    addInstructionCombiningPass(MPM);
+    MPM.add(createBarrierNoopPass());
+    MPM.add(createEliminateAvailableExternallyPass());
+    MPM.add(createReversePostOrderFunctionAttrsPass());
+    MPM.add(createGlobalOptimizerPass());
+    MPM.add(createGlobalDCEPass());
+    MPM.add(createConstantMergePass());
+  }
+  else if(customSizeLevel == 34 && subSeqNum == 6)
+  {
+    addInstructionCombiningPass(MPM);
+    MPM.add(createBarrierNoopPass());
+    MPM.add(createEliminateAvailableExternallyPass());
+    MPM.add(createReversePostOrderFunctionAttrsPass());
+    MPM.add(createGlobalOptimizerPass());
+    MPM.add(createGlobalDCEPass());
+    MPM.add(createFloat2IntPass());
+    MPM.add(createLowerConstantIntrinsicsPass());
+  }
+  else if(customSizeLevel == 34 && subSeqNum == 7)
+  {
+    MPM.add(createLoopSimplifyCFGPass());
+    MPM.add(createLoopLoadEliminationPass());
+  }
+  else if(customSizeLevel == 34 && subSeqNum == 8)
+  {
+    MPM.add(createLoopSimplifyCFGPass());
+    MPM.add(createLCSSAPass());
+    MPM.add(createLoopUnrollPass(OptLevel, DisableUnrollLoops,
+                                ForgetAllSCEVInLoopUnroll));
+  }
+  else if(customSizeLevel == 34 && subSeqNum == 9)
+  {
+    MPM.add(createLoopSimplifyCFGPass());
+    MPM.add(createLCSSAPass());
+    MPM.add(createLICMPass(LicmMssaOptCap, LicmMssaNoAccForPromotionCap));
+    MPM.add(createLoopUnswitchPass(SizeLevel || OptLevel < 3, DivergentTarget));
+  }
+  else if(customSizeLevel == 34 && subSeqNum == 10)
+  {
+    MPM.add(createLoopSimplifyCFGPass());
+    MPM.add(createLCSSAPass());
+    MPM.add(createLICMPass(LicmMssaOptCap, LicmMssaNoAccForPromotionCap));
+    MPM.add(createAggressiveDCEPass());
+  }
+  else if(customSizeLevel == 34 && subSeqNum == 11)
+  {
+    MPM.add(createLoopSimplifyCFGPass());
+    MPM.add(createLCSSAPass());
+    MPM.add(createLoopRotatePass(SizeLevel == 2 ? 0 : -1));
+    MPM.add(createLICMPass(LicmMssaOptCap, LicmMssaNoAccForPromotionCap));
+    MPM.add(createLoopUnswitchPass(SizeLevel || OptLevel < 3, DivergentTarget));
+  }
+  else if(customSizeLevel == 34 && subSeqNum == 12)
+  {
+    MPM.add(createLoopSimplifyCFGPass());
+    MPM.add(createLCSSAPass());
+    MPM.add(createLoopRotatePass(SizeLevel == 2 ? 0 : -1));
+    MPM.add(createLICMPass(LicmMssaOptCap, LicmMssaNoAccForPromotionCap));
+    MPM.add(createAggressiveDCEPass());
+  }
+  else if(customSizeLevel == 34 && subSeqNum == 13)
+  {
+    MPM.add(createLoopSimplifyCFGPass());
+    MPM.add(createLCSSAPass());
+    MPM.add(createLoopRotatePass(SizeLevel == 2 ? 0 : -1));
+    MPM.add(createLoopDistributePass());
+    MPM.add(createLoopVectorizePass(!LoopsInterleaved, !LoopVectorize));
+  }
+  else if(customSizeLevel == 34 && subSeqNum == 14)
+  {
+    MPM.add(createLoopSimplifyCFGPass());
+    MPM.add(createLCSSAPass());
+    MPM.add(createLoopSinkPass());
+    MPM.add(createInstSimplifyLegacyPass());
+    MPM.add(createDivRemPairsPass());
+  }
+  else if(customSizeLevel == 34 && subSeqNum == 15)
+  {
+    MPM.add(createLoopSimplifyCFGPass());
+    MPM.add(createLCSSAPass());
+    MPM.add(createIndVarSimplifyPass());
+    MPM.add(createLoopIdiomPass());
+    MPM.add(createLoopDeletionPass());
+    MPM.add(createLoopUnrollPass(OptLevel, DisableUnrollLoops,
+                                ForgetAllSCEVInLoopUnroll));
+  }
+  else if(customSizeLevel == 34 && subSeqNum == 16)
+  {
+    MPM.add(createLoopSimplifyCFGPass());
+    MPM.add(createLCSSAPass());
+    MPM.add(createLICMPass(LicmMssaOptCap, LicmMssaNoAccForPromotionCap));
+    MPM.add(createAlignmentFromAssumptionsPass()); 
+    MPM.add(createStripDeadPrototypesPass());
+    MPM.add(createGlobalDCEPass());
+    MPM.add(createConstantMergePass());
+  }
+  else if(customSizeLevel == 34 && subSeqNum == 17)
+  {
+    MPM.add(createLoopSimplifyCFGPass());
+    MPM.add(createLCSSAPass());
+    MPM.add(createLoopUnrollPass(OptLevel, DisableUnrollLoops,
+                                ForgetAllSCEVInLoopUnroll));
+    MPM.add(createMergedLoadStoreMotionPass());
+    MPM.add(NewGVN ? createNewGVNPass()
+                       : createGVNPass(DisableGVNLoadPRE));
+    MPM.add(createMemCpyOptPass());
+    MPM.add(createSCCPPass());
+    MPM.add(createBitTrackingDCEPass());
+  }
+  else if(customSizeLevel == 34 && subSeqNum == 18)
+  {
+    MPM.add(createLoopSimplifyCFGPass());
+    MPM.add(createLCSSAPass());
+    MPM.add(createLoopRotatePass(SizeLevel == 2 ? 0 : -1));
+    MPM.add(createLICMPass(LicmMssaOptCap, LicmMssaNoAccForPromotionCap));
+    MPM.add(createAlignmentFromAssumptionsPass()); 
+    MPM.add(createStripDeadPrototypesPass());
+    MPM.add(createGlobalDCEPass());
+    MPM.add(createConstantMergePass());
+  }
+  else if(customSizeLevel == 34 && subSeqNum == 19)
+  {
+    MPM.add(createLoopSimplifyCFGPass());
+    MPM.add(createLCSSAPass());
+    MPM.add(createLICMPass(LicmMssaOptCap, LicmMssaNoAccForPromotionCap));
+    MPM.add(createAlignmentFromAssumptionsPass()); 
+    MPM.add(createStripDeadPrototypesPass());
+    MPM.add(createGlobalDCEPass());
+    MPM.add(createFloat2IntPass());
+    MPM.add(createLowerConstantIntrinsicsPass());
+  }
+  else if(customSizeLevel == 34 && subSeqNum == 20)
+  {
+    MPM.add(createLoopSimplifyCFGPass());
+    MPM.add(createLCSSAPass());
+    MPM.add(createLoopRotatePass(SizeLevel == 2 ? 0 : -1));
+    MPM.add(createLICMPass(LicmMssaOptCap, LicmMssaNoAccForPromotionCap));
+    MPM.add(createAlignmentFromAssumptionsPass()); 
+    MPM.add(createStripDeadPrototypesPass());
+    MPM.add(createGlobalDCEPass());
+    MPM.add(createFloat2IntPass());
+    MPM.add(createLowerConstantIntrinsicsPass());
+  }
+  else if(customSizeLevel == 34 && subSeqNum == 21)
+  {
+    MPM.add(createLoopSimplifyCFGPass());
+    MPM.add(createLCSSAPass());
+    MPM.add(createIndVarSimplifyPass());
+    MPM.add(createLoopIdiomPass());
+    MPM.add(createLoopDeletionPass());
+    MPM.add(createLoopUnrollPass(OptLevel, DisableUnrollLoops,
+                                ForgetAllSCEVInLoopUnroll));
+    MPM.add(createMergedLoadStoreMotionPass());
+    MPM.add(NewGVN ? createNewGVNPass()
+                       : createGVNPass(DisableGVNLoadPRE));
+    MPM.add(createMemCpyOptPass());
+    MPM.add(createSCCPPass());
+    MPM.add(createBitTrackingDCEPass());
+  }
+  else if(customSizeLevel == 34 && subSeqNum == 22)
+  {
+    MPM.add(createCFGSimplificationPass());
+  }
+  else if(customSizeLevel == 34 && subSeqNum == 23)
+  {
+    MPM.add(createCFGSimplificationPass());
+    MPM.add(createAggressiveInstCombinerPass());
+  }
+  else if(customSizeLevel == 34 && subSeqNum == 24)
+  {
+    MPM.add(createCFGSimplificationPass());
+    MPM.add(createReassociatePass());
+  }
+  else if(customSizeLevel == 34 && subSeqNum == 25)
+  {
+    MPM.add(createCFGSimplificationPass());
+    MPM.add(createSLPVectorizerPass());
+  }
+  else if(customSizeLevel == 34 && subSeqNum == 26)
+  {
+    MPM.add(createCFGSimplificationPass());
+    MPM.add(createSROAPass());
+    MPM.add(createEarlyCSEPass());
+    MPM.add(createLowerExpectIntrinsicPass());
+  }
+  else if(customSizeLevel == 34 && subSeqNum == 27)
+  {
+    MPM.add(createCFGSimplificationPass());
+    MPM.add(createSROAPass());
+    MPM.add(createEarlyCSEPass(true /* Enable mem-ssa. */)); // Catch trivial redundancies
+    // Speculative execution if the target has divergent branches; otherwise nop.
+    MPM.add(createSpeculativeExecutionIfHasBranchDivergencePass());
+    MPM.add(createJumpThreadingPass());         // Thread jumps.
+    MPM.add(createCorrelatedValuePropagationPass()); // Propagate conditionals
+  }
+  else if(customSizeLevel == 34 && subSeqNum == 28)
+  {
+    MPM.add(createCFGSimplificationPass());
+    MPM.add(createSROAPass());
+    MPM.add(createEarlyCSEPass(true /* Enable mem-ssa. */)); // Catch trivial redundancies
+    // Speculative execution if the target has divergent branches; otherwise nop.
+    MPM.add(createSpeculativeExecutionIfHasBranchDivergencePass());
+    MPM.add(createJumpThreadingPass());         
+    MPM.add(createCorrelatedValuePropagationPass()); 
+    MPM.add(createDeadStoreEliminationPass());  
+  }
+  else if(customSizeLevel == 34 && subSeqNum == 29)
+  {
+    MPM.add(createCFGSimplificationPass());
+    MPM.add(createPruneEHPass());
+    bool RunInliner = false;
+    if (Inliner) {
+      MPM.add(Inliner);
+      Inliner = nullptr;
+      RunInliner = true;
+    }
+    MPM.add(createPostOrderFunctionAttrsLegacyPass());
+    MPM.add(createArgumentPromotionPass());
+    MPM.add(createSROAPass());
+    MPM.add(createEarlyCSEPass());
+    MPM.add(createLowerExpectIntrinsicPass());
+  }
+  else if(customSizeLevel == 34 && subSeqNum == 30)
+  {
+    MPM.add(createCFGSimplificationPass());
+    MPM.add(createPruneEHPass());
+    bool RunInliner = false;
+    if (Inliner) {
+      MPM.add(Inliner);
+      Inliner = nullptr;
+      RunInliner = true;
+    }
+    MPM.add(createPostOrderFunctionAttrsLegacyPass());
+    MPM.add(createArgumentPromotionPass());
+    MPM.add(createSROAPass());
+    MPM.add(createEarlyCSEPass(true /* Enable mem-ssa. */)); // Catch trivial redundancies
+    // Speculative execution if the target has divergent branches; otherwise nop.
+    MPM.add(createSpeculativeExecutionIfHasBranchDivergencePass());
+    MPM.add(createJumpThreadingPass());
+    MPM.add(createCorrelatedValuePropagationPass());
+  }
+  else if(customSizeLevel == 34 && subSeqNum == 31)
+  {
+    MPM.add(createCFGSimplificationPass());
+    MPM.add(createForceFunctionAttrsLegacyPass());
+    MPM.add(createInferFunctionAttrsLegacyPass());
+    MPM.add(createCallSiteSplittingPass());
+    MPM.add(createIPSCCPPass());
+    MPM.add(createCalledValuePropagationPass());
+    MPM.add(createAttributorLegacyPass());
+    MPM.add(createGlobalOptimizerPass());
+    MPM.add(createPromoteMemoryToRegisterPass());
+    MPM.add(createDeadArgEliminationPass());
+  }
+  else if(customSizeLevel == 34 && subSeqNum == 32)
+  {
+    MPM.add(createCFGSimplificationPass());
+    MPM.add(createForceFunctionAttrsLegacyPass());
+    MPM.add(createInferFunctionAttrsLegacyPass());
+    MPM.add(createCallSiteSplittingPass());
+    MPM.add(createIPSCCPPass());
+    MPM.add(createCalledValuePropagationPass());
+    MPM.add(createAttributorLegacyPass());
+    MPM.add(createGlobalOptimizerPass());
+    MPM.add(createGlobalDCEPass());
+    MPM.add(createConstantMergePass());
+  }
+  else if(customSizeLevel == 34 && subSeqNum == 33)
+  {
+    MPM.add(createCFGSimplificationPass());
+    MPM.add(createPruneEHPass());
+    bool RunInliner = false;
+    if (Inliner) {
+      MPM.add(Inliner);
+      Inliner = nullptr;
+      RunInliner = true;
+    }
+    MPM.add(createPostOrderFunctionAttrsLegacyPass());
+    MPM.add(createArgumentPromotionPass());
+    MPM.add(createSROAPass());
+    MPM.add(createEarlyCSEPass(true /* Enable mem-ssa. */)); // Catch trivial redundancies
+    // Speculative execution if the target has divergent branches; otherwise nop.
+    MPM.add(createSpeculativeExecutionIfHasBranchDivergencePass());
+    MPM.add(createJumpThreadingPass());
+    MPM.add(createCorrelatedValuePropagationPass());
+    MPM.add(createDeadStoreEliminationPass());
+  }
+  else if(customSizeLevel == 34 && subSeqNum == 34)
+  {
+    MPM.add(createCFGSimplificationPass());
+    MPM.add(createForceFunctionAttrsLegacyPass());
+    MPM.add(createInferFunctionAttrsLegacyPass());
+    MPM.add(createCallSiteSplittingPass());
+    MPM.add(createIPSCCPPass());
+    MPM.add(createCalledValuePropagationPass());
+    MPM.add(createAttributorLegacyPass());
+    MPM.add(createGlobalOptimizerPass());
+    MPM.add(createGlobalDCEPass());
+    MPM.add(createFloat2IntPass());
+    MPM.add(createLowerConstantIntrinsicsPass());
+  }
+  else if(customSizeLevel == 34 && subSeqNum == 35)
+  {
+    MPM.add(createCFGSimplificationPass());
+    MPM.add(createSROAPass());
+    MPM.add(createEarlyCSEPass());
+    MPM.add(createLowerExpectIntrinsicPass());
+    MPM.add(createForceFunctionAttrsLegacyPass());
+    MPM.add(createInferFunctionAttrsLegacyPass());
+    MPM.add(createCallSiteSplittingPass());
+    MPM.add(createIPSCCPPass());
+    MPM.add(createCalledValuePropagationPass());
+    MPM.add(createAttributorLegacyPass());
+    MPM.add(createGlobalOptimizerPass());
+    MPM.add(createPromoteMemoryToRegisterPass());
+    MPM.add(createDeadArgEliminationPass());
+  }
+  else if(customSizeLevel == 34 && subSeqNum == 36)
+  {
+    MPM.add(createCFGSimplificationPass());
+    MPM.add(createSROAPass());
+    MPM.add(createEarlyCSEPass());
+    MPM.add(createLowerExpectIntrinsicPass());
+    MPM.add(createForceFunctionAttrsLegacyPass());
+    MPM.add(createInferFunctionAttrsLegacyPass());
+    MPM.add(createCallSiteSplittingPass());
+    MPM.add(createIPSCCPPass());
+    MPM.add(createCalledValuePropagationPass());
+    MPM.add(createAttributorLegacyPass());
+    MPM.add(createGlobalOptimizerPass());
+    MPM.add(createGlobalDCEPass());
+    MPM.add(createConstantMergePass());
+  }
+  else if(customSizeLevel == 34 && subSeqNum == 37)
+  {
+    MPM.add(createCFGSimplificationPass());
+    MPM.add(createSROAPass());
+    MPM.add(createEarlyCSEPass());
+    MPM.add(createLowerExpectIntrinsicPass());
+    MPM.add(createForceFunctionAttrsLegacyPass());
+    MPM.add(createInferFunctionAttrsLegacyPass());
+    MPM.add(createCallSiteSplittingPass());
+    MPM.add(createIPSCCPPass());
+    MPM.add(createCalledValuePropagationPass());
+    MPM.add(createAttributorLegacyPass());
+    MPM.add(createGlobalOptimizerPass());
+    MPM.add(createGlobalDCEPass());
+    MPM.add(createFloat2IntPass());
+    MPM.add(createLowerConstantIntrinsicsPass());
+  }
+  else if(customSizeLevel == 34 && subSeqNum == 38)
+  {
+    MPM.add(createCFGSimplificationPass());
+    MPM.add(createPruneEHPass());
+    bool RunInliner = false;
+    if (Inliner) {
+      MPM.add(Inliner);
+      Inliner = nullptr;
+      RunInliner = true;
+    }
+    MPM.add(createPostOrderFunctionAttrsLegacyPass());
+    MPM.add(createArgumentPromotionPass());
+    MPM.add(createSROAPass());
+    MPM.add(createEarlyCSEPass()); 
+    MPM.add(createLowerExpectIntrinsicPass());
+    MPM.add(createForceFunctionAttrsLegacyPass());
+    MPM.add(createInferFunctionAttrsLegacyPass());
+    MPM.add(createCallSiteSplittingPass());
+    MPM.add(createIPSCCPPass());
+    MPM.add(createCalledValuePropagationPass());
+    MPM.add(createAttributorLegacyPass());
+    MPM.add(createGlobalOptimizerPass());
+    MPM.add(createPromoteMemoryToRegisterPass());
+    MPM.add(createDeadArgEliminationPass());
+  }
+  else if(customSizeLevel == 34 && subSeqNum == 39)
+  {
+    MPM.add(createCFGSimplificationPass());
+    MPM.add(createPruneEHPass());
+    bool RunInliner = false;
+    if (Inliner) {
+      MPM.add(Inliner);
+      Inliner = nullptr;
+      RunInliner = true;
+    }
+    MPM.add(createPostOrderFunctionAttrsLegacyPass());
+    MPM.add(createArgumentPromotionPass());
+    MPM.add(createSROAPass());
+    MPM.add(createEarlyCSEPass()); 
+    MPM.add(createLowerExpectIntrinsicPass());
+    MPM.add(createForceFunctionAttrsLegacyPass());
+    MPM.add(createInferFunctionAttrsLegacyPass());
+    MPM.add(createCallSiteSplittingPass());
+    MPM.add(createIPSCCPPass());
+    MPM.add(createCalledValuePropagationPass());
+    MPM.add(createAttributorLegacyPass());
+    MPM.add(createGlobalOptimizerPass());
+    MPM.add(createGlobalDCEPass());
+    MPM.add(createConstantMergePass());
+  }
+  else if(customSizeLevel == 34 && subSeqNum == 40)
+  {
+    MPM.add(createCFGSimplificationPass());
+    MPM.add(createPruneEHPass());
+    bool RunInliner = false;
+    if (Inliner) {
+      MPM.add(Inliner);
+      Inliner = nullptr;
+      RunInliner = true;
+    }
+    MPM.add(createPostOrderFunctionAttrsLegacyPass());
+    MPM.add(createArgumentPromotionPass());
+    MPM.add(createSROAPass());
+    MPM.add(createEarlyCSEPass()); 
+    MPM.add(createForceFunctionAttrsLegacyPass());
+    MPM.add(createInferFunctionAttrsLegacyPass());
+    MPM.add(createCallSiteSplittingPass());
+    MPM.add(createIPSCCPPass());
+    MPM.add(createCalledValuePropagationPass());
+    MPM.add(createAttributorLegacyPass());
+    MPM.add(createGlobalOptimizerPass());
+    MPM.add(createGlobalDCEPass());
+    MPM.add(createFloat2IntPass());
+    MPM.add(createLowerConstantIntrinsicsPass());
+  }
 }
