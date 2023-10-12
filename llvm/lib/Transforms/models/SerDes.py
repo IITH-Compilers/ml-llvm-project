@@ -19,10 +19,10 @@ class SerDes:
             "bytes": self.readObservationBytes,
             "protobuf": self.readObservationProtobuf,
         }
-        self.sendDataMap = {
-            "json": self.sendDataJson,
-            "bytes": self.sendDataBytes,
-            "protobuf": self.sendDataProtobuf,
+        self.serializeDataMap = {
+            "json": self.serializeDataJson,
+            "bytes": self.serializeDataBytes,
+            "protobuf": self.serializeDataProtobuf,
         }
 
     def init(self):
@@ -75,24 +75,24 @@ class SerDes:
 
     def sendData(self, data):
         self.log_file.write(f'{data}\n')
-        self.sendDataMap[self.data_format](data)
+        data = self.serializeDataMap[self.data_format](data)
+        self.tc.write(data)
+        self.tc.flush()
 
-    def sendDataJson(self, data):
+    def serializeDataJson(self, data):
         msg = json.dumps({"out": data}).encode("utf-8")
         hdr = len(msg).to_bytes(8, "little")
         out = hdr + msg
-        self.tc.write(out)
-        self.tc.flush()
+        return out
 
-    def sendDataBytes(self, data):
+    def serializeDataBytes(self, data):
         if isinstance(data, list):
             msg = b"".join([x.to_bytes(4, "little", signed=True) for x in data])
         else:
             msg = data.to_bytes(4, "little", signed=True)
         hdr = len(msg).to_bytes(8, "little")
         out = hdr + msg
-        self.tc.write(out)
-        self.tc.flush()
+        return out
 
-    def sendDataProtobuf(self, data):
+    def serializeDataProtobuf(self, data):
         raise NotImplementedError

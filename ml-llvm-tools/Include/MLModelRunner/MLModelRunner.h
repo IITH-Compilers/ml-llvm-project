@@ -32,59 +32,6 @@ public:
   MLModelRunner &operator=(const MLModelRunner &) = delete;
   virtual ~MLModelRunner() = default;
 
-  template <typename T> void *evaluateH() {
-    void *res = evaluateUntyped();
-    errs() << "EvaluateH: after deserialize\n";
-    // check if T is_same as int, float, double etc and call appropriate
-    // functions like evaluateInt, evaluateFloat etc
-    if (std::is_same<T, int>::value) {
-      return reinterpret_cast<int *>(res);
-    }
-    if (std::is_same<T, float>::value) {
-      return reinterpret_cast<float *>(res);
-    }
-    if (std::is_same<T, double>::value) {
-      return reinterpret_cast<double *>(res);
-    }
-    if (std::is_same<T, std::vector<int>>::value) {
-      return new std::vector<int>(
-          (int *)res, (int *)res + SerDes->getMessageLength() / sizeof(int));
-    }
-    if (std::is_same<T, std::vector<float>>::value) {
-      return new std::vector<float>((float *)res,
-                                    (float *)res + SerDes->getMessageLength() /
-                                                       sizeof(float));
-    }
-    if (std::is_same<T, std::vector<double>>::value) {
-      return new std::vector<double>(
-          (double *)res,
-          (double *)res + SerDes->getMessageLength() / sizeof(double));
-    }
-    llvm_unreachable("Unsupported type");
-  }
-
-  // template <typename T> T evaluate() {
-  //   if (std::is_pointer<T>::value) {
-  //     using BaseType = typename std::remove_pointer<T>::type;
-  //     T ret = new BaseType[SerDes->getMessageLength()];
-  //     memcpy(ret, evaluateUntyped(), SerDes->getMessageLength());
-  //     return ret;
-  //   }
-  //   return *reinterpret_cast<T *>(evaluateUntyped());
-  // }
-  template <typename T> T evaluate2() {
-    // assume T is always vector<F>, find F . F can be int, float, double
-    // create a vector of F and return it
-    using BaseType = VectorElementTypeT<T>;
-    void *res = evaluateUntyped();
-    errs() << "Evaluate2: after deserialize\n";
-    errs() << "Evaluate2: SerDes->getMessageLength(): "
-           << SerDes->getMessageLength() << "\n";
-    T ret((BaseType *)(res),
-          (BaseType *)(res) + SerDes->getMessageLength() / sizeof(BaseType));
-    return ret;
-  }
-
   template <typename T>
   typename std::enable_if<std::is_fundamental<T>::value, T>::type evaluate() {
     return *reinterpret_cast<T *>(evaluateUntyped());
@@ -96,6 +43,7 @@ public:
       void>::type
   evaluate(T &data, size_t &dataSize) {
     using BaseType = typename std::remove_pointer<T>::type;
+    // errs() << "In MLModelRunner evaluate...\n";
     void *res = evaluateUntyped();
     // errs() << "Evaluate: after deserialize\n";
     // errs() << "Evaluate: SerDes->getMessageLength(): "

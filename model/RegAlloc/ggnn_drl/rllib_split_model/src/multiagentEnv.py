@@ -1055,10 +1055,11 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         else:
             # grpccolor = RegisterAllocationInference_pb2.Data.color(key=node_id, value=int(reg_allocated))
             # print()
-            if self.use_pipe:
-                self.color_assignment_map.append({str(node_id): int(reg_allocated)})
-            else: 
-              self.color_assignment_map.append(RegisterAllocationInference_pb2.Data.colorData(key=str(node_id), value=int(reg_allocated)))
+            self.color_assignment_map.append({str(node_id): int(reg_allocated)})
+            # if self.use_pipe:
+            #     self.color_assignment_map.append({str(node_id): int(reg_allocated)})
+            # else: 
+            #   self.color_assignment_map.append(RegisterAllocationInference_pb2.Data.colorData(key=str(node_id), value=int(reg_allocated)))
 
         logging.debug('Color the node with index={cur_node}, node_id={node_id} with color={action} in RegClass={regclass}'.format(cur_node=nodeChoosen, node_id=node_id, action=reg_allocated, regclass=self.obs.reg_class_list[self.cur_node]))
         

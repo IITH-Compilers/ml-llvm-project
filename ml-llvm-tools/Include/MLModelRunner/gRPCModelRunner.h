@@ -11,8 +11,11 @@
 
 #include "MLModelRunner/MLModelRunner.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/Support/raw_ostream.h"
 #include <future>
+#include <google/protobuf/text_format.h>
 #include <grpcpp/grpcpp.h>
+#include <grpcpp/health_check_service_interface.h>
 #include <memory>
 
 // grpc model runner requires service, stub, request and response
@@ -55,12 +58,9 @@ public:
     grpc::ClientContext grpcCtx;
     request = getRequest();
     auto status = stub_->getAdvice(&grpcCtx, *request, response);
-    request->Clear();
     if (!status.ok())
       Ctx->emitError("gRPC failed: " + status.error_message());
-    auto *action = new int(); // Hard wired for PosetRL case, should be fixed
-    *action = response->action();
-    return action;
+    return SerDes->deserializeUntyped(response);
   }
 
 private:
@@ -97,6 +97,17 @@ private:
   Request *getRequest() { return (Request *)SerDes->getRequest(); }
 
   Response *getResponse() { return (Response *)SerDes->getResponse(); }
+
+  void printMessage(const google::protobuf::Message *message) {
+    errs() << "In gRPCModelRunner printMessage...\n";
+    std::string s;
+    if (google::protobuf::TextFormat::PrintToString(*message, &s)) {
+      std::cout << "Your message: " << s << std::endl;
+    } else {
+      std::cerr << "Message not valid (partial content: "
+                << request->ShortDebugString() << ")\n";
+    }
+  }
 };
 } // namespace llvm
 

@@ -65,6 +65,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "MLModelRunner/ONNXModelRunner/onnx.h"
+#include "grpc/RegisterAllocationInference/RegisterAllocationInference.pb.h"
 #include "multi_agent_env.h"
 // gRPC includes
 #include "grpc/RegisterAllocation/RegisterAllocation.grpc.pb.h"
@@ -179,6 +180,13 @@ protected:
     // std::cout << "\n";
   }
 
+public:
+  registerallocationinference::RegisterProfileList ServerModeResponse;
+  registerallocationinference::Data ServerModeRequest;
+  registerallocationinference::Data ClientModeResponse;
+  registerallocationinference::RegisterProfileList ClientModeRequest;
+  registerallocationinference::test ClientTestRequest;
+  registerallocationinference::test ClientTestResponse;
 private:
   // struct RegisterProfile {
   //   StringRef cls;
@@ -200,7 +208,6 @@ private:
   std::vector<TensorSpec> FeatureSpecs;
   std::vector<void*> InputBuffers;
   SmallSetVector<unsigned, 8> regIdxs;
-
   // TensorSpec AdviceSpec;
   bool CommuResult;
   bool IsNew;
@@ -266,7 +273,9 @@ private:
             
   Observation split_node_step(unsigned action) override;
   void initPipeCommunication();
-  void processMLInputs(SmallSetVector<unsigned, 8> *updatedRegIdxs, bool IsStart = false);
+  void processMLInputs(SmallSetVector<unsigned, 8> *updatedRegIdxs, bool IsStart = false, bool IsJson=false);
+  void processMLInputsProtobuf(SmallSetVector<unsigned, 8> *updatedRegIdxs, bool IsStart = false);
+  void printFeatures();
   // void processMLAdvice();
 
   // std::map<std::string, std::map<std::string, int64_t>>

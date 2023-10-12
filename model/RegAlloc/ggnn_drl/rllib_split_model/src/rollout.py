@@ -306,7 +306,7 @@ class RollOutInference:
             # Try parent directory.
             if not os.path.exists(config_path):
                 config_path = os.path.join(config_dir, "../params.pkl")
-    
+        print("config_path", config_path)
         # Load the config from pickled.
         if os.path.exists(config_path):
             with open(config_path, "rb") as f:

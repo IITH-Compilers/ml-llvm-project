@@ -73,7 +73,7 @@ struct PosetRL : public ModulePass,
     if (usePipe) {
       // data_format can take values: protobuf, json, bytes
       std::string basename =
-          "/home/venkat/ml-llvm-project/Model/RLLib-PhaseOrder/" + pipe_name;
+          "/home/cs20btech11024/repos/ml-llvm-project/Model/RLLib-PhaseOrder/" + pipe_name;
 
       BaseSerDes::Kind SerDesType;
       if (data_format == "json")
@@ -135,9 +135,9 @@ struct PosetRL : public ModulePass,
       std::pair<std::string, std::vector<float>> p1("embedding",
                                                     getEmbeddings());
       MLRunner->populateFeatures(p1);
-      int res = MLRunner->evaluate<int>();
-      processMLAdvice(res);
-      passSequence = res;
+      int Res = MLRunner->evaluate<int>();
+      processMLAdvice(Res);
+      passSequence = Res;
       errs() << "Sequence: " << passSequence << "\t";
     }
   }

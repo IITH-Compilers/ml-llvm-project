@@ -65,7 +65,13 @@ class service_server(
         args = Namespace(**args)
         self.inference_model = inference.RollOutInference(args)
 
-    def getInfo(self, request, context):
+    def getAdvice1(self, req, context):
+        print('******************************************')
+        print(req)
+        return RegisterAllocationInference_pb2.test(message="Hello from python")
+    
+    def getAdvice(self, request, context):
+        print("Test................")
         try:
             print("------Hi--------- isnew {} ".format(request.new))
             # print(request)
@@ -80,10 +86,12 @@ class service_server(
             #     print('Nothing to update')
             #     return RegisterAllocationInference_pb2.Data(message="Exit")
             print(
-                "********************FUNC NAME FROM GETINFO***************************"
+                "********************FUNC NAME FROM GETADVICE***************************"
             )
             print("request.funcName: ", request.funcName)
-            print_inter_graphs(inter_graphs)
+            print("request.new: ", request.new)
+            print("request.result: ", request.result)
+            # print_inter_graphs(inter_graphs)
             assert len(inter_graphs.regProf) > 0, "Graphs has no nodes"
 
             if inter_graphs.new:
@@ -97,7 +105,9 @@ class service_server(
                 status = self.inference_model.setGraphInEnv(inter_graph_list)
                 if status is None:
                     print("Exiting from inference")
-                    return RegisterAllocationInference_pb2.Data(message="Exit")
+                    out = {"action": "Exit"}
+                    out = encode_action(out)
+                    return RegisterAllocationInference_pb2.Data(data=out)
             elif inter_graphs.result:
                 # exit()
                 # self.inference_model.update_obs(request, self.inference_model.env.virtRegId, self.inference_model.env.split_point)
@@ -125,21 +135,43 @@ class service_server(
             color_agent = "colour_node_agent_id"
 
             if self.inference_model.getLastTaskDone() == 1:
-                reply = RegisterAllocationInference_pb2.Data(
-                    message="Split",
-                    regidx=action[select_node_agent],
-                    payload=action[split_agent],
-                )
+                print('Entered split...')
+                out = {
+                    "action": "Split",
+                    "regidx": action[select_node_agent],
+                    "payload": action[split_agent],
+                }
+                out = encode_action(out)
+                print(out)
+                reply = RegisterAllocationInference_pb2.Data(data=out)
+                # reply = RegisterAllocationInference_pb2.Data(
+                #     message="Split",
+                #     regidx=action[select_node_agent],
+                #     payload=action[split_agent],
+                # )
             elif self.inference_model.getLastTaskDone() == 0:
+                print('Entered color...')
                 # print("Returned colour map is:", action[color_agent])
-                reply = RegisterAllocationInference_pb2.Data(
-                    message="Color",
-                    color=action[color_agent],
-                    funcName=request.funcName,
-                )
+                out = {
+                    "action": "Color",
+                    "color": action[color_agent],
+                    "funcName": inter_graphs.funcName,
+                }
+                out = encode_action(out)
+                reply = RegisterAllocationInference_pb2.Data(data=out)
+                # reply = RegisterAllocationInference_pb2.Data(
+                #     message="Color",
+                #     color=action[color_agent],
+                #     funcName=request.funcName,
+                # )
             else:
+                print('Entered exit...')
                 reply = RegisterAllocationInference_pb2.Data(message="Exit")
+                out = {"action": "Exit"}
+                out = encode_action(out)
+                return RegisterAllocationInference_pb2.Data(data=out)
             # print('------Bye-----' , reply)
+            print(reply)
             print("------Bye-----")
             return reply
         except:
@@ -173,6 +205,23 @@ def print_inter_graphs(inter_graphs, f):
         #     end=" ",
         # )
         # print()
+
+def encode_action(data):
+    msg = []
+    if data["action"] == "Split":
+        msg.append(0)
+        msg.append(data["regidx"])
+        msg.append(data["payload"])
+    elif data["action"] == "Color":
+        msg.append(1)
+        for x in data["color"]:
+            for k, v in x.items():
+                msg.append(int(k))
+                msg.append(int(v))
+    elif data["action"] == "Exit":
+        msg.append(-1)
+    msg = [int(x) for x in msg]
+    return msg
 
 def run_pipe_communication(data_format, pipe_name):
     log_file = open(f'{data_format}_python.log', 'w')
@@ -300,21 +349,7 @@ def run_pipe_communication(data_format, pipe_name):
         inter_graphs = NestedDict(inter_graphs)
         return inter_graphs
 
-    def encode_action(data):
-        msg = []
-        if data["action"] == "Split":
-            msg.append(0)
-            msg.append(data["regidx"])
-            msg.append(data["payload"])
-        elif data["action"] == "Color":
-            msg.append(1)
-            for x in data["color"]:
-                for k, v in x.items():
-                    msg.append(int(k))
-                    msg.append(int(v))
-        elif data["action"] == "Exit":
-            msg.append(-1)
-        return msg
+
 
     # #########################################
 
@@ -401,10 +436,11 @@ class Server:
             service_server(), server
         )
 
-        server.add_insecure_port("localhost:" + str(server_address))
+        server_add = "localhost:" + str(server_address)
+        server.add_insecure_port(server_add)
 
         server.start()
-        print("Server Running")
+        print("Server Running at " + server_add + "...")
 
         server.wait_for_termination()
 
