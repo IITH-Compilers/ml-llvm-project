@@ -150,7 +150,7 @@ class PhaseOrderInference:
                     "beta": args.beta,
                     "size_reward_thresh": args.size_reward_thresh,
                     "mca_reward_thresh": args.mca_reward_thresh,
-                    "action_space_size": 34,
+                    "action_space_size": 41,
                     "use_pipe": use_pipe,
                     "data_format": data_format,
                     "use_grpc": use_grpc
@@ -210,7 +210,7 @@ class PhaseOrderInference:
                 break
 
         return reward, response
-    
+
 class service_server(posetRL_pb2_grpc.PosetRLService):
     def __init__(self, inferece_obj):
         self.inference_obj = inferece_obj
@@ -218,8 +218,8 @@ class service_server(posetRL_pb2_grpc.PosetRLService):
         self.state = None
         self.env = None
         self.action = None
-        
-    def getAdvice(self, request, context):        
+
+    def getAdvice(self, request, context):
         try:
             done = False
             if self.new_file:
@@ -231,7 +231,7 @@ class service_server(posetRL_pb2_grpc.PosetRLService):
                 self.env.embedding = np.array(request.embedding)
                 self.state, reward, done, response  = self.env.step(self.action)
             if not done:
-                self.action = self.inference_obj.train_agent.compute_action(self.state) 
+                self.action = self.inference_obj.train_agent.compute_action(self.state)
                 reply=posetRL_pb2.ActionRequest(action=self.action.item())
             else:
                 reply=posetRL_pb2.ActionRequest(action=-1)
@@ -242,9 +242,9 @@ class service_server(posetRL_pb2_grpc.PosetRLService):
             print('Error')
             traceback.print_exc()
             reply=posetRL_pb2.ActionRequest(action=-1)
-            return reply    
-        
-        
+            return reply
+
+
 
 
 if __name__ == "__main__":
@@ -274,7 +274,7 @@ if __name__ == "__main__":
         server.add_insecure_port('127.0.0.1:50051')
 
         server.start()
-        print("Server Running")        
+        print("Server Running")
         server.wait_for_termination()
     else:
         now = datetime.now()
@@ -283,7 +283,7 @@ if __name__ == "__main__":
         repeat_count = 3
         for file in os.listdir(args.test_dir):
             f = open(file_name, "a")
-            count = 0            
+            count = 0
             while count < repeat_count:
                 start = time.time()
                 reward, response = inference_obj.run_predict(file)

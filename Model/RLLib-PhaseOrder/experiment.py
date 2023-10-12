@@ -9,7 +9,7 @@
 #                             --alpha <Alpha hyperparameter>
 #                             --beta <Beta hyperparameter>
 #                             --size_reward_thresh <Threshold value for size reward for an action>
-#                             --mca_reward_thresh <Threshold value for mca reward for an action> 
+#                             --mca_reward_thresh <Threshold value for mca reward for an action>
 # Example: python experiment.py --llvm_dir POSET_RL/llvm-project-10/build \
 #                               --ir2vec_dir POSET_IR2Vec \
 #                               --train_dir train_ll \
@@ -76,7 +76,7 @@ def experiment(config):
     train_results = {}
     print(config)
     train_agent = DQNTrainer(config=config, env=PhaseOrder)
-    checkpoint = "/home/cs20mtech12003/ray_results/experiment_2023-06-16_01-17-51/experiment_PhaseOrder_83255_00000_0_2023-06-16_01-17-51/checkpoint_000500/checkpoint-500"
+    # checkpoint = "/home/cs20mtech12003/ray_results/experiment_2023-06-16_01-17-51/experiment_PhaseOrder_83255_00000_0_2023-06-16_01-17-51/checkpoint_000500/checkpoint-500"
     if checkpoint is not None:
         train_agent.restore(checkpoint)
 
@@ -86,9 +86,9 @@ def experiment(config):
     # policy.export_model(model_path)
     # input_signature = policy.observation_space.sample().reshape(1, -1)
     # print(input_signature)
-    # torch.onnx.export(policy.model, torch.from_numpy(input_signature), model_path, input_names=["input"], output_names=["output"])   
+    # torch.onnx.export(policy.model, torch.from_numpy(input_signature), model_path, input_names=["input"], output_names=["output"])
 
-    
+
     for i in range(iterations):
         train_results = train_agent.train()
         # train_agent.export_policy_model("/home/cs20btech11018/repos/ML-Phase-Ordering/RLLib-PhaseOrder/poset-RL-onnx-model", onnx=int(os.getenv("ONNX_OPSET", "11")))
@@ -144,7 +144,7 @@ if __name__ == '__main__':
                 "beta": args.beta,
                 "size_reward_thresh": args.size_reward_thresh,
                 "mca_reward_thresh": args.mca_reward_thresh,
-                "action_space_size": 34,
+                "action_space_size": 41,
                 "use_pipe": args.use_pipe,
                 "data_format": args.data_format,
                 "use_grpc": args.use_grpc
