@@ -35,7 +35,7 @@ args = parser.parse_args()
 
 
 def run_pipe_communication(data_format, pipe_name):
-    serdes = SerDes.SerDes(data_format, pipe_name)
+    serdes = SerDes.SerDes(data_format, "/tmp/" + pipe_name)
     print('Serdes init...')
     serdes.init()
     while True:
@@ -62,7 +62,7 @@ class service_server(helloMLBridge_pb2_grpc.HelloMLBridgeService):
     def getAdvice(self, request, context):
         try:
             print("Entered getAdvice")
-            print("Data: ", request.hello)
+            print("Data: ", request.tensor)
             reply = helloMLBridge_pb2.ActionRequest(action=1)
             return reply
         except:

@@ -9,7 +9,7 @@ See `simple_q_[tf|torch]_policy.py` for the definition of the policy loss.
 
 import logging
 from typing import Optional, Type
-
+from config import REPO_DIR
 from ray.rllib.agents.dqn.dqn import DQNTrainer
 from ray.rllib.agents.dqn.simple_q_tf_policy import SimpleQTFPolicy
 from ray.rllib.agents.dqn.simple_q_torch_policy import SimpleQTorchPolicy
@@ -119,9 +119,7 @@ DEFAULT_CONFIG = with_common_config({
         "dump_type": 'One',
         "dump_color_graph": True,
         "intermediate_data": './temp',
-        # "dataset": "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data_100d/",
-        "dataset": "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_new_data_100d/",
-        # "dataset": "/home/cs20mtech12003/ML-Register-Allocation/data/test_dict/graphs/IG/",
+        "dataset": f"{REPO_DIR}/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_new_data_100d/",
         "graphs_num": 10000,
         "action_space_size": RegisterActionSpace("X86").ac_sp_normlize_size
     },

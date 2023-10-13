@@ -11,7 +11,7 @@ Detailed documentation: https://docs.ray.io/en/master/rllib-algorithms.html#ppo
 
 import logging
 from typing import Optional, Type
-
+from config import REPO_DIR, BUILD_DIR
 from ray.rllib.agents import with_common_config
 from ray.rllib.agents.ppo.ppo_tf_policy import PPOTFPolicy
 from ray.rllib.agents.trainer_template import build_trainer
@@ -120,15 +120,12 @@ DEFAULT_CONFIG = with_common_config({
         "dump_type": 'One',
         "dump_color_graph": True,
         "intermediate_data": './temp',
-        # "build_path": "/home/cs20mtech12003/ML-Register-Allocation/AarchBuild_UPMM",
-        "build_path": "/home/cs20mtech12003/ML-Register-Allocation/build_x86",
-        "Register_config": "/home/cs20mtech12003/ML-Register-Allocation/llvm/lib/CodeGen/MLRegAlloc/config_json",
-        "log_path": "/home/cs20mtech12003/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src/log",
-        #"dataset": "/raid/cs17m20P100001/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_new_data/",
-        # "dataset": "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_aarch64_new_data/",
-        "dataset": "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/",
+        "build_path": BUILD_DIR,
+        "Register_config": f"{REPO_DIR}/llvm/lib/CodeGen/MLRegAlloc/config_json",
+        "log_path": f"{REPO_DIR}/model/RegAlloc/ggnn_drl/rllib_split_model/src/log",
+        "dataset": f"{REPO_DIR}/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/",
         "graphs_num": 10000,
-        "action_space_size": RegisterActionSpace("X86", "/home/cs20mtech12003/ML-Register-Allocation/llvm/lib/CodeGen/MLRegAlloc/config_json").ac_sp_normlize_size,
+        "action_space_size": RegisterActionSpace("X86", f"{REPO_DIR}/llvm/lib/CodeGen/MLRegAlloc/config_json").ac_sp_normlize_size,
         "check_point": None,
         "episode_number": 99,
         "GPU_ID": '0',
@@ -146,8 +143,8 @@ DEFAULT_CONFIG = with_common_config({
         "use_mca_self_play_reward": False,
         "mca_reward_clip": 10,
         "mca_timeout": 30,
-        "greedy_mca_throughput_file_path": "/home/cs20mtech12003/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src/greedy-throughput_set_70-120.json",
-        "mca_cycles_file_path": "/home/cs20mtech12003/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src/greedy-cycles_set_70-120.json"
+        "greedy_mca_throughput_file_path": f"{REPO_DIR}/model/RegAlloc/ggnn_drl/rllib_split_model/src/greedy-throughput_set_70-120.json",
+        "mca_cycles_file_path": f"{REPO_DIR}/model/RegAlloc/ggnn_drl/rllib_split_model/src/greedy-cycles_set_70-120.json"
 
     },
 

@@ -1,9 +1,12 @@
 #include "SerDes/protobufSerDes.h"
 #include "google/protobuf/descriptor.h"
+#include "google/protobuf/message.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cassert>
 #include <cstdint>
 #include <type_traits>
+#include <vector>
 
 inline void ProtobufSerDes::setFeature(const std::string &name,
                                            const int &value) {
@@ -80,6 +83,24 @@ void *ProtobufSerDes::getSerializedData() {
   return data;
 }
 
+void ProtobufSerDes::setFeature(const std::string &name,
+                                    const google::protobuf::Message* value) {
+  auto reflection = Request->GetReflection();
+  auto descriptor = Request->GetDescriptor();
+  auto field = descriptor->FindFieldByName(name);
+  reflection->MutableMessage(Request, field)->CopyFrom(*value);
+}
+
+void ProtobufSerDes::setFeature(const std::string& name, const std::vector<google::protobuf::Message*>& value) {
+    // set repeated field of messages in this->Request
+    auto reflection = Request->GetReflection();
+    auto descriptor = Request->GetDescriptor();
+    auto field = descriptor->FindFieldByName(name);
+    for (auto& v : value) {
+        reflection->AddMessage(Request, field)->CopyFrom(*v);
+    }
+}
+
 inline void ProtobufSerDes::setRequest(void *Request) {
   this->Request = reinterpret_cast<Message *>(Request);
 }
@@ -89,9 +110,7 @@ inline void ProtobufSerDes::setResponse(void *Response) {
 }
 
 void *ProtobufSerDes::deserializeUntyped(void *data) {
-  auto *dataString = reinterpret_cast<std::string *>(data);
-  Response->ParseFromString(*dataString);
-  llvm::errs() << Response->DebugString();
+  Response = reinterpret_cast<Message *>(data);
 
   const Descriptor *descriptor = Response->GetDescriptor();
   const Reflection *reflection = Response->GetReflection();
@@ -99,22 +118,22 @@ void *ProtobufSerDes::deserializeUntyped(void *data) {
 
   if (field->label() == FieldDescriptor::LABEL_REPEATED) {
     if (field->type() == FieldDescriptor::Type::TYPE_INT32) {
-      auto ref = reflection->GetRepeatedField<int32_t>(*Response, field);
-      std::vector<int32_t> *ptr = new std::vector<int32_t>(
-          ref.mutable_data(), ref.mutable_data() + ref.size());
-      return ptr;
+      auto& ref = reflection->GetRepeatedField<int32_t>(*Response, field);
+      std::vector<int> *ret = new std::vector<int>(ref.begin(), ref.end());
+      this->MessageLength = ref.size() * sizeof(int32_t);
+      return ret->data();
     }
     if (field->type() == FieldDescriptor::Type::TYPE_FLOAT) {
       auto ref = reflection->GetRepeatedField<float>(*Response, field);
-      std::vector<float> *ptr = new std::vector<float>(
-          ref.mutable_data(), ref.mutable_data() + ref.size());
-      return ptr;
+      std::vector<float> *ret = new std::vector<float>(ref.begin(), ref.end());
+      this->MessageLength = ref.size() * sizeof(float);
+      return ret->data();
     }
     if (field->type() == FieldDescriptor::Type::TYPE_DOUBLE) {
       auto ref = reflection->GetRepeatedField<double>(*Response, field);
-      std::vector<double> *ptr = new std::vector<double>(
-          ref.mutable_data(), ref.mutable_data() + ref.size());
-      return ptr;
+     std::vector<double> *ret = new std::vector<double>(ref.begin(), ref.end());
+      this->MessageLength = ref.size() * sizeof(double);
+      return ret->data();
     }
     if (field->type() == FieldDescriptor::Type::TYPE_STRING) {
       // yet to be tested
@@ -137,26 +156,31 @@ void *ProtobufSerDes::deserializeUntyped(void *data) {
   if (field->type() == FieldDescriptor::Type::TYPE_INT32) {
     int32_t value = reflection->GetInt32(*Response, field);
     int32_t *ptr = new int32_t(value);
+    this->MessageLength = sizeof(int32_t);
     return ptr;
   }
   if (field->type() == FieldDescriptor::Type::TYPE_FLOAT) {
     float value = reflection->GetFloat(*Response, field);
     float *ptr = new float(value);
+    this->MessageLength = sizeof(float);
     return ptr;
   }
   if (field->type() == FieldDescriptor::Type::TYPE_DOUBLE) {
     double value = reflection->GetDouble(*Response, field);
     double *ptr = new double(value);
+    this->MessageLength = sizeof(double);
     return ptr;
   }
   if (field->type() == FieldDescriptor::Type::TYPE_STRING) {
     std::string value = reflection->GetString(*Response, field);
     std::string *ptr = new std::string(value);
+    this->MessageLength = value.length();
     return ptr;
   }
   if (field->type() == FieldDescriptor::Type::TYPE_BOOL) {
     bool value = reflection->GetBool(*Response, field);
     bool *ptr = new bool(value);
+    this->MessageLength = sizeof(bool);
     return ptr;
   }
 

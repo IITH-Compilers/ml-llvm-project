@@ -3,7 +3,7 @@ from tqdm import tqdm
 import os
 # import json
 import glob
-
+from config import MODEL_PATH
 import ray
 from ray import tune
 from ray.rllib.agents import ppo
@@ -60,11 +60,6 @@ class Inference:
         config["env_config"]["dump_type"] = 'One'
         config["env_config"]["dump_color_graph"] = True
         config["env_config"]["intermediate_data"] = './temp'
-    
-        # config["env_config"]["dataset"] = "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_SPLIT2/"
-        # config["env_config"]["dataset"] = "/home/cs20mtech12003/ML-Register-Allocation/data/test_dict/"
-        # config["env_config"]["graphs_num"] = 50000
-        # training_graphs=glob.glob(os.path.join(dataset, 'graphs/IG/json_new/*.json'))
     
         ModelCatalog.register_custom_model("select_node_model", SelectNodeNetwork)
         ModelCatalog.register_custom_model("select_task_model", SelectTaskNetwork)
@@ -253,7 +248,7 @@ if __name__ == "__main__":
         tensor_spec = None
         advice_spec = None
         ray.init()
-        model_path = "/home/cs20btech11024/ray_results/G_table3/checkpoint-8052"
+        model_path = MODEL_PATH
 
         inference = Inference(model_path)
         inference.env.use_pipe = True
@@ -296,9 +291,7 @@ if __name__ == "__main__":
 #     config["env_config"]["action_space_size"] = config["env_config"]["registerAS"].ac_sp_normlize_size
 #     config["env_config"]["state_size"] = 300
 # 
-#     # dataset = "/home/cs20mtech12003/Compilers/ML-Register-Allocation/data/level-O0-llfiles_test_mlra_x86_LITE/"
 #     # training_graphs=glob.glob(os.path.join(dataset, 'graphs/IG/json_new/*.json'))
-#     config["env_config"]["dataset"] = "/home/cs20mtech12003/Compilers/ML-Register-Allocation/data/level-O0-llfiles_test_mlra_x86_LITE/"
 #     config["env_config"]["graphs_num"] = 1000
 #     config["env_config"]["mode"] = 'inference'
 #     config["env_config"]["dump_type"] = 'One'
@@ -309,10 +302,8 @@ if __name__ == "__main__":
 #     
 #     
 #     train_agent = DQNTrainer(config=config, env=GraphColorEnv)
-#     checkpoint = "/home/cs20mtech12003/ray_results/experiment_2021-06-27_23-29-08/experiment_GraphColorEnv_5efd2_00000_0_2021-06-27_23-29-09/checkpoint_001000/checkpoint-1000"
 #     train_agent.restore(checkpoint)            
 #     
-#     # utils_config = { 'mode' :'inference', 'dump_type':'One', 'dump_color_graph':True, 'intermediate_data' : '/home/cs20mtech12003/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib-basic/src/tmp'}
 # 
 #     # utils_config = utils.set_config(utils_config)
 # 
