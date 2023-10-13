@@ -41,7 +41,22 @@ import logging
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--train-iterations", type=int, default=1)
-parser.add_argument("--use-pipe", type=bool, default=False)
+
+parser.add_argument(
+    "--use_pipe",
+    action="store_true",
+    help="Use pipe communication",
+    required=False,
+    default=False,
+)
+parser.add_argument(
+    "--data_format",
+    type=str,
+    choices=["json", "protobuf", "bytes"],
+    help="Data format to use for communication",
+)
+parser.add_argument("--use_grpc", action='store_true', help = "Use grpc communication", required=False, default=False)
+
 
 checkpoint = None
 def experiment(config):
@@ -63,6 +78,7 @@ def experiment(config):
 
     last_checkpoint = 0
     for i in range(iterations):
+        print("Training iteration: ", i)
         train_results = train_agent.train()
         # auto_garbage_collect()
         # if i == iterations - 1 or (train_results['episodes_total'] - last_checkpoint) > 99:
@@ -101,6 +117,8 @@ if __name__ == "__main__":
     # utils.get_parse_args()
     config["train-iterations"] = args.train_iterations
     config["env_config"]["use_pipe"] = args.use_pipe
+    config["env_config"]["data_format"] = args.data_format
+    config["env_config"]["use_grpc"] = args.use_grpc
 
     # utils.get_parse_args()
 

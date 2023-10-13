@@ -14,6 +14,7 @@ using namespace std;
 
 #define SUPPORTED_TYPES(M)                                                     \
   M(int)                                                                       \
+  M(long)                                                                       \
   M(float)                                                                     \
   M(double)                                                                    \
   M(string)                                                                    \
