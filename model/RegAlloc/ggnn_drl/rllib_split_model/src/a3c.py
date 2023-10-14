@@ -20,7 +20,7 @@ from ray.rllib.utils.metrics.learner_info import LearnerInfoBuilder
 from ray.rllib.utils.typing import ResultDict
 
 from register_action_space import RegisterActionSpace
-
+from config import REPO_DIR, BUILD_DIR
 logger = logging.getLogger(__name__)
 
 
@@ -103,15 +103,12 @@ class A3CConfig(AlgorithmConfig):
             "dump_type": 'One',
             "dump_color_graph": True,
             "intermediate_data": './temp',
-            # "build_path": "/home/cs20mtech12003/ML-Register-Allocation/AarchBuild_UPMM",
-            "build_path": "/home/ai20btech11004/ML-Register-Allocation/build_x86",
-            "Register_config": "/home/ai20btech11004/ML-Register-Allocation/llvm/lib/CodeGen/MLRegAlloc/config_json",
-            "log_path": "/home/ai20btech11004/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src/log",
-            #"dataset": "/raid/cs17m20P100001/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_new_data/",
-            # "dataset": "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_aarch64_new_data/",
-            "dataset": "/home/ai20btech11004/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/LTS-ll-files_train_mlra_x86_split_data",
+            "build_path": BUILD_DIR,
+            "Register_config": f"{REPO_DIR}/llvm/lib/CodeGen/MLRegAlloc/config_json",
+            "log_path": f"{REPO_DIR}/model/RegAlloc/ggnn_drl/rllib_split_model/src/log",
+            "dataset": f"{REPO_DIR}/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/LTS-ll-files_train_mlra_x86_split_data",
             "graphs_num": 10000,
-            "action_space_size": RegisterActionSpace("X86", "/home/ai20btech11004/ML-Register-Allocation/llvm/lib/CodeGen/MLRegAlloc/config_json").ac_sp_normlize_size,
+            "action_space_size": RegisterActionSpace("X86", f"{REPO_DIR}/llvm/lib/CodeGen/MLRegAlloc/config_json").ac_sp_normlize_size,
             "check_point": None,
             "episode_number": 10000,
             "GPU_ID": '0',
@@ -127,8 +124,8 @@ class A3CConfig(AlgorithmConfig):
             "use_mca_self_play_reward": False,
             "mca_reward_clip": 10,
             "mca_timeout": 30,
-            "greedy_mca_throughput_file_path": "/home/ai20btech11004/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src/LTS_x86_greedy-throughput_set_120-500.json",
-            "mca_cycles_file_path": "/home/ai20btech11004/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src/LTS_x86_greedy-cycles_set_120-500.json"
+            "greedy_mca_throughput_file_path": f"{REPO_DIR}/model/RegAlloc/ggnn_drl/rllib_split_model/src/LTS_x86_greedy-throughput_set_120-500.json",
+            "mca_cycles_file_path": f"{REPO_DIR}/model/RegAlloc/ggnn_drl/rllib_split_model/src/LTS_x86_greedy-cycles_set_120-500.json"
         }
 
         self.horizon = 1000

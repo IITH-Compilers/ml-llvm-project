@@ -6,22 +6,6 @@ import itertools
 
 logger = logging.getLogger(__file__)
 class RegisterActionSpace:
-    
-    # regCountEachBitRange = 14
-    
-    # regScale = {}
-    # regScale['GR64'] = 0
-    # regScale['GR32'] = 1
-    # regScale['GR16'] = 2
-    # regScale['GR8'] = 3
-
-    # regMask = {}
-    # regMask['spill'] = [0]
-    # regMask['GR64'] =range(1,15)
-    # regMask['GR32'] = range(15,29)
-    # regMask['GR16'] = range(29,43)
-    # regMask['GR8'] = range(43,57)
-
 
     def __init__(self, target, config_path):
         # :%s/\(.*"color":\).*\(,\n.*\n.*"phyReg":\)\(.*\)/\1\3\2\3/g
@@ -140,10 +124,6 @@ class RegisterActionSpace:
 
     @staticmethod
     def loadRegConfig(target, baseDir):
-        # baseDir = '/home/venkat/IF-DV/Rohit/regAlloc/iith-compilers/ML-Register-Allocation/llvm/lib/CodeGen/MLRegAlloc/config_json'
-        #baseDir = '/home/venkat/IF-DV/Rohit/regAlloc/iith-compilers/benchmarking/ML-Register-Allocation/llvm/lib/CodeGen/MLRegAlloc/config_json'
-        #baseDir = '/raid/cs17m20P100001/ML-Register-Allocation/llvm/lib/CodeGen/MLRegAlloc/config_json'
-        # baseDir = '/home/cs18mtech11030/project/grpc_llvm/ML-Register-Allocation/llvm/lib/CodeGen/MLRegAlloc/config_json'
         if target == "X86":
             fileName= os.path.join(baseDir, 'X86_supported_RegClasses.json')
             overlapfile = os.path.join(baseDir, 'X86_overlaps_info.json')
@@ -168,15 +148,5 @@ class RegisterActionSpace:
         
         with open(overlapfile) as f:
             overlaps = json.load(f)
-        # supported_reg_test = {}
-        # registers = []
-        # for cls in regconfig.keys():
-        #     if cls in ['GR8', 'GR16', 'GR32', 'GR64']:
-        #         registers += list(map(lambda x: x["regName"], regconfig[cls]))
-        # 
-        # supported_reg_test["register_names"] = registers
-
-        # with open("{}_supported_reg.json".format(target), "w") as f:
-        #     json.dump(supported_reg_test, f, indent=4)
         print("suppcls_regs_map", len(suppcls_regs_map.values()))
         return supported_regClass, suppcls_regs_map, reg_idname_map, overlaps 
