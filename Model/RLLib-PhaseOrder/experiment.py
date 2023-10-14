@@ -76,7 +76,7 @@ def experiment(config):
     train_results = {}
     print(config)
     train_agent = DQNTrainer(config=config, env=PhaseOrder)
-    checkpoint = "/home/cs20mtech12003/ray_results/experiment_2023-06-16_01-17-51/experiment_PhaseOrder_83255_00000_0_2023-06-16_01-17-51/checkpoint_000500/checkpoint-500"
+    # checkpoint = "/home/cs20mtech12003/ray_results/experiment_2023-06-16_01-17-51/experiment_PhaseOrder_83255_00000_0_2023-06-16_01-17-51/checkpoint_000500/checkpoint-500"
     if checkpoint is not None:
         train_agent.restore(checkpoint)
 
