@@ -64,6 +64,7 @@ parser.add_argument(
     choices=["json", "protobuf", "bytes"],
     help="Data format to use for communication",
 )
+parser.add_argument("--server_port", type=str, help="Server port", default=50051)
 
 # Use for resuming training from checkpoint
 # checkpoint = "/home/cs20btech11018/ray_results/0.2thresh-10alpha-5beta-aarch/experiment_PhaseOrder_54b91_00000_0_2023-02-04_18-33-34/checkpoint_000010/checkpoint-10"
@@ -147,7 +148,8 @@ if __name__ == '__main__':
                 "action_space_size": 34,
                 "use_pipe": args.use_pipe,
                 "data_format": args.data_format,
-                "use_grpc": args.use_grpc
+                "use_grpc": args.use_grpc,
+                "server_port": args.server_port
             },
             "train_batch_size": 512,
             "exploration_config": {

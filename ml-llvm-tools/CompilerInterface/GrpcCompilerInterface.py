@@ -16,11 +16,16 @@ class GrpcCompilerInterface(BaseCompilerInterface):
     def __init__(self, mode, stub_class=None, hostip='127.0.0.1', hostport=50051, add_server_method=None,grpc_service_obj=None ):
         super().__init__('protobuf')
         self.mode = mode
+
+        self.host=hostip
+        self.server_port = hostport
+
+        # print('address ', '{}:{}'.format(self.host,self.server_port))
+
         if self.mode == 'client':
-            self.host=hostip
-            self.server_port = hostport
             # self.process=None
             self.channel = grpc.insecure_channel('{}:{}'.format(self.host,self.server_port))
+            print("Setting stub", stub_class)
             self.stub = stub_class(self.channel)
         
         elif self.mode == 'server':
@@ -36,17 +41,11 @@ class GrpcCompilerInterface(BaseCompilerInterface):
     # def populate_buffer(self, data):
     #     self.serdes_obj.serializeData(data)
 
-    # work in progress
     def evaluate(self, mode = None):
         out = self.serdes_obj.getOutputBuffer()
-        # if self.stub.applyActionGetEmbeddings is not None:
-        #     self.stub.queryCompiler = self.stub.applyActionGetEmbeddings 
-        print("Stub calss:", type(self.stub.queryCompiler))
+        # print("Stub class:", type(self.stub.queryCompiler))
         return self.stub.queryCompiler(out)
 
-        # if mode == 'exit':
-        #     return None
-        # return self.serdes_obj.deserializeData(self.fc)
 
     def start_server(self):
         # ray.init()
@@ -59,7 +58,7 @@ class GrpcCompilerInterface(BaseCompilerInterface):
             # RegisterAllocationInference_pb2_grpc.add_RegisterAllocationInferenceServicer_to_server(service_server(inference_obj),server)
             self.add_server_method(self.grpc_service_obj,server)
             # server.add_insecure_port('localhost:' + str(sys.argv[1]))
-            server.add_insecure_port('127.0.0.1:50067')
+            server.add_insecure_port('{}:{}'.format(self.host,self.server_port))
 
             server.start()
             print("Server Running")        

@@ -155,6 +155,8 @@ class PhaseOrder(gym.Env):
            self.compiler_interface = None
         self.is_init = True 
 
+        self.server_port = config["server_port"]
+
     def make(self, TrainingPath):
         self.FileSys_Obj.generateTrainingData(TrainingPath)
         self.Obs = self.FileSys_Obj.LLFileList
@@ -226,14 +228,14 @@ class PhaseOrder(gym.Env):
                 index = np.random.random_integers(0, len(self.Obs) - 1)
 
                 self.serverId = self.startServer(
-                    self.Obs[index], "127.0.0.1:50051")
+                    self.Obs[index], "127.0.0.1:" + str(self.server_port))
                 print("Server started at pid:", self.serverId)
                 # self.channel = grpc.insecure_channel(
                 #     '{}:{}'.format("127.0.0.1", "50051"))
                 # self.stub = posetRL_pb2_grpc.PosetRLServiceStub #(self.channel)  
                 
                 if self.use_grpc and self.compiler_interface is None:
-                    self.compiler_interface = GrpcCompilerInterface(mode='client', stub_class=posetRL_pb2_grpc.PosetRLServiceStub, hostip='localhost', hostport=50051)                                          
+                    self.compiler_interface = GrpcCompilerInterface(mode='client', stub_class=posetRL_pb2_grpc.PosetRLServiceStub, hostip='127.0.0.1', hostport= self.server_port)                                          
                 
                 self.createEnv(self.Obs[index])
                 self.doneList.append(self.Obs[index])
@@ -255,11 +257,12 @@ class PhaseOrder(gym.Env):
 
         # Opening pipe files
         if self.use_pipe:
-            print("Before reset called")
+            # print("Before reset called")
             if self.is_init:
                 self.compiler_interface.reset_pipes()
                 self.is_init = False
-            print("After reset called")
+            # print("After reset called")
+
             # to_compiler = self.temp_rootname + ".in"
             # from_compiler = self.temp_rootname + ".out"
             # print("Creating pipe files", to_compiler, from_compiler)
@@ -267,13 +270,8 @@ class PhaseOrder(gym.Env):
             # print("Opened the write pipe")
             # self.fc = io.BufferedReader(io.FileIO(from_compiler, "rb"))
             # print("Opened the read pipe")
-            print('tc', self.compiler_interface.tc)
-            print('reading obs from pipe')
             result = self.readObservation()         # DEBUG
             # result = self.compiler_interface.evaluate('exit')         # tried
-
-            print('done reading obs from pipe')
-
 
             # print("Returned obs value is", result[0]._view)
             if result is None:
@@ -285,7 +283,6 @@ class PhaseOrder(gym.Env):
             if self.mode == 'inference':
                 self.embedding = np.array(embedding)
             else:
-                print('stable ----')
                 self.embedding = self.stable_grpc("Action", 0) # LLVMgRPC way
         else:
             self.embedding = self.getEmbedding(self.BaseIR)
@@ -299,9 +296,8 @@ class PhaseOrder(gym.Env):
 
     def readObservation(self):
         embedding = np.empty([300])
-        print("before evaluate")
+        # print("before evaluate")
         features = self.compiler_interface.evaluate()
-        print("after evaluate")
 
 
         if self.data_format == "bytes":
@@ -457,11 +453,10 @@ class PhaseOrder(gym.Env):
             #     result = self.compiler_interface.evaluate()
             if self.use_pipe:                
                 self.sendResponse(action_index)
-                print("Reading respponse")
+                # print("Reading pipe response")
                 result = self.readObservation()
-                print('Done reading')
             elif self.use_grpc:
-                print("In gRPC training flow")
+                # print("In gRPC training flow")
                 result = self.stable_grpc("Action", action_index) # LLVMgRPC way
                 # self.embedding = result
                 # print("Result:", result)
@@ -517,7 +512,7 @@ class PhaseOrder(gym.Env):
                 # self.compiler_interface.reset_buffers()
                 self.sendResponse(-1)                        # self.populate_buffer(-1)
                 self.compiler_interface.evaluate('exit')
-                print("closing pipe-----")       
+
                 # self.compiler_interface.close_pipes()
                 # self.compiler_interface.reset_pipes()
 
@@ -538,7 +533,7 @@ class PhaseOrder(gym.Env):
         logging.info("Action {}".format(action_index))
 # quiet#        print("done {}".format(done))
         logging.info("done {}".format(done))
-        print("Returning from step")
+# quiet#        print("Returning from step")
 
         return next_observation, Reward, done, {}
 
@@ -547,13 +542,11 @@ class PhaseOrder(gym.Env):
         cmd1 = self.FileSys_Obj.LlcPath + " " + self.opt_arch_flag + \
             " " + new_file + ".ll" + " -o " + new_file + ".s" + " -ml-config-path=/home/cs21btech11051/ml-llvm-project/build_all/config"
         os.system(cmd1)
-        print('cmd1----:', cmd1)
         cmd2 = self.FileSys_Obj.MCAPath + " " + \
             self.opt_arch_flag + " " + new_file + ".s" 
         pro = subprocess.Popen(cmd2, executable='/bin/bash', shell=True,
                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding='utf8')
         Output_cmd2 = pro.stdout
-        print('cmd2----:', cmd2)
 
         line = Output_cmd2.readline()
         if pro.stderr is not None:
@@ -762,20 +755,15 @@ class PhaseOrder(gym.Env):
         return np.array(array)
 
     def applyActionGetEmbeddings(self, action):
-        print('here action ------',action)
         request = posetRL_pb2.ActionRequest(action=action)
-        print('here req ------',request, type(request))
  
         self.compiler_interface.populate_buffer(request)
         response = self.compiler_interface.evaluate()
-        # print(response, 'here response ----------')
-        # CEHCK
         # response = self.stub.applyActionGetEmbeddings(request)
         return self.repeatedgRPCFieldToNumpyArray(response)
 
     def stopServer(self):
         request = posetRL_pb2.ActionRequest(action=-1)
-        print(request, 'here 2 request ------')
         self.compiler_interface.populate_buffer(request)
         self.compiler_interface.evaluate()
         # self.stub.applyActionGetEmbeddings(request)
@@ -792,7 +780,6 @@ class PhaseOrder(gym.Env):
                 # quiet#                print("LLVM grpc called")
                 t1 = time.time()
                 if op != "Exit":
-                    print(action, 'action ----')
                     result = self.applyActionGetEmbeddings(action=action)
                 else:
                     result = self.stopServer()

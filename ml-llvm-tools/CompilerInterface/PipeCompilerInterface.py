@@ -26,39 +26,19 @@ class PipeCompilerInterface(BaseCompilerInterface):
 
     # writes buffer, then reads from pipe
     def evaluate(self, mode = None):
-        # print('errmsg 1')
         out = self.serdes_obj.getOutputBuffer()
         if out is not None:
-            # print('errmsg 2')
             self.tc.write(out)
             self.tc.flush()
 
         if mode == 'exit':
             return None
 
-        print('in serdes evaluate')
         result = self.serdes_obj.deserializeData(self.fc)
-        # print('errmsg 3')
 
         # self.close_pipes()
         # self.init()
         return result
-
-
-    # def send(self, data):
-    #     out = serdes_obj.serializeData(data)
-    #     self.init()
-    #     self.tc.write(out)
-    #     self.tc.flush()
-
-    # def receive(self, data):
-    #     hdr = self.fc.read(8)
-    #     size = int.from_bytes(hdr, "little")
-    #     data = self.fc.read(size)
-    #     result = serdes_obj.deserializeData(data7)
-    #     self.close_pipes()
-    #     return result
-
 
     # INIT PIPE COMMN
 
@@ -96,6 +76,21 @@ class PipeCompilerInterface(BaseCompilerInterface):
 
     # COMMUNICATE WITH PIPES
 
-    def evaluate_untyped(self):
-        pass 
+
+
+    # def evaluate_untyped(self):
+    #     pass 
     
+        # def send(self, data):
+    #     out = serdes_obj.serializeData(data)
+    #     self.init()
+    #     self.tc.write(out)
+    #     self.tc.flush()
+
+    # def receive(self, data):
+    #     hdr = self.fc.read(8)
+    #     size = int.from_bytes(hdr, "little")
+    #     data = self.fc.read(size)
+    #     result = serdes_obj.deserializeData(data7)
+    #     self.close_pipes()
+    #     return result

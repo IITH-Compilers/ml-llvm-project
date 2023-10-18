@@ -73,7 +73,7 @@ struct PosetRL : public ModulePass,
     if (usePipe) {
       // data_format can take values: protobuf, json, bytes
       std::string basename =
-          "/home/cs20btech11024/repos/ml-llvm-project/Model/RLLib-PhaseOrder/" + pipe_name;
+          "/home/cs21btech11051/ml-llvm-project/Model/RLLib-PhaseOrder/" + pipe_name;
 
       BaseSerDes::Kind SerDesType;
       if (data_format == "json")
@@ -135,10 +135,12 @@ struct PosetRL : public ModulePass,
       std::pair<std::string, std::vector<float>> p1("embedding",
                                                     getEmbeddings());
       MLRunner->populateFeatures(p1);
+      // static_cast<gRPCModelRunner>(MLRunner)->printMessage();
+      
       int Res = MLRunner->evaluate<int>();
       processMLAdvice(Res);
       passSequence = Res;
-      errs() << "Sequence: " << passSequence << "\t";
+      errs() << "Sequence : " << passSequence << "\t";
     }
   }
 
@@ -186,6 +188,25 @@ struct PosetRL : public ModulePass,
     }
     return grpc::Status::OK;
   }
+
+  grpc::Status
+  queryCompiler(grpc::ServerContext *context,
+                           const ::posetRLgRPC::ActionRequest *request,
+                           ::posetRLgRPC::EmbeddingResponse *response) {
+    // errs() << "Action requested: " << request->action() << "\n";
+
+    if (request->action() == -1) {
+      return grpc::Status::OK;
+    } else if (request->action() != 0)
+      processMLAdvice(request->action());
+
+    Embedding emb = getEmbeddings();
+    for (unsigned long i = 0; i < emb.size(); i++) {
+      response->add_embedding(emb[i]);
+    }
+    return grpc::Status::OK;
+  }
+
 
 private:
   Module *M;

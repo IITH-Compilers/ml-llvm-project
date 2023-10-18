@@ -5,7 +5,6 @@ import log_reader
 
 class SerDes:
     def __init__(self, data_format):
-        print('data format ----', data_format)
         self.buffer = None
         self.data_format = data_format
         self.read_stream_iter = None
@@ -35,11 +34,8 @@ class SerDes:
     def deserializeBytes(self, datastream):
         if self.read_stream_iter is None:
             self.read_stream_iter = log_reader.read_stream2(datastream)        # try to make it indep
-        print('datastream: ', datastream)
         hdr = datastream.read(8)
-        print('header is', hdr)
         context, observation_id, features, score = next(self.read_stream_iter)
-        print('features:', features)
         return features
     
     def deserializeProtobuf(self, datastream):
@@ -70,7 +66,6 @@ class SerDes:
 
     # implement outside for now
     def serializeProtobuf(self, data):
-        print(data, type(data))
         self.buffer = data
         # msg = posetRL_pb2.ActionRequest(action=value).SerializeToString()
         # hdr = len(msg).to_bytes(8, "little")
