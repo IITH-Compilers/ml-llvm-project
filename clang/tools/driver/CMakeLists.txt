@@ -18,6 +18,7 @@ set( LLVM_LINK_COMPONENTS
   TransformUtils
   Vectorize
   PosetRL
+  CodeSizeOpt
   AddSizeAttr
   IR2Vec
   CollectMachineIR

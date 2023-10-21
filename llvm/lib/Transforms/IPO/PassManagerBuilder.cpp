@@ -39,6 +39,7 @@
 #include "llvm/Transforms/InstCombine/InstCombine.h"
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/PosetRL/PosetRL.h"
+#include "llvm/Transforms/CodeSizeOpt/CodeSizeOpt.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/GVN.h"
 #include "llvm/Transforms/Scalar/InstSimplifyPass.h"
@@ -58,6 +59,9 @@ static cl::opt<bool>
     OPosetRL("OPosetRL", cl::init(false), cl::Hidden,
                        cl::desc("poset rl pass sequence"));
 
+static cl::opt<bool>
+    OCodeSizeOpt("OCodeSizeOpt", cl::init(false), cl::Hidden,
+                       cl::desc("codesize opt pass sequence"));
 static cl::opt<bool>
     RunPartialInlining("enable-partial-inlining", cl::init(false), cl::Hidden,
                        cl::ZeroOrMore, cl::desc("Run Partial inlinining pass"));
@@ -1443,6 +1447,13 @@ void PassManagerBuilder::populateModulePassManager(
       MPM.add(createPosetRLPass());
       return;
   }
+
+  if(OCodeSizeOpt) {
+      errs() << "opt level "<< OptLevel << " SizeLevel " << SizeLevel << "\n";
+      MPM.add(createCodeSizeOptPass());
+      return;
+  }
+  
   if(!RunNoPreDistributionPasses){
   if (!PGOSampleUse.empty()) {
     MPM.add(createPruneEHPass());

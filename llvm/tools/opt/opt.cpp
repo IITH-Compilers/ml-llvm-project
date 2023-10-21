@@ -165,6 +165,9 @@ static cl::opt<bool>
 static cl::opt<bool>
     OptLevelOPosetRL("OposetRL", cl::init(true) ,cl::Hidden, cl::desc("Optimization level for PosetRL."));
 
+static cl::opt<bool>
+    OptLevelOCodeSizeOpt("Ocodesizeopt", cl::init(true) ,cl::Hidden, cl::desc("Optimization level for CodeSizeOpt."));
+
 static cl::opt<bool> OptLevelO15("O15",
                                  cl::desc("15 optimization subsequences."));
 
@@ -571,6 +574,7 @@ int main(int argc, char **argv) {
   initializeInstrumentation(Registry);
   initializeTarget(Registry);
   initializePosetRLPass(Registry);
+  initializeCodeSizeOptPass(Registry);
   initializeAddSizeAttrPassPass(Registry);
   // For codegen passes, only passes that do IR to IR transformation are
   // supported.
@@ -785,7 +789,7 @@ int main(int argc, char **argv) {
 
   std::unique_ptr<legacy::FunctionPassManager> FPasses;
   if (OptLevelO0 || OptLevelO1 || OptLevelO2 || OptLevelOs || OptLevelOz ||
-      OptLevelO3 || OptLevelOPosetRL || OptLevelO15 || OptLevelO17 ||
+      OptLevelO3 || OptLevelOPosetRL || OptLevelOCodeSizeOpt || OptLevelO15 || OptLevelO17 ||
       OptLevelO30 || OptLevelO34 || OptLevelO34M) {
     FPasses.reset(new legacy::FunctionPassManager(M.get()));
     FPasses->add(createTargetTransformInfoWrapperPass(
@@ -956,7 +960,10 @@ int main(int argc, char **argv) {
 
   if (OptLevelOPosetRL)
     AddOptimizationPasses(Passes, *FPasses, TM.get(), 0, 0);
-
+  
+  if(OptLevelOCodeSizeOpt)
+    AddOptimizationPasses(Passes, *FPasses, TM.get(), 0, 0);
+  
   if (FPasses) {
     FPasses->doInitialization();
     for (Function &F : *M)

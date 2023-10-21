@@ -24,6 +24,7 @@ set(LLVM_LINK_COMPONENTS
   Vectorize
   Passes
   PosetRL
+  CodeSizeOpt
   IR2Vec
 )
 
