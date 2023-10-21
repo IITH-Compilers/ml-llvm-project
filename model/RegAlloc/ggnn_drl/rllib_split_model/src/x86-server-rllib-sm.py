@@ -1,5 +1,5 @@
 import sys
-from config import REPO_DIR
+from config import REPO_DIR, MODEL_PATH
 sys.path.append(
     f"{REPO_DIR}/ml-llvm-tools/MLModelRunner/gRPCModelRunner/Python-Utilities"
 )
@@ -225,7 +225,7 @@ def encode_action(data):
 
 def run_pipe_communication(data_format, pipe_name):
     log_file = open(f'{data_format}_python.log', 'w')
-    model_path = "/Pramana/ML_LLVM_Tools/RL4ReAl-checkpoint/checkpoint_000002/"
+    model_path = MODEL_PATH
     args = {
         "no_render": True,
         "checkpoint": model_path,

@@ -41,9 +41,10 @@ public:
 private:
   void canonicalizeLoopsWithLoads();
 
-  void initPipeCommunication(std::vector<std::string> RDG_List);
+  void initPipeCommunication(const std::vector<std::string>& RDG_List);
 
   std::unique_ptr<MLModelRunner> MLRunner;
+  std::ofstream outfile;
 };
 
 FunctionPass *createcustom_loop_distributionPass();

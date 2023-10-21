@@ -20,7 +20,7 @@ import math
 import torch
 import signal
 from gym.spaces import Discrete, Box
-
+from ld_config import BUILD_DIR, REPO_DIR
 # from ggnn_1 import get_observations, get_observationsInf, GatedGraphNeuralNetwork, constructVectorFromMatrix, AdjacencyList
 from ggnn_1 import GatedGraphNeuralNetwork, AdjacencyList, get_observations
 # from register_action_space import RegisterActionSpace
@@ -58,15 +58,13 @@ import ctypes
 from functools import reduce
 import operator
 
-
-sys.path.append('../../../../../llvm-grpc/Python-Utilities/')
-# from client import *
-# import RegisterAllocationInference_pb2_grpc, RegisterAllocationInference_pb2
+sys.path.extend([
+    f"{REPO_DIR}/ml-llvm-tools/MLModelRunner/gRPCModelRunner/Python-Utilities"
+])
 
 config_path=None
 
 logger = logging.getLogger(__file__)
-# logging.basicConfig(filename=os.path.join("/home/cs18mtech11030/project/grpc_llvm/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src", 'running.log'), format='%(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
 logging.basicConfig(filename='running_spill.log', format='%(thread)d - %(threadName)s %(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
 
 def set_config(path):
@@ -123,29 +121,29 @@ class DistributeLoopEnv(MultiAgentEnv):
         self.speedup = 0        
         self.use_pipe = env_config['use_pipe']
         print("use pipe --------------", self.use_pipe)
-        self.use_grpc = env_config['use_grpc']
+        self.use_grpc = not self.use_pipe
         if self.use_pipe:
             self.data_format = env_config['data_format']
         self.read_stream_iter = None
 
         
-        if self.use_pipe:
-            # pipes opening
-            self.temp_rootname = "loopdistppipe"
-            to_compiler = self.temp_rootname + ".in"
-            from_compiler = self.temp_rootname + ".out"
-            print("to_compiler", to_compiler)
-            print("from_compiler", from_compiler)
-            if os.path.exists(to_compiler):
-                os.remove(to_compiler)
-            if os.path.exists(from_compiler):
-                os.remove(from_compiler)
-            os.mkfifo(to_compiler, 0o666)
-            os.mkfifo(from_compiler, 0o666)
-            self.tc = None
-            self.fc = None
-            self.tensor_specs = None
-            self.advice_spec =  None
+        # if self.use_pipe:
+        #     # pipes opening
+        #     self.temp_rootname = "loopdistppipe"
+        #     to_compiler = self.temp_rootname + ".in"
+        #     from_compiler = self.temp_rootname + ".out"
+        #     print("to_compiler", to_compiler)
+        #     print("from_compiler", from_compiler)
+        #     if os.path.exists(to_compiler):
+        #         os.remove(to_compiler)
+        #     if os.path.exists(from_compiler):
+        #         os.remove(from_compiler)
+        #     os.mkfifo(to_compiler, 0o666)
+        #     os.mkfifo(from_compiler, 0o666)
+        #     self.tc = None
+        #     self.fc = None
+        #     self.tensor_specs = None
+        #     self.advice_spec =  None
         self.partition_seq = None
     
     def reward_formula(self, distributedLoopCost, OriginalLoopCost):
@@ -372,9 +370,10 @@ class DistributeLoopEnv(MultiAgentEnv):
         if self.mode != 'inference':
             return obs, reward, done, {}
         else:
-            if self.use_pipe:
-                self.parseSequenceAndSend(self.distribution)
-            return obs, reward, done, self.distribution
+            # if self.use_pipe:
+            #     self.parseSequenceAndSend(self.distribution)
+            distribution = self.parseSeq(self.distribution)
+            return obs, reward, done, distribution
     
     # def step_via_vectorization(self, action):
     #     next_state =None
@@ -591,24 +590,24 @@ class DistributeLoopEnv(MultiAgentEnv):
                         self.serverAddress)
                 self.stub = LoopDistribution_pb2_grpc.LoopDistributionStub(self.channel)
             
-            print("self use pipe: ", self.use_pipe)
-            if self.use_pipe:
-                # Opening pipe files
-                to_compiler = self.temp_rootname + ".in"
-                from_compiler = self.temp_rootname + ".out"
-                print("Creating pipe files", to_compiler, from_compiler)
-                self.tc = io.BufferedWriter(io.FileIO(to_compiler, "wb"))
-                print("Opened the write pipe")
-                self.fc = io.BufferedReader(io.FileIO(from_compiler, "rb"))
-                print("Opened the read pipe")
-                # self.tensor_specs, _, self.advice_spec = log_reader.read_header(self.fc)
-                # print("Tensor and Advice spec", self.tensor_specs, self.advice_spec)                
-                # result = self.readObservation()
-                # element = result[0].__getitem__(0)
-                # print("Pipe init result:", element)
-                # exit(0)
+            # print("self use pipe: ", self.use_pipe)
+            # if self.use_pipe:
+            #     # Opening pipe files
+            #     to_compiler = self.temp_rootname + ".in"
+            #     from_compiler = self.temp_rootname + ".out"
+            #     print("Creating pipe files", to_compiler, from_compiler)
+            #     self.tc = io.BufferedWriter(io.FileIO(to_compiler, "wb"))
+            #     print("Opened the write pipe")
+            #     self.fc = io.BufferedReader(io.FileIO(from_compiler, "rb"))
+            #     print("Opened the read pipe")
+            #     # self.tensor_specs, _, self.advice_spec = log_reader.read_header(self.fc)
+            #     # print("Tensor and Advice spec", self.tensor_specs, self.advice_spec)                
+            #     # result = self.readObservation()
+            #     # element = result[0].__getitem__(0)
+            #     # print("Pipe init result:", element)
+            #     # exit(0)
         
-    def readObservation(self):
+    # def readObservation(self):
         
         # next_event = self.fc.readline()
         # # if not next_event:
@@ -627,36 +626,36 @@ class DistributeLoopEnv(MultiAgentEnv):
         #     tensor_values.append(fv)
         # return tensor_values
 
-        loopcost = None
+        # loopcost = None
 
-        if self.data_format == "bytes":
-            #read first 8 bytes to be compatible with protobuf
-            # if self.read_stream_iter is None:
-            self.read_stream_iter = log_reader.read_stream2(self.fc)
-            print("Before reading cost")
-            hdr = self.fc.read(8)
-            print("Header", hdr)
-            context, observation_id, features, score = next(self.read_stream_iter)
-            print("Obtained feature value is", features[0].__getitem__(0))
-            # assert len(features[0]) == 1
-            loopcost = features[0].__getitem__(0)
-            # loopcost = np.empty([1])
-            # for i in range(len(features[0])):
-            #     loopcost[i] = features[0][i]
+        # if self.data_format == "bytes":
+        #     #read first 8 bytes to be compatible with protobuf
+        #     # if self.read_stream_iter is None:
+        #     self.read_stream_iter = log_reader.read_stream2(self.fc)
+        #     print("Before reading cost")
+        #     hdr = self.fc.read(8)
+        #     print("Header", hdr)
+        #     context, observation_id, features, score = next(self.read_stream_iter)
+        #     print("Obtained feature value is", features[0].__getitem__(0))
+        #     # assert len(features[0]) == 1
+        #     loopcost = features[0].__getitem__(0)
+        #     # loopcost = np.empty([1])
+        #     # for i in range(len(features[0])):
+        #     #     loopcost[i] = features[0][i]
 
-        elif self.data_format == "json":
-            print("reading json...")
-            #read first 8 bytes to be compatible with protobuf
-            hdr = self.fc.read(8)
-            print("hdr: ",hdr)
-            size = int.from_bytes(hdr, "little")
-            print("size: ", size)
-            msg = self.fc.read(size)
-            loopcost = json.loads(msg.decode('utf-8'))["loopcost"]
-            # assert len(embedding) == 300
-            # embedding = np.array(embedding) 
+        # elif self.data_format == "json":
+        #     print("reading json...")
+        #     #read first 8 bytes to be compatible with protobuf
+        #     hdr = self.fc.read(8)
+        #     print("hdr: ",hdr)
+        #     size = int.from_bytes(hdr, "little")
+        #     print("size: ", size)
+        #     msg = self.fc.read(size)
+        #     loopcost = json.loads(msg.decode('utf-8'))["loopcost"]
+        #     # assert len(embedding) == 300
+        #     # embedding = np.array(embedding) 
 
-        return loopcost
+        # return loopcost
     
     def sendResponseV1(self, f: io.BufferedWriter, value, spec: log_reader.TensorSpec):
         try:
@@ -711,8 +710,8 @@ class DistributeLoopEnv(MultiAgentEnv):
         #     assert(False, 'Not valid task selected')
 
     def startServer(self,filePath, functionName, loopId, serverAddress):
-        optPath = "/home/cs21btech11051/ml-llvm-project/build_all/bin/opt"
-        clangPath = "/home/cs21btech11051/ml-llvm-project/build_all/bin/clang"
+        optPath = f"{BUILD_DIR}/bin/opt"
+        clangPath = f"{BUILD_DIR}/bin/clang"
 
         # edit server, path
         if(self.use_pipe):
@@ -755,7 +754,7 @@ class DistributeLoopEnv(MultiAgentEnv):
         self.killServer()        
         return OrignialloopCost, distributedLoopCost
     
-    def parseSequenceAndSend(self, partition):
+    def parseSeq(self, partition):
         seq = partition.replace('|', '-')
         # seq = re.split(r',|-', seq)
         seq = re.split('(\W)', seq)
@@ -769,11 +768,14 @@ class DistributeLoopEnv(MultiAgentEnv):
                 partition_seq[i] = 101
             else:
                 partition_seq[i] = 102
-                
         print("Partition Sequence after: ", partition, partition_seq)
         self.partition_seq = partition_seq
+        print("In parseSeq func: self.partition_seq: ", self.partition_seq)
+        return partition_seq
 
-        self.sendResponse(partition_seq)
+    def parseSequenceAndSend(self, partition):
+        self.parseSeq(partition)
+        self.sendResponse(self.partition_seq)
         # self.sendResponse(self.tc, partition_seq, self.advice_spec)
     
     def killServer(self):

@@ -1,5 +1,8 @@
 #include "llvm/Transforms/IR2Vec-LOF/custom_loop_distribution.h"
+#include "MLModelRunner/gRPCModelRunner.h"
 #include "Python.h"
+#include "grpc/LoopDistribution/LoopDistribution.grpc.pb.h"
+#include "grpc/LoopDistribution/LoopDistribution.pb.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/SmallVector.h"
@@ -25,9 +28,11 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IR2Vec-LOF/Config.h"
 #include "llvm/Transforms/IR2Vec-LOF/IR2Vec-SCC.h"
+#include "llvm/Transforms/IR2Vec-LOF/LoopDistribution.h"
 #include "llvm/Transforms/IR2Vec-LOF/RDG.h"
 #include <algorithm>
 #include <bits/stdint-intn.h>
+#include <memory>
 #include <string>
 // #include <ray/api.h>
 
@@ -35,13 +40,21 @@
 
 using namespace llvm;
 
-static cl::opt<bool> usePipe("use-pipe-inf", cl::desc("Use pipe for inference"),
+static cl::opt<bool> usePipe("cld-use-pipe-inf",
+                             cl::desc("Use pipe for inference"), cl::Hidden,
+                             cl::Optional, cl::init(false));
+static cl::opt<bool> useOnnx("cld-use-onnx", cl::desc("Use onnx for inference"),
                              cl::Hidden, cl::Optional, cl::init(false));
-static cl::opt<bool> useOnnx("use-onnx-cld", cl::desc("Use onnx for inference"),
-                             cl::Hidden, cl::Optional, cl::init(false));
-
-static cl::opt<std::string> data_format("ld-data-format", cl::Hidden,
+static cl::opt<bool> useOrg("cld-use-org", cl::desc("Use org for inference"),
+                            cl::Hidden, cl::Optional, cl::init(false));
+static cl::opt<std::string> pipe_name("cld-pipe-name", cl::Hidden,
+                                      cl::init("loopdistppipe"));
+static cl::opt<std::string> data_format("cld-data-format", cl::Hidden,
                                         cl::init("protobuf"));
+cl::opt<std::string> server_address(
+    "cld-server-address", cl::Hidden,
+    cl::desc("Starts the server in the given address; format <ip>:<port>"),
+    cl::init("0.0.0.0:50051"));
 
 custom_loop_distribution::custom_loop_distribution() : FunctionPass(ID) {
   initializecustom_loop_distributionPass(*PassRegistry::getPassRegistry());
@@ -128,25 +141,7 @@ void custom_loop_distribution::canonicalizeLoopsWithLoads() {
 }
 
 void custom_loop_distribution::initPipeCommunication(
-    std::vector<std::string> RDG_List) {
-
-  std::string basename = "/home/cs20btech11024/repos/ml-llvm-project/model/ggnn_drl/static_v4/src/loopdistppipe";
-
-  BaseSerDes::Kind SerDesType;
-  if (data_format == "json") {
-    SerDesType = BaseSerDes::Kind::Json;
-  } else if (data_format == "bytes") {
-    SerDesType = BaseSerDes::Kind::Bitstream;
-  } else if (data_format == "protobuf") {
-    SerDesType = BaseSerDes::Kind::Protobuf;
-  } else {
-    errs() << "Invalid data format\n";
-    return;
-  }
-
-  MLRunner = std::make_unique<PipeModelRunner>(
-      basename + ".out", basename + ".in", SerDesType, &M->getContext());
-
+    const std::vector<std::string>& RDG_List) {
   int cnt = 1;
   for (auto rdg : RDG_List) {
     std::pair<std::string, std::string> p1("RDG", rdg);
@@ -174,85 +169,29 @@ void custom_loop_distribution::initPipeCommunication(
     }
     errs() << "Reseved partition:" << partition << "\n";
     distributed_seqs.push_back(partition);
+    outfile << partition << "\n";
+    errs() << "Dist_seqs vec size: " << distSequence.size() << "\n";
   }
+  errs() << "Covered all RDGs\n";
   std::pair<std::string, int> p1("Exit", 1);
   MLRunner->populateFeatures(p1);
-  MLRunner->evaluate<int>();
+  int res = MLRunner->evaluate<int>();
+  errs() << "Exit code: " << res << "\n";
 }
-
-// void custom_loop_distribution::initPipeCommunication(std::vector<std::string>
-// RDG_List) {
-//     const char *const DecisionName = "advisor_decision";
-//     const TensorSpec DecisionSpec =
-//         TensorSpec::createSpec<int64_t>(DecisionName, {100});
-
-//     const char *const DefaultFeatureName = "feature_default";
-//     const TensorSpec DefaultFeatureSpec =
-//         TensorSpec::createSpec<int64_t>(DefaultFeatureName, {2});
-
-//     std::vector<uint64_t> feature_data;
-//     for(size_t i=0; i<DefaultFeatureSpec.getElementCount(); i++)
-//         feature_data.push_back((uint64_t) (1));
-
-//     // std::string basename =
-//     "../../../../../model/ggnn_drl/static_v4/src/loopdistppipe"; std::string
-//     basename =
-//     "/home/cs20mtech12003/ML-Loop-Distribution/model/ggnn_drl/static_v4/src/loopdistppipe";
-//     std::vector<TensorSpec> Features;
-//     Features.push_back(DefaultFeatureSpec);
-//     std::unique_ptr<InteractiveModelRunner> AOTRunner;
-
-//     errs() << "DEBUG2\n";
-
-//     for(auto rdg: RDG_List) {
-//       AOTRunner = std::make_unique<InteractiveModelRunner>(
-//         this->M->getContext(), Features, DecisionSpec,
-//         basename + ".out",
-//         basename + ".in");
-//       auto res = AOTRunner->communicateData<int64_t>(rdg);
-//       errs() << "Runner result:\n";
-//       std::vector<int64_t> distSequence(res, res + 100);
-//       std::string partition;
-//       for (int i = 0; i < 100; i++) {
-//         int64_t element = distSequence[i];
-//         if (element == -1)
-//           break;
-//         else if (element == 101)
-//           partition.append(",");
-//         else if (element == 102)
-//           partition.append("|");
-//         else
-//           partition.append("S" + std::to_string(element));
-//       }
-//       errs() << "Reseved partition:\n";
-//       distributed_seqs.push_back(partition);
-//     }
-//   }
 
 bool custom_loop_distribution::runOnFunction(Function &F) {
   // if (F.getName() != "s222")
   //   return false;
   // F.dump();
+  errs() << "Entered custom_loop_distribution pass\n";
   this->M = F.getParent();
   this->FName = F.getName();
   canonicalizeLoopsWithLoads();
-  // errs()<<"After canonicolization: \n";
-  // F.dump();
-  // RDG_List: Contains list of all the string wrt to RDG
-  // SmallVector<std::string, 5> RDG_List;
-  // std::vector<std::string> RDG_List;
-  // SmallVector<DOTData, 5> RDG_List;
 
   SmallVector<DataDependenceGraph *, 5> SCCGraphs;
   SmallVector<Loop *, 5> loops;
 
   RDGWrapperPass &R = getAnalysis<RDGWrapperPass>();
-  // RDGWrapperPass *R = createRDGWrapperPass();
-  // legacy::FunctionPassManager FPM(F.getParent());
-  // FPM.add(R);
-  // FPM.run(F);
-  // errs() << "*********************BEFORE compute RDG "
-  // "starts*****************************\n";
   R.computeRDG(F);
   RDGData data = R.getRDGInfo();
 
@@ -271,6 +210,24 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
   SmallVector<std::string, 5> vf_seqs;
 
   if (usePipe) {
+    std::string basename = "/tmp/" + pipe_name;
+
+    BaseSerDes::Kind SerDesType;
+    if (data_format == "json") {
+      SerDesType = BaseSerDes::Kind::Json;
+    } else if (data_format == "bytes") {
+      SerDesType = BaseSerDes::Kind::Bitstream;
+    } else if (data_format == "protobuf") {
+      SerDesType = BaseSerDes::Kind::Protobuf;
+    } else {
+      errs() << "Invalid data format\n";
+      return false;
+    }
+
+    MLRunner = std::make_unique<PipeModelRunner>(
+        basename + ".out", basename + ".in", SerDesType, &M->getContext());
+
+    outfile.open(data_format + "out.log", std::ios_base::app);
     std::vector<std::string> RDG_List;
     RDG_List.insert(RDG_List.end(), data.input_rdgs_str.begin(),
                     data.input_rdgs_str.end());
@@ -283,35 +240,12 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
       errs() << "No RDGs\n";
       return false;
     }
-    LLVM_DEBUG(errs() << "Number rdg generated : " << RDG_List.size() << "\n");
+    (errs() << "Number rdg generated : " << RDG_List.size() << "\n");
     initPipeCommunication(RDG_List);
+    outfile.close();
   } else if (useOnnx) {
-    /******************************************************/
-    // SmallVector<DOTData, 5> RDG_List;
-    // RDG_List.insert(RDG_List.end(), data.input_rdgs.begin(),
-    //                 data.input_rdgs.end());
 
-    // assert(RDG_List.size() == SCCGraphs.size() &&
-    //      RDG_List.size() == loops.size() &&
-    //      "RDG_List, SCCgraphs and loops list should of same size.");
-
-    // if (RDG_List.size() == 0) {
-    //   errs() << "No RDGs\n";
-    //   return false;
-    // }
-    // LLVM_DEBUG(errs() << "Number rdg generated : " << RDG_List.size() <<
-    // "\n");
-
-    // MultiAgentEnv *Env = new MultiAgentEnv();
-    // DriverService *DriverInference = new DriverService(Env);
-
-    // DriverInference->getInfo(RDG_List, distributed_seqs);
-    // errs() << "***DISTRIBUTED SEQS:";
-    // for (auto seq : distributed_seqs)
-    //   errs() << seq << " ";
-    // errs() << "\n";
-    // /******************************************************/
-
+    outfile.open("onnx_out.log", std::ios_base::app);
     SmallVector<DOTData, 5> RDG_List;
     RDG_List.insert(RDG_List.end(), data.input_rdgs.begin(),
                     data.input_rdgs.end());
@@ -336,12 +270,14 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
           std::make_unique<ONNXModelRunner>(this, agents, &M->getContext());
       // runInference();
       MLRunner->evaluate<int64_t>();
+      errs() << this->DistributionSeq << "\n";
+      outfile << this->DistributionSeq << "\n";
       distributed_seqs.push_back(this->DistributionSeq);
     }
+    outfile.close();
     // errs() << "Code is Commented\n";
     // exit(0);
-  } else {
-
+  } else if (useOrg) {
     std::vector<std::string> RDG_List;
     RDG_List.insert(RDG_List.end(), data.input_rdgs_str.begin(),
                     data.input_rdgs_str.end());
@@ -471,6 +407,31 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
         Py_DECREF(pName);
       }
     }
+  } else {
+    loopdistribution::LoopDistributionRequest request;
+    loopdistribution::Advice response;
+    MLRunner = std::make_unique<gRPCModelRunner<
+        loopdistribution::LoopDistribution,
+        loopdistribution::LoopDistribution::Stub,
+        loopdistribution::LoopDistributionRequest, loopdistribution::Advice>>(
+        server_address, &request, &response, &M->getContext());
+    MLRunner->setRequest(&request);
+    MLRunner->setResponse(&response);
+
+    std::vector<std::string> RDG_List;
+    RDG_List.insert(RDG_List.end(), data.input_rdgs_str.begin(),
+                    data.input_rdgs_str.end());
+
+    assert(RDG_List.size() == SCCGraphs.size() &&
+           RDG_List.size() == loops.size() &&
+           "RDG_List, SCCgraphs and loops list should of same size.");
+
+    if (RDG_List.size() == 0) {
+      errs() << "No RDGs\n";
+      return false;
+    }
+    (errs() << "Number rdg generated : " << RDG_List.size() << "\n");
+    initPipeCommunication(RDG_List);
   }
 
   LLVM_DEBUG(errs() << "Call to runwihAnalysis...\n");
