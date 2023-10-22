@@ -34,7 +34,7 @@ void ONNXModelRunner::computeAction(Observation obs) {
     action = current_agent->computeAction(obs);
     obs = this->env->step(action);
     if (this->env->checkDone()) {
-      std::cout << "Done🎉\n";
+      // std::cout << "Done🎉\n";
       break;
     }
   }

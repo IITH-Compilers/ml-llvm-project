@@ -14,7 +14,6 @@ add_subdirectory(Coroutines)
 add_subdirectory(CFGuard)
 add_subdirectory(AddSizeAttr)
 add_subdirectory(PosetRL)
-add_subdirectory(CodeSizeOpt)
 add_subdirectory(MCAInstrumentation)
 
 add_subdirectory(IR2Vec-LOF)
