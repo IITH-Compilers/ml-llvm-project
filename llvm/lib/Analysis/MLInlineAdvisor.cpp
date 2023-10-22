@@ -66,14 +66,14 @@ llvm::getReleaseModeAdvisor(Module &M, ModuleAnalysisManager &MAM,
   std::unique_ptr<MLModelRunner> AOTRunner;
   if (InteractiveChannelBaseName.empty()) {
     AOTRunner = std::make_unique<TFModelRunner<CompiledModelType>>(
-        M.getContext(), DecisionName); // a TFModelRunner
+        &M.getContext(), DecisionName); // a TFModelRunner
   } else {
     auto Features = FeatureMap;
     if (InteractiveIncludeDefault)
       Features.push_back(DefaultDecisionSpec);
     AOTRunner = std::make_unique<PipeModelRunner>(
-        InteractiveChannelBaseName + ".out",
-        InteractiveChannelBaseName + ".in",BaseSerDes::Kind::Protobuf); // a PipeModelRunner
+        InteractiveChannelBaseName + ".out", InteractiveChannelBaseName + ".in",
+        BaseSerDes::Kind::Protobuf); // a PipeModelRunner
   }
   return std::make_unique<MLInlineAdvisor>(M, MAM, std::move(AOTRunner),
                                            GetDefaultAdvice);
@@ -385,7 +385,8 @@ std::unique_ptr<InlineAdvice> MLInlineAdvisor::getAdviceImpl(CallBase &CB) {
   // auto p1 = make_pair(std::string("callee_basic_block_count"),
   //                     CalleeBefore.BasicBlockCount);
 
-  auto p1 = make_pair(std::string("callee_basic_block_count"),CalleeBefore.BasicBlockCount);
+  auto p1 = make_pair(std::string("callee_basic_block_count"),
+                      CalleeBefore.BasicBlockCount);
   auto p2 = make_pair("callsite_height", getInitialFunctionLevel(Caller));
   auto p3 = make_pair("node_count", NodeCount);
   auto p4 = make_pair("nr_ctant_params", NrCtantParams);
@@ -447,7 +448,8 @@ std::unique_ptr<InlineAdvice> MLInlineAdvisor::getAdviceImpl(CallBase &CB) {
   // }
   // // This one would have been set up to be right at the end.
   // if (!InteractiveChannelBaseName.empty() && InteractiveIncludeDefault)
-  //   *ModelRunner->getTensor<int64_t>(InlineCostFeatureIndex::NumberOfFeatures) =
+  //   *ModelRunner->getTensor<int64_t>(InlineCostFeatureIndex::NumberOfFeatures)
+  //   =
   //       GetDefaultAdvice(CB);
 
   return getAdviceFromModel(CB, ORE);

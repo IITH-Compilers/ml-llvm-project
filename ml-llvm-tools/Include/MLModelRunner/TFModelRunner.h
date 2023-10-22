@@ -29,11 +29,11 @@ template <class TGen> class TFModelRunner final : public MLModelRunner {
 public:
   /// FeatureNames' type should be an indexed collection of std::string, like
   /// std::array or std::vector, that has a size() method.
-  TFModelRunner(LLVMContext &Ctx, StringRef DecisionName,
+  TFModelRunner(LLVMContext *Ctx, StringRef DecisionName,
                 StringRef FeedPrefix = "feed_",
                 StringRef FetchPrefix = "fetch_")
-      : MLModelRunner(MLModelRunner::Kind::TFAOT,
-                      BaseSerDes::Kind::Tensorflow, &Ctx),
+      : MLModelRunner(MLModelRunner::Kind::TFAOT, BaseSerDes::Kind::Tensorflow,
+                      Ctx),
         CompiledModel(std::make_unique<TGen>()) {
 
     SerDes->setRequest(CompiledModel.get());

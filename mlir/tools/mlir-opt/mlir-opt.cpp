@@ -61,6 +61,7 @@ void registerTestSpirvModuleCombinerPass();
 void registerTestTraitsPass();
 void registerTosaTestQuantUtilAPIPass();
 void registerVectorizerTestPass();
+void registerMyOperationPass();
 
 namespace test {
 void registerCommutativityUtils();
@@ -176,6 +177,7 @@ void registerTestPasses() {
   registerTestTraitsPass();
   registerVectorizerTestPass();
   registerTosaTestQuantUtilAPIPass();
+  registerMyOperationPass();
 
   mlir::test::registerCommutativityUtils();
   mlir::test::registerConvertCallOpPass();
@@ -267,6 +269,6 @@ int main(int argc, char **argv) {
   ::test::registerTestTransformDialectExtension(registry);
   ::test::registerTestDynDialect(registry);
 #endif
-  return mlir::asMainReturnCode(
-      mlir::MlirOptMain(argc, argv, "MLIR modular optimizer driver\n", registry));
+  return mlir::asMainReturnCode(mlir::MlirOptMain(
+      argc, argv, "MLIR modular optimizer driver\n", registry));
 }
