@@ -1,7 +1,7 @@
-#include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/IR/BuiltinOps.h"
-#include "mlir/Pass/Pass.h"
-#include "mlir/Pass/PassManager.h"
+// #include "mlir/Dialect/Func/IR/FuncOps.h"
+// #include "mlir/IR/BuiltinOps.h"
+// #include "mlir/Pass/Pass.h"
+// #include "mlir/Pass/PassManager.h"
 // #include "mlir/Transforms/Passes.h"
 
 #include "MLModelRunner/MLModelRunner.h"
@@ -264,7 +264,7 @@ static cl::opt<int> n("hello-data-size", cl::Hidden, cl::init(1000),
                       cl::desc("Size of input vector"));
 
 // using namespace grpc;
-using namespace mlir;
+// using namespace mlir;
 // using namespace helloMLBridge;
 
 namespace {
