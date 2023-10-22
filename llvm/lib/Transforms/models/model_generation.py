@@ -12,5 +12,5 @@ for i in range(500,50000+1,500):
 
     module = tf.Module()
     module.call = linear_function
-    tf.saved_model.save(module, "/home/cs20btech11018/data/model3/", signatures={"serving_default": linear_function.get_concrete_function()})
-    os.system(f"/home/cs20btech11018/anaconda3/envs/mlgo-new/lib/python3.10/site-packages/tensorflow/../../../../bin/saved_model_cli aot_compile_cpu --multithreading false --dir /home/cs20btech11018/data/model3  --cpp_class LinearModel{i} --tag_set serve --signature_def_key serving_default --output_prefix /home/cs20btech11018/repos/ml-llvm-project/llvm/lib/Transforms/Hello-MLBridge/tf_model/LinearModel{i}")
+    tf.saved_model.save(module, "/home/cs20mtech12003/data/model3/", signatures={"serving_default": linear_function.get_concrete_function()})
+    os.system(f"/home/cs20mtech12003/anaconda3/envs/mlgo/lib/python3.10/site-packages/tensorflow/../../../../bin/saved_model_cli aot_compile_cpu --multithreading false --dir /home/cs20mtech12003/data/model3  --cpp_class LinearModel{i} --tag_set serve --signature_def_key serving_default --output_prefix /home/cs20mtech12003/ml-llvm-project/mlir/lib/Transforms/tf_model/LinearModel{i}")

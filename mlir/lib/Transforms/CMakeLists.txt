@@ -32,6 +32,7 @@ add_mlir_library(MLIRTransforms
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Transforms
   ${LLVM_BUILD_DIR}/tools/ml-llvm-tools
   ${TENSORFLOW_AOT_PATH}/include
+  ${CMAKE_CURRENT_SOURCE_DIR}/tf_model
 
   DEPENDS
   MLIRTransformsPassIncGen
@@ -52,4 +53,11 @@ add_mlir_library(MLIRTransforms
 
 
 target_include_directories(MLIRTransforms PUBLIC ${LLVM_MAIN_INCLUDE_DIRS} ${Protobuf_INCLUDE_DIRS} )
+
+file(GLOB MODEL_OBJECTS ${CMAKE_CURRENT_SOURCE_DIR}/tf_model/*.o)
+
+foreach(MODEL_OBJECT ${MODEL_OBJECTS})
+  target_link_libraries(MLIRTransforms PUBLIC ${MODEL_OBJECT})
+endforeach()
+
   # /home/cs20mtech12003/anaconda3/envs/mlgo/lib/python3.10/site-packages/tensorflow/include
