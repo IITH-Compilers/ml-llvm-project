@@ -19,7 +19,7 @@ logger = logging.getLogger('utils.py')
 
 # LLVM_BUILD = '/home/shalini/LOF_test/LD_VF/IR2Vec-LoopOptimizationFramework/build_release/'
 # LLVM_BUILD = '/home/shalini/LOF_test/LD_VF/IR2Vec-LoopOptimizationFramework/debug_build/'
-LLVM_BUILD = '/home/cs20btech11018/repos/ml-llvm-project/build_release_2/'
+LLVM_BUILD = '/home/cs21btech11051/ml-llvm-project/build_all/'
 llvm = LLVM_BUILD
 opt = '{}bin/opt'.format(LLVM_BUILD)
 CLANG = '{}bin/clang'.format(LLVM_BUILD)
@@ -125,7 +125,7 @@ def call_distributionPass(filename, distributeSeq, method_name, loop_id, hfun_id
         logging.info("{} --------------------------> {}".format(parts[1],distributeSeq))
         
         # print(opt)
-        cmd = opt + " -LoopDistribution -lID " + loop_id + " -function " + method_name + ' --partition=\"' + distributeSeq + '\" ' + "-S " + filename + " -o " + dist_llfile
+        cmd = opt + " -LoopDistribution -lID " + loop_id + " -function " + method_name + ' --partition=\"' + distributeSeq + '\" ' + "-S " + filename + " -o " + dist_llfile + " --ml-config-path /Pramana/ML_LLVM_Tools/ml-llvm-project/build_loopdist/config "
         # ".format(opt=os.environ['OPT'], LLVM=os.environ['LLVM'], dseq=distributeSeq ,input_file=filename, dist_llfile=dist_llfile, method_name=method_name, loop_id=loop_id, vecfactorflag=vecfactorflag)
 ## Use for replicate the O3
         # print("cmd: {}".format(cmd))
@@ -214,7 +214,7 @@ def getLoopCost(filepath, loopId, fname):
     try:
         # TODO 
         # cmd = "{opt} -S -load {llvm}/lib/LoopCost.so {post_distribution_passes} -LoopCost -lc-lID {loopId} -lc-function {fname}  {input_file} -o /dev/null ".format(opt=os.environ['OPT'], llvm=os.environ['LLVM'], input_file=filepath, loopId=loopId,fname=fname, post_distribution_passes=POST_DIS_PASSES_MAP[config.post_pass_key])
-        cmd = opt + " -S -load " + llvm + "lib/LoopCost.so " + POST_DIST_O3_PASSES + " -LoopCost -lc-lID " + loopId + " -lc-function " + fname + " " + filepath + " -o /dev/null"
+        cmd = opt + " -S -load " + llvm + "lib/LoopCost.so " + POST_DIST_O3_PASSES + " -LoopCost -lc-lID " + loopId + " -lc-function " + fname + " " + filepath + " -o /dev/null" + " --ml-config-path /Pramana/ML_LLVM_Tools/ml-llvm-project/build_loopdist/config "
         # .format(opt=os.environ['OPT'], llvm=os.environ['LLVM'], input_file=filepath, loopId=loopId,fname=fname, post_distribution_passes=POST_DIS_PASSES_MAP[config.post_pass_key])
         # analysedInfo = subprocess.Popen(cmd, executable='/bin/bash', shell=True, stdout=subprocess.PIPE).stdout.read()
         # print("LoopCost cmd: {}".format(cmd))

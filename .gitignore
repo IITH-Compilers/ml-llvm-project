@@ -76,3 +76,6 @@ LLVM/IR2Vec-Engine/IR2Vec-Binaries/*
 
 # trained model
 trained_model/
+
+.env
+.eggs

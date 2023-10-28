@@ -14,13 +14,12 @@ using namespace llvm;
 typedef std::vector<float> Embedding;
 typedef std::vector<float> ActionMask;
 
-std::vector<int> Sequence;
-
 class PosetRLEnv : public Environment {
   unsigned Actioncount = 0;
   Embedding CurrEmbedding;
   ActionMask CurrActionMask;
-
+public:
+  std::vector<int> Sequence;
 public:
   PosetRLEnv();
   Observation reset() override;

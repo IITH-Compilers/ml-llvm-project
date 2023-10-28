@@ -12,6 +12,7 @@
 #include "llvm/Transforms/IR2Vec-LOF/LoopDistribution.h"
 #include "MLModelRunner/MLModelRunner.h"
 #include "MLModelRunner/gRPCModelRunner.h"
+#include "MLModelRunner/PipeModelRunner.h"           // check
 // grpc includes
 #include "grpc/LoopDistribution/LoopDistribution.grpc.pb.h"
 #include "grpc/LoopDistribution/LoopDistribution.pb.h"
@@ -19,6 +20,8 @@
 #include <bits/stdint-intn.h>
 #include <cstdint>
 #include "llvm/Transforms/Vectorize.h"
+#include "llvm/Transforms/IR2Vec-LOF/RDG.h"
+
 
 
 using namespace llvm;
@@ -31,8 +34,14 @@ static cl::opt<unsigned int> loopID("loopID", cl::desc("Loop ID"),
                                     cl::value_desc("Loop ID"), cl::Hidden,
                                     cl::Optional, cl::init(0));
 
-static cl::opt<bool> usePipe("use-pipe-loop-dist", cl::desc("Use pipe for inference"), cl::Hidden,
+static cl::opt<bool> use_pipe("use-pipe-loop-dist", cl::desc("Use pipe for inference"), cl::Hidden,
                                     cl::Optional, cl::init(false));
+
+static cl::opt<bool> use_grpc("use-grpc-loop-dist", cl::desc("Use pipe for inference"), cl::Hidden,
+                                    cl::Optional, cl::init(false));
+
+static cl::opt<std::string> data_format("loop-dist-data-format", cl::Hidden,
+                                        cl::init("protobuf"));
 
 static cl::opt<std::string> server_address(
     "server_address_loop_dist", cl::Hidden,
@@ -69,7 +78,7 @@ struct LoopDistributionServerPass
     ORE = &getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
     LAA = &getAnalysis<LoopAccessLegacyAnalysis>();
     OriginalLoopCost = getAnalysis<LoopCost>().getLoopCost();
-    errs() << OriginalLoopCost << "\n";
+    errs() << "OriginalLoopCost: " << OriginalLoopCost << "\n";
     GetLAA = [&](Loop &L) -> const LoopAccessInfo & {
       return LAA->getInfo(&L);
     };
@@ -79,11 +88,12 @@ struct LoopDistributionServerPass
     auto DI = DependenceInfo(&F, AA, SE, LI);
     this->DI = &DI;
     FileModified = false;
-    if(usePipe)
+    errs() << "Before Communicate \n";
+    if(use_pipe)
       initPipeCommunication();
-    else {
+    else if(use_grpc) {
       errs() << "came here\n";
-       AOTRunner = std::make_unique<gRPCModelRunner<
+      AOTRunner = std::make_unique<gRPCModelRunner<
           loopdistribution::LoopDistribution,
           loopdistribution::LoopDistribution::Stub,
           loopdistribution::LoopDistributionRequest, loopdistribution::LoopDistributionResponse>>(
@@ -115,7 +125,9 @@ struct LoopDistributionServerPass
     return grpc::Status::OK;
   }
 
+
   uint64_t distributeLoopAndGetLoopCostHelper(std::string partition) {
+    errs() << "Entered Distribute Func\n";
 
     dist_helper.setPartition(partition);
 
@@ -141,73 +153,88 @@ struct LoopDistributionServerPass
     return DistributedLoopCost;
   }
 
-  void initPipeCommunication() {
-    const char *const DecisionName = "advisor_decision";
-    const TensorSpec DecisionSpec =
-        TensorSpec::createSpec<int64_t>(DecisionName, {100});
+  void initPipeCommunication() {    // std::vector<std::string> RDG_List
 
-    const char *const DefaultFeatureName = "feature_default";
-    const TensorSpec DefaultFeatureSpec =
-        TensorSpec::createSpec<int64_t>(DefaultFeatureName, {2});
+  // Pipe and runner setup
 
-    std::vector<uint64_t> feature_data;  
-    for(size_t i=0; i<DefaultFeatureSpec.getElementCount(); i++) 
-        feature_data.push_back((uint64_t) (1));
+    std::string pipe_name = "loopdistppipe";
+    std::string basename = "/home/cs21btech11051/ml-llvm-project/model/ggnn_drl/static_v4/src/" + pipe_name; // change
 
-    std::string basename = "loopdistppipe";
-    std::vector<TensorSpec> Features;
-    // std::vector<void*> InputBuffers;
+    BaseSerDes::Kind SerDesType;
+    if (data_format == "json") {
+      SerDesType = BaseSerDes::Kind::Json;
+    } else if (data_format == "bytes") {
+      SerDesType = BaseSerDes::Kind::Bitstream;
+    } else if (data_format == "protobuf") {
+      SerDesType = BaseSerDes::Kind::Protobuf;
+    } else {
+      errs() << "Invalid data format\n";
+      return;
+    }
 
+    std::unique_ptr<MLModelRunner> MLRunner = std::make_unique<PipeModelRunner>(
+      basename + ".out", basename + ".in", SerDesType, &M->getContext());
 
-    // if (InteractiveIncludeDefault){
-    Features.push_back(DefaultFeatureSpec);
-    // Features.push_back(DefaultFeatureSpec2);
+    std::pair<std::string, long> p1("loopcost", (long) OriginalLoopCost);
+    MLRunner->populateFeatures(p1);
+    errs() << "Value populated (original cost):" << (long) OriginalLoopCost << "\n";
 
-    // InputBuffers.push_back(feature_data.data());
+    int cnt = 1;
+    // for (auto rdg : RDG_List) {
+      // std::pair<std::string, std::string> p1("RDG", rdg);
+      // MLRunner->populateFeatures(p1);
 
-    // std::cout << "DEBUG1\n" << std::endl;
+    // Obtain partition sequence
+    int *out;
+    size_t size;
+    MLRunner->evaluate<int *>(out, size);
+    errs() << "Func name: " << this->F << " : " << cnt++ << "\n";
+    std::vector<int> distSequence;
+    for (int i = 0; i < size; i++) {
+      distSequence.push_back(out[i]);
+    }
+    std::string partition;
+    for (int i = 0; i < 100; i++) {
+      int element = distSequence[i];
+      if (element == -1)
+        break;
+      else if (element == 101)
+        partition.append(",");
+      else if (element == 102)
+        partition.append("|");
+      else
+        partition.append("S" + std::to_string(element));
 
-    // AOTRunner = std::make_unique<InteractiveModelRunner>(
-    //   M->getContext(), Features, DecisionSpec,
-    //   basename + ".out",
-    //   basename + ".in");
-    // errs() << "DEBUG2\n";
-              
-    // std::vector<void*> InputBuffers;
-    // // auto embedding = getEmbeddings();
-    // // errs() << "Embedding size:" << embedding.size() << "\n";
-    // InputBuffers.push_back(feature_data.data());
-    // AOTRunner->feedInputBuffers(InputBuffers);
-    // // int res = static_cast<int>(AOTRunner->evaluate<int64_t>());
-    // auto res = AOTRunner->evaluate<int64_t>();
-    // errs() << "Runner result:\n";
-    // std::vector<int64_t> distSequence(res, res + 100);
-    // std::string partition;
-    // for (int i = 0; i < 100; i++) {
-    //   int64_t element = distSequence[i];
-    //   if (element == -1)
-    //     break;
-    //   else if (element == 101)
-    //     partition.append(",");
-    //   else if (element == 102)
-    //     partition.append("|");
-    //   else
-    //     partition.append("S" + std::to_string(element));      
-    // }
+    }
 
-    // DistributedLoopCost = this->distributeLoopAndGetLoopCostHelper(partition);
-    // errs() << "Orignal and Distributed Loop costs are: " << OriginalLoopCost << " " << DistributedLoopCost << "\n";
+  // Calculate and return costs
+    errs() << "Received partition:" << partition << "\n";
 
-    // feature_data[0] = OriginalLoopCost;
-    // feature_data[1] = DistributedLoopCost;
-    // InputBuffers[0] = feature_data.data();
-    // AOTRunner->feedInputBuffers(InputBuffers);
-    auto res2 = AOTRunner->evaluate<int64_t>();
+    if (partition == "Exit") {
+      errs() << "server exit requested\n";
+      AOTRunner->requestExit();
+      return;
+      //return grpc::Status::OK;
+    }
 
-    errs() << "Episode completed: " << res2 << "\n";
-    // AOTRunner->feedInputBuffers(InputBuffers);
-    // int res = static_cast<int>(AOTRunner->evaluate<int64_t>());
-    // errs() << "Runner result: " << res <<'\n';
+    DistributedLoopCost = this->distributeLoopAndGetLoopCostHelper(partition);
+    std::pair<std::string, long> p2("loopcost", (long) DistributedLoopCost);
+    MLRunner->populateFeatures(p2);
+    errs() << "Features populated (distributed cost): " << (long) DistributedLoopCost << "\n";
+
+    int *status_out;
+    MLRunner->evaluate<int *>(status_out, size);
+    std::string final_status;
+    for (int i = 0; i < size; i++) {
+      final_status.push_back( (char) status_out[i] );
+    }
+    if(final_status == "Exit"){
+      errs() << "Costs sent and acknowledged\n";
+    }
+    else{
+      errs() << "Costs sent NOT acknowledged!\n";
+    }
+
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {

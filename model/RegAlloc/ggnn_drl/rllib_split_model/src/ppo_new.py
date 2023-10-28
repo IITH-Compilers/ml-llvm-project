@@ -11,7 +11,7 @@ Detailed documentation: https://docs.ray.io/en/master/rllib-algorithms.html#ppo
 
 import logging
 from typing import List, Optional, Type, Union
-
+from config import REPO_DIR, BUILD_DIR
 from ray.util.debug import log_once
 from ray.rllib.algorithms.algorithm import Algorithm
 from ray.rllib.algorithms.algorithm_config import AlgorithmConfig, NotProvided
@@ -135,13 +135,10 @@ class PPOConfig(PGConfig):
             "dump_type": 'One',
             "dump_color_graph": True,
             "intermediate_data": './temp',
-            # "build_path": "/home/cs20mtech12003/ML-Register-Allocation/AarchBuild_UPMM",
-            "build_path": "/home/ai20btech11004/ML-Register-Allocation/build_x86",
+            "build_path": BUILD_DIR,
             "Register_config": "/Pramana/ML_LLVM_Tools/ml-llvm-project/llvm/lib/CodeGen/MLRegAlloc/config_json",
-            "log_path": "/home/ai20btech11004/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src/log",
-            #"dataset": "/raid/cs17m20P100001/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_new_data/",
-            #"dataset": "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_aarch64_new_data/",
-            "dataset": "/home/ai20btech11004/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/LTS-ll-files_train_mlra_x86_split_data",
+            "log_path": f"{REPO_DIR}/model/RegAlloc/ggnn_drl/rllib_split_model/src/log",
+            "dataset": f"{REPO_DIR}/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/LTS-ll-files_train_mlra_x86_split_data",
             "graphs_num": 10000,
             "action_space_size": RegisterActionSpace("X86", "/Pramana/ML_LLVM_Tools/ml-llvm-project/llvm/lib/CodeGen/MLRegAlloc/config_json").ac_sp_normlize_size,
             "check_point": None,
@@ -159,8 +156,8 @@ class PPOConfig(PGConfig):
             "use_mca_self_play_reward": False,
             "mca_reward_clip": 10,
             "mca_timeout": 30,
-            "greedy_mca_throughput_file_path": "/home/ai20btech11004/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src/LTS_x86_greedy-throughput_set_120-500.json",
-            "mca_cycles_file_path": "/home/ai20btech11004/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src/LTS_x86_greedy-cycles_set_120-500.json"
+            "greedy_mca_throughput_file_path": f"{REPO_DIR}/model/RegAlloc/ggnn_drl/rllib_split_model/src/LTS_x86_greedy-throughput_set_120-500.json",
+            "mca_cycles_file_path": f"{REPO_DIR}/model/RegAlloc/ggnn_drl/rllib_split_model/src/LTS_x86_greedy-cycles_set_120-500.json"
         }
 
         self.horizon = 1000

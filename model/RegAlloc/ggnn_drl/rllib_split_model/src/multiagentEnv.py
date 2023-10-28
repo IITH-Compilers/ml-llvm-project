@@ -1055,10 +1055,11 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         else:
             # grpccolor = RegisterAllocationInference_pb2.Data.color(key=node_id, value=int(reg_allocated))
             # print()
-            if self.use_pipe:
-                self.color_assignment_map.append({str(node_id): int(reg_allocated)})
-            else: 
-              self.color_assignment_map.append(RegisterAllocationInference_pb2.Data.colorData(key=str(node_id), value=int(reg_allocated)))
+            self.color_assignment_map.append({str(node_id): int(reg_allocated)})
+            # if self.use_pipe:
+            #     self.color_assignment_map.append({str(node_id): int(reg_allocated)})
+            # else: 
+            #   self.color_assignment_map.append(RegisterAllocationInference_pb2.Data.colorData(key=str(node_id), value=int(reg_allocated)))
 
         logging.debug('Color the node with index={cur_node}, node_id={node_id} with color={action} in RegClass={regclass}'.format(cur_node=nodeChoosen, node_id=node_id, action=reg_allocated, regclass=self.obs.reg_class_list[self.cur_node]))
         
@@ -1289,11 +1290,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             inx = (((self.worker_index-1) * self.env_config['current_batch']) + self.graph_counter)
             # print("Worker index", self.worker_index, inx, len(self.training_graphs))
             path=self.training_graphs[inx]
-            # path="/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/graphs/IG/json/526.blender_r_756.ll_F15.json"
-            # path="/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/graphs/IG/json/500.perlbench_r_51.ll_F2.json"
-            # path = "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/graphs/IG/json_new/523.xalancbmk_r_392.ll_F21.json"
-            # path = "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_split_data/graphs/IG/json_new/523.xalancbmk_r_682.ll_F12.json"
-            # path ="/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_training_data_06-08-22/graphs/IG/sample/502.gcc_r_332.ll_F3.json"
             logging.debug('Graphs selected : {}'.format(path))
             print('Graphs selected : {}'.format(path))
             self.reset_count+=1

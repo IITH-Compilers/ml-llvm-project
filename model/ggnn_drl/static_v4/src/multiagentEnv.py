@@ -20,7 +20,7 @@ import math
 import torch
 import signal
 from gym.spaces import Discrete, Box
-
+from ld_config import BUILD_DIR, REPO_DIR
 # from ggnn_1 import get_observations, get_observationsInf, GatedGraphNeuralNetwork, constructVectorFromMatrix, AdjacencyList
 from ggnn_1 import GatedGraphNeuralNetwork, AdjacencyList, get_observations
 # from register_action_space import RegisterActionSpace
@@ -58,15 +58,13 @@ import ctypes
 from functools import reduce
 import operator
 
-
-sys.path.append('../../../../../llvm-grpc/Python-Utilities/')
-# from client import *
-# import RegisterAllocationInference_pb2_grpc, RegisterAllocationInference_pb2
+sys.path.extend([
+    f"{REPO_DIR}/ml-llvm-tools/MLModelRunner/gRPCModelRunner/Python-Utilities"
+])
 
 config_path=None
 
 logger = logging.getLogger(__file__)
-# logging.basicConfig(filename=os.path.join("/home/cs18mtech11030/project/grpc_llvm/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src", 'running.log'), format='%(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
 logging.basicConfig(filename='running_spill.log', format='%(thread)d - %(threadName)s %(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
 
 def set_config(path):
@@ -122,26 +120,30 @@ class DistributeLoopEnv(MultiAgentEnv):
 
         self.speedup = 0        
         self.use_pipe = env_config['use_pipe']
+        print("use pipe --------------", self.use_pipe)
         self.use_grpc = not self.use_pipe
+        if self.use_pipe:
+            self.data_format = env_config['data_format']
+        self.read_stream_iter = None
 
         
-        if self.use_pipe:
-            # pipes opening
-            self.temp_rootname = "loopdistppipe"
-            to_compiler = self.temp_rootname + ".in"
-            from_compiler = self.temp_rootname + ".out"
-            # print("to_compiler", to_compiler)
-            # print("from_compiler", from_compiler)
-            # if os.path.exists(to_compiler):
-            #     os.remove(to_compiler)
-            # if os.path.exists(from_compiler):
-            #     os.remove(from_compiler)
-            # os.mkfifo(to_compiler, 0o666)
-            # os.mkfifo(from_compiler, 0o666)
-            self.tc = None
-            self.fc = None
-            self.tensor_specs = None
-            self.advice_spec =  None
+        # if self.use_pipe:
+        #     # pipes opening
+        #     self.temp_rootname = "loopdistppipe"
+        #     to_compiler = self.temp_rootname + ".in"
+        #     from_compiler = self.temp_rootname + ".out"
+        #     print("to_compiler", to_compiler)
+        #     print("from_compiler", from_compiler)
+        #     if os.path.exists(to_compiler):
+        #         os.remove(to_compiler)
+        #     if os.path.exists(from_compiler):
+        #         os.remove(from_compiler)
+        #     os.mkfifo(to_compiler, 0o666)
+        #     os.mkfifo(from_compiler, 0o666)
+        #     self.tc = None
+        #     self.fc = None
+        #     self.tensor_specs = None
+        #     self.advice_spec =  None
         self.partition_seq = None
     
     def reward_formula(self, distributedLoopCost, OriginalLoopCost):
@@ -212,42 +214,45 @@ class DistributeLoopEnv(MultiAgentEnv):
             # if isVectorizationtask: 
             #     vectorfactor = action
             # distributed_llfile = utils.call_distributionPass( input_file_path, self.distribution, method_name, loop_id, fun_id, loop_id, self.distributed_data, vecfactor=vectorfactor)
-            OriginalLoopCost,distributedLoopCost = self.doLoopDistributionGetLoopCost(self.distribution)
-            # distributed_llfile = input_file_path
-            distributed_llfile = utils.call_distributionPass( input_file_path, self.distribution, method_name, loop_id, fun_id, loop_id, self.distributed_data)
-            print("distribution pattern: {}".format(self.distribution))
-            # self.speedup=0
-            if distributed_llfile is None:
-                logging.warning('distributed file  not generated...., reward={}'.format(reward))
+            if self.use_grpc or self.use_pipe:
+                OriginalLoopCost,distributedLoopCost = self.doLoopDistributionGetLoopCost(self.distribution)
             else:
-                if self.config["loop_cost"]:
-                    pass
-                    # logging.info('Get the loop_cost metric for original loop')
-                    # OriginalLoopCost = utils.getLoopCost(meta_ssa_file_path, loop_id, method_name)
-                    # logging.info('Get the loop_cost metric for distributed loop')
-                    # distributedLoopCost = utils.getLoopCost(distributed_llfile, loop_id, method_name)
-                    # print("bbbbbbbb: {}".format(OriginalLoopCost))
-                    # print("bbbbbbbb: {}".format(distributedLoopCost))
+                # distributed_llfile = input_file_path
+                distributed_llfile = utils.call_distributionPass( input_file_path, self.distribution, method_name, loop_id, fun_id, loop_id, self.distributed_data)
+                print("distribution pattern: {}".format(self.distribution))
+                # self.speedup=0
+                if distributed_llfile is None:
+                    logging.warning('distributed file  not generated...., reward={}'.format(reward))
                 else:
-                    logging.info('Get the mca_cost metric for original loop')
-                    OriginalLoopCost = utils.getMCACost(meta_ssa_file_path, loop_id, method_name)
-                    logging.info('Get the mca_cost metric for distributed loop')
-                    distributedLoopCost = utils.getMCACost(distributed_llfile, loop_id, method_name)
-                reward = self.reward_formula(distributedLoopCost, OriginalLoopCost) 
-                # print("distributedLoopCost: {}".format(distributedLoopCost))
-                # print("OriginalLoopCost: {}".format(OriginalLoopCost)) 
-                # Remove, it is occupies a lot of space
-                if self.mode != 'test':
-                    os.remove(distributed_llfile)
-                # update the cache 
-                # if not isVectorizationtask:
-                self.second_loopcost_cache.add(key + (distributedLoopCost, OriginalLoopCost,))
-                logging.info('***Key added to the cache***')
-                logging.info('ll_filename|OriginalLoopCost|TransformLoopCost|reward|distributeSeq|task {} {} {} {} {} {}'.format(ll_file_name, OriginalLoopCost, distributedLoopCost, reward, self.distribution, 'Distribution'))
-                # else:
-                #     logging.info('ll_filename|OriginalLoopCost|TransformLoopCost|reward|distributeSeq|task|predVecfactor {} {} {} {} {} {} {}'.format(ll_file_name, OriginalLoopCost, distributedLoopCost, reward, self.distribution, 'Vectorization', vectorfactor))
-                # costly operation
-                # self.loopcost_cache.loc[key,['Distributed cost', 'Undsitributed Cost']] = [ distributedLoopCost, OriginalLoopCost]      
+                    if self.config["loop_cost"]:
+                        pass
+                        # logging.info('Get the loop_cost metric for original loop')
+                        OriginalLoopCost = utils.getLoopCost(meta_ssa_file_path, loop_id, method_name)
+                        logging.info('Get the loop_cost metric for distributed loop')
+                        distributedLoopCost = utils.getLoopCost(distributed_llfile, loop_id, method_name)
+                        # print("bbbbbbbb: {}".format(OriginalLoopCost))
+                        # print("bbbbbbbb: {}".format(distributedLoopCost))
+                    else:
+                        logging.info('Get the mca_cost metric for original loop')
+                        OriginalLoopCost = utils.getMCACost(meta_ssa_file_path, loop_id, method_name)
+                        logging.info('Get the mca_cost metric for distributed loop')
+                        distributedLoopCost = utils.getMCACost(distributed_llfile, loop_id, method_name)
+                        if self.mode != 'test':
+                            os.remove(distributed_llfile)
+            reward = self.reward_formula(distributedLoopCost, OriginalLoopCost) 
+            # print("distributedLoopCost: {}".format(distributedLoopCost))
+            # print("OriginalLoopCost: {}".format(OriginalLoopCost)) 
+            # Remove, it is occupies a lot of space
+            
+            # update the cache 
+            # if not isVectorizationtask:
+            self.second_loopcost_cache.add(key + (distributedLoopCost, OriginalLoopCost,))
+            logging.info('***Key added to the cache***')
+            logging.info('ll_filename|OriginalLoopCost|TransformLoopCost|reward|distributeSeq|task {} {} {} {} {} {}'.format(ll_file_name, OriginalLoopCost, distributedLoopCost, reward, self.distribution, 'Distribution'))
+            # else:
+            #     logging.info('ll_filename|OriginalLoopCost|TransformLoopCost|reward|distributeSeq|task|predVecfactor {} {} {} {} {} {} {}'.format(ll_file_name, OriginalLoopCost, distributedLoopCost, reward, self.distribution, 'Vectorization', vectorfactor))
+            # costly operation
+            # self.loopcost_cache.loc[key,['Distributed cost', 'Undsitributed Cost']] = [ distributedLoopCost, OriginalLoopCost]      
 
         print("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa: {}".format(reward))
         return reward
@@ -256,7 +261,7 @@ class DistributeLoopEnv(MultiAgentEnv):
         return self.getReward_Static()
 
     def _select_distribution_step(self, action):
-        print("444444444444444444444444444 {}".format(self.functionName))
+        print("444444444444444444444444444 (distr step) func name: {}".format(self.functionName))
         dist_flag = [1] * 1
         if(action == 0):
             print("DO NOT DISTRIBUTE (MERGE)")
@@ -365,9 +370,10 @@ class DistributeLoopEnv(MultiAgentEnv):
         if self.mode != 'inference':
             return obs, reward, done, {}
         else:
-            if self.use_pipe:
-                self.parseSequenceAndSend(self.distribution)
-            return obs, reward, done, self.distribution
+            # if self.use_pipe:
+            #     self.parseSequenceAndSend(self.distribution)
+            distribution = self.parseSeq(self.distribution)
+            return obs, reward, done, distribution
     
     # def step_via_vectorization(self, action):
     #     next_state =None
@@ -575,51 +581,83 @@ class DistributeLoopEnv(MultiAgentEnv):
         if self.mode != "inference":
             meta_ssa_dir = os.path.join(self.home_dir, 'llfiles/meta_ssa')
             input_file_path = os.path.join(meta_ssa_dir, self.fileName)
-            self.serverAddress = "127.0.0.1:5005"
-            print("loopId: ",self.loopId," loop_id: ",self.loop_id)
-            self.process = self.startServer(input_file_path,self.functionName,self.loop_id,self.serverAddress)
+            if self.use_grpc or self.use_pipe:
+                self.serverAddress = "127.0.0.1:5005"
+                print("loopId: ",self.loopId," loop_id: ",self.loop_id)
+                self.process = self.startServer(input_file_path,self.functionName,self.loop_id,self.serverAddress)
             if self.use_grpc:
                 self.channel = grpc.insecure_channel(
                         self.serverAddress)
                 self.stub = LoopDistribution_pb2_grpc.LoopDistributionStub(self.channel)
             
-            print("self use pipe: ", self.use_pipe)
-            if self.use_pipe:
-                # Opening pipe files
-                to_compiler = self.temp_rootname + ".in"
-                from_compiler = self.temp_rootname + ".out"
-                print("Creating pipe files", to_compiler, from_compiler)
-                self.tc = io.BufferedWriter(io.FileIO(to_compiler, "wb"))
-                print("Opened the write pipe")
-                self.fc = io.BufferedReader(io.FileIO(from_compiler, "rb"))
-                print("Opened the read pipe")
-                self.tensor_specs, _, self.advice_spec = log_reader.read_header(self.fc)
-                print("Tensor and Advice spec", self.tensor_specs, self.advice_spec)                
-                result = self.readObservation()
-                element = result[0].__getitem__(0)
-                print("Pipe init result:", element)
-                exit(0)
+            # print("self use pipe: ", self.use_pipe)
+            # if self.use_pipe:
+            #     # Opening pipe files
+            #     to_compiler = self.temp_rootname + ".in"
+            #     from_compiler = self.temp_rootname + ".out"
+            #     print("Creating pipe files", to_compiler, from_compiler)
+            #     self.tc = io.BufferedWriter(io.FileIO(to_compiler, "wb"))
+            #     print("Opened the write pipe")
+            #     self.fc = io.BufferedReader(io.FileIO(from_compiler, "rb"))
+            #     print("Opened the read pipe")
+            #     # self.tensor_specs, _, self.advice_spec = log_reader.read_header(self.fc)
+            #     # print("Tensor and Advice spec", self.tensor_specs, self.advice_spec)                
+            #     # result = self.readObservation()
+            #     # element = result[0].__getitem__(0)
+            #     # print("Pipe init result:", element)
+            #     # exit(0)
         
-    def readObservation(self):
+    # def readObservation(self):
         
-        next_event = self.fc.readline()
-        # if not next_event:
-        #     break
-        context = None
-        last_context, observation_id, features,_ = log_reader.read_one_observation(
-            context, next_event, self.fc, self.tensor_specs, None
-        )
-        if last_context != context:
-            print(f"context: {last_context}")
-        context = last_context
-        # print(f"observation: {observation_id}")
-        tensor_values = []
-        for fv in features:
-            # log_reader.pretty_print_tensor_value(fv)
-            tensor_values.append(fv)
-        return tensor_values
+        # next_event = self.fc.readline()
+        # # if not next_event:
+        # #     break
+        # context = None
+        # last_context, observation_id, features,_ = log_reader.read_one_observation(
+        #     context, next_event, self.fc, self.tensor_specs, None
+        # )
+        # if last_context != context:
+        #     print(f"context: {last_context}")
+        # context = last_context
+        # # print(f"observation: {observation_id}")
+        # tensor_values = []
+        # for fv in features:
+        #     # log_reader.pretty_print_tensor_value(fv)
+        #     tensor_values.append(fv)
+        # return tensor_values
+
+        # loopcost = None
+
+        # if self.data_format == "bytes":
+        #     #read first 8 bytes to be compatible with protobuf
+        #     # if self.read_stream_iter is None:
+        #     self.read_stream_iter = log_reader.read_stream2(self.fc)
+        #     print("Before reading cost")
+        #     hdr = self.fc.read(8)
+        #     print("Header", hdr)
+        #     context, observation_id, features, score = next(self.read_stream_iter)
+        #     print("Obtained feature value is", features[0].__getitem__(0))
+        #     # assert len(features[0]) == 1
+        #     loopcost = features[0].__getitem__(0)
+        #     # loopcost = np.empty([1])
+        #     # for i in range(len(features[0])):
+        #     #     loopcost[i] = features[0][i]
+
+        # elif self.data_format == "json":
+        #     print("reading json...")
+        #     #read first 8 bytes to be compatible with protobuf
+        #     hdr = self.fc.read(8)
+        #     print("hdr: ",hdr)
+        #     size = int.from_bytes(hdr, "little")
+        #     print("size: ", size)
+        #     msg = self.fc.read(size)
+        #     loopcost = json.loads(msg.decode('utf-8'))["loopcost"]
+        #     # assert len(embedding) == 300
+        #     # embedding = np.array(embedding) 
+
+        # return loopcost
     
-    def sendResponse(self, f: io.BufferedWriter, value, spec: log_reader.TensorSpec):
+    def sendResponseV1(self, f: io.BufferedWriter, value, spec: log_reader.TensorSpec):
         try:
             """Send the `value` - currently just a scalar - formatted as per `spec`."""
             # just int64 for now
@@ -635,10 +673,27 @@ class DistributeLoopEnv(MultiAgentEnv):
         except (BrokenPipeError, IOError):
             pass
 
+    # IN PROGRESS - send list of ints
+    def sendResponse(self, data):
+        msg = data
+
+        if self.data_format == "bytes":
+            msg = b''.join([x.to_bytes(4, 'little', signed=True) for x in msg])
+            hdr = int(len(msg)).to_bytes(8, 'little')
+        elif self.data_format == "json":
+            msg = json.dumps({"out": msg}).encode("utf-8")
+            hdr = int(len(msg)).to_bytes(8, "little")
+        elif self.data_format == "protobuf":
+            pass
+        out = hdr + msg
+        # print("out: ", out)
+        self.tc.write(out)
+        self.tc.flush()  
+
     def step(self, action_dict):
         
         # assert(self.ggnn is not None, 'ggnn is None')
-        print("3333333333333333333333333")
+        # print("3333333333333333333333333 (in step)")
         # print(self.select_node_agent_id)
         # print(self.distribution_agent_id)
         # print(action_dict)
@@ -655,10 +710,15 @@ class DistributeLoopEnv(MultiAgentEnv):
         #     assert(False, 'Not valid task selected')
 
     def startServer(self,filePath, functionName, loopId, serverAddress):
-        optPath = "/home/cs20btech11018/repos/ml-llvm-project/build_release_2/bin/opt"
-        clangPath = "/home/cs20btech11018/repos/ml-llvm-project/build_release_2/bin/clang"
+        optPath = f"{BUILD_DIR}/bin/opt"
+        clangPath = f"{BUILD_DIR}/bin/clang"
 
-        cmd = optPath + " -LoopDistributionServer -loopID " + loopId + " -funcName " + functionName + " -lc-function " + functionName + " -lc-lID " + loopId + " --server_address_loop_dist "+ serverAddress + " --ml-config-path /home/cs20btech11018/repos/ml-llvm-project/build_release_2/config " + " -S " + filePath + " -o /dev/null"
+        # edit server, path
+        if(self.use_pipe):
+            cmd = optPath + " -LoopDistributionServer -loopID " + loopId + " -funcName " + functionName + " -lc-function " + functionName + " -lc-lID " + loopId + " --ml-config-path /Pramana/ML_LLVM_Tools/ml-llvm-project/build_loopdist/config " + " -S " + filePath + " --use-pipe-loop-dist " + " --loop-dist-data-format " +  self.config["data_format"]  + " -o /dev/null"     # " --ml-config-path /home/cs21btech11051/ml-llvm-project/build_all/config " +
+        elif(self.use_grpc):        
+            # old cmd : 
+            cmd = optPath + " -LoopDistributionServer -loopID " + loopId + " -funcName " + functionName + " -lc-function " + functionName + " -lc-lID " + loopId + " --server_address_loop_dist "+ serverAddress + " --ml-config-path /Pramana/ML_LLVM_Tools/ml-llvm-project/build_loopdist/config " + " -S " + filePath + " --use-grpc-loop-dist " + " -o /dev/null"
 
         print("server start command: ",cmd)
         pid = subprocess.Popen(cmd, executable='/bin/bash', shell=True, preexec_fn= os.setsid)
@@ -666,6 +726,7 @@ class DistributeLoopEnv(MultiAgentEnv):
         return pid
 
     def doLoopDistributionGetLoopCost(self,partition: str):
+        print('use_pipe in multiagentEnv', self.use_pipe)
         if self.use_grpc:
             response = self.stable_grpc(partition)
             jsonObj = MessageToJson(response)
@@ -675,33 +736,25 @@ class DistributeLoopEnv(MultiAgentEnv):
             OrignialloopCost = int(response['OrignialloopCost'])
             distributedLoopCost = int(response['distributedLoopCost'])            
         elif self.use_pipe:
-            # seq = partition.replace('|', '-')
-            # # seq = re.split(r',|-', seq)
-            # seq = re.split('(\W)', seq)
-            # print("Partition Sequence before: ",partition)
-            # partition_seq = [-1]*100
-            # for i in range(len(seq)):
-            #     if 'S' in seq[i]:
-            #         element = int((seq[i])[1:])
-            #         partition_seq[i] = element
-            #     elif ',' in seq[i]:
-            #         partition_seq[i] = 101
-            #     else:
-            #         partition_seq[i] = 102
-                    
-            # print("Partition Sequence after: ",partition, partition_seq)
-            # self.sendResponse(self.tc, partition_seq, self.advice_spec)
-            self.parseSequenceAndSend(partition)
+  
+            print("Before reading original loop cost")
             result = self.readObservation()
-            OrignialloopCost = result[0].__getitem__(0)
-            distributedLoopCost = result[0].__getitem__(1)
-            print("Partition Sequence send", OrignialloopCost, distributedLoopCost)
-            self.sendResponse(self.tc, [-1]*100, self.advice_spec)                
+            OrignialloopCost = result    # .__getitem__(0)
+            print("Python received original cost", OrignialloopCost)
+            self.parseSequenceAndSend(partition)
+            print("Partition Sequence sent")
+
+            result = self.readObservation()
+            distributedLoopCost = result # .__getitem__(0)
+            # send acknowledgement out:status
+            exitStatus = [ ord(c) for c in "Exit" ]
+            self.sendResponse(exitStatus)
+            print("Recieved costs: ", OrignialloopCost, distributedLoopCost)
         
         self.killServer()        
         return OrignialloopCost, distributedLoopCost
     
-    def parseSequenceAndSend(self, partition):
+    def parseSeq(self, partition):
         seq = partition.replace('|', '-')
         # seq = re.split(r',|-', seq)
         seq = re.split('(\W)', seq)
@@ -715,9 +768,14 @@ class DistributeLoopEnv(MultiAgentEnv):
                 partition_seq[i] = 101
             else:
                 partition_seq[i] = 102
-                
-        print("Partition Sequence after: ",partition, partition_seq)
+        print("Partition Sequence after: ", partition, partition_seq)
         self.partition_seq = partition_seq
+        print("In parseSeq func: self.partition_seq: ", self.partition_seq)
+        return partition_seq
+
+    def parseSequenceAndSend(self, partition):
+        self.parseSeq(partition)
+        self.sendResponse(self.partition_seq)
         # self.sendResponse(self.tc, partition_seq, self.advice_spec)
     
     def killServer(self):

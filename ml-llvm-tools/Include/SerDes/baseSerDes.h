@@ -1,6 +1,8 @@
 #ifndef BASE_SERDES_H
 #define BASE_SERDES_H
 
+#include "google/protobuf/extension_set.h"
+#include "google/protobuf/message.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <map>
@@ -12,6 +14,7 @@ using namespace std;
 
 #define SUPPORTED_TYPES(M)                                                     \
   M(int)                                                                       \
+  M(long)                                                                       \
   M(float)                                                                     \
   M(double)                                                                    \
   M(string)                                                                    \
@@ -29,6 +32,9 @@ public:
   virtual void setFeature(const std::string &, const std::vector<TYPE> &){};
   SUPPORTED_TYPES(SET_FEATURE)
 #undef SET_FEATURE
+
+  virtual void setFeature(const std::string &name, const google::protobuf::Message* value){};
+  virtual void setFeature(const std::string &name, const std::vector<google::protobuf::Message*> &value){};
 
   // a hack to set the request and response structures in protobuf serializer
   virtual void setRequest(void *Request) {

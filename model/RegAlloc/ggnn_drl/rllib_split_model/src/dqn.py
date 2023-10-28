@@ -29,9 +29,10 @@ from ray.rllib.policy.policy import LEARNER_STATS_KEY, Policy
 from ray.rllib.utils.typing import TrainerConfigDict
 from ray.util.iter import LocalIterator
 from ray.rllib.utils.deprecation import deprecation_warning, DEPRECATED_VALUE
+from config import REPO_DIR
 
 logger = logging.getLogger(__file__)
-logging.basicConfig(filename=os.path.join("/home/cs20mtech12003/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib-basic/src", 'running.log'), format='%(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
+logging.basicConfig(filename=os.path.join(f"{REPO_DIR}/model/RegAlloc/ggnn_drl/rllib-basic/src", 'running.log'), format='%(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
 
 # yapf: disable
 # __sphinx_doc_begin__

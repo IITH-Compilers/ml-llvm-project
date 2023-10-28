@@ -6,12 +6,12 @@ import subprocess
 import re
 import signal
 from joblib import Parallel, delayed
+from config import REPO_DIR, BUILD_DIR
 
 
 def startServer(filename, fun_name, fun_id, worker_index):
     def run(filename, fun_id, worker_index):
-        # cmd = "{clang} -O3 -mllvm -regalloc=greedy -march=core2 -mllvm -mlra-training -mllvm -debug-only=mlra-regalloc -mllvm -mlra-funcID={fun_id} -mllvm -mlra-server-address={ip} {src_file} -o /dev/null &> llvm_logs_1.log".format(clang=os.environ['CLANG'], src_file=filename, fun_id=fun_id, ip=ip)
-        cmd = "{clang} -S -Xclang -load -Xclang /home/ai20btech11004/ML-Register-Allocation/build_x86/lib/MCAInstrument.so -O3 -mcpu=core2 -mllvm -mca-funcID={fun_name} -mllvm -regalloc=greedy -mllvm -mlra-funcID={fun_id} {src_file} -o - | {mca} -mcpu=core2".format(clang=os.environ['CLANG'], src_file=filename, fun_name=fun_name, fun_id=fun_id, worker_index=worker_index, mca=os.environ['MCA'])
+        cmd = "{clang} -S -Xclang -load -Xclang " + BUILD_DIR + "/lib/MCAInstrument.so -O3 -mcpu=core2 -mllvm -mca-funcID={fun_name} -mllvm -regalloc=greedy -mllvm -mlra-funcID={fun_id} {src_file} -o - | {mca} -mcpu=core2".format(clang=os.environ['CLANG'], src_file=filename, fun_name=fun_name, fun_id=fun_id, worker_index=worker_index, mca=os.environ['MCA'])
         print("Clang command:", cmd)
         #os.system(cmd)
         pid = subprocess.Popen(cmd, executable='/bin/bash', shell=True, preexec_fn=os.setsid, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
@@ -103,7 +103,7 @@ def run(path):
     
 
 start_time = time.time()
-dataset = '/home/ai20btech11004/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/LTS-ll-files_train_mlra_x86_split_data/'
+dataset = f'{REPO_DIR}/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/LTS-ll-files_train_mlra_x86_split_data/'
 training_graphs = glob.glob(os.path.join(dataset, 'graphs/IG/set_120-500/*.json'))
 throughput_map = {}
 cycle_map = {}

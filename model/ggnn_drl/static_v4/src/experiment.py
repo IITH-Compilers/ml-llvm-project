@@ -41,7 +41,22 @@ import logging
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--train-iterations", type=int, default=1)
-parser.add_argument("--use-pipe", type=bool, default=False)
+
+parser.add_argument(
+    "--use_pipe",
+    action="store_true",
+    help="Use pipe communication",
+    required=False,
+    default=False,
+)
+parser.add_argument(
+    "--data_format",
+    type=str,
+    choices=["json", "protobuf", "bytes"],
+    help="Data format to use for communication",
+)
+parser.add_argument("--use_grpc", action='store_true', help = "Use grpc communication", required=False, default=False)
+
 
 checkpoint = None
 def experiment(config):
@@ -49,6 +64,7 @@ def experiment(config):
     global checkpoint
     train_results = {}
     # config["env_config"]["path"] = path
+    checkpoint = "/Pramana/RL4Real/tmp/loop_dist_checkpoint/checkpoint-2"
     train_agent = SimpleQTrainer(config=config, env=DistributeLoopEnv)
     print('------------------------ aegent --------------------------------- ', train_agent)
     
@@ -57,30 +73,31 @@ def experiment(config):
         print("Checkpoint restored") 
 
     # # export model using torch.onnx
-    # SELECT_NODE_MODEL_PATH = "/home/cs20btech11024/onnx/select_node/model-1.onnx"
-    # DISTRIBUTION_MODEL_PATH = "/home/cs20btech11024/onnx/distribution/model-1.onnx"
+    SELECT_NODE_MODEL_PATH = "/home/cs20btech11024/onnx/select_node.onnx"
+    DISTRIBUTION_MODEL_PATH = "/home/cs20btech11024/onnx/distribution.onnx"
 
 
-    last_checkpoint = 0
-    for i in range(iterations):
-        train_results = train_agent.train()
-        # auto_garbage_collect()
-        # if i == iterations - 1 or (train_results['episodes_total'] - last_checkpoint) > 99:
-        #     last_checkpoint = train_results['episodes_total']
-        #     checkpoint = train_agent.save(tune.get_trial_dir())
-            # print("***************Checkpoint****************", checkpoint)
-        tune.report(**train_results)
-        # if train_results['episodes_total'] > 99:
-        #     print("Training Ended")
-        #     checkpoint = train_agent.save(tune.get_trial_dir())
-        #     break
-        checkpoint = train_agent.save(tune.get_trial_dir())
+    # last_checkpoint = 0
+    # for i in range(iterations):
+    #     print("Training iteration: ", i)
+    #     train_results = train_agent.train()
+    #     # auto_garbage_collect()
+    #     # if i == iterations - 1 or (train_results['episodes_total'] - last_checkpoint) > 99:
+    #     #     last_checkpoint = train_results['episodes_total']
+    #     #     checkpoint = train_agent.save(tune.get_trial_dir())
+    #         # print("***************Checkpoint****************", checkpoint)
+    #     tune.report(**train_results)
+    #     # if train_results['episodes_total'] > 99:
+    #     #     print("Training Ended")
+    #     #     checkpoint = train_agent.save(tune.get_trial_dir())
+    #     #     break
+    #     checkpoint = train_agent.save(tune.get_trial_dir())
 
-    train_agent.stop()
+    # train_agent.stop()
 
-    # torch.onnx.export(train_agent.get_policy("select_node_policy").model, ({"obs": torch.randn(1, 301000)}, {}), f=SELECT_NODE_MODEL_PATH, verbose=True, input_names=["obs"], output_names=["output"])
+    torch.onnx.export(train_agent.get_policy("select_node_policy").model, ({"obs": torch.randn(1, 301000)}, {}), f=SELECT_NODE_MODEL_PATH, verbose=True, input_names=["obs"], output_names=["output"])
 
-    # torch.onnx.export(train_agent.get_policy("distribution_policy").model, ({"obs": torch.randn(1, 603)}, {}), f=DISTRIBUTION_MODEL_PATH, verbose=True, input_names=["obs"], output_names=["output"])
+    torch.onnx.export(train_agent.get_policy("distribution_policy").model, ({"obs": torch.randn(1, 603)}, {}), f=DISTRIBUTION_MODEL_PATH, verbose=True, input_names=["obs"], output_names=["output"])
 
 
 if __name__ == "__main__":
@@ -101,6 +118,8 @@ if __name__ == "__main__":
     # utils.get_parse_args()
     config["train-iterations"] = args.train_iterations
     config["env_config"]["use_pipe"] = args.use_pipe
+    config["env_config"]["data_format"] = args.data_format
+    config["env_config"]["use_grpc"] = args.use_grpc
 
     # utils.get_parse_args()
 

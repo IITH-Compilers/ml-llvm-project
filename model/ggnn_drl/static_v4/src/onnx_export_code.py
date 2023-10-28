@@ -2,10 +2,11 @@ import torch
 import torch.onnx
 import torch.nn as nn
 import torch.nn.functional as F
+from ld_config import MODEL_PATH
 # import logging
 # from ray.rllib.models.torch.torch_modelv2 import TorchModelV2
-from ray.rllib.utils.torch_ops import FLOAT_MIN
-
+# from ray.rllib.utils.torch_ops import FLOAT_MIN
+FLOAT_MIN = -1e38
 
 class SelectNodeNetwork(nn.Module):
     """Actor (Policy) Model."""
@@ -137,7 +138,15 @@ class DistributionTask(nn.Module):
 
         return x
 
+class DummyModel(nn.Module):
+    def __init__(self, input_dim=10):
+        nn.Module.__init__(self)
+        self.fc1 = nn.Linear(input_dim, 1)
 
+    def forward(self, input):
+        x = self.fc1(input)
+        return x
+    
 DISTRIBUTION_MODEL_PATH = "/home/cs20btech11024/onnx/distribution/model.onnx"
 SELECT_NODE_MODEL_PATH = "/home/cs20btech11024/onnx/select_node/model.onnx"
 
@@ -149,12 +158,29 @@ SELECT_NODE_MODEL_PATH = "/home/cs20btech11024/onnx/select_node/model.onnx"
 # )
 
 arr = torch.randn(10)
-print(type(arr))
 # torch.onnx.export(
 #   DistributionTask(),
 #   torch.randn(603),
 #   DISTRIBUTION_MODEL_PATH
 # )
 
-# x = torch.tensor([1,2,3])
-# print(x[1])
+arr = torch.randn(1, 10)
+torch.onnx.export(
+  DummyModel(),
+  arr,
+  "/Pramana/ML_LLVM_Tools/hello-MLBridge/dummy-torch-model.onnx",
+  input_names=["obs"],
+)
+
+# for i in range(500, 50001, 500):
+#     print(i, end=" ")
+# print()
+
+for i in range(500, 50001, 500):
+    arr = torch.randn(1, i)
+    torch.onnx.export(
+        DummyModel(input_dim=i),
+        arr,
+        "/Pramana/ML_LLVM_Tools/hello-MLBridge/dummy-torch-model-{}.onnx".format(i),
+        input_names=["obs"],
+    )

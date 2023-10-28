@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import argparse
+from config import REPO_DIR
 import collections
 import copy
 import gym
@@ -25,7 +26,7 @@ from ray.tune.utils import merge_dicts
 from ray.tune.registry import get_trainable_cls, _global_registry, ENV_CREATOR
 
 import sys
-sys.path.append('/home/cs20mtech12003/ml-llvm-project/model/RegAlloc/ggnn_drl/rllib_split_model/src')
+sys.path.append(f'{REPO_DIR}/model/RegAlloc/ggnn_drl/rllib_split_model/src')
 from multiagentEnv import HierarchicalGraphColorEnv
 import utils_1
 from register_action_space import RegisterActionSpace
@@ -305,7 +306,7 @@ class RollOutInference:
             # Try parent directory.
             if not os.path.exists(config_path):
                 config_path = os.path.join(config_dir, "../params.pkl")
-    
+        print("config_path", config_path)
         # Load the config from pickled.
         if os.path.exists(config_path):
             with open(config_path, "rb") as f:
@@ -398,12 +399,9 @@ class RollOutInference:
                 "dump_color_graph": True,
                 "intermediate_data": './temp',
                 "build_path": "/home/venkat/IF-DV/Rohit/regAlloc/iith-compilers/benchmarking/ML-Register-Allocation/aarchRandomBuild",
-                # "build_path": "/home/cs20mtech12003/ML-Register-Allocation/AArch64Build",
                 "Register_config": "/home/venkat/IF-DV/Rohit/regAlloc/iith-compilers/benchmarking/ML-Register-Allocation/llvm/lib/CodeGen/MLRegAlloc/config_json",
                 "log_path": "/home/venkat/IF-DV/Rohit/regAlloc/iith-compilers/benchmarking/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src/log",
-                #"dataset": "/raid/cs17m20P100001/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_new_data/",
                 "dataset": "/home/venkat/level-O0-llfiles_train_mlra_aarch64_new_data",
-                # "dataset": "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_aarch64_new_data/",
                 "graphs_num": 10000,
                 "action_space_size": RegisterActionSpace("AArch64", "/home/venkat/IF-DV/Rohit/regAlloc/iith-compilers/benchmarking/ML-Register-Allocation/llvm/lib/CodeGen/MLRegAlloc/config_json").ac_sp_normlize_size,
                 "check_point": None,
@@ -421,8 +419,8 @@ class RollOutInference:
                 "use_mca_self_play_reward": False,
                 "mca_reward_clip": 10,
                 "mca_timeout": 30,
-                "greedy_mca_throughput_file_path": "/home/cs20mtech12003/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src/greedy-throughput_set_70-120.json",
-                "mca_cycles_file_path": "/home/cs20mtech12003/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src/greedy-cycles_set_70-120.json"
+                "greedy_mca_throughput_file_path": f"{REPO_DIR}/model/RegAlloc/ggnn_drl/rllib_split_model/src/greedy-throughput_set_70-120.json",
+                "mca_cycles_file_path": f"{REPO_DIR}/model/RegAlloc/ggnn_drl/rllib_split_model/src/greedy-cycles_set_70-120.json"
 
             }
         else:
@@ -437,15 +435,15 @@ class RollOutInference:
                 "dump_type": 'One',
                 "dump_color_graph": True,
                 "intermediate_data": './temp',
-                "build_path": "/home/cs20mtech12003/ML-Register-Allocation/X86Build_UPMM",
-                # "build_path": "/home/cs20mtech12003/ML-Register-Allocation/AArch64Build",
-                "Register_config": "/home/cs20mtech12003/ml-llvm-project/llvm/lib/CodeGen/MLRegAlloc/config_json",
-                "log_path": "/home/cs20mtech12003/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src/log",
+                "build_path": f"{REPO_DIR}/X86Build_UPMM",
+                # "build_path": f"{REPO_DIR}/AArch64Build",
+                "Register_config": f"{REPO_DIR}/llvm/lib/CodeGen/MLRegAlloc/config_json",
+                "log_path": f"{REPO_DIR}/model/RegAlloc/ggnn_drl/rllib_split_model/src/log",
                 #"dataset": "/raid/cs17m20P100001/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_new_data/",
-                "dataset": "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_generated_at_05-05-22/",
-                # "dataset": "/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_aarch64_new_data/",
+                "dataset": f"{REPO_DIR}/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_generated_at_05-05-22/",
+                # "dataset": f"{REPO_DIR}/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_aarch64_new_data/",
                 "graphs_num": 10000,
-                "action_space_size": RegisterActionSpace("X86", "/home/cs20mtech12003/ml-llvm-project/llvm/lib/CodeGen/MLRegAlloc/config_json").ac_sp_normlize_size,
+                "action_space_size": RegisterActionSpace("X86", f"{REPO_DIR}/llvm/lib/CodeGen/MLRegAlloc/config_json").ac_sp_normlize_size,
                 "check_point": None,
                 "episode_number": 49999,
                 "GPU_ID": '0',
@@ -463,8 +461,8 @@ class RollOutInference:
                 "use_mca_self_play_reward": False,
                 "mca_reward_clip": 10,
                 "mca_timeout": 30,
-                "greedy_mca_throughput_file_path": "/home/cs20mtech12003/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src/greedy-throughput_set_70-120.json",
-                "mca_cycles_file_path": "/home/cs20mtech12003/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src/greedy-cycles_set_70-120.json"
+                "greedy_mca_throughput_file_path": f"{REPO_DIR}/model/RegAlloc/ggnn_drl/rllib_split_model/src/greedy-throughput_set_70-120.json",
+                "mca_cycles_file_path": f"{REPO_DIR}/model/RegAlloc/ggnn_drl/rllib_split_model/src/greedy-cycles_set_70-120.json"
         
             }       
         config["num_gpus"]=0
