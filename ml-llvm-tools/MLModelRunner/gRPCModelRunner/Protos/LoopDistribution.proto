@@ -11,7 +11,7 @@ service LoopDistribution {
   rpc distributeLoopAndGetLoopCost(LoopDistributionRequest)
       returns (LoopDistributionResponse) {}
   
-  rpc getAdvice(LoopDistributionRequest) returns (Advice) {}
+  rpc getAdvice(LoopDistributionRequest) returns (LoopDistributionResponse) {}
 }
 
 message LoopDistributionRequest {
