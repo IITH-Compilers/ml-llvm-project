@@ -1448,11 +1448,11 @@ void PassManagerBuilder::populateModulePassManager(
       return;
   }
 
-  if(OCodeSizeOpt) {
-      errs() << "opt level "<< OptLevel << " SizeLevel " << SizeLevel << "\n";
-      MPM.add(createCodeSizeOptPass());
-      return;
-  }
+  // if(OCodeSizeOpt) {
+  //     errs() << "opt level "<< OptLevel << " SizeLevel " << SizeLevel << "\n";
+  //     MPM.add(createCodeSizeOptPass());
+  //     return;
+  // }
   
   if(!RunNoPreDistributionPasses){
   if (!PGOSampleUse.empty()) {

@@ -21,7 +21,7 @@ set(LLVM_LINK_COMPONENTS
   Vectorize
   IPO
   PosetRL
-  CodeSizeOpt
+  # CodeSizeOpt
   IR2Vec
   CollectMachineIR
   )
