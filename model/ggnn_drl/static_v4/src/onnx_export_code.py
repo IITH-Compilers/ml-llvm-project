@@ -2,6 +2,7 @@ import torch
 import torch.onnx
 import torch.nn as nn
 import torch.nn.functional as F
+from ld_config import MODEL_PATH
 # import logging
 # from ray.rllib.models.torch.torch_modelv2 import TorchModelV2
 # from ray.rllib.utils.torch_ops import FLOAT_MIN
@@ -162,7 +163,6 @@ arr = torch.randn(10)
 #   torch.randn(603),
 #   DISTRIBUTION_MODEL_PATH
 # )
-
 
 arr = torch.randn(1, 10)
 torch.onnx.export(

@@ -9,6 +9,7 @@ Observation LDEnv::reset() {
   this->DistributionSeq = "";
   this->PrevNode = -1;
   this->CurrentNode = -1;
+  this->resetDone();
   int idx = 0;
   errs() << "NodeRepresentation size = " << currRDG.NodeRepresentations.size()
          << "\n";

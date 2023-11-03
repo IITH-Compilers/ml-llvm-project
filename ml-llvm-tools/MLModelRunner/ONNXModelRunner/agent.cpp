@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MLModelRunner/ONNXModelRunner/agent.h"
+#include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cmath>
 #include <iterator>

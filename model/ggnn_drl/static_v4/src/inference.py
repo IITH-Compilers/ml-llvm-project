@@ -1,31 +1,44 @@
 import argparse
+
 # import collections
 from argparse import Namespace
 from atexit import register
 from distutils.command.config import config
 from itertools import count
+
 # from email import parser
+import grpc
+from concurrent import futures
 from tqdm import tqdm
 import os
-import json 
+import json
 import glob
+from ld_config import MODEL_PATH, REPO_DIR, TEST_DIR
+import traceback
 import sys
 
-# import sys
-# sys.path.append('/home/shalini/LOF_test/LD_VF/IR2Vec-LoopOptimizationFramework/model/ggnn_drl/static_v4/src')
 
+sys.path.extend(
+    [
+        f"{REPO_DIR}/ml-llvm-tools/MLModelRunner/gRPCModelRunner/Python-Utilities",
+        f"{REPO_DIR}/model/ggnn_drl/static_v4/src",
+        f"{REPO_DIR}/llvm/lib/Transforms/models"
+    ]
+)
+import LoopDistribution_pb2, LoopDistribution_pb2_grpc
 import ray
 from ray import tune
 from ray.rllib.agents import ppo
+
 # from mlra_trainer.dqn import DQNTrainer, DEFAULT_CONFIG
 from simple_q import SimpleQTrainer, DEFAULT_CONFIG
-# from ray.rllib.env import MultiAgentEnv
 from multiagentEnv import DistributeLoopEnv
-import utils #_1
 # from register_action_space import RegisterActionSpace
 from ray.rllib.models import ModelCatalog
-from model import SelectNodeNetwork, DistributionTask 
+from model import SelectNodeNetwork, DistributionTask
 import logging
+import SerDes
+
 # from ray.tune.registry import get_trainable_cls, _global_registry, ENV_CREATOR
 # from ray.rllib.evaluation.worker_set import WorkerSet
 # from ray.rllib.utils.spaces.space_utils import flatten_to_single_ndarray
@@ -35,17 +48,22 @@ import numpy as np
 from ray.tune import function
 
 logger = logging.getLogger(__file__)
-logging.basicConfig(filename='inference.log', format='%(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
+logging.basicConfig(
+    filename="inference.log",
+    format="%(levelname)s - %(filename)s - %(message)s",
+    level=logging.DEBUG,
+)
 
 import networkx
+
 # import numpy as np
 import json
-#from dqn_agent import Agent
+
+# from dqn_agent import Agent
 import torch
 from argparse import Namespace
 import pydot
 from networkx.readwrite import json_graph
-from ray.rllib.agents.dqn.simple_q_torch_policy import SimpleQTorchPolicy
 
 from typing import Callable, List, Union, Optional
 import io
@@ -58,69 +76,110 @@ import operator
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--use_pipe", action='store_true', help = "Use pipe communication", required=False, default=False)
+parser.add_argument(
+    "--use_pipe",
+    action="store_true",
+    help="Use pipe communication",
+    required=False,
+    default=False,
+)
+parser.add_argument(
+    "--use_grpc",
+    action="store_true",
+    help="Use grpc communication",
+    required=False,
+    default=False,
+)
 parser.add_argument(
     "--data_format",
     type=str,
     choices=["json", "protobuf", "bytes"],
     help="Data format to use for communication",
 )
-
+parser.add_argument("--pipe_name", type=str, help="Pipe name to use for communication")
+parser.add_argument("--server_port", type=str, help="Server port")
 
 class DistributionInference:
-    def __init__(self, model_path):
-        logdir='/tmp'
+    def __init__(self, model_path, use_pipe):
+        logdir = "/tmp"
         logger = logging.getLogger(__file__)
-        logging.basicConfig(filename='running.log', format='%(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
+        logging.basicConfig(
+            filename="running.log",
+            format="%(levelname)s - %(filename)s - %(message)s",
+            level=logging.DEBUG,
+        )
 
         # self.state = None
         # config = { 'mode' :'inference', 'state_size':300, 'target' : 'X86', 'intermediate_data' : '/tmp'}
         # config = utils.set_config(config)
         # logdir='/tmp'
-        
+
         logger = logging.getLogger(__file__)
-        logging.basicConfig(filename=os.path.join(logdir, 'loop-distribution.log'), format='%(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
-      
+        logging.basicConfig(
+            filename=os.path.join(logdir, "loop-distribution.log"),
+            format="%(levelname)s - %(filename)s - %(message)s",
+            level=logging.DEBUG,
+        )
+
         config = DEFAULT_CONFIG.copy()
         # config["train-iterations"] = args.train_iterations
         config["num_workers"] = 0
         config["explore"] = False
 
         from ray.tune.registry import register_env
-        
+
         # config["env"] = DistributeLoopEnv
         config["env_config"]["target"] = "X86"
         # config["env_config"]["registerAS"] = RegisterActionSpace(config["env_config"]["target"])
         # config["env_config"]["action_space_size"] = config["env_config"]["registerAS"].ac_sp_normlize_size
         config["env_config"]["state_size"] = 300
         # config["env_config"]["test_dir"] = test_dir
-    
-        config["env_config"]["mode"] = 'inference'
-        config["env_config"]["dump_type"] = 'One'
+
+        config["env_config"]["mode"] = "inference"
+        config["env_config"]["dump_type"] = "One"
         # config["env_config"]["dump_color_graph"] = True
-        config["env_config"]["intermediate_data"] = './temp'
+        config["env_config"]["intermediate_data"] = "./temp"
+        config["env_config"]["use_pipe"] = use_pipe
+        config["env_config"]["data_format"] = args.data_format
 
         ModelCatalog.register_custom_model("select_node_model", SelectNodeNetwork)
         ModelCatalog.register_custom_model("distribution_model", DistributionTask)
 
         box_obs = Box(
-                -10000000000000.0, 10000000000000.0, shape=(config["env_config"]["state_size"], ), dtype=np.float32)
+            -10000000000000.0,
+            10000000000000.0,
+            shape=(config["env_config"]["state_size"],),
+            dtype=np.float32,
+        )
         box_obs_select_node = Box(
-                -10000000000000.0, 10000000000000.0, shape=(config["env_config"]["max_number_nodes"], config["env_config"]["state_size"]), dtype=np.float32)
+            -10000000000000.0,
+            10000000000000.0,
+            shape=(
+                config["env_config"]["max_number_nodes"],
+                config["env_config"]["state_size"],
+            ),
+            dtype=np.float32,
+        )
 
-        obs_select_node = Dict({
-            "action_mask": Box(0, 1, shape=(config["env_config"]["max_number_nodes"],)),
-            "state": box_obs_select_node
-        })
+        obs_select_node = Dict(
+            {
+                "action_mask": Box(
+                    0, 1, shape=(config["env_config"]["max_number_nodes"],)
+                ),
+                "state": box_obs_select_node,
+            }
+        )
 
-        obs_distribute_node = Dict({
-            "prev_Node": box_obs,
-            "curr_Node": box_obs,
-            "dist_flag": Box(0, 1, shape=(1,)),
-            "action_mask": Box(0, 1, shape=(2,)),
-            # "state": box_obs
-        })
-        
+        obs_distribute_node = Dict(
+            {
+                "prev_Node": box_obs,
+                "curr_Node": box_obs,
+                "dist_flag": Box(0, 1, shape=(1,)),
+                "action_mask": Box(0, 1, shape=(2,)),
+                # "state": box_obs
+            }
+        )
+
         def policy_mapping_fn(agent_id, episode=None, **kwargs):
             if agent_id.startswith("select_node_agent"):
                 return "select_node_policy"
@@ -128,37 +187,45 @@ class DistributionInference:
                 return "distribution_policy"
 
         policies = {
-        "select_node_policy": (None, obs_select_node,
-                                Discrete(config["env_config"]["max_number_nodes"]), {
-                                    "gamma": 0.9,
-                                    "model": {
-                                        "custom_model": "select_node_model",
-                                        "custom_model_config": {
-                                            "state_size": config["env_config"]["state_size"],
-                                            "fc1_units": 64,
-                                            "fc2_units": 64
-                                        },
-                                    },
-                                }),
-        "distribution_policy": (None, obs_distribute_node,
-                                Discrete(2), {
-                                    "gamma": 0.9,
-                                    "model": {
-                                        "custom_model": "distribution_model",
-                                        "custom_model_config": {
-                                            "state_size": config["env_config"]["state_size"],
-                                            "fc1_units": 64,
-                                            "fc2_units": 64
-                                        },
-                                    },
-                                }),
-        # "vectorization_policy": (None, obs_vectorization_node,
-        #                         )
+            "select_node_policy": (
+                None,
+                obs_select_node,
+                Discrete(config["env_config"]["max_number_nodes"]),
+                {
+                    "gamma": 0.9,
+                    "model": {
+                        "custom_model": "select_node_model",
+                        "custom_model_config": {
+                            "state_size": config["env_config"]["state_size"],
+                            "fc1_units": 64,
+                            "fc2_units": 64,
+                        },
+                    },
+                },
+            ),
+            "distribution_policy": (
+                None,
+                obs_distribute_node,
+                Discrete(2),
+                {
+                    "gamma": 0.9,
+                    "model": {
+                        "custom_model": "distribution_model",
+                        "custom_model_config": {
+                            "state_size": config["env_config"]["state_size"],
+                            "fc1_units": 64,
+                            "fc2_units": 64,
+                        },
+                    },
+                },
+            ),
+            # "vectorization_policy": (None, obs_vectorization_node,
+            #                         )
         }
-    
+
         config["multiagent"] = {
-            "policies" : policies,
-            "policy_mapping_fn": function(policy_mapping_fn)
+            "policies": policies,
+            "policy_mapping_fn": function(policy_mapping_fn),
         }
 
         # def env_creator(env_config):
@@ -174,13 +241,13 @@ class DistributionInference:
         self.trained_agent.restore(checkpoint)
 
         self.config = config
-        
+
         self.temp_rootname = "loopdistppipe"
         self.tc = None
         self.fc = None
         self.tensor_specs = None
-        self.advice_spec =  None
-     
+        self.advice_spec = None
+
         # config =  config["env_config"]
         # self.env = DistributeLoopEnv(env_config)
 
@@ -188,7 +255,7 @@ class DistributionInference:
         py_dot_graph = pydot.graph_from_dot_data(dot_)[0]
         graph_netx = networkx.drawing.nx_pydot.from_pydot(py_dot_graph)
         graph_json = json_graph.adjacency_data(graph_netx)
-        return graph_json 
+        return graph_json
 
     def run_predict(self, test_file):
         env = DistributeLoopEnv(self.config["env_config"])
@@ -206,46 +273,48 @@ class DistributionInference:
         # obs = env.reset(test_file)
 
         score = 0
-        while(True):
-            logging.debug('-^_^-^_^-^_^-^_^-^_^-^_^-^_^-^_^-^_^-^_^-^_^-^_^-^_^-')
-    
+        while True:
+            logging.debug("-^_^-^_^-^_^-^_^-^_^-^_^-^_^-^_^-^_^-^_^-^_^-^_^-^_^-")
+
             # return the color index for a node
             # print("state {}".format(obs))
             action = {}
             for agent_id, agent_obs in obs.items():
                 # print("agent_id: {}".format(agent_id))
                 # print("agent_obs: {}".format(agent_obs))
-                policy_id = self.config['multiagent']['policy_mapping_fn'](agent_id)
-                action[agent_id] = self.trained_agent.compute_action(agent_obs, policy_id=policy_id)
+                policy_id = self.config["multiagent"]["policy_mapping_fn"](agent_id)
+                action[agent_id] = self.trained_agent.compute_action(
+                    agent_obs, policy_id=policy_id
+                )
                 print("action: {}".format(action[agent_id]))
-                
+
             obs, reward, done, response = env.step(action)
-            done = done['__all__']
+            done = done["__all__"]
             # sum up reward for all agents
             # episode_reward += sum(reward.values())
 
             # action = self.trained_agent.compute_action(state)
             # print("action {}".format(action))
-            
+
             # next_state, reward, done, response  = env.step(action)
 
             # # print("next_state {}".format(next_state))
-    
-            logging.debug('reward : {}'.format(reward))
-            
+
+            logging.debug("reward : {}".format(reward))
+
             # state = next_state
             if done:
-                with open('actionlist.txt', 'a') as actionfile:
+                with open("actionlist.txt", "a") as actionfile:
                     actionfile.write(str(test_file) + "\n")
-                assert response is not None, 'Allocation is not preset.'
+                assert response is not None, "Allocation is not preset."
                 break
         response = env.partition_seq
-        print("response: {}".format(response))        
+        print("response: {}".format(response))
         return reward, response
 
     def run_predict_multiple_loops(self, rdgs):
-        #Load the envroinment
-        # env = DistributeLoopEnv(config)    
+        # Load the envroinment
+        # env = DistributeLoopEnv(config)
         # seqs = []
         dist_seq = []
         # vf_seq = []
@@ -255,52 +324,116 @@ class DistributionInference:
             print("seqs: {}".format(seqs))
             dist_seq.append(seqs)
             # vf_seq.append(seqs[1])
-        
+
         count = 0
-        
+
         select_node_agent = "select_node_agent_{}".format(count)
         distribution_agent = "distribution_agent_{}".format(count)
 
         return [dist_seq]
 
-def predict_loop_distribution(rdgs : list, trained_dist_model : str):
+
+def predict_loop_distribution(rdgs: list, trained_dist_model: str):
     print("trained_dist_model: {}".format(trained_dist_model))
     sys.argv.append("")
-    sys.path.insert(0, "/home/cs20btech11024/repos/ml-llvm-project/model/ggnn_drl/static_v4/src")
     ray.init()
 
     inference_obj = DistributionInference(trained_dist_model)
     # agent.distribution_task.net_local.load_state_dict(torch.load(trained_dist_model, map_location=torch.device("cuda" if torch.cuda.is_available() else "cpu")))
     # agent.vectorization_task.net_local.load_state_dict(torch.load(trained_vec_model, map_location=torch.device("cuda" if torch.cuda.is_available() else "cpu")))
-    
-    logging.info('Start the inference....')
+
+    logging.info("Start the inference....")
     seqs = inference_obj.run_predict_multiple_loops(rdgs)
-    logging.info('Distrubuted seqs : {}'.format(seqs))
+    logging.info("Distrubuted seqs : {}".format(seqs))
     # print("seqs: " << seqs)
     ray.shutdown()
-    
+
     return seqs
 
+def run_pipe_communication(data_format, pipe_name):
+    def parseObservation(obs):
+        if data_format == "json":
+            if "Exit" in obs.keys():
+                return "Exit"
+            return obs["RDG"]
+        elif data_format == "bytes":
+            if obs[0].spec().name == "Exit":
+                return "Exit"
+            rdg = "".join(chr(int(x)) for x in obs[0])
+            return rdg
+        elif data_format == "protobuf":
+            pass
+
+    ray.init()
+    inference_obj = DistributionInference(MODEL_PATH)
+    inference_obj.use_pipe = True
+    print("Inference model created...")
+    serdes = SerDes.SerDes(data_format, "/tmp/" + pipe_name)
+    print("Serdes init...")
+    serdes.init()
+
+    with open(f'{data_format}_seq_output.log', 'w') as f:
+      while True:
+          try:
+              print("Entered while loop...")
+              msg = serdes.readObservation()
+              msg = parseObservation(msg)
+              print("line 367", msg)
+              if msg == "Exit":
+                  out = 1
+                  serdes.sendData(out)
+                  continue
+              _, seq = inference_obj.run_predict(msg)
+              f.write(str(seq) + "\n")
+              print("Sequence", seq)
+              serdes.sendData(seq)
+          except Exception as e:
+              print("*****Exception occured*******: ", e)
+              serdes.init()
+
+class service_server(LoopDistribution_pb2_grpc.LoopDistribution):
+    def __init__(self, inference_obj) -> None:
+        self.inference_obj = inference_obj
     
+    def getAdvice(self, request, context):
+        try:
+            done = False
+            while not done:
+                msg = request
+                if msg == "Exit":
+                    out = 1
+                    continue
+                _, seq = self.inference_obj.run_predict(msg)
+                return seq
+        except Exception as e:
+            print('Error')
+            traceback.print_exc()
+            reply = LoopDistribution_pb2.Advice(action=[])
+            return reply
+        
 if __name__ == "__main__":
     args = parser.parse_args()
-    # parser.add_argument("--test_dir", help = "Path to test directory")
-    logging.info('Start the inference....')
-
+    print(args)
     use_pipe = args.use_pipe
+    use_grpc = args.use_grpc
     if not use_pipe:
-        # model_path = "/home/shalini/ray_results/experiment_2022-02-14_23-08-28/experiment_DistributeLoopEnv_eb75c_00000_0_2022-02-14_23-08-28/checkpoint_000001/checkpoint-1"
-        model_path = "/home/shalini/ray_results/experiment_2022-03-22_11-06-19/experiment_DistributeLoopEnv_003b1_00000_0_2022-03-22_11-06-19/checkpoint_008568/checkpoint-8568"
-        test_dir = "/home/shalini/LOF_test/LD_VF/IR2Vec-LoopOptimizationFramework/data/Opt_cld_O3_individualfile/mutation/tsvc_train/GIF_train_v4/graphs/loops/json/"
-        args = {'no_render' : True, 'checkpoint' : model_path, 'run' : 'SimpleQ' , 'env' : '' , 'config' : {}, 'video_dir' : '', 'steps' : 0, 'episodes' : 0, 'arch' : 'X86'}
-        args = Namespace(**args)   
-
-        # ray.init()
-
-        # inference_obj = DistributionInference(args, model_path)
+        model_path = MODEL_PATH
+        test_dir = TEST_DIR
+        args = {
+            "no_render": True,
+            "checkpoint": model_path,
+            "run": "SimpleQ",
+            "env": "",
+            "config": {},
+            "video_dir": "",
+            "steps": 0,
+            "episodes": 0,
+            "arch": "X86",
+        }
+        args = Namespace(**args)
 
         rdgs = []
-        for path in glob.glob(os.path.join(test_dir, '*.json')):
+        for path in glob.glob(os.path.join(test_dir, "*.json")):
             print(path)
             with open(path) as f:
                 # print(json.dumps(json.load(f)))
@@ -315,115 +448,18 @@ if __name__ == "__main__":
 
         select_node_agent = "select_node_agent_{}".format(count)
         distribution_agent = "distribution_agent_{}".format(count)
-    
-    else:
-        # pipes opening
-        read_stream_iter = None
 
-        def readObservation(fc: io.BufferedReader):
-            if args.data_format == "json":
-                hdr = fc.read(8)
-                size = int.from_bytes(hdr, "little")
-                msg = fc.read(size)
-                msg = json.loads(msg.decode('utf-8'))
-                if "Exit" in msg.keys():
-                    return "Exit"
-                return msg["RDG"]
-            elif args.data_format == "bytes":
-                global read_stream_iter
-                if read_stream_iter is None:
-                    read_stream_iter = log_reader.read_stream2(fc)
-                hdr = fc.read(8)
-                context, observation_id, features, score = next(read_stream_iter)
-                if features[0].spec().name == "Exit":
-                    return "Exit"
-                rdg = ''.join(chr(int(x)) for x in features[0])
-                return rdg
-
-        def sendResponse(f: io.BufferedWriter, seq):
-            if args.data_format == "json":
-                msg = json.dumps({"out": seq}).encode("utf-8")
-                hdr = int(len(msg)).to_bytes(length=8, byteorder='little')
-            elif args.data_format == "bytes":
-                msg = b''.join([x.to_bytes(4, byteorder='little', signed=True) for x in seq])
-                hdr = int(len(msg)).to_bytes(length=8, byteorder='little')
-                
-            out = hdr + msg
-            f.write(out)
-            f.flush()
-
-        def sendExitAck(f: io.BufferedWriter):
-            if args.data_format == "json":
-                msg = json.dumps({"out": 1}).encode("utf-8")
-                hdr = int(len(msg)).to_bytes(length=8, byteorder='little')
-            elif args.data_format == "bytes":
-                msg = int(1).to_bytes(length=4, byteorder='little', signed=True)
-                hdr = int(len(msg)).to_bytes(length=8, byteorder='little')
-            out = hdr + msg
-            f.write(out)
-            f.flush()
-
-        temp_rootname = "loopdistppipe"
-        to_compiler = temp_rootname + ".in"
-        from_compiler = temp_rootname + ".out"
-        # print("to_compiler", to_compiler)
-        # print("from_compiler", from_compiler)
-        def init_pipes():
-            if os.path.exists(to_compiler):
-                os.remove(to_compiler)
-            if os.path.exists(from_compiler):
-                os.remove(from_compiler)
-
-            os.mkfifo(to_compiler, 0o666)
-            os.mkfifo(from_compiler, 0o666)
-        
-        def close_pipes():
-            global tc, fc
-            tc.close()
-            fc.close()
-            os.remove(to_compiler)
-            os.remove(from_compiler)
-            tc = None
-            fc = None
-
-        tc = None
-        fc = None
-
-        def init_buffers_communication():
-            global tc, fc
-            tc = io.BufferedWriter(io.FileIO(to_compiler, "wb"))
-            print("Opened the write pipe")
-            fc = io.BufferedReader(io.FileIO(from_compiler, "rb"))
-            print("Opened the read pipe")
-
-        tensor_specs = None
-        advice_spec =  None
-        ray.init()
-        # trained_dist_model = "/home/cs20mtech12003/ray_results/experiment_2023-08-10_22-08-07/experiment_DistributeLoopEnv_491f4_00000_0_2023-08-10_22-08-07/checkpoint_000002/checkpoint-2"
-        trained_dist_model = "/Pramana/RL4Real/tmp/loop_dist_checkpoint/checkpoint-2"
-        inference_obj = DistributionInference(trained_dist_model)
-        
-        init_pipes()
-        init_buffers_communication()
-        while(True):
-            try:
-              print("Entered while loop...")        
-              msg = readObservation(fc)
-              if msg == "Exit":
-                  sendExitAck(tc)
-                  close_pipes()
-                  init_pipes()
-                  init_buffers_communication()
-                  read_stream_iter = None
-                  continue
-              _, seq = inference_obj.run_predict(msg)
-              print("Sequence", seq)
-              sendResponse(tc, seq)
-            except Exception as e:
-                print("*****Exception occured*******: ", e)
-                init_pipes()
-                init_buffers_communication()
-                read_stream_iter = None
-        
-
-
+    if use_pipe:
+        run_pipe_communication(args.data_format, args.pipe_name)
+    elif use_grpc:
+        server = grpc.server(futures.ThreadPoolExecutor(max_workers=10), options = [
+                    ('grpc.max_send_message_length', 200*1024*1024), #50MB
+                            ('grpc.max_receive_message_length', 200*1024*1024) #50MB
+                                ])
+        inference_obj = DistributionInference(MODEL_PATH)
+        inference_obj.use_pipe = False
+        LoopDistribution_pb2_grpc.add_LoopDistributionServicer_to_server(service_server(inference_obj), server)
+        server.add_insecure_port('localhost:' + args.server_port)
+        server.start()
+        print("Server running at port: " + args.server_port)
+        server.wait_for_termination()

@@ -8,6 +8,7 @@
 
 #include "MLModelRunner/ONNXModelRunner/ONNXModelRunner.h"
 #include "SerDes/baseSerDes.h"
+#include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
 ONNXModelRunner::ONNXModelRunner(Environment *env,
