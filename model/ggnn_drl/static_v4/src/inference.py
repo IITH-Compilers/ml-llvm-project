@@ -96,11 +96,11 @@ parser.add_argument(
     choices=["json", "protobuf", "bytes"],
     help="Data format to use for communication",
 )
-parser.add_argument("--pipe_name", type=str, help="Pipe name to use for communication")
+parser.add_argument("--pipe_name", type=str, help="Pipe name to use for communication", default="loopdistppipe")
 parser.add_argument("--server_port", type=str, help="Server port")
 
 class DistributionInference:
-    def __init__(self, model_path, use_pipe):
+    def __init__(self, model_path, use_pipe=False, data_format=None):
         logdir = "/tmp"
         logger = logging.getLogger(__file__)
         logging.basicConfig(
@@ -140,7 +140,7 @@ class DistributionInference:
         # config["env_config"]["dump_color_graph"] = True
         config["env_config"]["intermediate_data"] = "./temp"
         config["env_config"]["use_pipe"] = use_pipe
-        config["env_config"]["data_format"] = args.data_format
+        config["env_config"]["data_format"] = data_format
 
         ModelCatalog.register_custom_model("select_node_model", SelectNodeNetwork)
         ModelCatalog.register_custom_model("distribution_model", DistributionTask)
@@ -341,7 +341,7 @@ def predict_loop_distribution(rdgs: list, trained_dist_model: str):
     inference_obj = DistributionInference(trained_dist_model)
     # agent.distribution_task.net_local.load_state_dict(torch.load(trained_dist_model, map_location=torch.device("cuda" if torch.cuda.is_available() else "cpu")))
     # agent.vectorization_task.net_local.load_state_dict(torch.load(trained_vec_model, map_location=torch.device("cuda" if torch.cuda.is_available() else "cpu")))
-
+    print("Start the inference....")
     logging.info("Start the inference....")
     seqs = inference_obj.run_predict_multiple_loops(rdgs)
     logging.info("Distrubuted seqs : {}".format(seqs))
@@ -365,9 +365,9 @@ def run_pipe_communication(data_format, pipe_name):
             pass
 
     ray.init()
-    inference_obj = DistributionInference(MODEL_PATH)
+    inference_obj = DistributionInference(MODEL_PATH, data_format=data_format)
     inference_obj.use_pipe = True
-    print("Inference model created...")
+    print("Inference model created, using pipe:", pipe_name)
     serdes = SerDes.SerDes(data_format, "/tmp/" + pipe_name)
     print("Serdes init...")
     serdes.init()
@@ -378,14 +378,13 @@ def run_pipe_communication(data_format, pipe_name):
               print("Entered while loop...")
               msg = serdes.readObservation()
               msg = parseObservation(msg)
-              print("line 367", msg)
               if msg == "Exit":
                   out = 1
                   serdes.sendData(out)
                   continue
               _, seq = inference_obj.run_predict(msg)
               f.write(str(seq) + "\n")
-              print("Sequence", seq)
+            #   print("Sequence", seq)
               serdes.sendData(seq)
           except Exception as e:
               print("*****Exception occured*******: ", e)
@@ -413,10 +412,9 @@ class service_server(LoopDistribution_pb2_grpc.LoopDistribution):
         
 if __name__ == "__main__":
     args = parser.parse_args()
-    print(args)
     use_pipe = args.use_pipe
     use_grpc = args.use_grpc
-    if not use_pipe:
+    if not use_pipe and not use_grpc:
         model_path = MODEL_PATH
         test_dir = TEST_DIR
         args = {
@@ -434,7 +432,6 @@ if __name__ == "__main__":
 
         rdgs = []
         for path in glob.glob(os.path.join(test_dir, "*.json")):
-            print(path)
             with open(path) as f:
                 # print(json.dumps(json.load(f)))
                 rdgs.append(json.load(f))
@@ -456,6 +453,7 @@ if __name__ == "__main__":
                     ('grpc.max_send_message_length', 200*1024*1024), #50MB
                             ('grpc.max_receive_message_length', 200*1024*1024) #50MB
                                 ])
+        ray.init()
         inference_obj = DistributionInference(MODEL_PATH)
         inference_obj.use_pipe = False
         LoopDistribution_pb2_grpc.add_LoopDistributionServicer_to_server(service_server(inference_obj), server)
