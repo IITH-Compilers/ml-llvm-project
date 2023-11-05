@@ -25,7 +25,7 @@ set(LLVM_LINK_COMPONENTS
   Vectorize
   Passes
   PosetRL
-  CodeSizeOpt
+#  CodeSizeOpt
   AddSizeAttr
   IR2Vec
   CollectMachineIR
