@@ -25,7 +25,7 @@ public:
   void setEnvironment(Environment *_env) { env = _env; }
   Environment *getEnvironment() { return env; }
   void addAgent(Agent *agent, std::string name);
-  void computeAction(Observation obs);
+  void computeAction(Observation& obs);
 
   void requestExit() override {}
 

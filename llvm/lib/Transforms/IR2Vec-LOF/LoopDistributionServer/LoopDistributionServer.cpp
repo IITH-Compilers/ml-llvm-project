@@ -93,11 +93,18 @@ struct LoopDistributionServerPass
       initPipeCommunication();
     else if(use_grpc) {
       errs() << "came here\n";
-      AOTRunner = std::make_unique<gRPCModelRunner<
-          loopdistribution::LoopDistribution,
-          loopdistribution::LoopDistribution::Stub,
-          loopdistribution::LoopDistributionRequest, loopdistribution::LoopDistributionResponse>>(
-          server_address,this);
+
+      /******
+      ISSUE: Advice during training and inference  is different
+      FIX: 
+      1. use `Message Advice` present in LoopDistribution.proto for training same as inference instead of `Message LoopDistributionResponse`
+      2. Modify in python side also appropriately
+      *******/
+      // AOTRunner = std::make_unique<gRPCModelRunner<
+      //     loopdistribution::LoopDistribution,
+      //     loopdistribution::LoopDistribution::Stub,
+      //     loopdistribution::LoopDistributionRequest, loopdistribution::LoopDistributionResponse>>(
+      //     server_address,this);
     }
 
     return FileModified;

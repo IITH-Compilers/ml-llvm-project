@@ -26,13 +26,13 @@ void ONNXModelRunner::addAgent(Agent *agent, std::string name) {
   }
 }
 
-void ONNXModelRunner::computeAction(Observation obs) {
+void ONNXModelRunner::computeAction(Observation& obs) {
   while (true) {
     Action action;
     // current agent
     auto current_agent = this->agents[this->env->getNextAgent()];
     action = current_agent->computeAction(obs);
-    obs = this->env->step(action);
+    this->env->step(action);
     if (this->env->checkDone()) {
       std::cout << "Done🎉\n";
       break;
@@ -41,7 +41,7 @@ void ONNXModelRunner::computeAction(Observation obs) {
 }
 
 void *ONNXModelRunner::evaluateUntyped() {
-  Observation obs = env->reset();
+  Observation& obs = env->reset();
   computeAction(obs);
   return new int(0);
 }
