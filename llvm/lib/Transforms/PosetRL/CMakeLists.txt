@@ -1,6 +1,3 @@
-set(protobuf_MODULE_COMPATIBLE TRUE)
-find_package(Protobuf CONFIG REQUIRED)
-
 add_llvm_component_library(LLVMPosetRL posetRL.cpp
 
 LINK_COMPONENTS
@@ -14,5 +11,4 @@ DEPENDS
 intrinsics_gen
 LLVMMLBridge
 )
-target_include_directories(LLVMPosetRL PUBLIC ${LLVM_MAIN_INCLUDE_DIRS} ${Protobuf_INCLUDE_DIRS})
 target_link_libraries(LLVMPosetRL PUBLIC LLVMMLBridge)

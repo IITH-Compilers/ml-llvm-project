@@ -1,6 +1,3 @@
-set(protobuf_MODULE_COMPATIBLE TRUE)
-find_package(Protobuf CONFIG REQUIRED)
-
 find_package (Python3 REQUIRED COMPONENTS Interpreter Development)
 
 add_llvm_component_library(LLVMcustom_loop_distribution STATIC BUILDTREE_ONLY
@@ -21,4 +18,3 @@ add_subdirectory(inference)
 add_library(libpython3.6m SHARED IMPORTED) 
 set_target_properties(libpython3.6m PROPERTIES IMPORTED_LOCATION ${Python3_LIBRARIES} INTERFACE_INCLUDE_DIRECTORIES ${Python3_INCLUDE_DIRS})
 target_link_libraries(LLVMcustom_loop_distribution LLVMLoopDistribution LLVMCLDInference libpython3.6m)
-target_include_directories(LLVMcustom_loop_distribution PUBLIC ${LLVM_MAIN_INCLUDE_DIRS} ${Protobuf_INCLUDE_DIRS})
