@@ -1,5 +1,7 @@
 #include "llvm/Transforms/IR2Vec-LOF/custom_loop_distribution.h"
 #include "MLModelRunner/gRPCModelRunner.h"
+#include "MLModelRunner/PipeModelRunner.h"
+#include "MLModelRunner/ONNXModelRunner/ONNXModelRunner.h"
 #include "Python.h"
 #include "grpc/LoopDistribution/LoopDistribution.grpc.pb.h"
 #include "grpc/LoopDistribution/LoopDistribution.pb.h"

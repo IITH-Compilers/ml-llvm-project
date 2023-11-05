@@ -49,3 +49,4 @@ add_llvm_component_library(LLVMipo
   )
 
 target_include_directories(LLVMipo PUBLIC ${LLVM_MAIN_INCLUDE_DIRS} ${Protobuf_INCLUDE_DIRS})
+target_link_libraries(LLVMipo PUBLIC LLVMMLBridge)

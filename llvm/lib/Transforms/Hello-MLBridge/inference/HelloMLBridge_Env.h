@@ -6,27 +6,29 @@
 using namespace llvm;
 
 class HelloMLBridgeEnv : public Environment {
-
+  Observation CurrObs;
 public:
   HelloMLBridgeEnv() {
     setNextAgent("agent");
   };
-  Observation reset() override;
-  Observation step(Action) override;
+  Observation& reset() override;
+  Observation& step(Action) override;
 
 protected:
   std::vector<float> FeatureVector;
 };
 
-Observation HelloMLBridgeEnv::step(Action Action) {
-  Observation Obs(FeatureVector.begin(), FeatureVector.end());
-
+Observation& HelloMLBridgeEnv::step(Action Action) {
+  CurrObs.clear();
+  std::copy(FeatureVector.begin(), FeatureVector.end(),
+            std::back_inserter(CurrObs));
   outs() << "Action: " << Action << "\n";
   setDone();
-  return Obs;
+  return CurrObs;
 }
 
-Observation HelloMLBridgeEnv::reset() {
-  Observation Obs(FeatureVector.begin(), FeatureVector.end());
-  return Obs;
+Observation& HelloMLBridgeEnv::reset() {
+  std::copy(FeatureVector.begin(), FeatureVector.end(),
+            std::back_inserter(CurrObs));
+  return CurrObs;
 }

@@ -10,8 +10,6 @@ DEPENDS
 intrinsics_gen
 )
         
-# add_dependencies(custom_loop_distribution intrinsics_gen)
-# target_link_libraries(python3.7m crypt pthread dl  util rt m)
 
 message(STATUS "Found Python3_INCLUDE_DIRS ${Python3_INCLUDE_DIRS}")
 message(STATUS "Found Python3_LIBRARY_DIRS ${Python3_LIBRARY_DIRS}")
@@ -22,6 +20,5 @@ link_directories(${Python3_LIBRARY_DIRS})
 add_subdirectory(inference)
 add_library(libpython3.6m SHARED IMPORTED) 
 set_target_properties(libpython3.6m PROPERTIES IMPORTED_LOCATION ${Python3_LIBRARIES} INTERFACE_INCLUDE_DIRECTORIES ${Python3_INCLUDE_DIRS})
-# target_link_libraries(LLVMcustom_loop_distribution LLVMLoopDistribution LLVMCLDInference libpython3.6m)
 target_link_libraries(LLVMcustom_loop_distribution LLVMLoopDistribution LLVMCLDInference libpython3.6m)
 target_include_directories(LLVMcustom_loop_distribution PUBLIC ${LLVM_MAIN_INCLUDE_DIRS} ${Protobuf_INCLUDE_DIRS})

@@ -5,4 +5,7 @@ add_llvm_component_library(LLVMCLDInference
 # ADDITIONAL_HEADER_DIRS
 #   ${CMAKE_CURRENT_SOURCE_DIR}/include
 
+DEPENDS
+  LLVMMLBridge
 )
+target_link_libraries(LLVMCLDInference PUBLIC LLVMMLBridge)

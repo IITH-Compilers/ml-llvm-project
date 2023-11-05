@@ -10,12 +10,6 @@ find_package(Protobuf CONFIG REQUIRED)
 
 add_llvm_library(LLVMHelloMLBridge MODULE BUILDTREE_ONLY
   Hello.cpp
-  ${CMAKE_CURRENT_BINARY_DIR}/../../../include/grpc/helloMLBridge/helloMLBridge.grpc.pb.h
-  ${CMAKE_CURRENT_BINARY_DIR}/../../../include/grpc/helloMLBridge/helloMLBridge.pb.h
-  ${CMAKE_CURRENT_BINARY_DIR}/../../../include/grpc/helloMLBridge/helloMLBridge.grpc.pb.cc
-  ${CMAKE_CURRENT_BINARY_DIR}/../../../include/grpc/helloMLBridge/helloMLBridge.pb.cc
-
-  # LINK_COMPONENTS
 
   DEPENDS
   intrinsics_gen
@@ -26,3 +20,4 @@ add_llvm_library(LLVMHelloMLBridge MODULE BUILDTREE_ONLY
   )
 
 target_include_directories(LLVMHelloMLBridge PUBLIC ${LLVM_MAIN_INCLUDE_DIRS} ${Protobuf_INCLUDE_DIRS} )
+target_link_libraries(LLVMHelloMLBridge PUBLIC LLVMMLBridge)

@@ -5,4 +5,8 @@ X86_register_config_objects.cpp
 
 ADDITIONAL_HEADER_DIRS
   ${CMAKE_CURRENT_SOURCE_DIR}/includes
+
+DEPENDS
+  LLVMMLBridge
 )
+target_link_libraries(LLVMMLRegAllocInference PUBLIC LLVMMLBridge)
