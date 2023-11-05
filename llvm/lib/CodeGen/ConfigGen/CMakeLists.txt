@@ -4,4 +4,4 @@ add_llvm_component_library(LLVMConfigGen
 	ConfigGen.cpp
     DEPENDS intrinsics_gen)
 
-target_link_libraries(LLVMConfigGen LLVMSymbolic)
+# target_link_libraries(LLVMConfigGen LLVMSymbolic)

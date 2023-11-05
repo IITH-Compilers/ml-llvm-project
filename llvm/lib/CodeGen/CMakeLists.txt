@@ -1,5 +1,5 @@
 include_directories( ${CMAKE_CURRENT_SOURCE_DIR}/MLRegAlloc/inference/includes)
-
+include_directories(/home/cs20btech11024/.local/include)
 add_llvm_component_library(LLVMCodeGen
   AggressiveAntiDepBreaker.cpp
   AllocationOrder.cpp
@@ -184,9 +184,9 @@ add_llvm_component_library(LLVMCodeGen
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/CodeGen/PBQP
   ${CMAKE_CURRENT_SOURCE_DIR}/MLRegAlloc/inference/includes
 
-  LINK_LIBS ${LLVM_PTHREAD_LIB} LLVMMLRegAlloc
+  # LINK_LIBS ${LLVM_PTHREAD_LIB} LLVMMLRegAlloc
   LINK_LIBS ${LLVM_PTHREAD_LIB} LLVMConfigGen
-  LINK_LIBS LLVMCollectMachineIR
+  # LINK_LIBS LLVMCollectMachineIR
 
   DEPENDS
   intrinsics_gen
@@ -196,7 +196,7 @@ add_subdirectory(SelectionDAG)
 add_subdirectory(AsmPrinter)
 add_subdirectory(MIRParser)
 add_subdirectory(GlobalISel)
-add_subdirectory(MLRegAlloc)
-add_subdirectory(MIR2Vec)
+# add_subdirectory(MLRegAlloc)
+# add_subdirectory(MIR2Vec)
 add_subdirectory(ConfigGen)
 

@@ -93,11 +93,11 @@ struct LoopDistributionServerPass
       initPipeCommunication();
     else if(use_grpc) {
       errs() << "came here\n";
-      AOTRunner = std::make_unique<gRPCModelRunner<
-          loopdistribution::LoopDistribution,
-          loopdistribution::LoopDistribution::Stub,
-          loopdistribution::LoopDistributionRequest, loopdistribution::LoopDistributionResponse>>(
-          server_address,this);
+      // AOTRunner = std::make_unique<gRPCModelRunner<
+      //     loopdistribution::LoopDistribution,
+      //     loopdistribution::LoopDistribution::Stub,
+      //     loopdistribution::LoopDistributionRequest, loopdistribution::LoopDistributionResponse>>(
+      //     server_address,this);
     }
 
     return FileModified;

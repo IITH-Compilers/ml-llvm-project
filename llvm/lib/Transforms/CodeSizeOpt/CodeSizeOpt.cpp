@@ -50,29 +50,40 @@ struct CodeSizeOpt : public ModulePass, public CodeSizeOptEnv {
 
   inline const llvm::TargetLibraryInfoImpl& tlii() const { return tlii_; }
 
-  void addPassToPM(llvm::legacy::FunctionPassManager* PM, Pass* P) {
-    errs() << "Adding Pass: Profilesummaryinfo" << "\n";
+  template<typename PassManager>
+  void setupPassManager(PassManager* PM, Pass* P) {
+    // errs() << "Adding Pass: Profilesummaryinfo" << "\n";
     PM->add(new ProfileSummaryInfoWrapperPass());
-    errs() << "Adding Pass: TargetLibraryInfo" << "\n";
+    // errs() << "Adding Pass: TargetLibraryInfo" << "\n";
     PM->add(new TargetLibraryInfoWrapperPass(tlii()));
-    errs() << "Adding Pass: TargetTransformInfo" << "\n";
+    // errs() << "Adding Pass: TargetTransformInfo" << "\n";
     PM->add(createTargetTransformInfoWrapperPass(TargetIRAnalysis()));
-    errs() << "Adding Pass: " << P->getPassName() << "\n";
+    // errs() << "Adding Pass: " << P->getPassName() << "\n";
     PM->add(P);
   }
 
-  Embedding getEmbeddings() override {
+  void runPass(llvm::Pass* P) {
+    llvm::legacy::PassManager PM;
+    setupPassManager(&PM, P);
+    PM.run(*M);
+  }
+
+  void runPass(llvm::FunctionPass* P) {
+    llvm::legacy::FunctionPassManager FPM(M);
+    setupPassManager(&FPM, P);
+    FPM.doInitialization();
+    for (auto& F : *M) {
+      FPM.run(F);
+    }
+    FPM.doFinalization();
+  }
+
+  void getEmbeddings() override {
     auto Ir2vec =
-        IR2Vec::Embeddings(*M, IR2Vec::IR2VecMode::FlowAware,
+        IR2Vec::Embeddings(*M, IR2Vec::IR2VecMode::Symbolic,
                            "/Pramana/ML_LLVM_Tools/ml-llvm-project/IR2Vec/"
                            "vocabulary/seedEmbeddingVocab-300-llvm10.txt");
-    auto ProgVector = Ir2vec.getProgramVector();
-    Embedding Vector(ProgVector.begin(), ProgVector.end());
-    // errs() << "Embedding: ";
-    // for(auto v : Vector)
-    //   errs() << v << " ";
-    // errs() << "\n";
-    return Vector;
+    CurrEmbedding = Ir2vec.getProgramVector();
   }
 
   void applySeq(Action Action) override {
@@ -82,18 +93,18 @@ struct CodeSizeOpt : public ModulePass, public CodeSizeOptEnv {
 
     legacy::FunctionPassManager FPM(M);
     legacy::PassManager MPM;
-    errs() << "Handle Pass: " << Action << "\n";
+    errs() << "Action: " << Action << "\n";
 
-#define HANDLE_PASS(pass) addPassToPM(&FPM, pass);
+#define HANDLE_PASS(pass) runPass(pass);
     HANDLE_ACTION(Action, HANDLE_PASS)
 #undef HANDLE_PASS
 
     // Builder.customPopulateFunctionPassManager(FPM, 34, Action);
     // Builder.customPopulateModulePassManager(MPM, 34, Action);
     // run the passes
-    errs() << "Running Module Passes\n";
+    // errs() << "Running Module Passes\n";
     MPM.run(*M);
-    errs() << "Running Function Passes\n";
+    // errs() << "Running Function Passes\n";
     for (auto &F : *M) {
       FPM.run(F);
     }

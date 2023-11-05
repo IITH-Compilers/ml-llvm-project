@@ -50,7 +50,7 @@
 #include "llvm/Transforms/Vectorize.h"
 #include "llvm/Transforms/Vectorize/LoopVectorize.h"
 #include "llvm/Transforms/Vectorize/SLPVectorizer.h"
-#include "llvm/Transforms/IR2Vec-LOF/custom_loop_distribution.h"
+// #include "llvm/Transforms/IR2Vec-LOF/custom_loop_distribution.h"
 
 using namespace llvm;
 
@@ -1710,7 +1710,7 @@ void PassManagerBuilder::populateModulePassManager(
   } 
   
   if(Runcustom_loop_distribution) {
-    MPM.add(createcustom_loop_distributionPass());
+    // MPM.add(createcustom_loop_distributionPass());
   }
 
   if(!RunNoPostDistributionPasses) {

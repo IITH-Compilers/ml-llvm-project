@@ -408,15 +408,15 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
       }
     }
   } else {
-    loopdistribution::LoopDistributionRequest request;
-    loopdistribution::Advice response;
-    MLRunner = std::make_unique<gRPCModelRunner<
-        loopdistribution::LoopDistribution,
-        loopdistribution::LoopDistribution::Stub,
-        loopdistribution::LoopDistributionRequest, loopdistribution::Advice>>(
-        server_address, &request, &response, &M->getContext());
-    MLRunner->setRequest(&request);
-    MLRunner->setResponse(&response);
+    // loopdistribution::LoopDistributionRequest request;
+    // loopdistribution::Advice response;
+    // MLRunner = std::make_unique<gRPCModelRunner<
+    //     loopdistribution::LoopDistribution,
+    //     loopdistribution::LoopDistribution::Stub,
+    //     loopdistribution::LoopDistributionRequest, loopdistribution::Advice>>(
+    //     server_address, &request, &response, &M->getContext());
+    // MLRunner->setRequest(&request);
+    // MLRunner->setResponse(&response);
 
     std::vector<std::string> RDG_List;
     RDG_List.insert(RDG_List.end(), data.input_rdgs_str.begin(),

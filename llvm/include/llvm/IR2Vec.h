@@ -14,7 +14,7 @@
 namespace IR2Vec {
 
 #define DIM 300
-using Vector = llvm::SmallVector<double, DIM>;
+using Vector = llvm::SmallVector<float, DIM>;
 
 enum IR2VecMode { FlowAware, Symbolic };
 

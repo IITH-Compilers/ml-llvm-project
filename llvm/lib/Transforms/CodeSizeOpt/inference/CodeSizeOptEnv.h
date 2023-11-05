@@ -8,6 +8,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <iterator>
@@ -18,49 +19,43 @@
 
 using namespace llvm;
 
-typedef std::vector<float> Embedding;
+typedef llvm::SmallVector<float, 300> Embedding;
 
 class CodeSizeOptEnv : public Environment {
   unsigned Actioncount = 0;
-  Embedding CurrEmbedding;
 
 public:
+  Embedding CurrEmbedding;
   std::vector<int> Sequence;
 
 public:
   CodeSizeOptEnv();
-  Observation reset() override;
-  Observation step(Action) override;
-  virtual Embedding getEmbeddings() = 0;
+  Observation& reset() override;
+  Observation& step(Action) override;
+  virtual void getEmbeddings() = 0;
   virtual void applySeq(Action) = 0;
 
 };
 
 
-Observation CodeSizeOptEnv::step(Action Action) {
+Observation& CodeSizeOptEnv::step(Action Action) {
   Sequence.push_back(Action);
-  applySeq(Action);
 
   Actioncount += 1;
-  CurrEmbedding = getEmbeddings();
-  if (Actioncount >= 30)
+  applySeq(Action);
+  if (Actioncount >= 15)
+  {
     setDone();
+    exit(0);
+  }
 
-  // std::vector<float> Obs;
-  Observation Obs;
-  std::copy(CurrEmbedding.begin(), CurrEmbedding.end(),
-            std::back_inserter(Obs));
-  return Obs;
+  getEmbeddings();
+  return CurrEmbedding;
 }
 
-Observation CodeSizeOptEnv::reset() {
-  CurrEmbedding = getEmbeddings();
-
-  // std::vector<float> Obs;
-  Observation Obs;
-  std::copy(CurrEmbedding.begin(), CurrEmbedding.end(),
-            std::back_inserter(Obs));
-  return Obs;
+Observation& CodeSizeOptEnv::reset() {
+  getEmbeddings();
+  return CurrEmbedding;
 }
 
 CodeSizeOptEnv::CodeSizeOptEnv() {

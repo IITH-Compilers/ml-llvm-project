@@ -431,7 +431,7 @@ void initializeWriteThinLTOBitcodePass(PassRegistry&);
 void initializeXRayInstrumentationPass(PassRegistry&);
 void initializePosetRLPass(PassRegistry&);
 void initializeCodeSizeOptPass(PassRegistry&);
-void initializeCollectMachineIRPass(PassRegistry &);
+// void initializeCollectMachineIRPass(PassRegistry &);
 void initializeConfigGenPass(PassRegistry &);
 
 

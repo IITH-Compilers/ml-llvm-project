@@ -600,10 +600,10 @@ int main(int argc, char **argv) {
   initializeWriteBitcodePassPass(Registry);
   initializeHardwareLoopsPass(Registry);
   initializeTypePromotionPass(Registry);
-  initializecustom_loop_distributionPass(Registry);
-  initializeLoopDistributionWrapperPassPass(Registry);
-  initializeLoopDistributionServerPassPass(Registry);
-  initializeLoopCostPass(Registry);
+  // initializecustom_loop_distributionPass(Registry);
+  // initializeLoopDistributionWrapperPassPass(Registry);
+  // initializeLoopDistributionServerPassPass(Registry);
+  // initializeLoopCostPass(Registry);
 
 #ifdef BUILD_EXAMPLES
   initializeExampleIRTransforms(Registry);

@@ -1196,7 +1196,7 @@ void TargetPassConfig::addOptimizedRegAlloc() {
   addPass(&MachineSchedulerID);
   
   if(EnableCollectMIR){
-    addPass(&CollectMachineIRID);
+    // addPass(&CollectMachineIRID);
   }
 
   if(EnableConfigGen){

@@ -18,7 +18,7 @@ LLVMMLBridge
 LINK_LIBS
 LLVMMLBridge
 LLVMMLRegAllocInference
-LLVMSymbolic
+# LLVMSymbolic
 )
 
 add_subdirectory(inference)

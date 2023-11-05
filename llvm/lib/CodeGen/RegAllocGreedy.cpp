@@ -39,7 +39,7 @@
 #include "llvm/CodeGen/LiveRangeEdit.h"
 #include "llvm/CodeGen/LiveRegMatrix.h"
 #include "llvm/CodeGen/LiveStacks.h"
-#include "llvm/CodeGen/MLRegAlloc.h"
+// #include "llvm/CodeGen/MLRegAlloc.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
@@ -154,8 +154,8 @@ static RegisterRegAlloc greedyRegAlloc("greedy", "greedy register allocator",
 namespace {
 
 class RAGreedy : public MachineFunctionPass,
-                 //  public RegAllocBase,
-                 public MLRA,
+                  public RegAllocBase,
+                //  public MLRA,
                  private LiveRangeEdit::Delegate {
   // Convenient shortcuts.
   using PQueue = std::priority_queue<std::pair<unsigned, unsigned>>;
@@ -3275,39 +3275,39 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
   SetOfBrokenHints.clear();
   LastEvicted.clear();
 
-  if (enable_dump_ig_dot || enable_mlra_inference || enable_mlra_training) {
-    LLVM_DEBUG(dbgs() << "======1.5\n";);
-    MLRegAlloc(*MF, *Indexes, *MBFI, *DomTree, *Loops, *AA, *DebugVars,
-               *SpillPlacer, *ORE);
-    ExtraRegInfo.resize(MRI->getNumVirtRegs());
-    IntfCache.init(MF, Matrix->getLiveUnions(), Indexes, LIS, TRI);
-    LLVM_DEBUG(dbgs() << "======2\n";); // LIS->dump());
+  // if (enable_dump_ig_dot || enable_mlra_inference || enable_mlra_training) {
+  //   LLVM_DEBUG(dbgs() << "======1.5\n";);
+  //   MLRegAlloc(*MF, *Indexes, *MBFI, *DomTree, *Loops, *AA, *DebugVars,
+  //              *SpillPlacer, *ORE);
+  //   ExtraRegInfo.resize(MRI->getNumVirtRegs());
+  //   IntfCache.init(MF, Matrix->getLiveUnions(), Indexes, LIS, TRI);
+  //   LLVM_DEBUG(dbgs() << "======2\n";); // LIS->dump());
 
-    // for (auto i : mlSpilledRegs) {
-    //   if (i->isSpillable()) {
-    //     errs() << "ML Spilling :";
-    //     i->dump();
-    //     SmallVector<unsigned int, 4> NewVRegs;
-    //     LiveRangeEdit LRE(i, NewVRegs, *MF, *LIS, VRM, this, &DeadRemats);
-    //     spiller().spill(LRE);
-    //     setStage(NewVRegs.begin(), NewVRegs.end(), RS_Done);
-    //     DebugVars->splitRegister(i->reg, LRE.regs(), *LIS);
+  //   // for (auto i : mlSpilledRegs) {
+  //   //   if (i->isSpillable()) {
+  //   //     errs() << "ML Spilling :";
+  //   //     i->dump();
+  //   //     SmallVector<unsigned int, 4> NewVRegs;
+  //   //     LiveRangeEdit LRE(i, NewVRegs, *MF, *LIS, VRM, this, &DeadRemats);
+  //   //     spiller().spill(LRE);
+  //   //     setStage(NewVRegs.begin(), NewVRegs.end(), RS_Done);
+  //   //     DebugVars->splitRegister(i->reg, LRE.regs(), *LIS);
 
-    //     if (VerifyEnabled)
-    //       MF->verify(this, "After spilling");
-    //   }
-    // }
-    ;
-    for (auto i : mlSplitRegs) {
-      // errs() << "mlSplitRegs " << printReg(i, TRI) << "\n";
-      setStage(LIS->getInterval(i), RS_Spill);
-    }
-    for (auto i : mlAllocatedRegs) {
-      setStage(LIS->getInterval(i), RS_Done);
-    }
+  //   //     if (VerifyEnabled)
+  //   //       MF->verify(this, "After spilling");
+  //   //   }
+  //   // }
+  //   ;
+  //   for (auto i : mlSplitRegs) {
+  //     // errs() << "mlSplitRegs " << printReg(i, TRI) << "\n";
+  //     setStage(LIS->getInterval(i), RS_Spill);
+  //   }
+  //   for (auto i : mlAllocatedRegs) {
+  //     setStage(LIS->getInterval(i), RS_Done);
+  //   }
 
-    LLVM_DEBUG(errs() << "Starting greedy flow here\n");
-  }
+  //   LLVM_DEBUG(errs() << "Starting greedy flow here\n");
+  // }
   LLVM_DEBUG(dbgs() << "======3\n";); // LIS->dump());
 
   allocatePhysRegs();

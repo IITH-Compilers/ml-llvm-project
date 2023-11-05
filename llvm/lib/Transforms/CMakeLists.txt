@@ -17,6 +17,6 @@ add_subdirectory(PosetRL)
 add_subdirectory(CodeSizeOpt)
 add_subdirectory(MCAInstrumentation)
 
-add_subdirectory(IR2Vec-LOF)
+# add_subdirectory(IR2Vec-LOF)
 # add_subdirectory(LoopTime)
-add_subdirectory(PipeIR)
+# add_subdirectory(PipeIR)

@@ -21,6 +21,7 @@
 
 class Agent {
 public:
+  int action;
   ONNXModel *model;
   Agent(std::string model_path);
   unsigned computeAction(Observation &obs);

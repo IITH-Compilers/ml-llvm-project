@@ -18,17 +18,18 @@ class PosetRLEnv : public Environment {
   unsigned Actioncount = 0;
   Embedding CurrEmbedding;
   ActionMask CurrActionMask;
+  Observation CurrObs;
 public:
   std::vector<int> Sequence;
 public:
   PosetRLEnv();
-  Observation reset() override;
-  Observation step(Action) override;
+  Observation& reset() override;
+  Observation& step(Action) override;
   virtual Embedding getEmbeddings() = 0;
   virtual void applySeq(Action) = 0;
 };
 
-Observation PosetRLEnv::step(Action Action) {
+inline Observation& PosetRLEnv::step(Action Action) {
   Sequence.push_back(Action);
   applySeq(Action);
 
@@ -40,27 +41,29 @@ Observation PosetRLEnv::step(Action Action) {
     setDone();
 
   // std::vector<float> Obs;
-  Observation Obs;
+  // Observation Obs;
+  CurrObs.clear();
   std::copy(CurrActionMask.begin(), CurrActionMask.end(),
-            std::back_inserter(Obs));
+            std::back_inserter(CurrObs));
   std::copy(CurrEmbedding.begin(), CurrEmbedding.end(),
-            std::back_inserter(Obs));
+            std::back_inserter(CurrObs));
 
-  return Obs;
+  return CurrObs;
 }
 
-Observation PosetRLEnv::reset() {
+inline Observation& PosetRLEnv::reset() {
   CurrEmbedding = getEmbeddings();
   CurrActionMask.assign(ActionMaskSize, 1);
 
   // std::vector<float> Obs;
-  Observation Obs;
+  // Observation Obs;
+  CurrObs.clear();
   std::copy(CurrActionMask.begin(), CurrActionMask.end(),
-            std::back_inserter(Obs));
+            std::back_inserter(CurrObs));
   std::copy(CurrEmbedding.begin(), CurrEmbedding.end(),
-            std::back_inserter(Obs));
+            std::back_inserter(CurrObs));
 
-  return Obs;
+  return CurrObs;
 }
 
 PosetRLEnv::PosetRLEnv() {
