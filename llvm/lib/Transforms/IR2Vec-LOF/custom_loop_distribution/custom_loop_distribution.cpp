@@ -409,11 +409,11 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
     }
   } else {
     loopdistribution::LoopDistributionRequest request;
-    loopdistribution::Advice response;
+    loopdistribution::LoopDistributionResponse response;
     MLRunner = std::make_unique<gRPCModelRunner<
         loopdistribution::LoopDistribution,
         loopdistribution::LoopDistribution::Stub,
-        loopdistribution::LoopDistributionRequest, loopdistribution::Advice>>(
+        loopdistribution::LoopDistributionRequest, loopdistribution::LoopDistributionResponse>>(
         server_address, &request, &response, &M->getContext());
     MLRunner->setRequest(&request);
     MLRunner->setResponse(&response);
