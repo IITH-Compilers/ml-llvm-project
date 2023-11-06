@@ -1,0 +1,827 @@
+	.text
+	.file	"mvt.c"
+	.section	.rodata.cst8,"aM",@progbits,8
+	.p2align	3               # -- Begin function polybench_flush_cache
+.LCPI0_0:
+	.quad	4621819117588971520     # double 10
+	.text
+	.globl	polybench_flush_cache
+	.p2align	4, 0x90
+	.type	polybench_flush_cache,@function
+polybench_flush_cache:                  # @polybench_flush_cache
+	.cfi_startproc
+# %bb.0:
+	pushq	%rbp
+	.cfi_def_cfa_offset 16
+	.cfi_offset %rbp, -16
+	movq	%rsp, %rbp
+	.cfi_def_cfa_register %rbp
+	movl	$4194560, %edi          # imm = 0x400100
+	movl	$8, %esi
+	callq	calloc
+	xorpd	%xmm0, %xmm0
+	movl	$2, %ecx
+	.p2align	4, 0x90
+.LBB0_1:                                # =>This Inner Loop Header: Depth=1
+	addsd	-16(%rax,%rcx,8), %xmm0
+	addsd	-8(%rax,%rcx,8), %xmm0
+	cmpq	$4194560, %rcx          # imm = 0x400100
+	je	.LBB0_2
+# %bb.4:                                #   in Loop: Header=BB0_1 Depth=1
+	addsd	(%rax,%rcx,8), %xmm0
+	addq	$3, %rcx
+	jmp	.LBB0_1
+.LBB0_2:
+	movsd	.LCPI0_0(%rip), %xmm1   # xmm1 = mem[0],zero
+	ucomisd	%xmm0, %xmm1
+	jb	.LBB0_5
+# %bb.3:
+	movq	%rax, %rdi
+	popq	%rbp
+	.cfi_def_cfa %rsp, 8
+	jmp	free                    # TAILCALL
+.LBB0_5:
+	.cfi_def_cfa %rbp, 16
+	movl	$.L.str, %edi
+	movl	$.L.str.1, %esi
+	movl	$.L__PRETTY_FUNCTION__.polybench_flush_cache, %ecx
+	movl	$301, %edx              # imm = 0x12D
+	callq	__assert_fail
+.Lfunc_end0:
+	.size	polybench_flush_cache, .Lfunc_end0-polybench_flush_cache
+	.cfi_endproc
+                                        # -- End function
+	.globl	polybench_prepare_instruments # -- Begin function polybench_prepare_instruments
+	.p2align	4, 0x90
+	.type	polybench_prepare_instruments,@function
+polybench_prepare_instruments:          # @polybench_prepare_instruments
+	.cfi_startproc
+# %bb.0:
+	pushq	%rbp
+	.cfi_def_cfa_offset 16
+	.cfi_offset %rbp, -16
+	movq	%rsp, %rbp
+	.cfi_def_cfa_register %rbp
+	popq	%rbp
+	.cfi_def_cfa %rsp, 8
+	jmp	polybench_flush_cache   # TAILCALL
+.Lfunc_end1:
+	.size	polybench_prepare_instruments, .Lfunc_end1-polybench_prepare_instruments
+	.cfi_endproc
+                                        # -- End function
+	.globl	polybench_timer_start   # -- Begin function polybench_timer_start
+	.p2align	4, 0x90
+	.type	polybench_timer_start,@function
+polybench_timer_start:                  # @polybench_timer_start
+	.cfi_startproc
+# %bb.0:
+	pushq	%rbp
+	.cfi_def_cfa_offset 16
+	.cfi_offset %rbp, -16
+	movq	%rsp, %rbp
+	.cfi_def_cfa_register %rbp
+	callq	polybench_prepare_instruments
+	movq	$0, polybench_t_start(%rip)
+	popq	%rbp
+	.cfi_def_cfa %rsp, 8
+	retq
+.Lfunc_end2:
+	.size	polybench_timer_start, .Lfunc_end2-polybench_timer_start
+	.cfi_endproc
+                                        # -- End function
+	.globl	polybench_timer_stop    # -- Begin function polybench_timer_stop
+	.p2align	4, 0x90
+	.type	polybench_timer_stop,@function
+polybench_timer_stop:                   # @polybench_timer_stop
+	.cfi_startproc
+# %bb.0:
+	pushq	%rbp
+	.cfi_def_cfa_offset 16
+	.cfi_offset %rbp, -16
+	movq	%rsp, %rbp
+	.cfi_def_cfa_register %rbp
+	movq	$0, polybench_t_end(%rip)
+	popq	%rbp
+	.cfi_def_cfa %rsp, 8
+	retq
+.Lfunc_end3:
+	.size	polybench_timer_stop, .Lfunc_end3-polybench_timer_stop
+	.cfi_endproc
+                                        # -- End function
+	.globl	polybench_timer_print   # -- Begin function polybench_timer_print
+	.p2align	4, 0x90
+	.type	polybench_timer_print,@function
+polybench_timer_print:                  # @polybench_timer_print
+	.cfi_startproc
+# %bb.0:
+	pushq	%rbp
+	.cfi_def_cfa_offset 16
+	.cfi_offset %rbp, -16
+	movq	%rsp, %rbp
+	.cfi_def_cfa_register %rbp
+	movsd	polybench_t_end(%rip), %xmm0 # xmm0 = mem[0],zero
+	subsd	polybench_t_start(%rip), %xmm0
+	movl	$.L.str.2, %edi
+	movb	$1, %al
+	popq	%rbp
+	.cfi_def_cfa %rsp, 8
+	jmp	printf                  # TAILCALL
+.Lfunc_end4:
+	.size	polybench_timer_print, .Lfunc_end4-polybench_timer_print
+	.cfi_endproc
+                                        # -- End function
+	.globl	polybench_alloc_data    # -- Begin function polybench_alloc_data
+	.p2align	4, 0x90
+	.type	polybench_alloc_data,@function
+polybench_alloc_data:                   # @polybench_alloc_data
+	.cfi_startproc
+# %bb.0:
+	pushq	%rbp
+	.cfi_def_cfa_offset 16
+	.cfi_offset %rbp, -16
+	movq	%rsp, %rbp
+	.cfi_def_cfa_register %rbp
+	movslq	%esi, %rax
+	imulq	%rax, %rdi
+	popq	%rbp
+	.cfi_def_cfa %rsp, 8
+	jmp	xmalloc                 # TAILCALL
+.Lfunc_end5:
+	.size	polybench_alloc_data, .Lfunc_end5-polybench_alloc_data
+	.cfi_endproc
+                                        # -- End function
+	.p2align	4, 0x90         # -- Begin function xmalloc
+	.type	xmalloc,@function
+xmalloc:                                # @xmalloc
+	.cfi_startproc
+# %bb.0:
+	pushq	%rbp
+	.cfi_def_cfa_offset 16
+	.cfi_offset %rbp, -16
+	movq	%rsp, %rbp
+	.cfi_def_cfa_register %rbp
+	subq	$16, %rsp
+	movq	%rdi, %rdx
+	movq	$0, -8(%rbp)
+	leaq	-8(%rbp), %rdi
+	movl	$32, %esi
+	callq	posix_memalign
+	testl	%eax, %eax
+	jne	.LBB6_3
+# %bb.1:
+	movq	-8(%rbp), %rax
+	testq	%rax, %rax
+	je	.LBB6_3
+# %bb.2:
+	addq	$16, %rsp
+	popq	%rbp
+	.cfi_def_cfa %rsp, 8
+	retq
+.LBB6_3:
+	.cfi_def_cfa %rbp, 16
+	movq	stderr(%rip), %rcx
+	movl	$.L.str.3, %edi
+	movl	$50, %esi
+	movl	$1, %edx
+	callq	fwrite
+	movl	$1, %edi
+	callq	exit
+.Lfunc_end6:
+	.size	xmalloc, .Lfunc_end6-xmalloc
+	.cfi_endproc
+                                        # -- End function
+	.globl	main                    # -- Begin function main
+	.p2align	4, 0x90
+	.type	main,@function
+main:                                   # @main
+	.cfi_startproc
+# %bb.0:
+	pushq	%rbp
+	.cfi_def_cfa_offset 16
+	.cfi_offset %rbp, -16
+	movq	%rsp, %rbp
+	.cfi_def_cfa_register %rbp
+	pushq	%r15
+	pushq	%r14
+	pushq	%r13
+	pushq	%r12
+	pushq	%rbx
+	subq	$56, %rsp
+	.cfi_offset %rbx, -56
+	.cfi_offset %r12, -48
+	.cfi_offset %r13, -40
+	.cfi_offset %r14, -32
+	.cfi_offset %r15, -24
+	movl	$16000000, %edi         # imm = 0xF42400
+	movl	$8, %esi
+	callq	polybench_alloc_data
+	movq	%rax, %r13
+	movl	$4000, %edi             # imm = 0xFA0
+	movl	$8, %esi
+	callq	polybench_alloc_data
+	movq	%rax, %rbx
+	movl	$4000, %edi             # imm = 0xFA0
+	movl	$8, %esi
+	callq	polybench_alloc_data
+	movq	%rax, %r15
+	movl	$4000, %edi             # imm = 0xFA0
+	movl	$8, %esi
+	callq	polybench_alloc_data
+	movq	%rax, %r14
+	movl	$4000, %edi             # imm = 0xFA0
+	movl	$8, %esi
+	callq	polybench_alloc_data
+	movq	%rax, -48(%rbp)         # 8-byte Spill
+	movl	$4000, %edi             # imm = 0xFA0
+	movl	$8, %esi
+	callq	polybench_alloc_data
+	movq	%rax, -56(%rbp)         # 8-byte Spill
+	movl	$4000, %edi             # imm = 0xFA0
+	movl	$8, %esi
+	callq	polybench_alloc_data
+	movq	%rax, %r12
+	movq	%r13, (%rsp)
+	movq	%rbx, -88(%rbp)         # 8-byte Spill
+	movq	%rbx, %rdi
+	movq	%r15, %rsi
+	movq	%r14, %rdx
+	movq	-48(%rbp), %rcx         # 8-byte Reload
+	movq	-56(%rbp), %r8          # 8-byte Reload
+	movq	%rax, %r9
+	callq	init_array
+	movq	%rbx, %rdi
+	movq	%r15, -64(%rbp)         # 8-byte Spill
+	movq	%r15, %rsi
+	movq	-48(%rbp), %rbx         # 8-byte Reload
+	movq	-56(%rbp), %r15         # 8-byte Reload
+	movq	%r15, %rdx
+	movq	%r12, %rcx
+	movq	%r13, %r8
+	callq	kernel_mvt
+	movq	%r14, %rdi
+	movq	%rbx, %rsi
+	movq	%r15, %rdx
+	movq	%r12, -72(%rbp)         # 8-byte Spill
+	movq	%r12, %rcx
+	movq	%r13, -80(%rbp)         # 8-byte Spill
+	movq	%r13, %r8
+	movq	-88(%rbp), %rbx         # 8-byte Reload
+	callq	kernel_mvt_StrictFP
+	movq	%rbx, %rdi
+	movq	%r14, %r15
+	movq	%r14, %rsi
+	callq	check_FP
+	movl	$1, %r12d
+	testl	%eax, %eax
+	je	.LBB7_3
+# %bb.1:
+	movq	-64(%rbp), %rdi         # 8-byte Reload
+	movq	-48(%rbp), %rsi         # 8-byte Reload
+	callq	check_FP
+	testl	%eax, %eax
+	je	.LBB7_3
+# %bb.2:
+	movq	%r15, %r14
+	movq	%r15, %rdi
+	movq	-48(%rbp), %r15         # 8-byte Reload
+	movq	%r15, %rsi
+	callq	print_array
+	movq	-80(%rbp), %rdi         # 8-byte Reload
+	callq	free
+	movq	%rbx, %rdi
+	callq	free
+	movq	-64(%rbp), %rdi         # 8-byte Reload
+	callq	free
+	movq	%r14, %rdi
+	callq	free
+	movq	%r15, %rdi
+	callq	free
+	movq	-56(%rbp), %rdi         # 8-byte Reload
+	callq	free
+	movq	-72(%rbp), %rdi         # 8-byte Reload
+	callq	free
+	xorl	%r12d, %r12d
+.LBB7_3:
+	movl	%r12d, %eax
+	addq	$56, %rsp
+	popq	%rbx
+	popq	%r12
+	popq	%r13
+	popq	%r14
+	popq	%r15
+	popq	%rbp
+	.cfi_def_cfa %rsp, 8
+	retq
+.Lfunc_end7:
+	.size	main, .Lfunc_end7-main
+	.cfi_endproc
+                                        # -- End function
+	.section	.rodata.cst8,"aM",@progbits,8
+	.p2align	3               # -- Begin function init_array
+.LCPI8_0:
+	.quad	4661014508095930368     # double 4000
+.LCPI8_1:
+	.quad	4607182418800017408     # double 1
+.LCPI8_2:
+	.quad	4613937818241073152     # double 3
+.LCPI8_3:
+	.quad	4616189618054758400     # double 4
+	.text
+	.p2align	4, 0x90
+	.type	init_array,@function
+init_array:                             # @init_array
+	.cfi_startproc
+# %bb.0:
+	pushq	%rbp
+	.cfi_def_cfa_offset 16
+	.cfi_offset %rbp, -16
+	movq	%rsp, %rbp
+	.cfi_def_cfa_register %rbp
+	pushq	%r14
+	pushq	%rbx
+	.cfi_offset %rbx, -32
+	.cfi_offset %r14, -24
+	movq	16(%rbp), %r11
+	xorl	%r10d, %r10d
+	movsd	.LCPI8_0(%rip), %xmm0   # xmm0 = mem[0],zero
+	movsd	.LCPI8_1(%rip), %xmm1   # xmm1 = mem[0],zero
+	movsd	.LCPI8_2(%rip), %xmm2   # xmm2 = mem[0],zero
+	movsd	.LCPI8_3(%rip), %xmm3   # xmm3 = mem[0],zero
+	jmp	.LBB8_1
+	.p2align	4, 0x90
+.LBB8_5:                                #   in Loop: Header=BB8_1 Depth=1
+	addq	$1, %r10
+	addq	$32000, %r11            # imm = 0x7D00
+.LBB8_1:                                # =>This Loop Header: Depth=1
+                                        #     Child Loop BB8_4 Depth 2
+	cmpq	$4000, %r10             # imm = 0xFA0
+	je	.LBB8_6
+# %bb.2:                                #   in Loop: Header=BB8_1 Depth=1
+	xorps	%xmm4, %xmm4
+	cvtsi2sd	%r10d, %xmm4
+	movapd	%xmm4, %xmm5
+	divsd	%xmm0, %xmm5
+	movsd	%xmm5, (%rdi,%r10,8)
+	movsd	%xmm5, (%rdx,%r10,8)
+	movapd	%xmm4, %xmm5
+	addsd	%xmm1, %xmm5
+	divsd	%xmm0, %xmm5
+	movsd	%xmm5, (%rsi,%r10,8)
+	movsd	%xmm5, (%rcx,%r10,8)
+	movapd	%xmm4, %xmm5
+	addsd	%xmm2, %xmm5
+	divsd	%xmm0, %xmm5
+	movsd	%xmm5, (%r8,%r10,8)
+	movapd	%xmm4, %xmm5
+	addsd	%xmm3, %xmm5
+	divsd	%xmm0, %xmm5
+	movsd	%xmm5, (%r9,%r10,8)
+	movl	$1, %eax
+	xorl	%r14d, %r14d
+	cmpq	$4001, %rax             # imm = 0xFA1
+	je	.LBB8_5
+	.p2align	4, 0x90
+.LBB8_4:                                #   Parent Loop BB8_1 Depth=1
+                                        # =>  This Inner Loop Header: Depth=2
+	xorps	%xmm5, %xmm5
+	cvtsi2sd	%r14d, %xmm5
+	mulsd	%xmm4, %xmm5
+	divsd	%xmm0, %xmm5
+	movsd	%xmm5, -8(%r11,%rax,8)
+	movl	%r14d, %ebx
+	orl	$1, %ebx
+	xorps	%xmm5, %xmm5
+	cvtsi2sd	%ebx, %xmm5
+	mulsd	%xmm4, %xmm5
+	divsd	%xmm0, %xmm5
+	movsd	%xmm5, (%r11,%rax,8)
+	addq	$2, %r14
+	addq	$2, %rax
+	cmpq	$4001, %rax             # imm = 0xFA1
+	jne	.LBB8_4
+	jmp	.LBB8_5
+.LBB8_6:
+	popq	%rbx
+	popq	%r14
+	popq	%rbp
+	.cfi_def_cfa %rsp, 8
+	retq
+.Lfunc_end8:
+	.size	init_array, .Lfunc_end8-init_array
+	.cfi_endproc
+                                        # -- End function
+	.p2align	4, 0x90         # -- Begin function kernel_mvt
+	.type	kernel_mvt,@function
+kernel_mvt:                             # @kernel_mvt
+	.cfi_startproc
+# %bb.0:
+	pushq	%rbp
+	.cfi_def_cfa_offset 16
+	.cfi_offset %rbp, -16
+	movq	%rsp, %rbp
+	.cfi_def_cfa_register %rbp
+	xorl	%r10d, %r10d
+	movq	%r8, %r9
+	jmp	.LBB9_1
+	.p2align	4, 0x90
+.LBB9_10:                               #   in Loop: Header=BB9_1 Depth=1
+	addq	$1, %r10
+	addq	$32000, %r9             # imm = 0x7D00
+.LBB9_1:                                # =>This Loop Header: Depth=1
+                                        #     Child Loop BB9_9 Depth 2
+	cmpq	$4000, %r10             # imm = 0xFA0
+	je	.LBB9_2
+# %bb.7:                                # %.preheader2
+                                        #   in Loop: Header=BB9_1 Depth=1
+	movl	$1, %eax
+	cmpq	$4001, %rax             # imm = 0xFA1
+	je	.LBB9_10
+	.p2align	4, 0x90
+.LBB9_9:                                #   Parent Loop BB9_1 Depth=1
+                                        # =>  This Inner Loop Header: Depth=2
+	movsd	-8(%r9,%rax,8), %xmm0   # xmm0 = mem[0],zero
+	mulsd	-8(%rdx,%rax,8), %xmm0
+	addsd	(%rdi,%r10,8), %xmm0
+	movsd	%xmm0, (%rdi,%r10,8)
+	movsd	(%r9,%rax,8), %xmm1     # xmm1 = mem[0],zero
+	mulsd	(%rdx,%rax,8), %xmm1
+	addsd	%xmm0, %xmm1
+	movsd	%xmm1, (%rdi,%r10,8)
+	addq	$2, %rax
+	cmpq	$4001, %rax             # imm = 0xFA1
+	jne	.LBB9_9
+	jmp	.LBB9_10
+.LBB9_2:                                # %.preheader1.preheader
+	xorl	%eax, %eax
+	jmp	.LBB9_3
+	.p2align	4, 0x90
+.LBB9_11:                               #   in Loop: Header=BB9_3 Depth=1
+	addq	$1, %rax
+	addq	$8, %r8
+.LBB9_3:                                # %.preheader1
+                                        # =>This Loop Header: Depth=1
+                                        #     Child Loop BB9_6 Depth 2
+	cmpq	$4000, %rax             # imm = 0xFA0
+	je	.LBB9_12
+# %bb.4:                                # %.preheader
+                                        #   in Loop: Header=BB9_3 Depth=1
+	movl	$1, %edx
+	movq	%r8, %rdi
+	cmpq	$4001, %rdx             # imm = 0xFA1
+	je	.LBB9_11
+	.p2align	4, 0x90
+.LBB9_6:                                #   Parent Loop BB9_3 Depth=1
+                                        # =>  This Inner Loop Header: Depth=2
+	movsd	(%rdi), %xmm0           # xmm0 = mem[0],zero
+	mulsd	-8(%rcx,%rdx,8), %xmm0
+	addsd	(%rsi,%rax,8), %xmm0
+	movsd	%xmm0, (%rsi,%rax,8)
+	movsd	32000(%rdi), %xmm1      # xmm1 = mem[0],zero
+	mulsd	(%rcx,%rdx,8), %xmm1
+	addsd	%xmm0, %xmm1
+	movsd	%xmm1, (%rsi,%rax,8)
+	addq	$2, %rdx
+	addq	$64000, %rdi            # imm = 0xFA00
+	cmpq	$4001, %rdx             # imm = 0xFA1
+	jne	.LBB9_6
+	jmp	.LBB9_11
+.LBB9_12:
+	popq	%rbp
+	.cfi_def_cfa %rsp, 8
+	retq
+.Lfunc_end9:
+	.size	kernel_mvt, .Lfunc_end9-kernel_mvt
+	.cfi_endproc
+                                        # -- End function
+	.p2align	4, 0x90         # -- Begin function kernel_mvt_StrictFP
+	.type	kernel_mvt_StrictFP,@function
+kernel_mvt_StrictFP:                    # @kernel_mvt_StrictFP
+	.cfi_startproc
+# %bb.0:
+	pushq	%rbp
+	.cfi_def_cfa_offset 16
+	.cfi_offset %rbp, -16
+	movq	%rsp, %rbp
+	.cfi_def_cfa_register %rbp
+	xorl	%r10d, %r10d
+	movq	%r8, %r9
+	jmp	.LBB10_1
+	.p2align	4, 0x90
+.LBB10_10:                              #   in Loop: Header=BB10_1 Depth=1
+	addq	$1, %r10
+	addq	$32000, %r9             # imm = 0x7D00
+.LBB10_1:                               # =>This Loop Header: Depth=1
+                                        #     Child Loop BB10_9 Depth 2
+	cmpq	$4000, %r10             # imm = 0xFA0
+	je	.LBB10_2
+# %bb.7:                                # %.preheader2
+                                        #   in Loop: Header=BB10_1 Depth=1
+	movl	$1, %eax
+	cmpq	$4001, %rax             # imm = 0xFA1
+	je	.LBB10_10
+	.p2align	4, 0x90
+.LBB10_9:                               #   Parent Loop BB10_1 Depth=1
+                                        # =>  This Inner Loop Header: Depth=2
+	movsd	-8(%r9,%rax,8), %xmm0   # xmm0 = mem[0],zero
+	mulsd	-8(%rdx,%rax,8), %xmm0
+	addsd	(%rdi,%r10,8), %xmm0
+	movsd	%xmm0, (%rdi,%r10,8)
+	movsd	(%r9,%rax,8), %xmm1     # xmm1 = mem[0],zero
+	mulsd	(%rdx,%rax,8), %xmm1
+	addsd	%xmm0, %xmm1
+	movsd	%xmm1, (%rdi,%r10,8)
+	addq	$2, %rax
+	cmpq	$4001, %rax             # imm = 0xFA1
+	jne	.LBB10_9
+	jmp	.LBB10_10
+.LBB10_2:                               # %.preheader1.preheader
+	xorl	%eax, %eax
+	jmp	.LBB10_3
+	.p2align	4, 0x90
+.LBB10_11:                              #   in Loop: Header=BB10_3 Depth=1
+	addq	$1, %rax
+	addq	$8, %r8
+.LBB10_3:                               # %.preheader1
+                                        # =>This Loop Header: Depth=1
+                                        #     Child Loop BB10_6 Depth 2
+	cmpq	$4000, %rax             # imm = 0xFA0
+	je	.LBB10_12
+# %bb.4:                                # %.preheader
+                                        #   in Loop: Header=BB10_3 Depth=1
+	movl	$1, %edx
+	movq	%r8, %rdi
+	cmpq	$4001, %rdx             # imm = 0xFA1
+	je	.LBB10_11
+	.p2align	4, 0x90
+.LBB10_6:                               #   Parent Loop BB10_3 Depth=1
+                                        # =>  This Inner Loop Header: Depth=2
+	movsd	(%rdi), %xmm0           # xmm0 = mem[0],zero
+	mulsd	-8(%rcx,%rdx,8), %xmm0
+	addsd	(%rsi,%rax,8), %xmm0
+	movsd	%xmm0, (%rsi,%rax,8)
+	movsd	32000(%rdi), %xmm1      # xmm1 = mem[0],zero
+	mulsd	(%rcx,%rdx,8), %xmm1
+	addsd	%xmm0, %xmm1
+	movsd	%xmm1, (%rsi,%rax,8)
+	addq	$2, %rdx
+	addq	$64000, %rdi            # imm = 0xFA00
+	cmpq	$4001, %rdx             # imm = 0xFA1
+	jne	.LBB10_6
+	jmp	.LBB10_11
+.LBB10_12:
+	popq	%rbp
+	.cfi_def_cfa %rsp, 8
+	retq
+.Lfunc_end10:
+	.size	kernel_mvt_StrictFP, .Lfunc_end10-kernel_mvt_StrictFP
+	.cfi_endproc
+                                        # -- End function
+	.section	.rodata.cst16,"aM",@progbits,16
+	.p2align	4               # -- Begin function check_FP
+.LCPI11_0:
+	.quad	9223372036854775807     # double NaN
+	.quad	9223372036854775807     # double NaN
+	.section	.rodata.cst8,"aM",@progbits,8
+	.p2align	3
+.LCPI11_1:
+	.quad	4532020583610935537     # double 1.0000000000000001E-5
+	.text
+	.p2align	4, 0x90
+	.type	check_FP,@function
+check_FP:                               # @check_FP
+	.cfi_startproc
+# %bb.0:
+	pushq	%rbp
+	.cfi_def_cfa_offset 16
+	.cfi_offset %rbp, -16
+	movq	%rsp, %rbp
+	.cfi_def_cfa_register %rbp
+	xorl	%ecx, %ecx
+	movapd	.LCPI11_0(%rip), %xmm2  # xmm2 = [NaN,NaN]
+	movsd	.LCPI11_1(%rip), %xmm3  # xmm3 = mem[0],zero
+	cmpq	$4000, %rcx             # imm = 0xFA0
+	je	.LBB11_2
+	.p2align	4, 0x90
+.LBB11_3:                               # =>This Inner Loop Header: Depth=1
+	movsd	(%rdi,%rcx,8), %xmm0    # xmm0 = mem[0],zero
+	movsd	(%rsi,%rcx,8), %xmm1    # xmm1 = mem[0],zero
+	movapd	%xmm0, %xmm4
+	subsd	%xmm1, %xmm4
+	andpd	%xmm2, %xmm4
+	ucomisd	%xmm3, %xmm4
+	ja	.LBB11_4
+# %bb.6:                                #   in Loop: Header=BB11_3 Depth=1
+	addq	$1, %rcx
+	cmpq	$4000, %rcx             # imm = 0xFA0
+	jne	.LBB11_3
+.LBB11_2:
+	movl	$1, %eax
+	popq	%rbp
+	.cfi_def_cfa %rsp, 8
+	retq
+.LBB11_4:
+	.cfi_def_cfa %rbp, 16
+	movq	stderr(%rip), %rdi
+	movsd	.LCPI11_1(%rip), %xmm2  # xmm2 = mem[0],zero
+	movl	$.L.str.4, %esi
+	movl	%ecx, %edx
+                                        # kill: def $ecx killed $ecx killed $rcx
+	movb	$3, %al
+	callq	fprintf
+	xorl	%eax, %eax
+	popq	%rbp
+	.cfi_def_cfa %rsp, 8
+	retq
+.Lfunc_end11:
+	.size	check_FP, .Lfunc_end11-check_FP
+	.cfi_endproc
+                                        # -- End function
+	.p2align	4, 0x90         # -- Begin function print_array
+	.type	print_array,@function
+print_array:                            # @print_array
+	.cfi_startproc
+# %bb.0:
+	pushq	%rbp
+	.cfi_def_cfa_offset 16
+	.cfi_offset %rbp, -16
+	movq	%rsp, %rbp
+	.cfi_def_cfa_register %rbp
+	pushq	%r15
+	pushq	%r14
+	pushq	%r12
+	pushq	%rbx
+	.cfi_offset %rbx, -48
+	.cfi_offset %r12, -40
+	.cfi_offset %r14, -32
+	.cfi_offset %r15, -24
+	movq	%rsi, %r14
+	movq	%rdi, %r15
+	movl	$64001, %edi            # imm = 0xFA01
+	callq	malloc
+	movq	%rax, %r12
+	movb	$0, 64000(%rax)
+	xorl	%ebx, %ebx
+	cmpq	$64000, %rbx            # imm = 0xFA00
+	je	.LBB12_3
+.LBB12_2:                               # =>This Inner Loop Header: Depth=1
+	movsd	(%r15), %xmm0           # xmm0 = mem[0],zero
+	movl	%ebx, %edi
+	movq	%r12, %rsi
+	callq	print_element
+	addq	$16, %rbx
+	addq	$8, %r15
+	cmpq	$64000, %rbx            # imm = 0xFA00
+	jne	.LBB12_2
+.LBB12_3:
+	movq	stderr(%rip), %rsi
+	movq	%r12, %rdi
+	callq	fputs
+	xorl	%ebx, %ebx
+	cmpq	$64000, %rbx            # imm = 0xFA00
+	je	.LBB12_6
+.LBB12_5:                               # =>This Inner Loop Header: Depth=1
+	movsd	(%r14), %xmm0           # xmm0 = mem[0],zero
+	movl	%ebx, %edi
+	movq	%r12, %rsi
+	callq	print_element
+	addq	$16, %rbx
+	addq	$8, %r14
+	cmpq	$64000, %rbx            # imm = 0xFA00
+	jne	.LBB12_5
+.LBB12_6:
+	movq	stderr(%rip), %rsi
+	movq	%r12, %rdi
+	callq	fputs
+	movq	%r12, %rdi
+	popq	%rbx
+	popq	%r12
+	popq	%r14
+	popq	%r15
+	popq	%rbp
+	.cfi_def_cfa %rsp, 8
+	jmp	free                    # TAILCALL
+.Lfunc_end12:
+	.size	print_array, .Lfunc_end12-print_array
+	.cfi_endproc
+                                        # -- End function
+	.p2align	4, 0x90         # -- Begin function print_element
+	.type	print_element,@function
+print_element:                          # @print_element
+	.cfi_startproc
+# %bb.0:
+	pushq	%rbp
+	.cfi_def_cfa_offset 16
+	.cfi_offset %rbp, -16
+	movq	%rsp, %rbp
+	.cfi_def_cfa_register %rbp
+	movq	%xmm0, %rax
+	movl	%eax, %edx
+	andb	$15, %dl
+	orb	$48, %dl
+	movslq	%edi, %rcx
+	movb	%dl, (%rsi,%rcx)
+	movb	%dl, 1(%rsi,%rcx)
+	movq	%rax, %rdx
+	shrq	$8, %rdx
+	andb	$15, %dl
+	orb	$48, %dl
+	movb	%dl, 2(%rsi,%rcx)
+	movb	%dl, 3(%rsi,%rcx)
+	movq	%rax, %rdx
+	shrq	$16, %rdx
+	andb	$15, %dl
+	orb	$48, %dl
+	movb	%dl, 4(%rsi,%rcx)
+	movb	%dl, 5(%rsi,%rcx)
+	movl	%eax, %edx
+	shrl	$24, %edx
+	andb	$15, %dl
+	orb	$48, %dl
+	movb	%dl, 6(%rsi,%rcx)
+	movb	%dl, 7(%rsi,%rcx)
+	movq	%rax, %rdx
+	shrq	$32, %rdx
+	andb	$15, %dl
+	orb	$48, %dl
+	movb	%dl, 8(%rsi,%rcx)
+	movb	%dl, 9(%rsi,%rcx)
+	movq	%rax, %rdx
+	shrq	$40, %rdx
+	andb	$15, %dl
+	orb	$48, %dl
+	movb	%dl, 10(%rsi,%rcx)
+	movb	%dl, 11(%rsi,%rcx)
+	movq	%rax, %rdx
+	shrq	$48, %rdx
+	andb	$15, %dl
+	orb	$48, %dl
+	movb	%dl, 12(%rsi,%rcx)
+	movb	%dl, 13(%rsi,%rcx)
+	shrq	$56, %rax
+	andb	$15, %al
+	orb	$48, %al
+	movb	%al, 14(%rsi,%rcx)
+	movb	%al, 15(%rsi,%rcx)
+	popq	%rbp
+	.cfi_def_cfa %rsp, 8
+	retq
+.Lfunc_end13:
+	.size	print_element, .Lfunc_end13-print_element
+	.cfi_endproc
+                                        # -- End function
+	.type	polybench_papi_counters_threadid,@object # @polybench_papi_counters_threadid
+	.bss
+	.globl	polybench_papi_counters_threadid
+	.p2align	2
+polybench_papi_counters_threadid:
+	.long	0                       # 0x0
+	.size	polybench_papi_counters_threadid, 4
+
+	.type	polybench_program_total_flops,@object # @polybench_program_total_flops
+	.globl	polybench_program_total_flops
+	.p2align	3
+polybench_program_total_flops:
+	.quad	0                       # double 0
+	.size	polybench_program_total_flops, 8
+
+	.type	.L.str,@object          # @.str
+	.section	.rodata.str1.1,"aMS",@progbits,1
+.L.str:
+	.asciz	"tmp <= 10.0"
+	.size	.L.str, 12
+
+	.type	.L.str.1,@object        # @.str.1
+.L.str.1:
+	.asciz	"/home/es17btech11025/llvm-test-suite/SingleSource/Benchmarks/Polybench/utilities/polybench.h"
+	.size	.L.str.1, 93
+
+	.type	.L__PRETTY_FUNCTION__.polybench_flush_cache,@object # @__PRETTY_FUNCTION__.polybench_flush_cache
+.L__PRETTY_FUNCTION__.polybench_flush_cache:
+	.asciz	"void polybench_flush_cache()"
+	.size	.L__PRETTY_FUNCTION__.polybench_flush_cache, 29
+
+	.type	polybench_t_start,@object # @polybench_t_start
+	.comm	polybench_t_start,8,8
+	.type	polybench_t_end,@object # @polybench_t_end
+	.comm	polybench_t_end,8,8
+	.type	.L.str.2,@object        # @.str.2
+.L.str.2:
+	.asciz	"%0.6f\n"
+	.size	.L.str.2, 7
+
+	.type	polybench_c_start,@object # @polybench_c_start
+	.comm	polybench_c_start,8,8
+	.type	polybench_c_end,@object # @polybench_c_end
+	.comm	polybench_c_end,8,8
+	.type	.L.str.3,@object        # @.str.3
+.L.str.3:
+	.asciz	"[PolyBench] posix_memalign: cannot allocate memory"
+	.size	.L.str.3, 51
+
+	.type	.L.str.4,@object        # @.str.4
+.L.str.4:
+	.asciz	"A[%d] = %lf and B[%d] = %lf differ more than FP_ABSTOLERANCE = %lf\n"
+	.size	.L.str.4, 68
+
+	.ident	"Ubuntu clang version 10.0.1-++20200708122807+ef32c611aa2-1~exp1~20200707223407.61 "
+	.section	".note.GNU-stack","",@progbits

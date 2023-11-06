@@ -33,8 +33,7 @@ from google.protobuf.json_format import MessageToJson
 import json
 
 import grpc
-# sys.path.append('/Pramana/ML_LLVM_Tools/ml-llvm-project/ml-llvm-tools/MLModelRunner/gRPCModelRunner/Python-Utilities/')
-sys.path.append('/home/cs21btech11051/ml-llvm-project/ml-llvm-tools/MLModelRunner/gRPCModelRunner/Python-Utilities/')
+sys.path.append('/home/cs20btech11037/ml-llvm-project/ml-llvm-tools/MLModelRunner/gRPCModelRunner/Python-Utilities/')
 import posetRL_pb2_grpc, posetRL_pb2
 from google.protobuf.empty_pb2 import Empty
 # pipe related imports
@@ -46,8 +45,9 @@ import log_reader
 from log_reader import TensorSpec
 from functools import reduce
 import operator
+import signal
 
-sys.path.append('/home/cs21btech11051/ml-llvm-project/ml-llvm-tools/CompilerInterface/')
+sys.path.append('/home/cs20btech11037/ml-llvm-project/ml-llvm-tools/CompilerInterface/')
 from PipeCompilerInterface import PipeCompilerInterface
 from GrpcCompilerInterface import GrpcCompilerInterface
 
@@ -73,7 +73,8 @@ class PhaseOrder(gym.Env):
         self.rename_Dir = False
         self.FileSys_Obj = fsystem(config["llvm_dir"], config["ir2vec_dir"])
         self.FileSys_Obj.createFolder("env")
-        self.temporaryDirectory = tempfile.gettempdir()
+        # self.temporaryDirectory = tempfile.gettempdir()
+        self.temporaryDirectory = "/home/cs20btech11037/ml-llvm-project/temp"
 
         self.clang_arch_flag = "-mcpu=cortex-a72" if config["target"] == "AArch64" else ""
         self.opt_arch_flag = "--mcpu=cortex-a72" if config["target"] == "AArch64" else ""
@@ -103,7 +104,7 @@ class PhaseOrder(gym.Env):
         else:
             self.worker_index = 0
 
-# quiet#        print(f"Worker Index: {self.worker_index}")
+        print(f"Worker Index: {self.worker_index}")
 
         if self.mode != 'inference':
             self.FileSys_Obj.createFolder("env")
@@ -403,7 +404,7 @@ class PhaseOrder(gym.Env):
             # Compute O0 Binary size
             command = self.FileSys_Obj.ClangPath + " " + self.clang_arch_flag + " -c " + \
                 self.Curr_Dir + "/" + fileName + ".ll -o " + \
-                self.Curr_Dir + "/" + "base_binary.o" + " -mllvm -ml-config-path=/home/cs21btech11051/ml-llvm-project/build_all/config"
+                self.Curr_Dir + "/" + "base_binary.o" + " -mllvm -ml-config-path=/home/cs20btech11037/ml-llvm-project/build/config"
             print("O0 binary object compile command: "+command)
             os.system(command)
             baseBinarySize = os.path.getsize(self.Curr_Dir + "/base_binary.o")
@@ -413,15 +414,15 @@ class PhaseOrder(gym.Env):
             # Compute Oz Binary size
             command = self.FileSys_Obj.OptPath + " " + self.opt_arch_flag + " -S  -add-size-attr --enableMinSizeAttr --removeNoInlineAttr " + \
                 self.Curr_Dir + "/" + fileName + ".ll -o " + \
-                self.Curr_Dir + "/" + fileName + ".ll" + "-ml-config-path=/home/cs21btech11051/ml-llvm-project/build_all/config "
+                self.Curr_Dir + "/" + fileName + ".ll" + " -ml-config-path=/home/cs20btech11037/ml-llvm-project/build/config"
             command = self.FileSys_Obj.OptPath + " " + self.opt_arch_flag + " -S -Oz " + \
                 self.Curr_Dir + "/" + fileName + ".ll -o " + \
-                self.Curr_Dir + "/" + fileName + "_Oz.ll" + " -ml-config-path=/home/cs21btech11051/ml-llvm-project/build_all/config "
+                self.Curr_Dir + "/" + fileName + "_Oz.ll" + " -ml-config-path=/home/cs20btech11037/ml-llvm-project/build/config"
             print(command)
             os.system(command)
             command = self.FileSys_Obj.ClangPath + " " + self.clang_arch_flag + " -c " + \
                 self.Curr_Dir + "/" + fileName + "_Oz.ll -o " + \
-                self.Curr_Dir + "/" + "Oz_binary.o" + " -mllvm -ml-config-path=/home/cs21btech11051/ml-llvm-project/build_all/config "
+                self.Curr_Dir + "/" + "Oz_binary.o" + " -mllvm -ml-config-path=/home/cs20btech11037/ml-llvm-project/build/config"
             print(command)
             os.system(command)
             minBinarySize = os.path.getsize(self.Curr_Dir + "/Oz_binary.o")
@@ -499,9 +500,9 @@ class PhaseOrder(gym.Env):
 
             if self.mode != 'inference':
                 if not self.use_pipe:
-                    self.stable_grpc("Exit", None)
                     try:
-                        outs, errs = self.server_pid.communicate(timeout=5)
+                        self.stable_grpc("Exit", None)
+                        # outs, errs = self.serverId.communicate(timeout=5)
                     except:
                         self.serverId.kill()
                         print("Clang failing")
@@ -540,10 +541,10 @@ class PhaseOrder(gym.Env):
     # Get llvm-mca Block RThroughput for the IR
     def getMCACost(self, new_file):
         cmd1 = self.FileSys_Obj.LlcPath + " " + self.opt_arch_flag + \
-            " " + new_file + ".ll" + " -o " + new_file + ".s" + " -ml-config-path=/home/cs21btech11051/ml-llvm-project/build_all/config"
+            " " + new_file + ".ll" + " -o " + new_file + ".s" + " -ml-config-path=/home/cs20btech11037/ml-llvm-project/build/config"
         os.system(cmd1)
         cmd2 = self.FileSys_Obj.MCAPath + " " + \
-            self.opt_arch_flag + " " + new_file + ".s" 
+            self.opt_arch_flag + " " + new_file + ".s"
         pro = subprocess.Popen(cmd2, executable='/bin/bash', shell=True,
                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding='utf8')
         Output_cmd2 = pro.stdout
@@ -590,11 +591,11 @@ class PhaseOrder(gym.Env):
         # Here we can use gRPC server to apply the action
         command = self.FileSys_Obj.OptPath + " " + self.opt_arch_flag + \
             " -S -O34 -SubNum=" + str(action) + " " + \
-            self.CurrIR + " -o " + new_IR + " -ml-config-path=/home/cs21btech11051/ml-llvm-project/build_all/config"
+            self.CurrIR + " -o " + new_IR + " -ml-config-path=/home/cs20btech11037/ml-llvm-project/build/config"
         print("Opt Command: "+command)
         os.system(command)
         command = self.FileSys_Obj.ClangPath + " " + \
-            self.clang_arch_flag + " -c " + new_IR + " -o " + new_file + ".o" + " -mllvm -ml-config-path=/home/cs21btech11051/ml-llvm-project/build_all/config"
+            self.clang_arch_flag + " -c " + new_IR + " -o " + new_file + ".o" + " -mllvm -ml-config-path=/home/cs20btech11037/ml-llvm-project/build/config"
         os.system(command)
 
         print("clang command: "+command)
@@ -657,7 +658,7 @@ class PhaseOrder(gym.Env):
         # object size reward
         objectFilePath = f"{self.temporaryDirectory}/objectfile_{self.worker_index}.o"
         objectFileGenerationCommand = self.FileSys_Obj.ClangPath + " -c " + \
-            self.clang_arch_flag + " " + AssemblyFilePath + " -o " + objectFilePath + " -mllvm -ml-config-path=/home/cs21btech11051/ml-llvm-project/build_all/config"
+            self.clang_arch_flag + " " + AssemblyFilePath + " -o " + objectFilePath + " -mllvm -ml-config-path=/home/cs20btech11037/ml-llvm-project/build/config"
 
         print("Object File Generation Command: "+objectFileGenerationCommand)
         os.system(objectFileGenerationCommand)
@@ -673,7 +674,7 @@ class PhaseOrder(gym.Env):
 
         self.lastBinarySize = currentBinarySize
 
-        llvmMcaCommand = f"{self.FileSys_Obj.MCAPath} {self.opt_arch_flag} {AssemblyFilePath}" #+ " -ml-config-path=/home/cs21btech11051/ml-llvm-project/build_all/config"
+        llvmMcaCommand = f"{self.FileSys_Obj.MCAPath} {self.opt_arch_flag} {AssemblyFilePath}"# + " -ml-config-path=/home/cs20btech11037/ml-llvm-project/build/config"
 
         print(f"LLVM MCA Command: {llvmMcaCommand}")
 
@@ -733,14 +734,14 @@ class PhaseOrder(gym.Env):
         return config_path
 
     def startServer(self, filename, ip):
-        optPath = "/home/cs21btech11051/ml-llvm-project/build_all/bin/opt"
-        clangPath = "/home/cs21btech11051/ml-llvm-project/build_all/bin/clang"
+        optPath = "/home/cs20btech11037/ml-llvm-project/build_new/bin/opt"
+        clangPath = "/home/cs20btech11037/ml-llvm-project/build_new/bin/clang"
         filepath = self.train_Dir + "/" + filename
         newfilepath = self.assembly_file_path
         data_format = self.data_format
 
-        cmd = f"{clangPath} -S -mllvm --OPosetRL -mllvm -ml-config-path=/home/cs21btech11051/ml-llvm-project/build_all/config -mllvm --training -mllvm -data-format={data_format} -mllvm --server_address={ip} {filepath}  -o {newfilepath}"
-#quiet#        print("Server starting command: "+cmd)
+        cmd = f"{clangPath} -S -mllvm --OPosetRL -mllvm --training -mllvm -data-format={data_format} -mllvm --server_address={ip} {filepath}  -o {newfilepath}" + " -mllvm -ml-config-path=/home/cs20btech11037/ml-llvm-project/build/config"
+        print("Server starting command: "+cmd)
         if self.use_pipe:
             cmd = cmd + " -mllvm -use-pipe"
         pid = subprocess.Popen(cmd, executable='/bin/bash',
@@ -762,10 +763,14 @@ class PhaseOrder(gym.Env):
         # response = self.stub.applyActionGetEmbeddings(request)
         return self.repeatedgRPCFieldToNumpyArray(response)
 
-    def stopServer(self):
-        request = posetRL_pb2.ActionRequest(action=-1)
-        self.compiler_interface.populate_buffer(request)
-        self.compiler_interface.evaluate()
+    def stopServer(self, sig):
+        self.serverId.send_signal(sig)
+        return_code = self.serverId.wait()
+        # if return_code == 0:
+        #     print("Server created at pid:", self.serverId.pid, "has ended")
+        # request = posetRL_pb2.ActionRequest(action=-1)
+        # self.compiler_interface.populate_buffer(request)
+        # self.compiler_interface.evaluate()
         # self.stub.applyActionGetEmbeddings(request)
 
     def stable_grpc(self, op, action):
@@ -782,7 +787,7 @@ class PhaseOrder(gym.Env):
                 if op != "Exit":
                     result = self.applyActionGetEmbeddings(action=action)
                 else:
-                    result = self.stopServer()
+                    result = self.stopServer(signal.SIGTERM)
                 t2 = time.time()
 # quiet#                print("LLVM grpc response came in {} sec".format(t2 - t1))
                 self.grpc_rtt += t2-t1

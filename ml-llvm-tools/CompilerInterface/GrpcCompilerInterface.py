@@ -3,6 +3,7 @@ from BaseCompilerInterface import BaseCompilerInterface
 from SerDes import SerDes
 import os
 import io
+import time
 
 import sys
 # sys.path.append('/Pramana/ML_LLVM_Tools/ml-llvm-project/ml-llvm-tools/MLModelRunner/gRPCModelRunner/Python-Utilities/')
@@ -44,7 +45,7 @@ class GrpcCompilerInterface(BaseCompilerInterface):
     def evaluate(self, mode = None):
         out = self.serdes_obj.getOutputBuffer()
         # print("Stub class:", type(self.stub.queryCompiler))
-        return self.stub.queryCompiler(out)
+        return self.stub.queryCompiler(out, time.time() + 1000)
 
 
     def start_server(self):

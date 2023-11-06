@@ -266,21 +266,35 @@ if __name__ == "__main__":
             reward, response = inference_obj.run_predict()
     elif args.use_grpc:
         # ray.init()
-        compiler_interface = GrpcCompilerInterface(mode = 'server', add_server_method=posetRL_pb2_grpc.add_PosetRLServiceServicer_to_server, grpc_service_obj=service_server(inference_obj), hostport= args.server_port)
-        compiler_interface.start_server()
-        # server=grpc.server(futures.ThreadPoolExecutor(max_workers=20),options = [
-        #             ('grpc.max_send_message_length', 200*1024*1024), #50MB
-        #                     ('grpc.max_receive_message_length', 200*1024*1024) #50MB
-        #                         ])
+        # compiler_interface = GrpcCompilerInterface(mode = 'server', add_server_method=posetRL_pb2_grpc.add_PosetRLServiceServicer_to_server, grpc_service_obj=service_server(inference_obj), hostport= args.server_port)
+        # compiler_interface.start_server()
+        server=grpc.server(futures.ThreadPoolExecutor(max_workers=20),options = [
+                    ('grpc.max_send_message_length', 200*1024*1024), #50MB
+                            ('grpc.max_receive_message_length', 200*1024*1024) #50MB
+                                ])
 
-        # # RegisterAllocationInference_pb2_grpc.add_RegisterAllocationInferenceServicer_to_server(service_server(inference_obj),server)
-        # posetRL_pb2_grpc.add_PosetRLServiceServicer_to_server(service_server(inference_obj),server)
-        # # server.add_insecure_port('localhost:' + str(sys.argv[1]))
-        # server.add_insecure_port('127.0.0.1:50051')
-
-        # server.start()
-        # print("Server Running")        
-        # server.wait_for_termination()
+        # RegisterAllocationInference_pb2_grpc.add_RegisterAllocationInferenceServicer_to_server(service_server(inference_obj),server)
+        posetRL_pb2_grpc.add_PosetRLServiceServicer_to_server(service_server(inference_obj),server)
+        # server.add_insecure_port('localhost:' + str(sys.argv[1]))
+        host_addr = '127.0.0.1:'
+        port = parser.parse_args().server_port
+        
+        attempts = 0
+        max_attempts = 5
+        wait_seconds = 1
+        
+        while attempts < max_attempts:    
+            added_port = server.add_insecure_port(host_addr + port)
+            
+            if str(added_port) == port:
+                server.start()
+                print("Server Running")
+                server.wait_for_termination()
+                break
+            else:
+                attempts += 1
+                print("The port", port, "is already in use retrying! attempt: ", attempts)
+                time.sleep(wait_seconds)
     else:
         now = datetime.now()
         date_time = now.strftime("%m-%d-%Y-%H-%M-%S")

@@ -10,6 +10,8 @@ package loopdistribution;
 service LoopDistribution {
   rpc distributeLoopAndGetLoopCost(LoopDistributionRequest)
       returns (LoopDistributionResponse) {}
+  
+  rpc getAdvice(LoopDistributionRequest) returns (LoopDistributionResponse) {}
 }
 
 message LoopDistributionRequest {
@@ -19,4 +21,5 @@ message LoopDistributionRequest {
 message LoopDistributionResponse { 
   uint64 OrignialLoopCost = 1;
   uint64 distributedLoopCost = 2; 
+  uint64 action = 3;
 }

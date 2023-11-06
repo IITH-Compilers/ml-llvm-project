@@ -15,6 +15,7 @@
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include <cstdlib>
 #include <fstream>
+#include <csignal>
 // gRPC includes
 #include "grpc/posetRL/posetRL.grpc.pb.h"
 #include "grpc/posetRL/posetRL.pb.h"
@@ -73,7 +74,7 @@ struct PosetRL : public ModulePass,
     if (usePipe) {
       // data_format can take values: protobuf, json, bytes
       std::string basename =
-          "/home/cs21btech11051/ml-llvm-project/Model/RLLib-PhaseOrder/" + pipe_name;
+          "/home/cs20btech11037/ml-llvm-project/Model/RLLib-PhaseOrder/" + pipe_name;
 
       BaseSerDes::Kind SerDesType;
       if (data_format == "json")
@@ -147,10 +148,9 @@ struct PosetRL : public ModulePass,
   inline void processMLAdvice(int advice) { applySeq(advice); }
 
   Embedding getEmbeddings() override {
-    auto Ir2vec =
-        IR2Vec::Embeddings(*M, IR2Vec::IR2VecMode::FlowAware,
-                           "/Pramana/ML_LLVM_Tools/ml-llvm-project/IR2Vec/"
-                           "vocabulary/seedEmbeddingVocab-300-llvm10.txt");
+    auto Ir2vec = IR2Vec::Embeddings(
+        *M, IR2Vec::IR2VecMode::FlowAware,
+        "/home/cs20btech11037/IR2Vec/build/seedEmbeddingVocab-300-llvm10.txt");
     auto ProgVector = Ir2vec.getProgramVector();
     Embedding Vector(ProgVector.begin(), ProgVector.end());
     return Vector;
