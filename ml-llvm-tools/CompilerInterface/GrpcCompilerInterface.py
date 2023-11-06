@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 from BaseCompilerInterface import BaseCompilerInterface
-from SerDes import SerDes
 import os
 import io
 

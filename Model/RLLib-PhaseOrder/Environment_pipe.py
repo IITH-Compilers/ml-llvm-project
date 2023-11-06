@@ -34,7 +34,7 @@ import json
 
 import grpc
 # sys.path.append('/Pramana/ML_LLVM_Tools/ml-llvm-project/ml-llvm-tools/MLModelRunner/gRPCModelRunner/Python-Utilities/')
-sys.path.append('/home/cs21btech11051/ml-llvm-project/ml-llvm-tools/MLModelRunner/gRPCModelRunner/Python-Utilities/')
+sys.path.append('../../ml-llvm-tools/MLModelRunner/gRPCModelRunner/Python-Utilities/')
 import posetRL_pb2_grpc, posetRL_pb2
 from google.protobuf.empty_pb2 import Empty
 # pipe related imports
@@ -47,7 +47,7 @@ from log_reader import TensorSpec
 from functools import reduce
 import operator
 
-sys.path.append('/home/cs21btech11051/ml-llvm-project/ml-llvm-tools/CompilerInterface/')
+sys.path.append('../../ml-llvm-tools/CompilerInterface/')
 from PipeCompilerInterface import PipeCompilerInterface
 from GrpcCompilerInterface import GrpcCompilerInterface
 

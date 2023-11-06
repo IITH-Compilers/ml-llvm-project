@@ -1,12 +1,11 @@
 from abc import ABC, abstractmethod
 from BaseCompilerInterface import BaseCompilerInterface
-from SerDes import SerDes
 import os
 import io
 
 class PipeCompilerInterface(BaseCompilerInterface):
 
-    def __init__(self, data_format=None, pipe_name='posetrl_pipe'):
+    def __init__(self, data_format=None, pipe_name=None):
         super().__init__(data_format)
         self.pipe_name = pipe_name
         self.to_compiler = None
