@@ -85,6 +85,8 @@
 #include <tuple>
 #include <utility>
 #include <vector>
+#include <string>
+#include <map>
 
 #define DEBUG_TYPE "mlra-regalloc"
 
@@ -186,6 +188,13 @@ public:
   registerallocationinference::Data ClientModeResponse;
   registerallocationinference::RegisterProfileList ClientModeRequest;
 private:
+  struct PipeResponse {
+    std::string Action;
+    int RedIdx;
+    int PayLoad;
+    std::map<std::string, int64_t> ColorMap;
+  };
+  PipeResponse PipeResponseData;
   // struct RegisterProfile {
   //   StringRef cls;
   //   float spillWeight;

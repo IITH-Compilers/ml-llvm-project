@@ -174,10 +174,9 @@ cl::opt<bool> MLRA::enable_rl_inference_engine(
     cl::desc("Use RL-Inference-Engine for inferecing the model"),
     cl::init(false));
 
-static cl::opt<bool>
-    usePipe("mlra-use-pipe", cl::Hidden,
-            cl::desc("Use pipe based interation with python model"),
-            cl::init(false));
+cl::opt<bool> usePipe("mlra-use-pipe", cl::Hidden,
+                      cl::desc("Use pipe based interation with python model"),
+                      cl::init(false));
 
 cl::opt<std::string> mlra_pipe_name("mlra-pipe-name", cl::Hidden,
                                     cl::init("rl4realpipe"),
@@ -339,7 +338,8 @@ void MLRA::processMLInputsProtobuf(SmallSetVector<unsigned, 8> *updatedRegIdxs,
   for (auto &reg : regIdxs) {
     auto &rp = regProfMap[reg];
 
-    // errs() << reg << " " << rp.cls << " " << rp.color << " " << rp.spillWeight
+    // errs() << reg << " " << rp.cls << " " << rp.color << " " <<
+    // rp.spillWeight
     //        << " ";
     // errs() << "[";
     // for (auto &val : rp.useDistances) {
@@ -451,7 +451,8 @@ void MLRA::processMLInputs(SmallSetVector<unsigned, 8> *updatedRegIdxs,
   for (auto &reg : regIdxs) {
     auto &rp = regProfMap[reg];
 
-    // errs() << reg << " " << rp.cls << " " << rp.color << " " << rp.spillWeight
+    // errs() << reg << " " << rp.cls << " " << rp.color << " " <<
+    // rp.spillWeight
     //        << " ";
     // errs() << "[";
     // for (auto &val : rp.useDistances) {
@@ -465,7 +466,8 @@ void MLRA::processMLInputs(SmallSetVector<unsigned, 8> *updatedRegIdxs,
         continue;
       }
     }
-    // errs() << reg << " " << rp.cls << " " << rp.color << " " << rp.spillWeight
+    // errs() << reg << " " << rp.cls << " " << rp.color << " " <<
+    // rp.spillWeight
     //        << " ";
     // errs() << "[";
     // for (auto &val : rp.useDistances) {
@@ -2393,33 +2395,28 @@ void MLRA::training_flow() {
 }
 
 void MLRA::initPipeCommunication() {
-  auto getJsonObj = [](std::vector<int> &reply) -> json::Object {
-    json::Object jsonObject;
+  auto processOutput = [&](std::vector<int> &reply) {
     if (reply[0] == 0) {
-      jsonObject["action"] = "Split";
-      jsonObject["regidx"] = reply[1];
-      jsonObject["payload"] = reply[2];
+      PipeResponseData.Action = "Split";
+      PipeResponseData.RedIdx = reply[1];
+      PipeResponseData.PayLoad = reply[2];
     } else if (reply[0] == 1) {
-      jsonObject["action"] = "Color";
-      json::Array colorArray;
+      PipeResponseData.Action = "Color";
+      PipeResponseData.ColorMap.clear();
       for (int i = 1; i < reply.size(); i = i + 2) {
-        json::Object colorObj;
-        colorObj[std::to_string(reply[i])] = reply[i + 1];
-        colorArray.push_back(json::Value(std::move(colorObj)));
+        PipeResponseData.ColorMap[std::to_string(reply[i])] = reply[i + 1];
       }
-      jsonObject["color"] = json::Value(std::move(colorArray));
     } else if (reply[0] == -1) {
-      jsonObject["action"] = "Exit";
+      PipeResponseData.Action = "Exit";
     }
-    return jsonObject;
   };
+
   bool IsJson = false;
   if (data_format == "json") {
     IsJson = true;
   }
   bool isGraphSet = false;
   while (true) {
-    // errs() << "Entered while loop\n";
     if (!isGraphSet) {
       this->IsNew = true;
       int count = 0;
@@ -2466,37 +2463,26 @@ void MLRA::initPipeCommunication() {
       errs() << x << " ";
     errs() << "\n";
 
-    json::Object res = getJsonObj(reply);
-    // json::Object res = json::Object();
-
-    if (res["action"].getAsString()->str() == "Color") {
-      // errs() << "Received color from model\n";
+    processOutput(reply);
+    if (PipeResponseData.Action == "Color") {
+      errs() << "Received color from model\n";
       std::string ucf = "";
       for (auto i : unsupportedClsFreq) {
         ucf += "\n " + i.first.str() + " - " + std::to_string(i.second);
       }
-      if (res["color"].getAsArray()->size() == 0) {
+      if (PipeResponseData.ColorMap.size() == 0) {
         errs() << "No color returned from model\n";
         return;
       }
 
-      // errs() << "Before filling color map\n";
-
-      std::map<std::string, int64_t> colorMap;
-      unsigned numSpills = 0;
-      // get res["color"] as object
-      auto colorObj = res["color"].getAsArray();
-      for (auto it = colorObj->begin(); it != colorObj->end(); it++) {
-        auto it2 = it->getAsObject();
-        std::string regName = it2->begin()->first.str();
-        int64_t color = it2->begin()->second.getAsInteger().value();
-        colorMap[regName] = color;
-        errs() << "RegName: " << regName << " color: " << color << "\n";
-        if (color == 0)
-          numSpills++;
+      for (auto it = PipeResponseData.ColorMap.begin();
+           it != PipeResponseData.ColorMap.end(); it++) {
+        errs() << "RegName: " << it->first << " color: " << it->second << "\n";
       }
 
-      this->FunctionVirtRegToColorMap[MF->getName()] = colorMap;
+      // errs() << "Before filling color map\n";
+      this->FunctionVirtRegToColorMap[MF->getName()] =
+          PipeResponseData.ColorMap;
       allocatePhysRegsViaRL();
 
       errs() << "ALLOCATION DONE for " << MF->getName() << "\n";
@@ -2504,10 +2490,10 @@ void MLRA::initPipeCommunication() {
       return;
     }
     // write if action is Split
-    if (res["action"].getAsString()->str() == "Split" ||
-        res["action"].getAsString()->str() == "SplitAndCapture") {
-      unsigned splitRegIdx = res["regidx"].getAsInteger().value();
-      int splitPoint = res["payload"].getAsInteger().value();
+    if (PipeResponseData.Action == "Split" ||
+        PipeResponseData.Action == "SplitAndCapture") {
+      unsigned splitRegIdx = PipeResponseData.RedIdx;
+      int splitPoint = PipeResponseData.PayLoad;
       SmallVector<unsigned, 2> NewVRegs;
 
       // errs() << "**************STARTING SPLITTING********************\n";
@@ -2523,7 +2509,7 @@ void MLRA::initPipeCommunication() {
           verifyRegisterProfile();
         // errs() << "Splitting done\n";
         // errs() << "**********************************\n";
-        if (res["action"].getAsString()->str() == "Split") {
+        if (PipeResponseData.Action == "Split") {
           errs() << "calling processMLInputs upon splitting...\n";
           processMLInputs(&updatedRegIdxs, false, IsJson);
         } else
@@ -2536,13 +2522,13 @@ void MLRA::initPipeCommunication() {
         std::pair<std::string, bool> newBool("new", 0);
         MLRunner->populateFeatures(result, newBool);
       }
-    }
 
-    if (res["action"].getAsString()->str() == "Exit") {
-      // splitting done for MF->getName()
-      // errs() << "Exit from model\n";
-      JO["exited"] = true;
-      return;
+      if (PipeResponseData.Action == "Exit") {
+        // splitting done for MF->getName()
+        // errs() << "Exit from model\n";
+        JO["exited"] = true;
+        return;
+      }
     }
   }
 }
@@ -2936,7 +2922,7 @@ void MLRA::MLRegAlloc(MachineFunction &MF, SlotIndexes &Indexes,
                       SpillPlacement &SpillPlacer,
                       MachineOptimizationRemarkEmitter &ORE) {
   FunctionCounter++;
-
+  errs() << "In MLRegAlloc func...\n";
   // reinitialize values for new function
   splitInvalidRegs.clear();
   regProfMap.clear();
