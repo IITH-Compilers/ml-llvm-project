@@ -33,12 +33,13 @@ private:
   SmallVector<IR2Vec::Vector, 12> NodeRepresentation;
   std::map<int, int> nid_idx;
   std::map<int, int> idx_nid;
+  Observation CurrObs;
 
 public:
   std::string DistributionSeq;
   LDEnv() {}
-  Observation reset() override;
-  Observation step(Action Action) override;
+  Observation& reset() override;
+  Observation& step(Action Action) override;
   Observation select_node_step(Action Action);
   Observation select_distribution_step(Action Action);
 

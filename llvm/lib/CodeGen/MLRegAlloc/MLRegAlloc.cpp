@@ -695,7 +695,7 @@ Observation MLRA::split_node_step(unsigned action) {
   this->setNextAgent(NODE_SELECTION_AGENT);
   Observation nodeSelectionObs(selectNodeObsSize);
   this->selectNodeObsConstructor(nodeSelectionObs);
-  this->setCurrentObservation(nodeSelectionObs, NODE_SELECTION_AGENT);
+  // this->setCurrentObservation(nodeSelectionObs, NODE_SELECTION_AGENT);
   return nodeSelectionObs;
 }
 

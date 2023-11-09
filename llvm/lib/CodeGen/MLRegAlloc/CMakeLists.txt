@@ -13,10 +13,8 @@ MLRegAlloc.cpp
 
 DEPENDS 
 intrinsics_gen
-LLVMMLBridge
 
 LINK_LIBS
-LLVMMLBridge
 LLVMMLRegAllocInference
 LLVMSymbolic
 )

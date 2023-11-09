@@ -73,7 +73,7 @@ struct PosetRL : public ModulePass,
     if (usePipe) {
       // data_format can take values: protobuf, json, bytes
       std::string basename =
-          "/home/cs21btech11051/ml-llvm-project/Model/RLLib-PhaseOrder/" + pipe_name;
+          "/tmp/" + pipe_name;
 
       BaseSerDes::Kind SerDesType;
       if (data_format == "json")
@@ -175,11 +175,12 @@ struct PosetRL : public ModulePass,
   grpc::Status
   applyActionGetEmbeddings(grpc::ServerContext *context,
                            const ::posetRLgRPC::ActionRequest *request,
-                           ::posetRLgRPC::EmbeddingResponse *response) {
+                           ::posetRLgRPC::EmbeddingResponse *response) override {
     // errs() << "Action requested: " << request->action() << "\n";
     if (request->action() == -1) {
       return grpc::Status::OK;
-    } else if (request->action() != 0)
+    } 
+    if (request->action() != 0)
       processMLAdvice(request->action());
 
     Embedding emb = getEmbeddings();

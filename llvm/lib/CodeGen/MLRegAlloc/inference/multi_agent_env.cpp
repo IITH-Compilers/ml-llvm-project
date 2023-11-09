@@ -7,7 +7,7 @@
 
 using namespace llvm;
 
-Observation MultiAgentEnv::reset() {
+Observation& MultiAgentEnv::reset() {
   // RegisterProfileMap regProfMapHelper_new;
   this->clearDataStructures();
   LLVM_DEBUG(errs() << "RegProgMap size at reset: " << this->regProfMapHelper.size()
@@ -83,12 +83,12 @@ Observation MultiAgentEnv::reset() {
   LLVM_DEBUG(errs() << "2. noderep size = " << this->nodeRepresentation.size()
                     << "\n");
   // assert()
-  Observation nodeSelectionObs(selectNodeObsSize);
-  this->selectNodeObsConstructor(nodeSelectionObs);
+  CurrObs.resize(selectNodeObsSize);
+  this->selectNodeObsConstructor(CurrObs);
   this->setNextAgent(NODE_SELECTION_AGENT);
 
-  this->setCurrentObservation(nodeSelectionObs, NODE_SELECTION_AGENT);
-  return nodeSelectionObs;
+  // this->setCurrentObservation(CurrObs, NODE_SELECTION_AGENT);
+  return CurrObs;
 }
 
 void MultiAgentEnv::clearDataStructures() {
@@ -124,25 +124,24 @@ void MultiAgentEnv::clearDataStructures() {
   LLVM_DEBUG(errs() << "Clear data at line no 93\n");
 }
 
-Observation MultiAgentEnv::step(Action action) {
-  Observation obs;
+Observation& MultiAgentEnv::step(Action action) {
   // errs() << "Action: " << action << "\n";
   if (this->getNextAgent() == NODE_SELECTION_AGENT) {
     // errs() << "Selected node is: " << action << "\n";
-    obs = this->select_node_step(action);
+    CurrObs = this->select_node_step(action);
   } else if (this->getNextAgent() == TASK_SELECTION_AGENT) {
-    obs = this->select_task_step(action);
+    CurrObs = this->select_task_step(action);
     if (this->getNextAgent() == SPLIT_NODE_AGENT) {
-      auto splitNodeObs = this->getCurrentObservation(SPLIT_NODE_AGENT);
+      // auto splitNodeObs = this->getCurrentObservation(SPLIT_NODE_AGENT);
     }
     // errs() << "Selected Task is: " << action << "\n";
   } else if (this->getNextAgent() == COLOR_NODE_AGENT) {
-    obs = this->colour_node_step(action);
+    CurrObs = this->colour_node_step(action);
     // errs() << "Node coloured is: " << action << "\n";
     
   } else if (this->getNextAgent() == SPLIT_NODE_AGENT) {
     splitStepCount++;
-    obs = this->split_node_step(action);
+    CurrObs = this->split_node_step(action);
     // errs() << "Node spliting is: " << action << "\n";
   } else {
     llvm_unreachable("Unexpected agent found");
@@ -162,7 +161,7 @@ Observation MultiAgentEnv::step(Action action) {
     auto tmp = SmallVector<IR2Vec::Vector, 12>();
     this->nodeRepresentation.swap(tmp);
   }
-  return obs;
+  return CurrObs;
 }
 
 void MultiAgentEnv::update_env(RegisterProfileMap *regProfMapHelper,
@@ -321,7 +320,7 @@ Observation MultiAgentEnv::select_node_step(unsigned action) {
   this->graph_topology->UpdateVisitList(action);
   Observation selectTaskObs(selectTaskObsSize);
   this->taskSelectionObsConstructor(selectTaskObs);
-  this->setCurrentObservation(selectTaskObs, TASK_SELECTION_AGENT);
+  // this->setCurrentObservation(selectTaskObs, TASK_SELECTION_AGENT);
   return selectTaskObs;
 }
 
@@ -331,7 +330,7 @@ Observation MultiAgentEnv::select_task_step(unsigned action) {
     this->setNextAgent(COLOR_NODE_AGENT);
     Observation colourNodeObs(colourNodeObsSize);
     this->colourNodeObsConstructor(colourNodeObs);
-    this->setCurrentObservation(colourNodeObs, COLOR_NODE_AGENT);
+    // this->setCurrentObservation(colourNodeObs, COLOR_NODE_AGENT);
     return colourNodeObs;
   } else {
     LLVM_DEBUG(errs() << "Next is spliting agent\n");
@@ -343,8 +342,8 @@ Observation MultiAgentEnv::select_task_step(unsigned action) {
     // std::ios::app); for (int i = 0; i < splitNodeObs.size();i++)
     //   outfile << splitNodeObs[i] << ", ";
     // outfile.close();
-    this->setCurrentObservation(splitNodeObs, SPLIT_NODE_AGENT);
-    auto readObs = this->getCurrentObservation(SPLIT_NODE_AGENT);
+    // this->setCurrentObservation(splitNodeObs, SPLIT_NODE_AGENT);
+    // auto readObs = this->getCurrentObservation(SPLIT_NODE_AGENT);
     // std::ofstream outfile;
     // outfile.open("/home/es20btech11021/ML-Register-Allocation/llvm/lib/CodeGen/MLRegAlloc/inference/splitNodeObs-read.log",
     // std::ios::app); for (int i = 0; i < readObs.size();i++)
@@ -374,7 +373,7 @@ Observation MultiAgentEnv::colour_node_step(unsigned action) {
   // std::ios::app); for (int i = 0; i < nodeSelectionObs.size();i++)
   //   outfile << nodeSelectionObs[i] << ", ";
   // outfile.close();
-  this->setCurrentObservation(nodeSelectionObs, NODE_SELECTION_AGENT);
+  // this->setCurrentObservation(nodeSelectionObs, NODE_SELECTION_AGENT);
   return nodeSelectionObs;
 }
 

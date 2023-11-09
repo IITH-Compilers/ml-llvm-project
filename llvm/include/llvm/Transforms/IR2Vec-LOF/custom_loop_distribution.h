@@ -12,9 +12,9 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IR2Vec-LOF/LoopDistribution.h"
 #include "llvm/Support/CommandLine.h"
-#include "MLModelRunner/PipeModelRunner.h"
-#include "MLModelRunner/ONNXModelRunner/ONNXModelRunner.h"
+#include "MLModelRunner/MLModelRunner.h"
 #include "llvm/Transforms/IR2Vec-LOF/multi_agent_env.h"
+#include <fstream>
 
 namespace llvm {
 

@@ -23,21 +23,21 @@ typedef std::vector<float> Embedding;
 class CodeSizeOptEnv : public Environment {
   unsigned Actioncount = 0;
   Embedding CurrEmbedding;
-
+  Observation CurrObs;
 public:
   std::vector<int> Sequence;
 
 public:
   CodeSizeOptEnv();
-  Observation reset() override;
-  Observation step(Action) override;
+  Observation& reset() override;
+  Observation& step(Action) override;
   virtual Embedding getEmbeddings() = 0;
   virtual void applySeq(Action) = 0;
 
 };
 
 
-Observation CodeSizeOptEnv::step(Action Action) {
+inline Observation& CodeSizeOptEnv::step(Action Action) {
   Sequence.push_back(Action);
   applySeq(Action);
 
@@ -46,24 +46,22 @@ Observation CodeSizeOptEnv::step(Action Action) {
   if (Actioncount >= 30)
     setDone();
 
-  // std::vector<float> Obs;
-  Observation Obs;
+  CurrObs.clear();
   std::copy(CurrEmbedding.begin(), CurrEmbedding.end(),
-            std::back_inserter(Obs));
-  return Obs;
+            std::back_inserter(CurrObs));
+  return CurrObs;
 }
 
-Observation CodeSizeOptEnv::reset() {
+inline Observation& CodeSizeOptEnv::reset() {
   CurrEmbedding = getEmbeddings();
 
-  // std::vector<float> Obs;
-  Observation Obs;
+  CurrObs.clear();
   std::copy(CurrEmbedding.begin(), CurrEmbedding.end(),
-            std::back_inserter(Obs));
-  return Obs;
+            std::back_inserter(CurrObs));
+  return CurrObs;
 }
 
-CodeSizeOptEnv::CodeSizeOptEnv() {
+inline CodeSizeOptEnv::CodeSizeOptEnv() {
   CurrEmbedding.assign(EmbeddingSize, 0);
   setNextAgent("agent");
 }

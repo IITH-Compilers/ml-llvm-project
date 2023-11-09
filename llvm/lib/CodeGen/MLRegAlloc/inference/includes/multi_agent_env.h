@@ -61,21 +61,22 @@ class MultiAgentEnv : public Environment {
   void printRegisterProfile() const;
 
   void clearDataStructures();
-protected:
-  void setCurrentObservation(Observation &obs, std::string agentName) {
-    obsMap[agentName] = obs;
-  }
+// protected:
+  // void setCurrentObservation(Observation &obs, std::string agentName) {
+  //   obsMap[agentName] = obs;
+  // }
 
-  Observation getCurrentObservation(std::string agentName) {
-    // assert(obsMap[agentName] && "obsMap should contain the observation");
-    return obsMap[agentName];
-  }
+  // Observation getCurrentObservation(std::string agentName) {
+  //   // assert(obsMap[agentName] && "obsMap should contain the observation");
+  //   return obsMap[agentName];
+  // }
   // void updateEdges();
 protected:
   RegisterProfileMap regProfMap;
 private:
   RegisterProfileMap regProfMapHelper;
 public:
+  Observation CurrObs;
   Graph *graph_topology;  
   std::vector<std::vector<int>> edges;
   std::map<unsigned, unsigned> nid_colour;
@@ -83,8 +84,8 @@ public:
   unsigned current_node_id;
   unsigned splitPoint;
 
-  Observation reset() override;
-  Observation step(Action action) override;
+  Observation& reset() override;
+  Observation& step(Action action) override;
 
   void update_env(RegisterProfileMap *regProfMap, SmallSetVector<unsigned, 8> updatedRegIdxs);\
   void selectNodeObsConstructor(Observation &obs);

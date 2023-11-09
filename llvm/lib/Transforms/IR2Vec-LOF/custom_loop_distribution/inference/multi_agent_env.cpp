@@ -5,7 +5,7 @@
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
 
-Observation LDEnv::reset() {
+Observation& LDEnv::reset() {
   this->DistributionSeq = "";
   this->PrevNode = -1;
   this->CurrentNode = -1;
@@ -26,27 +26,26 @@ Observation LDEnv::reset() {
   // delete this->GraphTopology;
   this->GraphTopology = new Graph(currRDG.AdjList, currRDG.NodeRepresentations.size());
 
-  Observation Obs(SELECT_NODE_OBS_SIZE);
-  this->select_node_obs_constructor(Obs);
+  CurrObs.resize(SELECT_NODE_OBS_SIZE);
+  this->select_node_obs_constructor(CurrObs);
   this->setNextAgent(SELECT_NODE_AGENT);
   // this->setCurrentObservation(Obs, SELECT_NODE_AGENT);
-  return Obs;
+  return CurrObs;
 }
 
-Observation LDEnv::step(Action Action) {
+Observation& LDEnv::step(Action Action) {
   LLVM_DEBUG(errs() << "this->next agnt = " << this->getNextAgent() << "\n");
-  Observation Obs;
   if (this->getNextAgent() == SELECT_NODE_AGENT)
-    Obs  = this->select_node_step(Action);
+    CurrObs  = this->select_node_step(Action);
   else if (this->getNextAgent() == DISTRIBUTION_AGENT) {
-    Obs = this->select_distribution_step(Action);
+    CurrObs = this->select_distribution_step(Action);
   }
   if (this->GraphTopology->allDiscovered() &&
       this->getNextAgent() == SELECT_NODE_AGENT) {
     this->setDone();
     LLVM_DEBUG(errs() << "************ALL NODES DISCOVERED***************\n");
   }
-  return Obs;
+  return CurrObs;
 }
 
 void LDEnv::create_node_select_mask(SmallVector<int, 8> &Mask) {
