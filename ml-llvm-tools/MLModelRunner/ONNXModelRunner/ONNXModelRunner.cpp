@@ -30,7 +30,9 @@ void ONNXModelRunner::computeAction(Observation obs) {
     Action action;
     // current agent
     auto current_agent = this->agents[this->env->getNextAgent()];
+    // errs() << "Agent selected\n";
     action = current_agent->computeAction(obs);
+    // errs() << "Action computed\n";
     obs = this->env->step(action);
     if (this->env->checkDone()) {
       // std::cout << "Done🎉\n";

@@ -1,4 +1,4 @@
-#include "mlir/Dialect/Func/IR/FuncOps.h"
+// #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
@@ -27,10 +27,12 @@
 // #include "llvm/Passes/PassPlugin.h"
 #include "llvm/Support/CommandLine.h"
 // #include "llvm/Support/raw_ostream.h"
+// #include <fstream>
 
 #include <algorithm>
 #include <chrono>
 #include <iterator>
+#include <llvm/Support/raw_ostream.h>
 #include <memory>
 #include <random>
 #include <string>
@@ -270,7 +272,7 @@ using namespace mlir;
 namespace {
 
 std::random_device rd;
-std::mt19937 gen(rd());
+std::mt19937 gen(5);
 std::uniform_real_distribution<float> dis(0.0, 1.0);
 
 struct MyOperationPass
@@ -278,18 +280,22 @@ struct MyOperationPass
       HelloMLBridgeEnv {
   // public OperationPass<> {
 public:
+  MyOperationPass() {}
+  
   void runOnOperation() override {
     // Get the current operation being operated on.
     Operation *op = getOperation();
     // llvm::errs() << "Hello World pass\n";
     // bool use_pipe = false;
     // bool useONNX = false;
-    if (usePipe) {
+    if (usePipe) {      
       populateFeatureVector();
       initCommunication();
     } else if (useONNX) {
+      std::ofstream outputFile;
+      outputFile.open("onnx.csv", std::ios::app);
       Agent *agent =
-          new Agent("/Pramana/RL4Real/temp/hello-MLBridge/dummy-torch-model-" +
+          new Agent("/Pramana/ML_LLVM_Tools/ml-llvm-project/onnx_test_dir/dummy-torch-model-" +
                     std::to_string(n) + ".onnx");
       std::map<std::string, Agent *> agents;
       agents["agent"] = agent;
@@ -300,7 +306,8 @@ public:
       auto EndTime = std::chrono::high_resolution_clock::now();
       auto Duration = std::chrono::duration_cast<std::chrono::microseconds>(
           EndTime - StartTime);
-      outs() << n << " " << Duration.count() << "\n";
+      outputFile << n << "," << Duration.count() << "\n";
+      outputFile.close();
     }
     // else {
     //   llvm::errs() << "Using 2nd gRPC flow...\n";
@@ -329,6 +336,8 @@ public:
     // }
 
     else {
+      std::ofstream outputFile;
+      outputFile.open("tf.csv", std::ios::app);
       auto StartTime = std::chrono::high_resolution_clock::now();
 
       std::pair<std::string, std::vector<float>> p1("x", FeatureVector);
@@ -342,7 +351,8 @@ public:
       auto Duration = std::chrono::duration_cast<std::chrono::microseconds>(
           EndTime - StartTime);
 
-      outs() << n << " " << Duration.count() << "\n";
+      outputFile << n << "," << Duration.count() << "\n";
+      outputFile.close();
     }
   }
 
@@ -360,8 +370,9 @@ private:
 };
 
 void MyOperationPass::initCommunication() {
+  std::ofstream outputFile;
+  outputFile.open("pipe_" + data_format + ".csv", std::ios::app);
   auto StartTime = std::chrono::high_resolution_clock::now();
-
   if (data_format == "bytes") {
     SerDesType = BaseSerDes::Kind::Bitstream;
   } else if (data_format == "json") {
@@ -381,7 +392,8 @@ void MyOperationPass::initCommunication() {
 
   auto Duration = std::chrono::duration_cast<std::chrono::microseconds>(
       EndTime - StartTime);
-  outs() << n << " " << Duration.count() << "\n";
+  outputFile << n << "," << Duration.count() << "\n";
+  outputFile.close();
 }
 
 // void MyOperationPass::initFeatureVector() {
