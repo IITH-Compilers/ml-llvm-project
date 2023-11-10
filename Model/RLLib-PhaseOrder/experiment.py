@@ -93,8 +93,9 @@ def experiment(config):
         train_results = train_agent.train()
         # train_agent.export_policy_model("/home/cs20btech11018/repos/ML-Phase-Ordering/RLLib-PhaseOrder/poset-RL-onnx-model", onnx=int(os.getenv("ONNX_OPSET", "11")))
         # break
-        tune.report(**train_results)
-        checkpoint = train_agent.save(tune.get_trial_dir())
+        if i % 5 == 0:
+            tune.report(**train_results)
+            checkpoint = train_agent.save(tune.get_trial_dir())
     train_agent.stop()
 
 if __name__ == '__main__':

@@ -33,7 +33,7 @@ from google.protobuf.json_format import MessageToJson
 import json
 
 import grpc
-sys.path.append('/Pramana/ML_LLVM_Tools/ml-llvm-project/ml-llvm-tools/MLModelRunner/gRPCModelRunner/Python-Utilities/')
+sys.path.append('/home/cs20mtech12003/MLIR-LLVM/ml-llvm-project/ml-llvm-tools/MLModelRunner/gRPCModelRunner/Python-Utilities/')
 import posetRL_pb2_grpc, posetRL_pb2
 from google.protobuf.empty_pb2 import Empty
 # pipe related imports
@@ -67,10 +67,13 @@ class PhaseOrder(gym.Env):
         self.rename_Dir = False
         self.FileSys_Obj = fsystem(config["llvm_dir"], config["ir2vec_dir"])
         self.FileSys_Obj.createFolder("env")
-        self.temporaryDirectory = tempfile.gettempdir()
-
-        self.clang_arch_flag = "-mcpu=cortex-a72" if config["target"] == "AArch64" else ""
-        self.opt_arch_flag = "--mcpu=cortex-a72" if config["target"] == "AArch64" else ""
+        # self.temporaryDirectory = tempfile.gettempdir()
+        self.temporaryDirectory = "/home/cs20mtech12003/MLIR-LLVM/ml-llvm-project/Model/RLLib-PhaseOrder/env"
+        self.build_dir = config["llvm_dir"]
+        self.clang_arch_flag = ("-mcpu=cortex-a72" if config["target"] == "AArch64" else "") + " -mllvm -ml-config-path=" + config["llvm_dir"] + "/config "
+        self.opt_arch_flag = ("--mcpu=cortex-a72" if config["target"] == "AArch64" else "" ) + " -ml-config-path=" + config["llvm_dir"] + "/config "
+        
+        self.mca_arch_flag = "--mcpu=cortex-a72" if config["target"] == "AArch64" else ""
 
         self.alpha = config["alpha"]
         self.beta = config["beta"]
@@ -111,8 +114,8 @@ class PhaseOrder(gym.Env):
             self.test_Benchmark = os.path.join(
                 self.FileSys_Obj.PhaseOrderDir, config["test_dir"])
 
-        # self.assembly_file_path = f"{self.temporaryDirectory}/assemblyfile_{self.worker_index}.s"
-        self.assembly_file_path = f"/home/cs20btech11029/repos/ml-llvm-project/output/assemblyfile_{self.worker_index}.s"
+        self.assembly_file_path = f"{self.temporaryDirectory}/assemblyfile_{self.worker_index}.s"
+        # self.assembly_file_path = f"/home/cs20btech11029/repos/ml-llvm-project/output/assemblyfile_{self.worker_index}.s"
 
 
         logger = logging.getLogger("__file__")
@@ -216,7 +219,7 @@ class PhaseOrder(gym.Env):
 
                 self.serverId = self.startServer(
                     self.Obs[index], "127.0.0.1:50057")
-                print("Server started at pid:", self.serverId)
+                # print("Server started at pid:", self.serverId)
                 self.channel = grpc.insecure_channel(
                     '{}:{}'.format("127.0.0.1", "50057"))
                 self.stub = posetRL_pb2_grpc.PosetRLServiceStub(self.channel)
@@ -289,12 +292,12 @@ class PhaseOrder(gym.Env):
                 embedding[i] = features[0][i]
 
         elif self.data_format == "json":
-            print("reading json...")
+            # print("reading json...")
             #read first 8 bytes to be compatible with protobuf
             hdr = self.fc.read(8)
-            print("hdr: ",hdr)
+            # print("hdr: ",hdr)
             size = int.from_bytes(hdr, "little")
-            print("size: ", size)
+            # print("size: ", size)
             msg = self.fc.read(size)
             embedding = json.loads(msg.decode('utf-8'))["embedding"]
             assert len(embedding) == 300
@@ -303,15 +306,15 @@ class PhaseOrder(gym.Env):
             print("reading protobuf...")
             # 8 bytes for size
             hdr = self.fc.read(8)
-            print("hdr: ",hdr)
+            # print("hdr: ",hdr)
             size = int.from_bytes(hdr, "little")
-            print("size: ", size)
+            # print("size: ", size)
             msg = self.fc.read(size)
-            print("msg: ", msg)
+            # print("msg: ", msg)
 
             emb = posetRL_pb2.EmbeddingResponse()
             emb.ParseFromString(msg)
-            print(emb)
+            # print(emb)
             embedding = np.array(emb.embedding)
         return embedding
 
@@ -342,7 +345,7 @@ class PhaseOrder(gym.Env):
         elif self.data_format == "json":
             f: io.BufferedWriter = self.tc
             message = json.dumps({"out": int(value)}).encode("utf-8")
-            print("message: ", message)
+            # print("message: ", message)
             hdr = int(len(message)).to_bytes(length=8, byteorder='little')
             out = hdr + message
             f.write(out)
@@ -357,7 +360,7 @@ class PhaseOrder(gym.Env):
             f.write(serialized_message)
 
         f.flush()
-        print("flushed !!!!")
+        # print("flushed !!!!")
 
 
     def getBinarySize(self, IRFile, init=False):
@@ -368,9 +371,10 @@ class PhaseOrder(gym.Env):
             # Compute O0 Binary size
             command = self.FileSys_Obj.ClangPath + " " + self.clang_arch_flag + " -c " + \
                 self.Curr_Dir + "/" + fileName + ".ll -o " + \
-                self.Curr_Dir + "/" + "base_binary.o" + " -mllvm -ml-config-path=/home/cs20btech11029/repos/ml-llvm-project/build_release/config"
+                self.Curr_Dir + "/" + "base_binary.o"
 # quiet#            print("O0 binary object compile command: "+command)
             os.system(command)
+            # print("CMD:", command)
             baseBinarySize = os.path.getsize(self.Curr_Dir + "/base_binary.o")
 # quiet#            print("base {}".format(baseBinarySize))
             logging.info("base {}".format(baseBinarySize))
@@ -378,16 +382,16 @@ class PhaseOrder(gym.Env):
             # Compute Oz Binary size
             command = self.FileSys_Obj.OptPath + " " + self.opt_arch_flag + " -S  -add-size-attr --enableMinSizeAttr --removeNoInlineAttr " + \
                 self.Curr_Dir + "/" + fileName + ".ll -o " + \
-                self.Curr_Dir + "/" + fileName + ".ll" + " -ml-config-path=/home/cs20btech11029/repos/ml-llvm-project/build_release/config"
+                self.Curr_Dir + "/" + fileName + ".ll"
             command = self.FileSys_Obj.OptPath + " " + self.opt_arch_flag + " -S -Oz " + \
                 self.Curr_Dir + "/" + fileName + ".ll -o " + \
-                self.Curr_Dir + "/" + fileName + "_Oz.ll" + " -ml-config-path=/home/cs20btech11029/repos/ml-llvm-project/build_release/config"
-            print(command)
+                self.Curr_Dir + "/" + fileName + "_Oz.ll"
+            # print(command)
             os.system(command)
             command = self.FileSys_Obj.ClangPath + " " + self.clang_arch_flag + " -c " + \
                 self.Curr_Dir + "/" + fileName + "_Oz.ll -o " + \
-                self.Curr_Dir + "/" + "Oz_binary.o" + " -mllvm -ml-config-path=/home/cs20btech11029/repos/ml-llvm-project/build_release/config"
-            print(command)
+                self.Curr_Dir + "/" + "Oz_binary.o"
+            # print(command)
             os.system(command)
             minBinarySize = os.path.getsize(self.Curr_Dir + "/Oz_binary.o")
 
@@ -458,6 +462,11 @@ class PhaseOrder(gym.Env):
                             actionfile.write(str(act_idx))
                     actionfile.write('] ')
 
+            if self.use_pipe:
+                self.sendResponse(-1)
+                self.fc.close()
+                self.tc.close()
+                
             if self.mode != 'inference':
                 if not self.use_pipe:
                     self.stable_grpc("Exit", None)
@@ -468,10 +477,7 @@ class PhaseOrder(gym.Env):
                         print("Clang failing")
 
                 Reward = self.getReward(self.assembly_file_path)
-            if self.use_pipe:
-                self.sendResponse(-1)
-                self.fc.close()
-                self.tc.close()
+            
 
                 self.cur_action_seq = []
             self.action_count = 0
@@ -488,10 +494,10 @@ class PhaseOrder(gym.Env):
     def getMCACost(self, new_file):
         currMcaThroughtput = 0
         cmd1 = self.FileSys_Obj.LlcPath + " " + self.opt_arch_flag + \
-            " " + new_file + ".ll" + " -o " + new_file + ".s" + " -ml-config-path=/home/cs20btech11029/repos/ml-llvm-project/build_release/config"
+            " " + new_file + ".ll" + " -o " + new_file + ".s"
         os.system(cmd1)
         cmd2 = self.FileSys_Obj.MCAPath + " " + \
-            self.opt_arch_flag + " " + new_file + ".s"
+            self.mca_arch_flag + " " + new_file + ".s"
         pro = subprocess.Popen(cmd2, executable='/bin/bash', shell=True,
                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding='utf8')
         Output_cmd2 = pro.stdout
@@ -500,7 +506,7 @@ class PhaseOrder(gym.Env):
         if pro.stderr is not None:
             logging.critical('Error : {}'.format(pro.stderr))
             print('Error : {}'.format(pro.stderr))
-        if not line:
+        if line:
             print("Read line is:", line)
         else:
             print("line not writen")
@@ -542,7 +548,7 @@ class PhaseOrder(gym.Env):
         print("Opt Command: "+command)
         os.system(command)
         command = self.FileSys_Obj.ClangPath + " " + \
-            self.clang_arch_flag + " -c " + new_IR + " -o " + new_file + ".o" + " -mllvm -ml-config-path=/home/cs20btech11029/repos/ml-llvm-project/build_release/config"
+            self.clang_arch_flag + " -c " + new_IR + " -o " + new_file + ".o"
         os.system(command)
 
         print("clang command: "+command)
@@ -605,9 +611,9 @@ class PhaseOrder(gym.Env):
         # object size reward
         objectFilePath = f"{self.temporaryDirectory}/objectfile_{self.worker_index}.o"
         objectFileGenerationCommand = self.FileSys_Obj.ClangPath + " -c " + \
-            self.clang_arch_flag + " " + AssemblyFilePath + " -o " + objectFilePath + " -mllvm -ml-config-path=/home/cs20btech11029/repos/ml-llvm-project/build_release/config"
+            self.clang_arch_flag + " " + AssemblyFilePath + " -o " + objectFilePath
 
-        print("Object File Generation Command: "+objectFileGenerationCommand)
+        # print("Object File Generation Command: "+objectFileGenerationCommand)
         os.system(objectFileGenerationCommand)
 
         currentBinarySize = os.path.getsize(objectFilePath)
@@ -621,7 +627,7 @@ class PhaseOrder(gym.Env):
 
         self.lastBinarySize = currentBinarySize
 
-        llvmMcaCommand = f"{self.FileSys_Obj.MCAPath} {self.opt_arch_flag} {AssemblyFilePath}"
+        llvmMcaCommand = f"{self.FileSys_Obj.MCAPath} {self.mca_arch_flag} {AssemblyFilePath}"
 
 # quiet#        print(f"LLVM MCA Command: {llvmMcaCommand}")
 
@@ -681,13 +687,15 @@ class PhaseOrder(gym.Env):
         return config_path
 
     def startServer(self, filename, ip):
-        optPath = "/home/cs20btech11029/repos/ml-llvm-project/build_release/bin/opt"
-        clangPath = "/home/cs20btech11029/repos/ml-llvm-project/build_release/bin/clang"
+        # optPath = "/Pramana/ML_LLVM_Tools/ml-llvm-project/build_posetrl/bin/opt"
+        optPath = self.FileSys_Obj.OptPath
+        # clangPath = "/Pramana/ML_LLVM_Tools/ml-llvm-project/build_posetrl/bin/clang"
+        clangPath = self.FileSys_Obj.ClangPath
         filepath = self.train_Dir + "/" + filename
         newfilepath = self.assembly_file_path
         data_format = self.data_format
 
-        cmd = f"{clangPath} -S -mllvm --OPosetRL -mllvm --training -mllvm -data-format={data_format} -mllvm --server_address={ip} -mllvm -ml-config-path=/home/cs20btech11029/repos/ml-llvm-project/build_release/config {filepath}  -o {newfilepath}"
+        cmd = f"{clangPath} -S -mllvm --OPosetRL -mllvm --training -mllvm -data-format={data_format} -mllvm --server_address={ip} -mllvm -ml-config-path={self.build_dir}/config {filepath}  -o {newfilepath}"
         print("Server starting command: "+cmd)
         if self.use_pipe:
             cmd = cmd + " -mllvm -use-pipe"
