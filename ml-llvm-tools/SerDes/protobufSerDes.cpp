@@ -153,10 +153,15 @@ void *ProtobufSerDes::deserializeUntyped(void *data) {
       // yet to be tested
       llvm_unreachable("vector<string> deserialization yet to be done");
       std::vector<std::string> *ptr = new std::vector<std::string>();
-      auto ref = reflection->GetRepeatedField<std::string>(*Response, field);
-      for (auto &v : ref) {
-        ptr->push_back(v);
-      }
+
+      /*
+      ISSUE: error: static assertion failed: We only support non-string scalars in RepeatedField.
+      FIX: ??
+      */
+      // auto ref = reflection->GetRepeatedField<std::string>(*Response, field);
+      // for (auto &v : ref) {
+      //   ptr->push_back(v);
+      // }
       return ptr;
     }
     if (field->type() == FieldDescriptor::Type::TYPE_BOOL) {

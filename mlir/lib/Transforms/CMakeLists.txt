@@ -20,6 +20,7 @@ add_llvm_library(MLIRTransforms
   Vectorize.cpp
   ViewOpGraph.cpp
   ViewRegionGraph.cpp
+  HelloMLBridgePass.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Transforms
@@ -35,4 +36,5 @@ target_link_libraries(MLIRTransforms
   MLIRPass
   MLIRTransformUtils
   MLIRVectorOps
+  LLVMMLBridge
   )
