@@ -1,7 +1,7 @@
 import os, io
 import json
 import log_reader
-
+import struct
 
 class SerDes:
     def __init__(self, data_format, pipe_name):
@@ -86,10 +86,17 @@ class SerDes:
         return out
 
     def serializeDataBytes(self, data):
-        if isinstance(data, list):
-            msg = b"".join([x.to_bytes(4, "little", signed=True) for x in data])
-        else:
-            msg = data.to_bytes(4, "little", signed=True)
+        def _pack(data):
+            if isinstance(data, int):
+                return struct.pack('i', data)
+            elif isinstance(data, float):
+                return struct.pack('f', data)
+            elif isinstance(data, str) and len(data) == 1:
+                return struct.pack('c', data)
+            elif isinstance(data, list):
+                return b"".join([_pack(x) for x in data])
+            
+        msg = _pack(data)
         hdr = len(msg).to_bytes(8, "little")
         out = hdr + msg
         return out
