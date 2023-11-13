@@ -40,6 +40,10 @@ if(onnxruntime_USE_DML)
   add_definitions(-DUSE_DML)
 endif()
 
+include_directories(${Protobuf_INCLUDE_DIRS})
+include_directories(${TENSORFLOW_AOT_PATH}/include)
+
+message("${TENSORFLOW_AOT_PATH}==============================")
 add_llvm_component_library(LLVMONNXModelRunner
 onnx.cpp
 agent.cpp

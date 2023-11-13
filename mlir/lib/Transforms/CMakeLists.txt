@@ -38,3 +38,9 @@ target_link_libraries(MLIRTransforms
   MLIRVectorOps
   LLVMMLBridge
   )
+
+file(GLOB MODEL_OBJECTS ${CMAKE_CURRENT_SOURCE_DIR}/tf_models/*.o)
+
+foreach(MODEL_OBJECT ${MODEL_OBJECTS})
+  target_link_libraries(MLIRTransforms ${MODEL_OBJECT})
+endforeach()
