@@ -345,7 +345,10 @@ struct HelloMLBridge : public ModulePass,
 
     auto Duration = std::chrono::duration_cast<std::chrono::microseconds>(
         EndTime - StartTime);
-    errs() << n << " " << Duration.count() << "\n";
+    std::ofstream outputFile;
+    outputFile.open("tf-llvm-10.csv", std::ios::app);
+    outputFile << n << "," << Duration.count() << "\n";
+    outputFile.close();
   }
 
   bool runOnModule(Module &M) override {
