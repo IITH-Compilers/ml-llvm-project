@@ -21,6 +21,8 @@
 // #include "grpc/posetRL/posetRL.pb.h"
 #include <google/protobuf/text_format.h>
 // #include <grpcpp/grpcpp.h>
+#include <llvm-10/llvm/Support/raw_ostream.h>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -73,7 +75,7 @@ struct PosetRL : public ModulePass,
     if (usePipe) {
       // data_format can take values: protobuf, json, bytes
       std::string basename =
-          "/home/cs20btech11024/repos/ml-llvm-project/Model/RLLib-PhaseOrder/" + pipe_name;
+          "/home/cs20mtech12003/Soumya/ml-llvm-project/Model/RLLib-PhaseOrder/" + pipe_name;
 
       BaseSerDes::Kind SerDesType;
       if (data_format == "json")
@@ -131,12 +133,22 @@ struct PosetRL : public ModulePass,
   }
   void initPipeCommunication() {
     int passSequence = 0;
+    std::string moduleStr;
     while (passSequence != -1) {
       std::pair<std::string, std::vector<float>> p1("embedding",
-                                                    getEmbeddings());
+                                                    getEmbeddings());    
       MLRunner->populateFeatures(p1);
       int Res = MLRunner->evaluate<int>();
       processMLAdvice(Res);
+
+      moduleStr = "";  
+      raw_string_ostream stream(moduleStr);
+      M->print(stream, nullptr);
+      // outs() << moduleStr << "\n";
+      std::ofstream outfile;
+      outfile.open("/home/cs20mtech12003/Soumya/ml-llvm-project/Model/RLLib-PhaseOrder/dummy.ll");
+      outfile << stream.str() << std::endl;;
+      outfile.close();
       passSequence = Res;
       errs() << "Sequence: " << passSequence << "\t";
     }

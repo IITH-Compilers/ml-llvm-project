@@ -52,7 +52,7 @@ parser.add_argument("-train", "--train_dir", required=True, help = "path to dire
 parser.add_argument("-iter", "--train-iterations", required=False, type=int, default=300)
 parser.add_argument("-a", "--isAArch", required=False, default=False, action='store_true')
 parser.add_argument("-log", "--log_dir", required=False, type=str, default="0.2thresh-10alpha-5beta-x86")
-parser.add_argument("-alpha", "--alpha", required=False, type=float, default=10)
+parser.add_argument("-alpha", "--alpha", required=False, type=float, default=0)
 parser.add_argument("-beta", "--beta", required=False, type=float, default=5)
 parser.add_argument("-size_reward_thresh", "--size_reward_thresh", required=False, type=float, default=0.2)
 parser.add_argument("-mca_reward_thresh", "--mca_reward_thresh", required=False, type=float, default=0.2)
@@ -93,9 +93,9 @@ def experiment(config):
         train_results = train_agent.train()
         # train_agent.export_policy_model("/home/cs20btech11018/repos/ML-Phase-Ordering/RLLib-PhaseOrder/poset-RL-onnx-model", onnx=int(os.getenv("ONNX_OPSET", "11")))
         # break
-        if i % 5 == 0:
-            tune.report(**train_results)
-            checkpoint = train_agent.save(tune.get_trial_dir())
+        # if i % 5 == 0:
+        tune.report(**train_results)
+        checkpoint = train_agent.save(tune.get_trial_dir())
     train_agent.stop()
 
 if __name__ == '__main__':

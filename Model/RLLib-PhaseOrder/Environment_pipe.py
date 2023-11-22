@@ -33,7 +33,7 @@ from google.protobuf.json_format import MessageToJson
 import json
 
 import grpc
-sys.path.append('/home/cs20mtech12003/MLIR-LLVM/ml-llvm-project/ml-llvm-tools/MLModelRunner/gRPCModelRunner/Python-Utilities/')
+sys.path.append('/home/cs20mtech12003/Soumya/ml-llvm-project/ml-llvm-tools/MLModelRunner/gRPCModelRunner/Python-Utilities/')
 import posetRL_pb2_grpc, posetRL_pb2
 from google.protobuf.empty_pb2 import Empty
 # pipe related imports
@@ -68,12 +68,12 @@ class PhaseOrder(gym.Env):
         self.FileSys_Obj = fsystem(config["llvm_dir"], config["ir2vec_dir"])
         self.FileSys_Obj.createFolder("env")
         # self.temporaryDirectory = tempfile.gettempdir()
-        self.temporaryDirectory = "/home/cs20mtech12003/MLIR-LLVM/ml-llvm-project/Model/RLLib-PhaseOrder/env"
+        self.temporaryDirectory = "/home/cs20mtech12003/Soumya/ml-llvm-project/Model/RLLib-PhaseOrder/env"
         self.build_dir = config["llvm_dir"]
-        self.clang_arch_flag = ("-mcpu=cortex-a72" if config["target"] == "AArch64" else "") + " -mllvm -ml-config-path=" + config["llvm_dir"] + "/config "
-        self.opt_arch_flag = ("--mcpu=cortex-a72" if config["target"] == "AArch64" else "" ) + " -ml-config-path=" + config["llvm_dir"] + "/config "
+        self.clang_arch_flag = ("-mcpu=cortex-a57" if config["target"] == "AArch64" else "") + " -mllvm -ml-config-path=" + config["llvm_dir"] + "/config "
+        self.opt_arch_flag = ("--mcpu=cortex-a57" if config["target"] == "AArch64" else "" ) + " -ml-config-path=" + config["llvm_dir"] + "/config "
         
-        self.mca_arch_flag = "--mcpu=cortex-a72" if config["target"] == "AArch64" else ""
+        self.mca_arch_flag = "--mcpu=cortex-a57" if config["target"] == "AArch64" else ""
 
         self.alpha = config["alpha"]
         self.beta = config["beta"]
@@ -475,12 +475,13 @@ class PhaseOrder(gym.Env):
                     except:
                         self.serverId.kill()
                         print("Clang failing")
-
-                Reward = self.getReward(self.assembly_file_path)
-            
-
+    
                 self.cur_action_seq = []
             self.action_count = 0
+            
+        if self.mode != 'inference':
+            Reward = self.getReward(self.assembly_file_path)
+
 # quiet#        print("Reward {}".format(Reward))
         logging.info("Reward {}".format(Reward))
 # quiet#        print("Action {}".format(action_index))
@@ -609,27 +610,51 @@ class PhaseOrder(gym.Env):
 
     def getReward(self, AssemblyFilePath):
         # object size reward
-        objectFilePath = f"{self.temporaryDirectory}/objectfile_{self.worker_index}.o"
-        objectFileGenerationCommand = self.FileSys_Obj.ClangPath + " -c " + \
-            self.clang_arch_flag + " " + AssemblyFilePath + " -o " + objectFilePath
+        # objectFilePath = f"{self.temporaryDirectory}/objectfile_{self.worker_index}.o"
+        # objectFileGenerationCommand = self.FileSys_Obj.ClangPath + " -c " + \
+        #     self.clang_arch_flag + " " + AssemblyFilePath + " -o " + objectFilePath
 
         # print("Object File Generation Command: "+objectFileGenerationCommand)
-        os.system(objectFileGenerationCommand)
+        # os.system(objectFileGenerationCommand)
+        
+        # # with open(AssemblyFilePath, 'r') as f:
+        # #     print("Asm before", f.read())
 
-        currentBinarySize = os.path.getsize(objectFilePath)
+        # currentBinarySize = os.path.getsize(objectFilePath)
 
-        if ((self.baseBinarySize - self.minBinarySize) > 0):
-            reward_binarySize = (self.lastBinarySize - currentBinarySize) / \
-                (self.baseBinarySize - self.minBinarySize)
-        else:
-            reward_binarySize = (self.lastBinarySize -
-                                 currentBinarySize) / self.baseBinarySize
+        # if ((self.baseBinarySize - self.minBinarySize) > 0):
+        #     reward_binarySize = (self.lastBinarySize - currentBinarySize) / \
+        #         (self.baseBinarySize - self.minBinarySize)
+        # else:
+        #     reward_binarySize = (self.lastBinarySize -
+        #                          currentBinarySize) / self.baseBinarySize
 
-        self.lastBinarySize = currentBinarySize
+        # self.lastBinarySize = currentBinarySize
 
-        llvmMcaCommand = f"{self.FileSys_Obj.MCAPath} {self.mca_arch_flag} {AssemblyFilePath}"
+#         llvmMcaCommand = f"{self.FileSys_Obj.MCAPath} {self.mca_arch_flag} {AssemblyFilePath}"
 
-# quiet#        print(f"LLVM MCA Command: {llvmMcaCommand}")
+# # quiet#        print(f"LLVM MCA Command: {llvmMcaCommand}")
+
+#         pro = subprocess.Popen(llvmMcaCommand, executable='/bin/bash', shell=True,
+#                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding='utf8')
+
+#         Output_cmd2 = pro.stdout
+
+#         line = Output_cmd2.readline()
+#         if pro.stderr is not None:
+#             logging.critical('Error : {}'.format(pro.stderr))
+#         currMcaThroughtput = 0
+#         while line:
+#             pair = line.split(':')
+#             if pair[0] == 'Block RThroughput':
+#                 currMcaThroughtput = float(pair[1].strip(' '))
+#                 print("currMcaThroughtput before", currMcaThroughtput)
+#             line = Output_cmd2.readline()
+            
+        # llvmMcaCommand = f"awk 'echo "{self.module_string}"' | llc-10 -o -" #| {self.FileSys_Obj.MCAPath} {self.mca_arch_flag}"
+        llvmMcaCommand = f"{self.FileSys_Obj.ClangPath} -S {self.clang_arch_flag} dummy.ll -o - | {self.FileSys_Obj.MCAPath} {self.mca_arch_flag}"
+        # llvmMcaCommand = f"{self.FileSys_Obj.ClangPath} -S {self.clang_arch_flag} dummy.ll -o dummy.s"
+        # print(f"LLVM MCA Command: {llvmMcaCommand}")
 
         pro = subprocess.Popen(llvmMcaCommand, executable='/bin/bash', shell=True,
                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding='utf8')
@@ -644,7 +669,9 @@ class PhaseOrder(gym.Env):
             pair = line.split(':')
             if pair[0] == 'Block RThroughput':
                 currMcaThroughtput = float(pair[1].strip(' '))
-            line = Output_cmd2.readline()
+                # print("currMcaThroughtput after", currMcaThroughtput)
+            line = Output_cmd2.readline()        
+                
 
 # quiet#        print("currMcaThroughtput: {}".format(currMcaThroughtput))
         # logging.info("currMcaThroughtput: {}".format(currMcaThroughtput))
@@ -663,7 +690,7 @@ class PhaseOrder(gym.Env):
         self.lastMcaThroughtput = currMcaThroughtput
 
         logging.info("Thr-debug:{}".format(mca_cost))
-        logging.info("Size-debug:{}".format(reward_binarySize))
+        # logging.info("Size-debug:{}".format(reward_binarySize))
 
         # Reward thresholds
         if mca_cost > self.mca_reward_thresh:
@@ -671,11 +698,12 @@ class PhaseOrder(gym.Env):
         elif mca_cost < -self.mca_reward_thresh:
             mca_cost = -self.mca_reward_thresh
 
-        if reward_binarySize > self.size_reward_thresh:
-            reward_binarySize = self.size_reward_thresh
-        elif reward_binarySize < -self.size_reward_thresh:
-            reward_binarySize = -self.size_reward_thresh
-
+        # if reward_binarySize > self.size_reward_thresh:
+        #     reward_binarySize = self.size_reward_thresh
+        # elif reward_binarySize < -self.size_reward_thresh:
+        #     reward_binarySize = -self.size_reward_thresh
+        
+        reward_binarySize = 0 # Setting size reward zero to train for performance only
         # Cumulative reward with alpha and beta hyperparameters
         reward = self.alpha*reward_binarySize + self.beta*mca_cost
 
@@ -695,7 +723,7 @@ class PhaseOrder(gym.Env):
         newfilepath = self.assembly_file_path
         data_format = self.data_format
 
-        cmd = f"{clangPath} -S -mllvm --OPosetRL -mllvm --training -mllvm -data-format={data_format} -mllvm --server_address={ip} -mllvm -ml-config-path={self.build_dir}/config {filepath}  -o {newfilepath}"
+        cmd = f"{clangPath} -S -mllvm --OPosetRL -mllvm --training -mllvm -data-format={data_format} -mllvm --server_address={ip} -mllvm -ml-config-path={self.build_dir}/config {filepath} -mcpu=cortex-a57  -o {newfilepath}"
         print("Server starting command: "+cmd)
         if self.use_pipe:
             cmd = cmd + " -mllvm -use-pipe"
