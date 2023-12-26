@@ -391,7 +391,9 @@ public:
         outputFile << n << "," << Duration.count() << "\n";
         outputFile.close();
       } else {
-        llvm::errs() << "Using 2nd gRPC flow...\n";
+        // llvm::errs() << "Using 2nd gRPC flow...\n";
+        std::ofstream outputFile;
+        outputFile.open("grpc-inference.csv", std::ios::app);
         auto StartTime = std::chrono::high_resolution_clock::now();
 
         helloMLBridgegRPC::TensorResponse request;
@@ -414,7 +416,9 @@ public:
 
         auto Duration = std::chrono::duration_cast<std::chrono::microseconds>(
             EndTime - StartTime);
-        outs() << n << " " << Duration.count() << "\n";
+        // outs() << n << " " << Duration.count() << "\n";
+        outputFile << n << "," << Duration.count() << "\n";
+        outputFile.close();
       }
     }
   }
@@ -430,6 +434,8 @@ private:
 };
 
 void MLIRHelloMLBridge::initCommunication() {
+  std::ofstream outputFile;
+  outputFile.open("pipe_" + data_format + ".csv", std::ios::app);
   if (data_format == "bytes") {
     SerDesType = BaseSerDes::Kind::Bitstream;
   } else if (data_format == "json") {
@@ -450,8 +456,8 @@ void MLIRHelloMLBridge::initCommunication() {
 
   auto Duration = std::chrono::duration_cast<std::chrono::microseconds>(
       EndTime - StartTime);
-  outs() << n << " " << Duration.count() << "\n";
-  exit(0);
+  outputFile << n << "," << Duration.count() << "\n";
+  outputFile.close();
 }
 
 void MLIRHelloMLBridge::populateFeatureVector(

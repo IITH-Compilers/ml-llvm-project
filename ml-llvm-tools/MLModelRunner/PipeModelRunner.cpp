@@ -26,10 +26,10 @@
 
 using namespace llvm;
 
-static cl::opt<bool> DebugReply(
-    "interactive-model-runner-echo-reply", cl::init(false), cl::Hidden,
-    cl::desc("The PipeModelRunner will echo back to stderr "
-             "the data received from the host (for debugging purposes)."));
+// static cl::opt<bool> DebugReply(
+//     "interactive-model-runner-echo-reply", cl::init(false), cl::Hidden,
+//     cl::desc("The PipeModelRunner will echo back to stderr "
+//              "the data received from the host (for debugging purposes)."));
 
 PipeModelRunner::PipeModelRunner(StringRef OutboundName, StringRef InboundName,
                                  BaseSerDes::Kind SerDesType,
