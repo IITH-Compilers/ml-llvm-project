@@ -20,4 +20,5 @@ LLVMSymbolic
 )
 
 add_subdirectory(inference)
+target_link_libraries(LLVMMLRegAlloc PRIVATE gRPCModelRunnerLib ONNXModelRunnerLib)
 configure_file (./Config.h.cmake Config.h @ONLY)

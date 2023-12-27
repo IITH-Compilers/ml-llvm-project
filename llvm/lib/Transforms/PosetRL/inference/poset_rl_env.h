@@ -14,6 +14,8 @@ using namespace llvm;
 typedef std::vector<float> Embedding;
 typedef std::vector<float> ActionMask;
 
+using namespace MLBridge;
+
 class PosetRLEnv : public Environment {
   unsigned Actioncount = 0;
   Embedding CurrEmbedding;

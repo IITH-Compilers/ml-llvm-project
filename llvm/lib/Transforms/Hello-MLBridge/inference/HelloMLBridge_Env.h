@@ -4,7 +4,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
-
+using namespace MLBridge;
 class HelloMLBridgeEnv : public Environment {
   Observation CurrObs;
 public:

@@ -23,7 +23,7 @@
 #define MAX_NODES_COUNT int(1000)
 
 using namespace llvm;
-
+using namespace MLBridge;
 
 class LDEnv : public Environment {
 private:

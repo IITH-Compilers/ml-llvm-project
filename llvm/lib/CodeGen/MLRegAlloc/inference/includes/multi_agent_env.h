@@ -26,6 +26,8 @@
 #define colourNodeObsSize 216
 #define splitNodeObsSize 700
 
+using namespace MLBridge;
+
 class MultiAgentEnv : public Environment {
   int debug_ct=0;
   RegisterActionSpace *registerAS;

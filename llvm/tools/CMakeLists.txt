@@ -38,6 +38,7 @@ add_llvm_external_project(llgo)
 add_llvm_external_project(lld)
 add_llvm_external_project(lldb)
 add_llvm_external_project(IR2Vec)
+add_llvm_external_project(MLCompilerBridge)
 add_llvm_external_project(mlir)
 
 # Automatically add remaining sub-directories containing a 'CMakeLists.txt'
