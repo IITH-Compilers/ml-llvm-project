@@ -26,6 +26,8 @@ class ModuleOp;
 class Pass;
 template <typename T> class OpPassBase;
 
+std::unique_ptr<Pass> createMLIRHelloMLBridgePass();
+
 /// Creates an instance of the Canonicalizer pass.
 std::unique_ptr<Pass> createCanonicalizerPass();
 

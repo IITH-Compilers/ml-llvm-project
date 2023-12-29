@@ -46,3 +46,4 @@ add_llvm_component_library(LLVMipo
   )
 
 target_link_libraries(LLVMipo PUBLIC LLVMMLBridge)
+# target_link_libraries(LLVMipo PUBLIC LLVMMLBridge LLVMPosetRL LLVMIRReader LLVMSupport LLVMIR2Vec)
