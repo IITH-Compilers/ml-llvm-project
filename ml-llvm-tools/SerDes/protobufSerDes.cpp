@@ -123,6 +123,7 @@ inline void ProtobufSerDes::setResponse(void *Response) {
 }
 
 void *ProtobufSerDes::deserializeUntyped(void *data) {
+  Request->Clear();      // todo: find correct place to clear request for protobuf serdes
   Response = reinterpret_cast<Message *>(data);
 
   const Descriptor *descriptor = Response->GetDescriptor();
