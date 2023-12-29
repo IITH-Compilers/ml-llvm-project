@@ -14,6 +14,7 @@
 #include "SerDes/bitstreamSerDes.h"
 #include "SerDes/jsonSerDes.h"
 #include "SerDes/protobufSerDes.h"
+#include "SerDes/tensorflowSerDes.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdlib>
@@ -149,6 +150,9 @@ private:
       break;
     case BaseSerDes::Kind::Bitstream:
       SerDes = std::make_unique<BitstreamSerDes>();
+      break;
+    case BaseSerDes::Kind::Tensorflow:
+      SerDes = std::make_unique<TensorflowSerDes>();
       break;
     case BaseSerDes::Kind::Unknown:
       SerDes = nullptr;

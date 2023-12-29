@@ -24,7 +24,7 @@ class BaseSerDes {
 public:
   // setRepeatedField as pushback
   // setFeature as setFeature, setAttribute
-  enum class Kind : int { Unknown, Json, Bitstream, Protobuf };
+  enum class Kind : int { Unknown, Json, Bitstream, Protobuf, Tensorflow };
   Kind getKind() const { return Type; }
 
 #define SET_FEATURE(TYPE)                                                      \

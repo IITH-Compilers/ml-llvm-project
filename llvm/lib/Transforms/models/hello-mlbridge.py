@@ -4,9 +4,10 @@ import os, io, json
 import SerDes
 
 import sys
+import torch, torch.nn as nn
 
 sys.path.append(
-    "/home/cs20btech11024/repos/ml-llvm-project/ml-llvm-tools/MLModelRunner/gRPCModelRunner/Python-Utilities"
+    "/Pramana/ML_LLVM_Tools/ml-llvm-project/ml-llvm-tools/MLModelRunner/gRPCModelRunner/Python-Utilities"
 )
 import helloMLBridge_pb2, helloMLBridge_pb2_grpc, grpc
 from concurrent import futures
@@ -33,7 +34,15 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
-
+class DummyModel(nn.Module):
+    def __init__(self, input_dim=10):
+        nn.Module.__init__(self)
+        self.fc1 = nn.Linear(input_dim, 1)
+        self.fc1.weight.data.fill_(0.01)
+    def forward(self, input):
+        x = self.fc1(input)
+        return x
+    
 def run_pipe_communication(data_format, pipe_name):
     serdes = SerDes.SerDes(data_format, "/tmp/" + pipe_name)
     print('Serdes init...')
@@ -48,9 +57,11 @@ def run_pipe_communication(data_format, pipe_name):
                 data = [x for x in data[0]]
                 # print("Data: ", [x for x in data[0]])
             print('len(tensor): ', len(data))
-            serdes.sendData(1)
+            model = DummyModel(input_dim=len(data))
+            action = model(torch.Tensor(data))
+            serdes.sendData(action.item())
         except Exception as e:
-            # print("*******Exception*******", e)
+            print("*******Exception*******", e)
             serdes.init()
 
 
@@ -69,8 +80,22 @@ class service_server(helloMLBridge_pb2_grpc.HelloMLBridgeService):
             reply = helloMLBridge_pb2.ActionRequest(action=-1)
             return reply
 
+def test_func():
+    data = 3.24
+    import struct
+    print(data, type(data))
+    byte_data = struct.pack('f', data)
+    print(byte_data, len(byte_data))
+    
+    
+    print('decoding...')
+    decoded = float(byte_data)
+    
+    print(decoded, type(decoded))
 
 if __name__ == "__main__":
+    # test_func()
+    # exit(0)
     if args.use_pipe:
         run_pipe_communication(args.data_format, args.pipe_name)
     elif args.use_grpc:
