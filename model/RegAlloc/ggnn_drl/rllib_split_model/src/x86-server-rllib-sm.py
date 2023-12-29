@@ -19,7 +19,7 @@ sys.path.append(
 import rollout as inference
 from argparse import Namespace
 
-sys.path.append(f'{REPO_DIR}/ml-llvm-project/ml-llvm-tools/CompilerInterface/')
+sys.path.append(f"{REPO_DIR}/MLCompilerBridge/CompilerInterface/")
 from PipeCompilerInterface import PipeCompilerInterface
 from GrpcCompilerInterface import GrpcCompilerInterface
 

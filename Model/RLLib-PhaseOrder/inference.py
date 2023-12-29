@@ -41,12 +41,13 @@ from ray.rllib.models import ModelCatalog
 from model import CustomPhaseOrderModel
 from ray.tune.registry import register_env
 from datetime import datetime
+from po_config import REPO_DIR, BUILD_DIR
 
 import sys
-sys.path.append('/Pramana/ML_LLVM_Tools/ml-llvm-project/ml-llvm-tools/MLModelRunner/gRPCModelRunner/Python-Utilities/')
+sys.path.append(f"{REPO_DIR}/ml-llvm-tools/MLModelRunner/gRPCModelRunner/Python-Utilities")
 import posetRL_pb2_grpc, posetRL_pb2
 
-sys.path.append('/home/cs21btech11051/ml-llvm-project/ml-llvm-tools/CompilerInterface/')
+sys.path.append(f"{REPO_DIR}/MLCompilerBridge/CompilerInterface/")
 from GrpcCompilerInterface import GrpcCompilerInterface
 
 from Filesystem import *

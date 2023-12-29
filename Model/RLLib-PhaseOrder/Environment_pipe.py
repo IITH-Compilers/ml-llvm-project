@@ -32,9 +32,11 @@ import logging
 from google.protobuf.json_format import MessageToJson
 import json
 
+from po_config import REPO_DIR, BUILD_DIR
+
 import grpc
 # sys.path.append('/Pramana/ML_LLVM_Tools/ml-llvm-project/ml-llvm-tools/MLModelRunner/gRPCModelRunner/Python-Utilities/')
-sys.path.append('../../ml-llvm-tools/MLModelRunner/gRPCModelRunner/Python-Utilities/')
+sys.path.append(f"{REPO_DIR}/ml-llvm-tools/MLModelRunner/gRPCModelRunner/Python-Utilities/")
 import posetRL_pb2_grpc, posetRL_pb2
 from google.protobuf.empty_pb2 import Empty
 # pipe related imports
@@ -47,7 +49,7 @@ from log_reader import TensorSpec
 from functools import reduce
 import operator
 
-sys.path.append('../../ml-llvm-tools/CompilerInterface/')
+sys.path.append(f"{REPO_DIR}/MLCompilerBridge/CompilerInterface/")
 from PipeCompilerInterface import PipeCompilerInterface
 from GrpcCompilerInterface import GrpcCompilerInterface
 
