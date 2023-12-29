@@ -14,12 +14,14 @@ import ray
 sys.path.append(
     f"{REPO_DIR}/model/RegAlloc/ggnn_drl/rllib_split_model/src"
 )
-sys.path.append(f"{REPO_DIR}/llvm/lib/Transforms/models")
-print(REPO_DIR)
-print(sys.path)
-import SerDes
+# sys.path.append(f"{REPO_DIR}/llvm/lib/Transforms/models")
+# import SerDes
 import rollout as inference
 from argparse import Namespace
+
+sys.path.append(f'{REPO_DIR}/ml-llvm-project/ml-llvm-tools/CompilerInterface/')
+from PipeCompilerInterface import PipeCompilerInterface
+from GrpcCompilerInterface import GrpcCompilerInterface
 
 
 class NestedDict:
@@ -91,8 +93,9 @@ class service_server(
             print("request.funcName: ", request.funcName)
             print("request.new: ", request.new)
             print("request.result: ", request.result)
+            print("request.regProf: ", request.regProf)
             # print_inter_graphs(inter_graphs)
-            assert len(inter_graphs.regProf) > 0, "Graphs has no nodes"
+            # assert len(inter_graphs.regProf) > 0, "Graphs has no nodes"
 
             if inter_graphs.new:
                 # model_path = os.path.abspath(model_path)
@@ -357,14 +360,20 @@ def run_pipe_communication(data_format, pipe_name):
     inference_model = inference.RollOutInference(args)
     inference_model.env.use_pipe = True
     print("Inference model created....")
-    serdes = SerDes.SerDes(data_format, "/tmp/" + pipe_name)
-    print("Serdes init...")
-    serdes.init()
+    # serdes = SerDes.SerDes(data_format, "/tmp/" + pipe_name)
+
+    # print("Serdes init...")
+    # serdes.init()
+    print('df, pipename:', data_format, pipe_name)
+    compiler_interface = PipeCompilerInterface(data_format= data_format, pipe_name = "/tmp/" + pipe_name)          
+    compiler_interface.reset_pipes()
+
     while True:
         try:
             # print("Entered while loop...")
             # input('Press enter to continue...')
-            data = serdes.readObservation()
+            # data = serdes.readObservation()
+            data = compiler_interface.evaluate()
             inter_graphs = parseObservation(data)
             print_inter_graphs(inter_graphs, log_file)
 
@@ -379,7 +388,8 @@ def run_pipe_communication(data_format, pipe_name):
                     print("Exiting from inference")
                     out = {"action": "Exit"}
                     out = encode_action(out)
-                    serdes.sendData(out)
+                    # serdes.sendData(out)
+                    compiler_interface.populate_buffer(out)
                     continue
             elif inter_graphs.result:
                 assert len(inter_graphs.regProf) > 0, "Graphs has no nodes"
@@ -414,35 +424,38 @@ def run_pipe_communication(data_format, pipe_name):
                 }
 
             out = encode_action(out)
-            serdes.sendData(out)
+            compiler_interface.populate_buffer(out)
         except Exception as e:
             print("*******Exception*******", e)
-            serdes.init()
+            # serdes.init()
+            compiler_interface.init_pipes()
+            compiler_interface.reset_pipes()
 
-class Server:
-    @staticmethod
-    def run(server_address):
-        ray.init()
 
-        server = grpc.server(
-            futures.ThreadPoolExecutor(max_workers=20),
-            options=[
-                ("grpc.max_send_message_length", 200 * 1024 * 1024),  # 50MB
-                ("grpc.max_receive_message_length", 200 * 1024 * 1024),  # 50MB
-            ],
-        )
+# class Server:
+#     @staticmethod
+#     def run(server_address):
+#         ray.init()
 
-        RegisterAllocationInference_pb2_grpc.add_RegisterAllocationInferenceServicer_to_server(
-            service_server(), server
-        )
+#         server = grpc.server(
+#             futures.ThreadPoolExecutor(max_workers=20),
+#             options=[
+#                 ("grpc.max_send_message_length", 200 * 1024 * 1024),  # 50MB
+#                 ("grpc.max_receive_message_length", 200 * 1024 * 1024),  # 50MB
+#             ],
+#         )
 
-        server_add = "localhost:" + str(server_address)
-        server.add_insecure_port(server_add)
+#         RegisterAllocationInference_pb2_grpc.add_RegisterAllocationInferenceServicer_to_server(
+#             service_server(), server
+#         )
 
-        server.start()
-        print("Server Running at " + server_add + "...")
+#         server_add = "localhost:" + str(server_address)
+#         server.add_insecure_port(server_add)
 
-        server.wait_for_termination()
+#         server.start()
+#         print("Server Running at " + server_add + "...")
+
+#         server.wait_for_termination()
 
 
 if __name__ == "__main__":
@@ -461,6 +474,7 @@ if __name__ == "__main__":
         "--pipe_name",
         type=str,
         help="Pipe Name",
+        default='default_pipe'
     )
     args = parser.parse_args()
     print(args)
@@ -470,5 +484,6 @@ if __name__ == "__main__":
         if args.server_port is None:
             print("Please specify server address for gRPC communication")
             exit()
-
-        Server.run(args.server_port)
+        # Server.run(args.server_port)
+        compiler_interface = GrpcCompilerInterface(mode = 'server', add_server_method=RegisterAllocationInference_pb2_grpc.add_RegisterAllocationInferenceServicer_to_server, grpc_service_obj=service_server(), hostport= args.server_port)
+        compiler_interface.start_server()

@@ -33,7 +33,8 @@ from google.protobuf.json_format import MessageToJson
 import json
 
 import grpc
-sys.path.append('/Pramana/ML_LLVM_Tools/ml-llvm-project/ml-llvm-tools/MLModelRunner/gRPCModelRunner/Python-Utilities/')
+# sys.path.append('/Pramana/ML_LLVM_Tools/ml-llvm-project/ml-llvm-tools/MLModelRunner/gRPCModelRunner/Python-Utilities/')
+sys.path.append('../../ml-llvm-tools/MLModelRunner/gRPCModelRunner/Python-Utilities/')
 import posetRL_pb2_grpc, posetRL_pb2
 from google.protobuf.empty_pb2 import Empty
 # pipe related imports
@@ -46,6 +47,11 @@ from log_reader import TensorSpec
 from functools import reduce
 import operator
 
+sys.path.append('../../ml-llvm-tools/CompilerInterface/')
+from PipeCompilerInterface import PipeCompilerInterface
+from GrpcCompilerInterface import GrpcCompilerInterface
+
+#import pipeCompilerInterface
 empty_message = Empty()
 
 
@@ -121,33 +127,41 @@ class PhaseOrder(gym.Env):
             filename='env.log', format='%(levelname)s - %(filename)s - %(message)s', level=log_level)
 
         # pipes opening
+        self.data_format = config["data_format"]
         self.use_pipe = config["use_pipe"]
         print("self.use_pipe {}".format(self.use_pipe))
-        self.data_format = config["data_format"]
-        self.temp_rootname = "posetrl_pipe"
-        to_compiler = self.temp_rootname + ".in"
-        from_compiler = self.temp_rootname + ".out"
-        self.from_compiler = from_compiler
-        self.tc = None
-        self.fc = None
-        self.read_stream_iter = None
+        # to_compiler = self.temp_rootname + ".in"
+        # from_compiler = self.temp_rootname + ".out"
+        # self.from_compiler = from_compiler
+        # self.tc = None
+        # self.fc = None
+        # self.read_stream_iter = None
         self.tensor_specs = None
         self.advice_spec = None
+
+        self.temp_rootname = "posetrl_pipe"
         if self.use_pipe:
-            if os.path.exists(to_compiler):
-                os.remove(to_compiler)
-            if os.path.exists(from_compiler):
-                os.remove(from_compiler)
-            os.mkfifo(to_compiler, 0o666)
-            os.mkfifo(from_compiler, 0o666) 
+            self.compiler_interface = PipeCompilerInterface(self.data_format, self.temp_rootname)
+            # self.compiler_interface.reset_pipes()
+            # if os.path.exists(to_compiler):
+            #     os.remove(to_compiler)
+            # if os.path.exists(from_compiler):
+            #     os.remove(from_compiler)
+            # os.mkfifo(to_compiler, 0o666)
+            # os.mkfifo(from_compiler, 0o666) 
             
-        self.use_grpc = config["use_grpc"]   
+        self.use_grpc = config["use_grpc"]  
+        if self.use_grpc:
+           self.compiler_interface = None
+        self.is_init = True 
+
+        self.server_port = config["server_port"]
 
     def make(self, TrainingPath):
         self.FileSys_Obj.generateTrainingData(TrainingPath)
         self.Obs = self.FileSys_Obj.LLFileList
 
-    def getEmbedding(self, fileName):
+    def getEmbedding(self, fileName) :
         EmbFile = self.Curr_Dir + "/" + str(self.StateIndex)
         # Get IR2Vec FlowAware embeddings
         command = self.FileSys_Obj.IR2VecBin + " -fa -vocab " + \
@@ -210,14 +224,18 @@ class PhaseOrder(gym.Env):
             # quiet#            print("Number of files {}".format(len(self.Obs)))
             logging.info("Number of files {}".format(len(self.Obs)))
             if (len(self.Obs) >= 1):
+                
                 index = np.random.random_integers(0, len(self.Obs) - 1)
 
                 self.serverId = self.startServer(
-                    self.Obs[index], "127.0.0.1:50051")
+                    self.Obs[index], "127.0.0.1:" + str(self.server_port))
                 print("Server started at pid:", self.serverId)
-                self.channel = grpc.insecure_channel(
-                    '{}:{}'.format("127.0.0.1", "50051"))
-                self.stub = posetRL_pb2_grpc.PosetRLServiceStub(self.channel)                                                
+                # self.channel = grpc.insecure_channel(
+                #     '{}:{}'.format("127.0.0.1", "50051"))
+                # self.stub = posetRL_pb2_grpc.PosetRLServiceStub #(self.channel)  
+                
+                if self.use_grpc and self.compiler_interface is None:
+                    self.compiler_interface = GrpcCompilerInterface(mode='client', stub_class=posetRL_pb2_grpc.PosetRLServiceStub, hostip='127.0.0.1', hostport= self.server_port)                                          
                 
                 self.createEnv(self.Obs[index])
                 self.doneList.append(self.Obs[index])
@@ -239,16 +257,21 @@ class PhaseOrder(gym.Env):
 
         # Opening pipe files
         if self.use_pipe:
-            to_compiler = self.temp_rootname + ".in"
-            from_compiler = self.temp_rootname + ".out"
-            print("Creating pipe files", to_compiler, from_compiler)
-            self.tc = io.BufferedWriter(io.FileIO(to_compiler, "wb"))
-            print("Opened the write pipe")
-            self.fc = io.BufferedReader(io.FileIO(from_compiler, "rb"))
-            print("Opened the read pipe")
-                      
+            # print("Before reset called")
+            if self.is_init:
+                self.compiler_interface.reset_pipes()
+                self.is_init = False
+            # print("After reset called")
 
-            result = self.readObservation()
+            # to_compiler = self.temp_rootname + ".in"
+            # from_compiler = self.temp_rootname + ".out"
+            # print("Creating pipe files", to_compiler, from_compiler)
+            # self.tc = io.BufferedWriter(io.FileIO(to_compiler, "wb"))
+            # print("Opened the write pipe")
+            # self.fc = io.BufferedReader(io.FileIO(from_compiler, "rb"))
+            # print("Opened the read pipe")
+            result = self.readObservation()         # DEBUG
+            # result = self.compiler_interface.evaluate('exit')         # tried
 
             # print("Returned obs value is", result[0]._view)
             if result is None:
@@ -272,89 +295,104 @@ class PhaseOrder(gym.Env):
         return next_observation
 
     def readObservation(self):
-        # if not next_event:
-        #     break
-        embedding = None
+        embedding = np.empty([300])
+        # print("before evaluate")
+        features = self.compiler_interface.evaluate()
+
+
         if self.data_format == "bytes":
-            #read first 8 bytes to be compatible with protobuf
-            if self.read_stream_iter is None:
-                self.read_stream_iter = log_reader.read_stream2(self.fc)
-            hdr = self.fc.read(8)
-            context, observation_id, features, score = next(self.read_stream_iter)
-            embedding = np.empty([300])
             for i in range(len(features[0])):
                 embedding[i] = features[0][i]
-
         elif self.data_format == "json":
-            print("reading json...")
-            #read first 8 bytes to be compatible with protobuf
-            hdr = self.fc.read(8)
-            print("hdr: ",hdr)
-            size = int.from_bytes(hdr, "little")
-            print("size: ", size)
-            msg = self.fc.read(size)
-            embedding = json.loads(msg.decode('utf-8'))["embedding"]
-            assert len(embedding) == 300
-            embedding = np.array(embedding)
-        elif self.data_format == "protobuf":
-            print("reading protobuf...")
-            # 8 bytes for size
-            hdr = self.fc.read(8)
-            print("hdr: ",hdr)
-            size = int.from_bytes(hdr, "little")
-            print("size: ", size)
-            msg = self.fc.read(size)
-            print("msg: ", msg)
+            for i in range(len(features["embedding"])):
+                embedding[i] = features["embedding"][i]
 
-            emb = posetRL_pb2.EmbeddingResponse()
-            emb.ParseFromString(msg)
-            print(emb)
-            embedding = np.array(emb.embedding)
+        # # if not next_event:
+        # #     break
+        # embedding = None
+        # if self.data_format == "bytes":
+        #     #read first 8 bytes to be compatible with protobuf
+        #     if self.read_stream_iter is None:
+        #         self.read_stream_iter = log_reader.read_stream2(self.fc)
+        #     hdr = self.fc.read(8)
+        #     context, observation_id, features, score = next(self.read_stream_iter)
+        #     embedding = np.empty([300])
+        #     for i in range(len(features[0])):
+        #         embedding[i] = features[0][i]
+
+        # elif self.data_format == "json":
+        #     print("reading json...")
+        #     #read first 8 bytes to be compatible with protobuf
+        #     hdr = self.fc.read(8)
+        #     print("hdr: ",hdr)
+        #     size = int.from_bytes(hdr, "little")
+        #     print("size: ", size)
+        #     msg = self.fc.read(size)
+        #     embedding = json.loads(msg.decode('utf-8'))["embedding"]
+        #     assert len(embedding) == 300
+        #     embedding = np.array(embedding)
+        # elif self.data_format == "protobuf":
+        #     print("reading protobuf...")
+        #     # 8 bytes for size
+        #     hdr = self.fc.read(8)
+        #     print("hdr: ",hdr)
+        #     size = int.from_bytes(hdr, "little")
+        #     print("size: ", size)
+        #     msg = self.fc.read(size)
+        #     print("msg: ", msg)
+
+        #     emb = posetRL_pb2.EmbeddingResponse()
+        #     emb.ParseFromString(msg)
+        #     print(emb)
+        #     embedding = np.array(emb.embedding)
         return embedding
 
 
+
     def sendResponse(self, value: Union[int, float]):
-        if self.data_format == "bytes":
-          f: io.BufferedWriter = self.tc
-          spec: log_reader.TensorSpec = self.advice_spec
-          """Send the `value` - currently just a scalar - formatted as per `spec`."""
-          # just int64 for now
-          # assert spec.element_type == ctypes.c_int64
-          # to_send = ctypes.c_int64(int(value))
-          # print("to_send", f.write(bytes(to_send)), ctypes.sizeof(spec.element_type) * reduce(operator.mul, spec.shape, 1))
-          # f.write(to_send. + b"\n")
-          # hdr = int(4).to_bytes(length=8, byteorder='little')
-          # f.write(hdr + b'\n')
+        self.compiler_interface.populate_buffer(int(value))
 
-          hdr = int(4).to_bytes(length=8, byteorder='little')
-          val = int(value)
-          message = val.to_bytes(length=4, byteorder='little', signed=True)
-          out = hdr + message
-          f.write(out)
+    #     if self.data_format == "bytes":
+    #       f: io.BufferedWriter = self.tc
+    #       spec: log_reader.TensorSpec = self.advice_spec
+    #       """Send the `value` - currently just a scalar - formatted as per `spec`."""
+    #       # just int64 for now
+    #       # assert spec.element_type == ctypes.c_int64
+    #       # to_send = ctypes.c_int64(int(value))
+    #       # print("to_send", f.write(bytes(to_send)), ctypes.sizeof(spec.element_type) * reduce(operator.mul, spec.shape, 1))
+    #       # f.write(to_send. + b"\n")
+    #       # hdr = int(4).to_bytes(length=8, byteorder='little')
+    #       # f.write(hdr + b'\n')
 
-          # # assert f.write(bytes(to_send)) == ctypes.sizeof(spec.element_type) * reduce(operator.mul, spec.shape, 1)
-          # assert f.write(bytes(to_send)) == ctypes.sizeof(spec.element_type) * math.prod(
-          #     spec.shape
-          # )
-        elif self.data_format == "json":
-            f: io.BufferedWriter = self.tc
-            message = json.dumps({"out": int(value)}).encode("utf-8")
-            print("message: ", message)
-            hdr = int(len(message)).to_bytes(length=8, byteorder='little')
-            out = hdr + message
-            f.write(out)
+    #       hdr = int(4).to_bytes(length=8, byteorder='little')
+    #       val = int(value)
+    #       message = val.to_bytes(length=4, byteorder='little', signed=True)
+    #       out = hdr + message
+    #       f.write(out)
 
-        elif self.data_format == "protobuf":
-            f: io.BufferedWriter = self.tc
+    #       # # assert f.write(bytes(to_send)) == ctypes.sizeof(spec.element_type) * reduce(operator.mul, spec.shape, 1)
+    #       # assert f.write(bytes(to_send)) == ctypes.sizeof(spec.element_type) * math.prod(
+    #       #     spec.shape
+    #       # )
+    #     elif self.data_format == "json":
+    #         f: io.BufferedWriter = self.tc
+    #         message = json.dumps({"out": int(value)}).encode("utf-8")
+    #         print("message: ", message)
+    #         hdr = int(len(message)).to_bytes(length=8, byteorder='little')
+    #         out = hdr + message
+    #         f.write(out)
 
-            serialized_message = posetRL_pb2.ActionRequest(action=value).SerializeToString()
-            size = len(serialized_message)
-            hdr = int.to_bytes(size, 8, "little")
-            f.write(hdr)
-            f.write(serialized_message)
+    #     elif self.data_format == "protobuf":
+    #         f: io.BufferedWriter = self.tc
 
-        f.flush()
-        print("flushed !!!!")
+    #         serialized_message = posetRL_pb2.ActionRequest(action=value).SerializeToString()
+    #         size = len(serialized_message)
+    #         hdr = int.to_bytes(size, 8, "little")
+    #         f.write(hdr)
+    #         f.write(serialized_message)
+
+    #     f.flush()
+    #     print("flushed !!!!")
                 
     
     def getBinarySize(self, IRFile, init=False):
@@ -365,8 +403,8 @@ class PhaseOrder(gym.Env):
             # Compute O0 Binary size
             command = self.FileSys_Obj.ClangPath + " " + self.clang_arch_flag + " -c " + \
                 self.Curr_Dir + "/" + fileName + ".ll -o " + \
-                self.Curr_Dir + "/" + "base_binary.o"
-# quiet#            print("O0 binary object compile command: "+command)
+                self.Curr_Dir + "/" + "base_binary.o" + " -mllvm -ml-config-path=/home/cs21btech11051/ml-llvm-project/build_all/config"
+            print("O0 binary object compile command: "+command)
             os.system(command)
             baseBinarySize = os.path.getsize(self.Curr_Dir + "/base_binary.o")
 # quiet#            print("base {}".format(baseBinarySize))
@@ -375,15 +413,15 @@ class PhaseOrder(gym.Env):
             # Compute Oz Binary size
             command = self.FileSys_Obj.OptPath + " " + self.opt_arch_flag + " -S  -add-size-attr --enableMinSizeAttr --removeNoInlineAttr " + \
                 self.Curr_Dir + "/" + fileName + ".ll -o " + \
-                self.Curr_Dir + "/" + fileName + ".ll"
+                self.Curr_Dir + "/" + fileName + ".ll" + "-ml-config-path=/home/cs21btech11051/ml-llvm-project/build_all/config "
             command = self.FileSys_Obj.OptPath + " " + self.opt_arch_flag + " -S -Oz " + \
                 self.Curr_Dir + "/" + fileName + ".ll -o " + \
-                self.Curr_Dir + "/" + fileName + "_Oz.ll"
+                self.Curr_Dir + "/" + fileName + "_Oz.ll" + " -ml-config-path=/home/cs21btech11051/ml-llvm-project/build_all/config "
             print(command)
             os.system(command)
             command = self.FileSys_Obj.ClangPath + " " + self.clang_arch_flag + " -c " + \
                 self.Curr_Dir + "/" + fileName + "_Oz.ll -o " + \
-                self.Curr_Dir + "/" + "Oz_binary.o"
+                self.Curr_Dir + "/" + "Oz_binary.o" + " -mllvm -ml-config-path=/home/cs21btech11051/ml-llvm-project/build_all/config "
             print(command)
             os.system(command)
             minBinarySize = os.path.getsize(self.Curr_Dir + "/Oz_binary.o")
@@ -391,6 +429,7 @@ class PhaseOrder(gym.Env):
             # Get Oz MCA Throughput
             self.OzMcaThroughtput = self.getMCACost(
                 self.Curr_Dir + "/" + fileName + "_Oz")
+            print("Setting OzMcaThroughtput:", self.OzMcaThroughtput)
 # quiet#            print("base {}".format(self.OzMcaThroughtput))
             logging.info("base {}".format(self.OzMcaThroughtput))
 
@@ -410,14 +449,17 @@ class PhaseOrder(gym.Env):
         if self.mode == 'inference' and self.use_grpc:
             pass
         else:
-            if self.use_pipe:
+            # if self.use_pipe or self.use_grpc:
+            #     result = self.compiler_interface.evaluate()
+            if self.use_pipe:                
                 self.sendResponse(action_index)
+                # print("Reading pipe response")
                 result = self.readObservation()
             elif self.use_grpc:
-                print("In gRPC training flow")
+                # print("In gRPC training flow")
                 result = self.stable_grpc("Action", action_index) # LLVMgRPC way
                 # self.embedding = result
-                print("Result:", result)
+                # print("Result:", result)
             else:
                 Reward, NextStateIR = self.getLocalReward(action_index)
                 result = self.getEmbedding(NextStateIR)
@@ -464,11 +506,24 @@ class PhaseOrder(gym.Env):
                         self.serverId.kill()
                         print("Clang failing")
                                                     
-                Reward = self.getReward(self.assembly_file_path)
+                    Reward = self.getReward(self.assembly_file_path)
             if self.use_pipe:
-                self.sendResponse(-1)
-                self.fc.close()
-                self.tc.close()
+                # self.compiler_interface.close_buffers()
+                # self.compiler_interface.reset_buffers()
+                self.sendResponse(-1)                        # self.populate_buffer(-1)
+                self.compiler_interface.evaluate('exit')
+
+                # self.compiler_interface.close_pipes()
+                # self.compiler_interface.reset_pipes()
+
+                if self.mode != "inference":
+                    Reward = self.getReward(self.assembly_file_path)
+                # else:
+                # print("Reset pipe called in step")
+                # self.compiler_interface.reset_pipes()
+                # print("Reset pipe successful")
+
+                # self.tc.close()                            # self.fc.close()
                 
                 self.cur_action_seq = []
             self.action_count = 0
@@ -478,16 +533,17 @@ class PhaseOrder(gym.Env):
         logging.info("Action {}".format(action_index))
 # quiet#        print("done {}".format(done))
         logging.info("done {}".format(done))
+# quiet#        print("Returning from step")
 
         return next_observation, Reward, done, {}
 
     # Get llvm-mca Block RThroughput for the IR
     def getMCACost(self, new_file):
         cmd1 = self.FileSys_Obj.LlcPath + " " + self.opt_arch_flag + \
-            " " + new_file + ".ll" + " -o " + new_file + ".s"
+            " " + new_file + ".ll" + " -o " + new_file + ".s" + " -ml-config-path=/home/cs21btech11051/ml-llvm-project/build_all/config"
         os.system(cmd1)
         cmd2 = self.FileSys_Obj.MCAPath + " " + \
-            self.opt_arch_flag + " " + new_file + ".s"
+            self.opt_arch_flag + " " + new_file + ".s" 
         pro = subprocess.Popen(cmd2, executable='/bin/bash', shell=True,
                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding='utf8')
         Output_cmd2 = pro.stdout
@@ -496,7 +552,7 @@ class PhaseOrder(gym.Env):
         if pro.stderr is not None:
             logging.critical('Error : {}'.format(pro.stderr))
             print('Error : {}'.format(pro.stderr))
-        if not line:
+        if line:
             print("Read line is:", line)
         else:
             print("line not writen")
@@ -534,11 +590,11 @@ class PhaseOrder(gym.Env):
         # Here we can use gRPC server to apply the action
         command = self.FileSys_Obj.OptPath + " " + self.opt_arch_flag + \
             " -S -O34 -SubNum=" + str(action) + " " + \
-            self.CurrIR + " -o " + new_IR
+            self.CurrIR + " -o " + new_IR + " -ml-config-path=/home/cs21btech11051/ml-llvm-project/build_all/config"
         print("Opt Command: "+command)
         os.system(command)
         command = self.FileSys_Obj.ClangPath + " " + \
-            self.clang_arch_flag + " -c " + new_IR + " -o " + new_file + ".o"
+            self.clang_arch_flag + " -c " + new_IR + " -o " + new_file + ".o" + " -mllvm -ml-config-path=/home/cs21btech11051/ml-llvm-project/build_all/config"
         os.system(command)
 
         print("clang command: "+command)
@@ -601,7 +657,7 @@ class PhaseOrder(gym.Env):
         # object size reward
         objectFilePath = f"{self.temporaryDirectory}/objectfile_{self.worker_index}.o"
         objectFileGenerationCommand = self.FileSys_Obj.ClangPath + " -c " + \
-            self.clang_arch_flag + " " + AssemblyFilePath + " -o " + objectFilePath
+            self.clang_arch_flag + " " + AssemblyFilePath + " -o " + objectFilePath + " -mllvm -ml-config-path=/home/cs21btech11051/ml-llvm-project/build_all/config"
 
         print("Object File Generation Command: "+objectFileGenerationCommand)
         os.system(objectFileGenerationCommand)
@@ -617,9 +673,9 @@ class PhaseOrder(gym.Env):
 
         self.lastBinarySize = currentBinarySize
 
-        llvmMcaCommand = f"{self.FileSys_Obj.MCAPath} {self.opt_arch_flag} {AssemblyFilePath}"
+        llvmMcaCommand = f"{self.FileSys_Obj.MCAPath} {self.opt_arch_flag} {AssemblyFilePath}" #+ " -ml-config-path=/home/cs21btech11051/ml-llvm-project/build_all/config"
 
-# quiet#        print(f"LLVM MCA Command: {llvmMcaCommand}")
+        print(f"LLVM MCA Command: {llvmMcaCommand}")
 
         pro = subprocess.Popen(llvmMcaCommand, executable='/bin/bash', shell=True,
                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding='utf8')
@@ -677,13 +733,13 @@ class PhaseOrder(gym.Env):
         return config_path
 
     def startServer(self, filename, ip):
-        optPath = "/Pramana/ML_LLVM_Tools/ml-llvm-project/build_posetrl/bin/opt"
-        clangPath = "/Pramana/ML_LLVM_Tools/ml-llvm-project/build_posetrl/bin/clang"
+        optPath = "/home/cs21btech11051/ml-llvm-project/build_all/bin/opt"
+        clangPath = "/home/cs21btech11051/ml-llvm-project/build_all/bin/clang"
         filepath = self.train_Dir + "/" + filename
         newfilepath = self.assembly_file_path
         data_format = self.data_format
 
-        cmd = f"{clangPath} -S -mllvm --OPosetRL -mllvm --training -mllvm -data-format={data_format} -mllvm --server_address={ip} {filepath}  -o {newfilepath}"
+        cmd = f"{clangPath} -S -mllvm --OPosetRL -mllvm -ml-config-path=/home/cs21btech11051/ml-llvm-project/build_all/config -mllvm --training -mllvm -data-format={data_format} -mllvm --server_address={ip} {filepath}  -o {newfilepath}"
 #quiet#        print("Server starting command: "+cmd)
         if self.use_pipe:
             cmd = cmd + " -mllvm -use-pipe"
@@ -700,12 +756,17 @@ class PhaseOrder(gym.Env):
 
     def applyActionGetEmbeddings(self, action):
         request = posetRL_pb2.ActionRequest(action=action)
-        response = self.stub.applyActionGetEmbeddings(request)
+ 
+        self.compiler_interface.populate_buffer(request)
+        response = self.compiler_interface.evaluate()
+        # response = self.stub.applyActionGetEmbeddings(request)
         return self.repeatedgRPCFieldToNumpyArray(response)
 
     def stopServer(self):
         request = posetRL_pb2.ActionRequest(action=-1)
-        self.stub.applyActionGetEmbeddings(request)
+        self.compiler_interface.populate_buffer(request)
+        self.compiler_interface.evaluate()
+        # self.stub.applyActionGetEmbeddings(request)
 
     def stable_grpc(self, op, action):
         attempt = 0

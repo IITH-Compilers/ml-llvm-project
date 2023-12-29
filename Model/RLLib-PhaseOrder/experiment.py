@@ -64,6 +64,7 @@ parser.add_argument(
     choices=["json", "protobuf", "bytes"],
     help="Data format to use for communication",
 )
+parser.add_argument("--server_port", type=str, help="Server port", default=50051)
 
 # Use for resuming training from checkpoint
 # checkpoint = "/home/cs20btech11018/ray_results/0.2thresh-10alpha-5beta-aarch/experiment_PhaseOrder_54b91_00000_0_2023-02-04_18-33-34/checkpoint_000010/checkpoint-10"
@@ -76,7 +77,7 @@ def experiment(config):
     train_results = {}
     print(config)
     train_agent = DQNTrainer(config=config, env=PhaseOrder)
-    checkpoint = "/home/cs20mtech12003/ray_results/experiment_2023-06-16_01-17-51/experiment_PhaseOrder_83255_00000_0_2023-06-16_01-17-51/checkpoint_000500/checkpoint-500"
+    # checkpoint = "/home/cs20mtech12003/ray_results/experiment_2023-06-16_01-17-51/experiment_PhaseOrder_83255_00000_0_2023-06-16_01-17-51/checkpoint_000500/checkpoint-500"
     if checkpoint is not None:
         train_agent.restore(checkpoint)
 
@@ -147,7 +148,8 @@ if __name__ == '__main__':
                 "action_space_size": 34,
                 "use_pipe": args.use_pipe,
                 "data_format": args.data_format,
-                "use_grpc": args.use_grpc
+                "use_grpc": args.use_grpc,
+                "server_port": args.server_port
             },
             "train_batch_size": 512,
             "exploration_config": {
