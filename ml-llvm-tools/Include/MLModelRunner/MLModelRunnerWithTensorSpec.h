@@ -11,8 +11,8 @@
 #define MLMODELRUNNER_WITH_TENSORSPEC_H
 
 #include "MLModelRunner/MLModelRunner.h"
+#include "SerDes/TensorSpec.h"
 #include "SerDes/baseSerDes.h"
-#include "llvm/Analysis/TensorSpec.h"
 // #include "llvm/IR/PassManager.h"
 
 namespace llvm {
