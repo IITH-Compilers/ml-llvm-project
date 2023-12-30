@@ -13,25 +13,30 @@ service RegisterAllocationInference{
 // RPC function to send Inference graph data and receive color data for codegen
 //  rpc getColouring(Empty) returns (ColorData) {}
 //rpc setGraph(GraphList) returns (Data) {}
-  rpc getInfo(RegisterProfileList) returns (Data) {}
+  rpc getAdvice(RegisterProfileList) returns (Data) {}
+  // rpc getAdvice(test) returns (test) {}
 }
 
 message GraphList {
   bytes payload=1;
 }
 
+// message test{
+//   string s=1;
+// }
+
 message RegisterProfileList {
   message vector {
     repeated double vec=1;
   }
   message RegisterProfile {
-    uint32 regID=1;
-    uint32 color=2;
+    int32 regID=1;
+    int32 color=2;
     float spillWeight=3;
     string cls=4;
-    repeated uint32 splitSlots=5;
-    repeated uint32 interferences=6;
-    repeated uint32 useDistances=7;
+    repeated int32 splitSlots=5;
+    repeated int32 interferences=6;
+    repeated int32 useDistances=7;
     repeated float positionalSpillWeights=8;
     repeated vector vectors=9;
     // string vectors=9;
@@ -39,21 +44,25 @@ message RegisterProfileList {
   repeated RegisterProfile regProf=1;
   string funcName=2;
   string fileName=3;
-  uint32 funid=4;
+  int32 funid=4;
   bool result=5;
   bool new=6;
 }
 
+// message Data {
+//   message colorData {
+//     string key = 1;
+//     uint32 value = 2;
+//   }
+//   string message = 1;
+//   uint32 regidx = 2;
+//   int64 payload = 3;
+//   string funcName = 4;
+//   repeated colorData color = 5;
+// }
+
 message Data {
-  message colorData {
-    string key = 1;
-    uint32 value = 2;
-  }
-  string message = 1;
-  uint32 regidx = 2;
-  int64 payload = 3;
-  string funcName = 4;
-  repeated colorData color = 5;
+  repeated int32 data=1;
 }
 
 message Empty {}

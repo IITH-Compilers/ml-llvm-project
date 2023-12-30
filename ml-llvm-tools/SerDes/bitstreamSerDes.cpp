@@ -24,6 +24,14 @@ void BitstreamSerDes::setFeature(const std::string &name,
 }
 
 void BitstreamSerDes::setFeature(const std::string &name,
+                                     const long &value) {
+  auto *valuePtr = new long(value);
+  featureslong[name] = valuePtr;
+  tensorSpecs.push_back(TensorSpec::createSpec<long>(name, {1}));
+  rawData.push_back(valuePtr);
+}
+
+void BitstreamSerDes::setFeature(const std::string &name,
                                      const float &value) {
   auto *valuePtr = new float(value);
   featuresfloat[name] = valuePtr;
@@ -66,6 +74,15 @@ void BitstreamSerDes::setFeature(const std::string &name,
 }
 
 void BitstreamSerDes::setFeature(const std::string &name,
+                                     const std::vector<long> &value) {
+  auto *valuePtr = new std::vector<long>(value);
+  featuresVectorlong[name] = valuePtr;
+  tensorSpecs.push_back(
+      TensorSpec::createSpec<int>(name, {static_cast<long>(valuePtr->size())}));
+  rawData.push_back(valuePtr->data());
+}
+
+void BitstreamSerDes::setFeature(const std::string &name,
                                      const std::vector<float> &value) {
   auto *valuePtr = new std::vector<float>(value);
   featuresVectorfloat[name] = valuePtr;
@@ -91,16 +108,6 @@ void BitstreamSerDes::setFeature(const std::string &name,
 void BitstreamSerDes::setFeature(const std::string &name,
                                      const std::vector<bool> &value) {
   llvm_unreachable("Currently std::vector<bool> not supported");
-}
-
-void BitstreamSerDes::setFeature(const std::string &name,
-                                     const int64_t &value) {
-  llvm_unreachable("Currently int64_t not supported");
-}
-
-void BitstreamSerDes::setFeature(const std::string &name,
-                                     const std::vector<int64_t> &value) {
-  llvm_unreachable("Currently std::vector<int64_t> not supported");
 }
 
 void *BitstreamSerDes::getSerializedData() {

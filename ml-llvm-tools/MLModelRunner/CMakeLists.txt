@@ -58,12 +58,13 @@ if (DEFINED LLVM_HAVE_TF_AOT OR LLVM_HAVE_TFLITE)
 endif()
 
 if (DEFINED LLVM_HAVE_TF_AOT OR LLVM_HAVE_TFLITE)
-  include(TensorFlowCompile)
+  include(cmake/modules/TensorFlowCompile.cmake)
   set(LLVM_INLINER_MODEL_PATH_DEFAULT "models/inliner-Oz")
 
   set(LLVM_INLINER_MODEL_CURRENT_URL "<UNSPECIFIED>" CACHE STRING "URL to download the LLVM inliner model")
 
   if (DEFINED LLVM_HAVE_TF_AOT)
+  
     tf_find_and_compile(
       ${LLVM_INLINER_MODEL_PATH}
       ${LLVM_INLINER_MODEL_CURRENT_URL}
@@ -83,6 +84,7 @@ if (DEFINED LLVM_HAVE_TF_AOT OR LLVM_HAVE_TFLITE)
   endif()
 endif()
 
+
 add_llvm_component_library(LLVMMLModelRunner
 PipeModelRunner.cpp
 ${GeneratedMLSources}
@@ -97,10 +99,13 @@ LLVMgRPCModelRunner
 LLVMONNXModelRunner
 )
 
+# message("${MLLinkDeps} ++++++++++++++++++++++++")
 
 target_link_libraries(LLVMMLModelRunner 
-PRIVATE LLVMMLModelRunnerUtils
+PRIVATE ${MLLinkDeps}
+LLVMMLModelRunnerUtils
 LLVMgRPCModelRunner
 LLVMONNXModelRunner
+# LLVMTFModelRunner
 )
 set_property(TARGET LLVMMLModelRunner PROPERTY CXX_STANDARD 17)

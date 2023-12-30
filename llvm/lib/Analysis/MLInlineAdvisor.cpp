@@ -66,7 +66,7 @@ llvm::getReleaseModeAdvisor(Module &M, ModuleAnalysisManager &MAM,
   std::unique_ptr<MLModelRunner> AOTRunner;
   if (InteractiveChannelBaseName.empty()) {
     AOTRunner = std::make_unique<TFModelRunner<CompiledModelType>>(
-        M.getContext(), DecisionName); // a TFModelRunner
+        DecisionName, M.getContext()); // a TFModelRunner
   } else {
     auto Features = FeatureMap;
     if (InteractiveIncludeDefault)

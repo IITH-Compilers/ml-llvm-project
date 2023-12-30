@@ -8,6 +8,7 @@
 
 #include "MLModelRunner/ONNXModelRunner/onnx.h"
 #include "onnxruntime_cxx_api.h"
+#include <cmath>
 
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -15,7 +16,6 @@
 #include <iostream>
 #include <numeric>
 #include <iostream>
-#include <cmath>
 
 ONNXModel::ONNXModel(const char *model_path) : model_path(model_path) {
   env = new Ort::Env(ORT_LOGGING_LEVEL_WARNING, "test");

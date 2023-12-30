@@ -29,11 +29,11 @@ template <class TGen> class TFModelRunner final : public MLModelRunner {
 public:
   /// FeatureNames' type should be an indexed collection of std::string, like
   /// std::array or std::vector, that has a size() method.
-  TFModelRunner(LLVMContext &Ctx, StringRef DecisionName,
+  TFModelRunner(StringRef DecisionName, LLVMContext &Ctx,
                 StringRef FeedPrefix = "feed_",
                 StringRef FetchPrefix = "fetch_")
-      : MLModelRunner(MLModelRunner::Kind::TFAOT,
-                      BaseSerDes::Kind::Tensorflow, &Ctx),
+      : MLModelRunner(MLModelRunner::Kind::TFAOT, BaseSerDes::Kind::Tensorflow,
+                      &Ctx),
         CompiledModel(std::make_unique<TGen>()) {
 
     SerDes->setRequest(CompiledModel.get());
@@ -44,7 +44,20 @@ public:
                                                    DecisionName.str());
     assert(ResultIndex >= 0 && "Cannot find DecisionName in inlining model");
   }
+  TFModelRunner(StringRef DecisionName,
+                StringRef FeedPrefix = "feed_",
+                StringRef FetchPrefix = "fetch_")
+      : MLModelRunner(MLModelRunner::Kind::TFAOT, BaseSerDes::Kind::Tensorflow),
+        CompiledModel(std::make_unique<TGen>()) {
 
+    SerDes->setRequest(CompiledModel.get());
+
+    assert(CompiledModel && "The CompiledModel should be valid");
+
+    ResultIndex = CompiledModel->LookupResultIndex(FetchPrefix.str() +
+                                                   DecisionName.str());
+    assert(ResultIndex >= 0 && "Cannot find DecisionName in inlining model");
+  }
   virtual ~TFModelRunner() = default;
 
   virtual void requestExit() override {

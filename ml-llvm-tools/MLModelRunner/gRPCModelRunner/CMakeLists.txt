@@ -9,9 +9,11 @@ else()
   set(_PROTOBUF_PROTOC $<TARGET_FILE:protobuf::protoc>)
 endif()
 
+include_directories(${Protobuf_INCLUDE_DIRS})
 # Find gRPC installation
 # Looks for gRPCConfig.cmake file installed by gRPC's cmake installation.
-find_package(gRPC CONFIG REQUIRED)
+
+find_package(gRPC 1.34.0 EXACT CONFIG REQUIRED)
 message(STATUS "Using gRPC ${gRPC_VERSION}")
 
 set(_GRPC_GRPCPP gRPC::grpc++)
@@ -24,6 +26,9 @@ else()
 endif()
 
 
+set(CMAKE_CXX_STANDARD 11)
+add_custom_target(protobuf_grpc_version ALL 
+COMMAND ${CMAKE_COMMAND} -E echo "protoc path = $<TARGET_FILE:protobuf::protoc> Using Protobuf ${Protobuf_VERSION} Using gRPC ${gRPC_VERSION} have AOT ${LLVM_HAVE_TF_AOT}")
 
 file(GLOB proto_list ${CMAKE_CURRENT_SOURCE_DIR}/Protos/*.proto)
 set(proto_dir ${CMAKE_CURRENT_SOURCE_DIR}/Protos)
@@ -84,5 +89,6 @@ target_link_libraries(LLVMgRPCModelRunner
 	          ${_PROTOBUF_LIBPROTOBUF}
 )
 
+message("PROTOBUF_INCLUDE_DIRS = ${Protobuf_INCLUDE_DIRS}")
 target_include_directories(LLVMgRPCModelRunner PRIVATE ${LLVM_INCLUDE_DIR}/Service)
 target_include_directories(LLVMgRPCModelRunner PUBLIC ${Protobuf_INCLUDE_DIRS})
