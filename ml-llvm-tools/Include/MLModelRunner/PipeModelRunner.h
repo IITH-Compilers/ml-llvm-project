@@ -12,12 +12,12 @@
 
 #include "MLModelRunner/MLModelRunner.h"
 #include "MLModelRunner/Utils/TrainingLogger.h"
+#include "SerDes/TensorSpec.h"
 #include "SerDes/baseSerDes.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/TensorSpec.h"
 #include <fstream>
 #include <memory>
 #include <system_error>

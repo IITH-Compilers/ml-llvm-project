@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "MLModelRunner/Utils/TrainingLogger.h"
-#include "llvm/Transforms/TensorSpec.h"
+#include "SerDes/TensorSpec.h"
 #include "llvm/Config/config.h"
 
 #include "llvm/ADT/Twine.h"

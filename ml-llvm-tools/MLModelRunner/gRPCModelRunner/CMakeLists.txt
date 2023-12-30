@@ -12,7 +12,8 @@ endif()
 include_directories(${Protobuf_INCLUDE_DIRS})
 # Find gRPC installation
 # Looks for gRPCConfig.cmake file installed by gRPC's cmake installation.
-find_package(gRPC CONFIG REQUIRED)
+
+find_package(gRPC 1.34.0 EXACT CONFIG REQUIRED)
 message(STATUS "Using gRPC ${gRPC_VERSION}")
 
 set(_GRPC_GRPCPP gRPC::grpc++)
@@ -88,5 +89,6 @@ target_link_libraries(LLVMgRPCModelRunner
 	          ${_PROTOBUF_LIBPROTOBUF}
 )
 
+message("PROTOBUF_INCLUDE_DIRS = ${Protobuf_INCLUDE_DIRS}")
 target_include_directories(LLVMgRPCModelRunner PRIVATE ${LLVM_INCLUDE_DIR}/Service)
 target_include_directories(LLVMgRPCModelRunner PUBLIC ${Protobuf_INCLUDE_DIRS})

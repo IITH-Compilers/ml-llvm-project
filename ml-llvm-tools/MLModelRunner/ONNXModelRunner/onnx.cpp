@@ -8,6 +8,7 @@
 
 #include "MLModelRunner/ONNXModelRunner/onnx.h"
 #include "onnxruntime_cxx_api.h"
+#include <cmath>
 
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>

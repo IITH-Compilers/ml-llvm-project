@@ -46,7 +46,6 @@ endfunction()
 # called ${cpp_class} - which may be a namespace-qualified class name.
 function(tf_compile model tag_set signature_def_key fname cpp_class hdr_file obj_file)
   tf_get_absolute_path(${model} ${CMAKE_CURRENT_BINARY_DIR} LLVM_ML_MODELS_ABSOLUTE)
-  message("Using model at " ${LLVM_ML_MODELS_ABSOLUTE})
   add_custom_command(OUTPUT ${obj_file} ${hdr_file}
     COMMAND ${TENSORFLOW_AOT_COMPILER} aot_compile_cpu
           --multithreading false
@@ -70,8 +69,8 @@ function(tf_compile model tag_set signature_def_key fname cpp_class hdr_file obj
 
   endfunction()
 
-function(tf_find_and_compile model default_url default_path test_model_generator tag_set signature_def_key fname cpp_class)
-  set(prefix ${CMAKE_CURRENT_BINARY_DIR}/${fname})
+function(tf_find_and_compile model default_url default_path test_model_generator tag_set signature_def_key fname cpp_class opath)
+  set(prefix ${opath}/${fname})
   set(obj_file ${prefix}.o)
   set(hdr_file ${prefix}.h)
   string(TOUPPER ${fname} fname_allcaps)

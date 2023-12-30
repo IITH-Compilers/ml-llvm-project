@@ -64,6 +64,7 @@ if (DEFINED LLVM_HAVE_TF_AOT OR LLVM_HAVE_TFLITE)
   set(LLVM_INLINER_MODEL_CURRENT_URL "<UNSPECIFIED>" CACHE STRING "URL to download the LLVM inliner model")
 
   if (DEFINED LLVM_HAVE_TF_AOT)
+  
     tf_find_and_compile(
       ${LLVM_INLINER_MODEL_PATH}
       ${LLVM_INLINER_MODEL_CURRENT_URL}
@@ -86,6 +87,7 @@ endif()
 
 add_llvm_component_library(LLVMMLModelRunner
 PipeModelRunner.cpp
+${GeneratedMLSources}
 
 DEPENDS
 ${MLDeps}

@@ -11,8 +11,8 @@
 #define MLMODELRUNNER_WITH_TENSORSPEC_H
 
 #include "MLModelRunner/MLModelRunner.h"
+#include "SerDes/TensorSpec.h"
 #include "SerDes/baseSerDes.h"
-#include "llvm/Transforms/TensorSpec.h"
 // #include "llvm/IR/PassManager.h"
 
 namespace llvm {
@@ -57,9 +57,10 @@ public:
 
   // void feedInputBuffers(std::vector<void*> Buffers);
   virtual void requestExit() = 0;
-  
+
 protected:
-  MLModelRunnerWithTensorSpec(LLVMContext &Ctx, Kind Type, size_t NrInputs, BaseSerDes::Kind SerializerType)
+  MLModelRunnerWithTensorSpec(LLVMContext &Ctx, Kind Type, size_t NrInputs,
+                              BaseSerDes::Kind SerializerType)
       : MLModelRunner(Ctx, Type, SerializerType), InputBuffers(NrInputs) {
     assert(Type != Kind::Unknown);
   }
