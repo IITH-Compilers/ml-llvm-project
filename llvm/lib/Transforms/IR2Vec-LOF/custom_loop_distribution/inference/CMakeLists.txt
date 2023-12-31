@@ -7,5 +7,6 @@ add_llvm_component_library(LLVMCLDInference
 
 DEPENDS
   LLVMMLBridge
+  intrinsics_gen
 )
 target_link_libraries(LLVMCLDInference PUBLIC LLVMMLBridge)

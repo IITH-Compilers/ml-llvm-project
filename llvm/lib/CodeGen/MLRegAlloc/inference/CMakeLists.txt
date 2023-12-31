@@ -8,5 +8,6 @@ ADDITIONAL_HEADER_DIRS
 
 DEPENDS
   LLVMMLBridge
+  intrinsics_gen
 )
 target_link_libraries(LLVMMLRegAllocInference PUBLIC LLVMMLBridge)

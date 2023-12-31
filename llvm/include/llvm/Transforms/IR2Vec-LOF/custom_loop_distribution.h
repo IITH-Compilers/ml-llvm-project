@@ -1,6 +1,7 @@
 #ifndef __IR2Vec_CUSTOM_LOOP_DISTRIBUTION_H__
 #define __IR2Vec_CUSTOM_LOOP_DISTRIBUTION_H__
 
+#include "MLModelRunner/MLModelRunner.h"
 #include "llvm/Analysis/DDG.h"
 #include "llvm/Analysis/DependenceGraphBuilder.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -9,10 +10,9 @@
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IR2Vec-LOF/LoopDistribution.h"
-#include "llvm/Support/CommandLine.h"
-#include "MLModelRunner/MLModelRunner.h"
 #include "llvm/Transforms/IR2Vec-LOF/multi_agent_env.h"
 #include <fstream>
 
@@ -38,10 +38,11 @@ public:
   bool runOnFunction(Function &F) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
+
 private:
   void canonicalizeLoopsWithLoads();
 
-  void initPipeCommunication(const std::vector<std::string>& RDG_List);
+  void initPipeCommunication(const std::vector<std::string> &RDG_List);
 
   std::unique_ptr<MLModelRunner> MLRunner;
   std::ofstream outfile;

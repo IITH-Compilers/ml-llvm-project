@@ -29,6 +29,7 @@
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include <algorithm>
 #include <chrono>
+#include <fstream>
 #include <google/protobuf/text_format.h>
 #include <iterator>
 #include <memory>
@@ -310,7 +311,10 @@ struct HelloMLBridge : public ModulePass,
 
     auto Duration = std::chrono::duration_cast<std::chrono::microseconds>(
         EndTime - StartTime);
-    outs() << n << " " << Duration.count() << "\n";
+    std::ofstream outputFile;
+    outputFile.open("pipe-" + data_format + "-inference.csv", std::ios_base::app);
+    outputFile << n << "," << Duration.count() << "\n";
+    outputFile.close();
   }
 
   inline void populateFeatureVector() {
@@ -345,7 +349,10 @@ struct HelloMLBridge : public ModulePass,
 
     auto Duration = std::chrono::duration_cast<std::chrono::microseconds>(
         EndTime - StartTime);
-    errs() << n << " " << Duration.count() << "\n";
+    std::ofstream outputFile;
+    outputFile.open("tf-inference.csv", std::ios_base::app);
+    outputFile << n << "," << Duration.count() << "\n";
+    outputFile.close();
   }
 
   bool runOnModule(Module &M) override {
@@ -392,7 +399,10 @@ struct HelloMLBridge : public ModulePass,
         auto EndTime = std::chrono::high_resolution_clock::now();
         auto Duration = std::chrono::duration_cast<std::chrono::microseconds>(
             EndTime - StartTime);
-        outs() << n << " " << Duration.count() << "\n";
+        std::ofstream outputFile;
+        outputFile.open("onnx-inference.csv", std::ios_base::app);
+        outputFile << n << "," << Duration.count() << "\n";
+        outputFile.close();
       } else {
         errs() << "Using 2nd gRPC flow...\n";
         auto StartTime = std::chrono::high_resolution_clock::now();
@@ -417,7 +427,10 @@ struct HelloMLBridge : public ModulePass,
 
         auto Duration = std::chrono::duration_cast<std::chrono::microseconds>(
             EndTime - StartTime);
-        outs() << n << " " << Duration.count() << "\n";
+        std::ofstream outputFile;
+        outputFile.open("grpc-interence.csv", std::ios_base::app);
+        outputFile << n << "," << Duration.count() << "\n";
+        outputFile.close();
       }
     }
     return false;

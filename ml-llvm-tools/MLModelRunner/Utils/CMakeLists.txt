@@ -1,1 +1,0 @@
-add_llvm_component_library(LLVMMLModelRunnerUtils TrainingLogger.cpp)
