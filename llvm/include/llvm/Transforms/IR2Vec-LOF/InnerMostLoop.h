@@ -1,13 +1,13 @@
 #ifndef __INNER_MOST_LOOP_H__
 #define __INNER_MOST_LOOP_H__
 
-#include "llvm/IR2Vec.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Analysis/DDG.h"
 #include "llvm/Analysis/DependenceGraphBuilder.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR2Vec.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 
@@ -17,7 +17,6 @@ namespace llvm {
 
 class InnerMostLoopPass : public FunctionPass {
 private:
-
   int FunctionNumber = 0;
   // OptimizationRemarkEmitter *ORE;
 
@@ -37,9 +36,8 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
-  void dumpIR2VecforIML(Loop &IML, std::string Filename,
-                         std::string ll_name,
-                         std::string functionName);
+  void dumpIR2VecforIML(Loop &IML, std::string Filename, std::string ll_name,
+                        std::string functionName);
 };
 
 } // namespace llvm
