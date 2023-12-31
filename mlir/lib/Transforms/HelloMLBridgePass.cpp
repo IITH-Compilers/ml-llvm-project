@@ -260,6 +260,7 @@ static cl::opt<bool> useTF("mlir-hello-use-tf", cl::Hidden,
 
 using namespace mlir;
 using namespace grpc;
+using namespace MLBridge;
 using namespace helloMLBridgegRPC;
 
 namespace {
@@ -326,7 +327,7 @@ public:
     switch (n) {
 #define M(x)                                                                   \
   case x:                                                                      \
-    MLRunner = new TFModelRunner<LinearModel##x>("output");      \
+    MLRunner = new TFModelRunner<LinearModel##x>("output");                    \
     break;
       MODELS(M)
 #undef M
