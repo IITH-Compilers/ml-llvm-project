@@ -1442,11 +1442,11 @@ void PassManagerBuilder::populateModulePassManager(
   // is handled separately, so just check this is not the ThinLTO post-link.
   bool DefaultOrPreLinkPipeline = !PerformThinLTO;
 
-  if (OPosetRL){
-      errs() << "opt level "<< OptLevel << " SizeLevel " << SizeLevel << "\n";
-      MPM.add(createPosetRLPass());
-      return;
-  }
+  // if (OPosetRL){
+  //     errs() << "opt level "<< OptLevel << " SizeLevel " << SizeLevel << "\n";
+  //     MPM.add(createPosetRLPass());
+  //     return;
+  // }
 
   // if(OCodeSizeOpt) {
   //     errs() << "opt level "<< OptLevel << " SizeLevel " << SizeLevel << "\n";
@@ -1709,9 +1709,9 @@ void PassManagerBuilder::populateModulePassManager(
   	MPM.add(createLoopDistributePass());
   } 
   
-  if(Runcustom_loop_distribution) {
-    MPM.add(createcustom_loop_distributionPass());
-  }
+  // if(Runcustom_loop_distribution) {
+  //   MPM.add(createcustom_loop_distributionPass());
+  // }
 
   if(!RunNoPostDistributionPasses) {
   MPM.add(createLoopVectorizePass(!LoopsInterleaved, !LoopVectorize));

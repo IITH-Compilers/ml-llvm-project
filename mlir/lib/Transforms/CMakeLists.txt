@@ -20,6 +20,7 @@ add_llvm_library(MLIRTransforms
   Vectorize.cpp
   ViewOpGraph.cpp
   ViewRegionGraph.cpp
+  HelloMLBridgePass.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Transforms
@@ -35,4 +36,11 @@ target_link_libraries(MLIRTransforms
   MLIRPass
   MLIRTransformUtils
   MLIRVectorOps
+  LLVMMLBridge
   )
+
+file(GLOB MODEL_OBJECTS ${CMAKE_CURRENT_SOURCE_DIR}/tf_models/*.o)
+
+foreach(MODEL_OBJECT ${MODEL_OBJECTS})
+  target_link_libraries(MLIRTransforms ${MODEL_OBJECT})
+endforeach()

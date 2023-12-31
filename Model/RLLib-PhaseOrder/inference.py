@@ -46,6 +46,9 @@ import sys
 sys.path.append('/Pramana/ML_LLVM_Tools/ml-llvm-project/ml-llvm-tools/MLModelRunner/gRPCModelRunner/Python-Utilities/')
 import posetRL_pb2_grpc, posetRL_pb2
 
+sys.path.append('/home/cs21btech11051/ml-llvm-project/ml-llvm-tools/CompilerInterface/')
+from GrpcCompilerInterface import GrpcCompilerInterface
+
 from Filesystem import *
 
 logger = logging.getLogger(__file__)
@@ -97,7 +100,7 @@ parser.add_argument(
     required=False,
     default=False,
 )
-parser.add_argument("--server_port", type=str, help="Server port")
+parser.add_argument("--server_port", type=str, help="Server port", default=50051)
 parser.add_argument(
     "--data_format",
     type=str,
@@ -153,7 +156,8 @@ class PhaseOrderInference:
                     "action_space_size": 34,
                     "use_pipe": use_pipe,
                     "data_format": data_format,
-                    "use_grpc": use_grpc
+                    "use_grpc": use_grpc,
+                    "server_port": args.server_port
                 },
                 "framework": "torch",
                 "explore": False,
@@ -188,7 +192,7 @@ class PhaseOrderInference:
     # Predict best optimization sequence for the given LLVM IR
     def run_predict(self, test_file=None):
         env = PhaseOrder(self.config["env_config"])
-
+    
         print("test_file {}".format(test_file))
         state = env.reset(test_file)
         score = 0
@@ -212,8 +216,8 @@ class PhaseOrderInference:
         return reward, response
     
 class service_server(posetRL_pb2_grpc.PosetRLService):
-    def __init__(self, inferece_obj):
-        self.inference_obj = inferece_obj
+    def __init__(self, inference_obj):
+        self.inference_obj = inference_obj
         self.new_file = True
         self.state = None
         self.env = None
@@ -262,20 +266,21 @@ if __name__ == "__main__":
             reward, response = inference_obj.run_predict()
     elif args.use_grpc:
         # ray.init()
+        compiler_interface = GrpcCompilerInterface(mode = 'server', add_server_method=posetRL_pb2_grpc.add_PosetRLServiceServicer_to_server, grpc_service_obj=service_server(inference_obj), hostport= args.server_port)
+        compiler_interface.start_server()
+        # server=grpc.server(futures.ThreadPoolExecutor(max_workers=20),options = [
+        #             ('grpc.max_send_message_length', 200*1024*1024), #50MB
+        #                     ('grpc.max_receive_message_length', 200*1024*1024) #50MB
+        #                         ])
 
-        server=grpc.server(futures.ThreadPoolExecutor(max_workers=20),options = [
-                    ('grpc.max_send_message_length', 200*1024*1024), #50MB
-                            ('grpc.max_receive_message_length', 200*1024*1024) #50MB
-                                ])
+        # # RegisterAllocationInference_pb2_grpc.add_RegisterAllocationInferenceServicer_to_server(service_server(inference_obj),server)
+        # posetRL_pb2_grpc.add_PosetRLServiceServicer_to_server(service_server(inference_obj),server)
+        # # server.add_insecure_port('localhost:' + str(sys.argv[1]))
+        # server.add_insecure_port('127.0.0.1:50051')
 
-        # RegisterAllocationInference_pb2_grpc.add_RegisterAllocationInferenceServicer_to_server(service_server(inference_obj),server)
-        posetRL_pb2_grpc.add_PosetRLServiceServicer_to_server(service_server(inference_obj),server)
-        # server.add_insecure_port('localhost:' + str(sys.argv[1]))
-        server.add_insecure_port('127.0.0.1:50051')
-
-        server.start()
-        print("Server Running")        
-        server.wait_for_termination()
+        # server.start()
+        # print("Server Running")        
+        # server.wait_for_termination()
     else:
         now = datetime.now()
         date_time = now.strftime("%m-%d-%Y-%H-%M-%S")
