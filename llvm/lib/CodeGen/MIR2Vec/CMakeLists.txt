@@ -6,4 +6,6 @@ add_llvm_component_library(LLVMCollectMachineIR
     DEPENDS intrinsics_gen)
 
 add_subdirectory(Embeddings)
+target_link_libraries(LLVMCollectMachineIR PRIVATE ModelRunnerUtils)
+
 configure_file (./Config.h.cmake Config.h @ONLY)
