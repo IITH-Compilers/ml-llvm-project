@@ -255,11 +255,11 @@ PreservedAnalyses HelloMLBridge::run(Module &M, ModuleAnalysisManager &MAM) {
 
 void HelloMLBridge::setModelRunner(int n) {
     switch (n) {
-  #define M(x) \
-  case x: \
-    MLRunner = std::make_unique<TFModelRunner<LinearModel##x>>( \
-        M->getContext(), "output"); \
-    break;
+#define M(x)                                                                   \
+    case x:                                                                    \
+      MLRunner = std::make_unique<TFModelRunner<LinearModel##x>>(              \
+          "output", M->getContext());                                        \
+      break;
       MODELS(M)
   #undef M
     }
