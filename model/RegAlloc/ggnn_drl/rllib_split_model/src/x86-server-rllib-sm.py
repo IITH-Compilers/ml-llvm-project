@@ -1,7 +1,7 @@
 import sys
 from config import REPO_DIR, MODEL_PATH
 sys.path.append(
-    f"{REPO_DIR}/ml-llvm-tools/MLModelRunner/gRPCModelRunner/Python-Utilities"
+    f"{REPO_DIR}/MLCompilerBridge/MLModelRunner/gRPCModelRunner/Python-Utilities"
 )
 import RegisterAllocationInference_pb2_grpc, RegisterAllocationInference_pb2
 
@@ -52,7 +52,7 @@ class service_server(
     RegisterAllocationInference_pb2_grpc.RegisterAllocationInferenceServicer
 ):
     def __init__(self):
-        model_path = "/Pramana/ML_LLVM_Tools/RL4ReAl-checkpoint/checkpoint_000002/"
+        model_path = MODEL_PATH
         args = {
             "no_render": True,
             "checkpoint": model_path,

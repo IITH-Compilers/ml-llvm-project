@@ -11,4 +11,4 @@ DEPENDS
 intrinsics_gen
 LLVMMLBridge
 )
-target_link_libraries(LLVMPosetRL PUBLIC LLVMMLBridge)
+target_link_libraries(LLVMPosetRL PUBLIC LLVMMLBridge )

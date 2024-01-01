@@ -44,7 +44,7 @@ from datetime import datetime
 from po_config import REPO_DIR, BUILD_DIR
 
 import sys
-sys.path.append(f"{REPO_DIR}/ml-llvm-tools/MLModelRunner/gRPCModelRunner/Python-Utilities")
+sys.path.append(f"{REPO_DIR}/MLCompilerBridge/MLModelRunner/gRPCModelRunner/Python-Utilities")
 import posetRL_pb2_grpc, posetRL_pb2
 
 sys.path.append(f"{REPO_DIR}/MLCompilerBridge/CompilerInterface/")

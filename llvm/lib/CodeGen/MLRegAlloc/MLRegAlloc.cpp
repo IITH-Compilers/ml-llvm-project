@@ -16,6 +16,7 @@
 #include "MLModelRunner/ONNXModelRunner/ONNXModelRunner.h"
 #include "MLModelRunner/PipeModelRunner.h"
 #include "MLModelRunner/gRPCModelRunner.h"
+#include "MLModelRunner/Utils/MLConfig.h"
 #include "RegAllocBase.h"
 #include "SerDes/baseSerDes.h"
 #include "SpillPlacement.h"
@@ -49,7 +50,6 @@
 #include "llvm/CodeGen/LiveRegMatrix.h"
 #include "llvm/CodeGen/LiveStacks.h"
 #include "llvm/CodeGen/MIR2Vec/Symbolic.h"
-#include "llvm/CodeGen/MLConfig.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
@@ -194,9 +194,10 @@ MLRA::MLRA() {
   // if (pred_file != "") {
   //   setPredictionFromFile(pred_file);
   // }
-  loadTargetRegisterConfig(MLConfig::mlconfig + "/RegColorMap_Both.json");
+  loadTargetRegisterConfig(MLConfig::mlconfig + "/regalloc/RegColorMap_Both.json");
   symbolic = new MIR2Vec_Symbolic(MLConfig::mlconfig +
-                                  "/seedEmbedding_5500E_100D.txt");
+  
+                                  "/regalloc/seedEmbedding_5500E_100D.txt");
   //???
   // SetStub<registerallocationinference::RegisterAllocationInference>(
   //     mlra_server_address);
@@ -2610,13 +2611,13 @@ void MLRA::inference() {
     } else if (enable_rl_inference_engine) {
       errs() << "In RL inference engine\n";
 #define nodeSelectionModelPath                                                 \
-  "/Pramana/ML_LLVM_Tools/RL4ReAl-onnx-checkpoint/SELECT_NODE_MODEL_PATH.onnx"
+  MLConfig::mlconfig + "/regalloc/onnx-checkpoint/SELECT_NODE_MODEL_PATH.onnx"
 #define taskSelectionModelPath                                                 \
-  "/Pramana/ML_LLVM_Tools/RL4ReAl-onnx-checkpoint/SELECT_TASK_MODEL_PATH.onnx"
+  MLConfig::mlconfig + "/regalloc/onnx-checkpoint/SELECT_TASK_MODEL_PATH.onnx"
 #define nodeColouringModelPath                                                 \
-  "/Pramana/ML_LLVM_Tools/RL4ReAl-onnx-checkpoint/COLOR_NODE_MODEL_PATH.onnx"
+  MLConfig::mlconfig + "/regalloc/onnx-checkpoint/COLOR_NODE_MODEL_PATH.onnx"
 #define nodeSplitingModelPath                                                  \
-  "/Pramana/ML_LLVM_Tools/RL4ReAl-onnx-checkpoint/SPLIT_NODE_MODEL_PATH.onnx"
+  MLConfig::mlconfig + "/regalloc/onnx-checkpoint/SPLIT_NODE_MODEL_PATH.onnx"
 
       std::map<std::string, Agent *> agentMap;
       agentMap[NODE_SELECTION_AGENT] = new Agent(nodeSelectionModelPath);
@@ -2692,13 +2693,18 @@ void MLRA::inference() {
       allocatePhysRegsViaRL();
       return;
     } else {
+      errs() << "Creting gRPC model runner\n";
       MLRunner = std::make_unique<gRPCModelRunner<
           registerallocationinference::RegisterAllocationInference,
           registerallocationinference::RegisterAllocationInference::Stub,
           registerallocationinference::RegisterProfileList,
           registerallocationinference::Data>>(
           mlra_server_address, &ClientModeRequest, &ClientModeResponse);
+      errs() << "After Creting gRPC model runner\n";
+      
       MLRunner->setResponse(&ClientModeResponse);
+      errs() << "After seting data runner\n";
+      
       initPipeCommunication();
     }
   }

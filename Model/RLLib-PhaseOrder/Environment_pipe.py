@@ -36,7 +36,7 @@ from po_config import REPO_DIR, BUILD_DIR
 
 import grpc
 # sys.path.append('/Pramana/ML_LLVM_Tools/ml-llvm-project/ml-llvm-tools/MLModelRunner/gRPCModelRunner/Python-Utilities/')
-sys.path.append(f"{REPO_DIR}/ml-llvm-tools/MLModelRunner/gRPCModelRunner/Python-Utilities/")
+sys.path.append(f"{REPO_DIR}/MLCompilerBridge/MLModelRunner/gRPCModelRunner/Python-Utilities/")
 import posetRL_pb2_grpc, posetRL_pb2
 from google.protobuf.empty_pb2 import Empty
 # pipe related imports
@@ -141,7 +141,7 @@ class PhaseOrder(gym.Env):
         self.tensor_specs = None
         self.advice_spec = None
 
-        self.temp_rootname = "posetrl_pipe"
+        self.temp_rootname = "/tmp/posetrl_pipe"
         if self.use_pipe:
             self.compiler_interface = PipeCompilerInterface(self.data_format, self.temp_rootname)
             # self.compiler_interface.reset_pipes()
@@ -405,7 +405,7 @@ class PhaseOrder(gym.Env):
             # Compute O0 Binary size
             command = self.FileSys_Obj.ClangPath + " " + self.clang_arch_flag + " -c " + \
                 self.Curr_Dir + "/" + fileName + ".ll -o " + \
-                self.Curr_Dir + "/" + "base_binary.o" + " -mllvm -ml-config-path=/home/cs21btech11051/ml-llvm-project/build_all/config"
+                self.Curr_Dir + "/" + "base_binary.o" + f" -mllvm -ml-config-path={REPO_DIR}/build_all/config"
             print("O0 binary object compile command: "+command)
             os.system(command)
             baseBinarySize = os.path.getsize(self.Curr_Dir + "/base_binary.o")
@@ -415,15 +415,15 @@ class PhaseOrder(gym.Env):
             # Compute Oz Binary size
             command = self.FileSys_Obj.OptPath + " " + self.opt_arch_flag + " -S  -add-size-attr --enableMinSizeAttr --removeNoInlineAttr " + \
                 self.Curr_Dir + "/" + fileName + ".ll -o " + \
-                self.Curr_Dir + "/" + fileName + ".ll" + "-ml-config-path=/home/cs21btech11051/ml-llvm-project/build_all/config "
+                self.Curr_Dir + "/" + fileName + ".ll" + f"-ml-config-path={REPO_DIR}/build_all/config "
             command = self.FileSys_Obj.OptPath + " " + self.opt_arch_flag + " -S -Oz " + \
                 self.Curr_Dir + "/" + fileName + ".ll -o " + \
-                self.Curr_Dir + "/" + fileName + "_Oz.ll" + " -ml-config-path=/home/cs21btech11051/ml-llvm-project/build_all/config "
+                self.Curr_Dir + "/" + fileName + "_Oz.ll" + f" -ml-config-path={REPO_DIR}/build_all/config "
             print(command)
             os.system(command)
             command = self.FileSys_Obj.ClangPath + " " + self.clang_arch_flag + " -c " + \
                 self.Curr_Dir + "/" + fileName + "_Oz.ll -o " + \
-                self.Curr_Dir + "/" + "Oz_binary.o" + " -mllvm -ml-config-path=/home/cs21btech11051/ml-llvm-project/build_all/config "
+                self.Curr_Dir + "/" + "Oz_binary.o" + f" -mllvm -ml-config-path={REPO_DIR}/build_all/config "
             print(command)
             os.system(command)
             minBinarySize = os.path.getsize(self.Curr_Dir + "/Oz_binary.o")
@@ -542,7 +542,7 @@ class PhaseOrder(gym.Env):
     # Get llvm-mca Block RThroughput for the IR
     def getMCACost(self, new_file):
         cmd1 = self.FileSys_Obj.LlcPath + " " + self.opt_arch_flag + \
-            " " + new_file + ".ll" + " -o " + new_file + ".s" + " -ml-config-path=/home/cs21btech11051/ml-llvm-project/build_all/config"
+            " " + new_file + ".ll" + " -o " + new_file + ".s" + f" -ml-config-path={REPO_DIR}/build_all/config"
         os.system(cmd1)
         cmd2 = self.FileSys_Obj.MCAPath + " " + \
             self.opt_arch_flag + " " + new_file + ".s" 
@@ -592,11 +592,11 @@ class PhaseOrder(gym.Env):
         # Here we can use gRPC server to apply the action
         command = self.FileSys_Obj.OptPath + " " + self.opt_arch_flag + \
             " -S -O34 -SubNum=" + str(action) + " " + \
-            self.CurrIR + " -o " + new_IR + " -ml-config-path=/home/cs21btech11051/ml-llvm-project/build_all/config"
+            self.CurrIR + " -o " + new_IR + f" -ml-config-path={REPO_DIR}/build_all/config"
         print("Opt Command: "+command)
         os.system(command)
         command = self.FileSys_Obj.ClangPath + " " + \
-            self.clang_arch_flag + " -c " + new_IR + " -o " + new_file + ".o" + " -mllvm -ml-config-path=/home/cs21btech11051/ml-llvm-project/build_all/config"
+            self.clang_arch_flag + " -c " + new_IR + " -o " + new_file + ".o" + f" -mllvm -ml-config-path={REPO_DIR}/build_all/config"
         os.system(command)
 
         print("clang command: "+command)
@@ -659,7 +659,7 @@ class PhaseOrder(gym.Env):
         # object size reward
         objectFilePath = f"{self.temporaryDirectory}/objectfile_{self.worker_index}.o"
         objectFileGenerationCommand = self.FileSys_Obj.ClangPath + " -c " + \
-            self.clang_arch_flag + " " + AssemblyFilePath + " -o " + objectFilePath + " -mllvm -ml-config-path=/home/cs21btech11051/ml-llvm-project/build_all/config"
+            self.clang_arch_flag + " " + AssemblyFilePath + " -o " + objectFilePath + f" -mllvm -ml-config-path={REPO_DIR}/build_all/config"
 
         print("Object File Generation Command: "+objectFileGenerationCommand)
         os.system(objectFileGenerationCommand)
@@ -675,7 +675,7 @@ class PhaseOrder(gym.Env):
 
         self.lastBinarySize = currentBinarySize
 
-        llvmMcaCommand = f"{self.FileSys_Obj.MCAPath} {self.opt_arch_flag} {AssemblyFilePath}" #+ " -ml-config-path=/home/cs21btech11051/ml-llvm-project/build_all/config"
+        llvmMcaCommand = f"{self.FileSys_Obj.MCAPath} {self.opt_arch_flag} {AssemblyFilePath}" #+ " -ml-config-path={REPO_DIR}/build_all/config"
 
         print(f"LLVM MCA Command: {llvmMcaCommand}")
 
@@ -735,13 +735,13 @@ class PhaseOrder(gym.Env):
         return config_path
 
     def startServer(self, filename, ip):
-        optPath = "/home/cs21btech11051/ml-llvm-project/build_all/bin/opt"
-        clangPath = "/home/cs21btech11051/ml-llvm-project/build_all/bin/clang"
+        optPath = f"{REPO_DIR}/build_all/bin/opt"
+        clangPath = f"{REPO_DIR}/build_all/bin/clang"
         filepath = self.train_Dir + "/" + filename
         newfilepath = self.assembly_file_path
         data_format = self.data_format
 
-        cmd = f"{clangPath} -S -mllvm --OPosetRL -mllvm -ml-config-path=/home/cs21btech11051/ml-llvm-project/build_all/config -mllvm --training -mllvm -data-format={data_format} -mllvm --server_address={ip} {filepath}  -o {newfilepath}"
+        cmd = f"{clangPath} -S -mllvm --OPosetRL -mllvm -ml-config-path={REPO_DIR}/build_all/config -mllvm --training -mllvm -data-format={data_format} -mllvm --server_address={ip} {filepath}  -o {newfilepath}"
 #quiet#        print("Server starting command: "+cmd)
         if self.use_pipe:
             cmd = cmd + " -mllvm -use-pipe"

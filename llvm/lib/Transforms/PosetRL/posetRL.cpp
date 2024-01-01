@@ -28,8 +28,10 @@
 #include "MLModelRunner/ONNXModelRunner/ONNXModelRunner.h"
 #include "MLModelRunner/PipeModelRunner.h"
 #include "MLModelRunner/gRPCModelRunner.h"
+#include "MLModelRunner/Utils/MLConfig.h"
 
 #include "grpcpp/impl/codegen/status.h"
+
 
 using namespace llvm;
 using namespace grpc;
@@ -104,8 +106,8 @@ struct PosetRL : public ModulePass,
             posetRLgRPC::PosetRLService::Stub, posetRLgRPC::EmbeddingResponse,
             posetRLgRPC::ActionRequest>>(server_address, this, &M.getContext());
       } else if (useONNX) {
-        Agent agent("/Pramana/ML_LLVM_Tools/ml-llvm-project/"
-                    "onnx_checkpoints_posetrl/posetrl_model.onnx");
+        Agent agent(MLConfig::mlconfig +
+                    "/posetrl/posetrl_model.onnx");
         std::map<std::string, Agent *> agents;
         agents["agent"] = &agent;
         MLRunner =
@@ -149,8 +151,7 @@ struct PosetRL : public ModulePass,
   Embedding getEmbeddings() override {
     auto Ir2vec =
         IR2Vec::Embeddings(*M, IR2Vec::IR2VecMode::FlowAware,
-                           "/Pramana/ML_LLVM_Tools/ml-llvm-project/IR2Vec/"
-                           "vocabulary/seedEmbeddingVocab-300-llvm10.txt");
+                           MLConfig::mlconfig + "/posetrl/seedEmbeddingVocab-300-llvm10.txt");
     auto ProgVector = Ir2vec.getProgramVector();
     Embedding Vector(ProgVector.begin(), ProgVector.end());
     return Vector;
