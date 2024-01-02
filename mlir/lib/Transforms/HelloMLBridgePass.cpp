@@ -5,6 +5,7 @@
 #include "MLModelRunner/PipeModelRunner.h"
 #include "MLModelRunner/TFModelRunner.h"
 #include "MLModelRunner/gRPCModelRunner.h"
+#include "MLModelRunner/Utils/MLConfig.h"
 #include "grpc/helloMLBridge/helloMLBridge.grpc.pb.h"
 #include "grpc/helloMLBridge/helloMLBridge.pb.h"
 #include "mlir/IR/MLIRContext.h"
@@ -376,8 +377,8 @@ public:
       } else if (useONNX) {
         std::ofstream outputFile;
         outputFile.open("onnx.csv", std::ios::app);
-        Agent *agent = new Agent("/Pramana/ML_LLVM_Tools/ml-llvm-project/"
-                                 "onnx_test_dir/dummy-torch-model-" +
+        Agent *agent = new Agent( MLConfig::mlconfig + 
+                                 "/hellopass/onnx_test_dir/dummy-torch-model-" +
                                  std::to_string(n) + ".onnx");
         std::map<std::string, Agent *> agents;
         agents["agent"] = agent;

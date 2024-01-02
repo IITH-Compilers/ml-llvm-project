@@ -9,7 +9,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 
 #include "Config.h"
-#include "llvm/CodeGen/MLConfig.h"
+#include "MLModelRunner/Utils/MLConfig.h"
 
 #include <fstream>
 

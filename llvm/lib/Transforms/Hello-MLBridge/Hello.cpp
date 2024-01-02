@@ -11,6 +11,7 @@
 #include "MLModelRunner/ONNXModelRunner/ONNXModelRunner.h"
 #include "MLModelRunner/PipeModelRunner.h"
 #include "MLModelRunner/gRPCModelRunner.h"
+#include "MLModelRunner/Utils/MLConfig.h"
 #include "grpc/helloMLBridge/helloMLBridge.grpc.pb.h"
 #include "grpc/helloMLBridge/helloMLBridge.pb.h"
 #include "grpcpp/impl/codegen/status.h"
@@ -386,8 +387,8 @@ struct HelloMLBridge : public ModulePass,
                             helloMLBridgegRPC::ActionRequest>>(
             server_address, this, &M.getContext());
       } else if (useONNX) {
-        Agent *agent = new Agent(
-            "/Pramana/ML_LLVM_Tools/hello-MLBridge/dummy-torch-model-" +
+        Agent *agent = new Agent( MLConfig::mlconfig + 
+            "/hellopass/onnx_test_dir/dummy-torch-model-" +
             std::to_string(n) + ".onnx");
         std::map<std::string, Agent *> agents;
         agents["agent"] = agent;
