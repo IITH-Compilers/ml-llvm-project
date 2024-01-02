@@ -1,3 +1,4 @@
+link_directories("${ONNXRUNTIME_ROOTDIR}/lib")
 set(LLVM_OPTIONAL_SOURCES
   null.cpp
 )
