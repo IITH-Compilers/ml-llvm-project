@@ -205,7 +205,6 @@ namespace {
       (void) llvm::createMergeICmpsLegacyPass();
       (void) llvm::createExpandMemCmpPass();
       (void)llvm::createPosetRLPass();
-      (void) llvm::createHelloMLBridgePass();
       // (void) llvm::createCodeSizeOptPass();
       std::string buf;
       llvm::raw_string_ostream os(buf);
