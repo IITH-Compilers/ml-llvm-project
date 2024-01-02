@@ -26,7 +26,7 @@ set(LLVM_LINK_COMPONENTS
   Passes
   PosetRL
   HelloMLBridge
-#  CodeSizeOpt
+ CodeSizeOpt
   AddSizeAttr
   IR2Vec
   CollectMachineIR

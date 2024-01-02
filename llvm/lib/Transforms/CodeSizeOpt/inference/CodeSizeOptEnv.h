@@ -17,6 +17,7 @@
 #define EmbeddingSize 300
 
 using namespace llvm;
+using namespace MLBridge;
 
 typedef std::vector<float> Embedding;
 
