@@ -2,6 +2,7 @@
 #include "MLModelRunner/gRPCModelRunner.h"
 #include "MLModelRunner/PipeModelRunner.h"
 #include "MLModelRunner/ONNXModelRunner/ONNXModelRunner.h"
+#include "MLModelRunner/Utils/MLConfig.h"
 #include "Python.h"
 #include "grpc/LoopDistribution/LoopDistribution.grpc.pb.h"
 #include "grpc/LoopDistribution/LoopDistribution.pb.h"
@@ -28,7 +29,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/IR2Vec-LOF/Config.h"
 #include "llvm/Transforms/IR2Vec-LOF/IR2Vec-SCC.h"
 #include "llvm/Transforms/IR2Vec-LOF/LoopDistribution.h"
 #include "llvm/Transforms/IR2Vec-LOF/RDG.h"
@@ -57,6 +57,11 @@ cl::opt<std::string> server_address(
     "cld-server-address", cl::Hidden,
     cl::desc("Starts the server in the given address; format <ip>:<port>"),
     cl::init("0.0.0.0:50051"));
+
+cl::opt<std::string> model_src(
+    "cld-model-src", cl::Hidden,
+    cl::desc("Path to src directory containing model"),
+    cl::init(""));
 
 custom_loop_distribution::custom_loop_distribution() : FunctionPass(ID) {
   initializecustom_loop_distributionPass(*PassRegistry::getPassRegistry());
@@ -182,6 +187,7 @@ void custom_loop_distribution::initPipeCommunication(
 }
 
 bool custom_loop_distribution::runOnFunction(Function &F) {
+  assert(MLConfig::mlconfig != "" && "ml-config-path required" );
   // if (F.getName() != "s222")
   //   return false;
   // F.dump();
@@ -280,6 +286,7 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
     // errs() << "Code is Commented\n";
     // exit(0);
   } else if (useOrg) {
+    assert(model_src != "" && "ml-config-path required" );
     std::vector<std::string> RDG_List;
     RDG_List.insert(RDG_List.end(), data.input_rdgs_str.begin(),
                     data.input_rdgs_str.end());
@@ -302,12 +309,10 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
     PyRun_SimpleString("import os");
 
     // errs() << "sys.path: " << MODEL_SRC << "\n";
-    PyRun_SimpleString("sys.path.append('/home/cs20mtech12003/"
-                       "ML-Loop-Distribution/model/ggnn_drl/static_v4/src')");
-    // PyRun_SimpleString(std::string("sys.path.append(\"")
-    //                       .append(MODEL_SRC)
-    //                       .append("\")")
-    //                       .c_str());
+    PyRun_SimpleString(std::string("sys.path.append('")
+                          .append(model_src)
+                          .append("')")
+                          .c_str());
     // Build the name object
     pName = PyUnicode_FromString("inference");
 
@@ -346,7 +351,7 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
             Py_INCREF(py_rdg);
           }
 
-          PyObject *distModelPath = PyUnicode_FromString(DIST_INFERENCE_MODEL);
+          PyObject *distModelPath = PyUnicode_FromString(MLConfig::mlconfig.append("/model/dist-checkpoint-final.pth").c_str());
           // PyObject *vfModelPath = PyUnicode_FromString(VF_INFERENCE_MODEL);
 
           PyObject *arglist = PyTuple_Pack(2, my_list, distModelPath);

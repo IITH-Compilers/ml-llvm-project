@@ -59,7 +59,7 @@ from functools import reduce
 import operator
 
 sys.path.extend([
-    f"{REPO_DIR}/ml-llvm-tools/MLModelRunner/gRPCModelRunner/Python-Utilities"
+    f"{REPO_DIR}/MLCompilerBridge/MLModelRunner/gRPCModelRunner/Python-Utilities"
 ])
 
 config_path=None
@@ -715,7 +715,7 @@ class DistributeLoopEnv(MultiAgentEnv):
 
         # edit server, path
         if(self.use_pipe):
-            cmd = optPath + " -LoopDistributionServer -loopID " + loopId + " -funcName " + functionName + " -lc-function " + functionName + " -lc-lID " + loopId + " --ml-config-path /Pramana/ML_LLVM_Tools/ml-llvm-project/build_loopdist/config " + " -S " + filePath + " --use-pipe-loop-dist " + " --loop-dist-data-format " +  self.config["data_format"]  + " -o /dev/null"     # " --ml-config-path /home/cs21btech11051/ml-llvm-project/build_all/config " +
+            cmd = optPath + " -LoopDistributionServer -loopID " + loopId + " -funcName " + functionName + " -lc-function " + functionName + " -lc-lID " + loopId + " --ml-config-path /Pramana/ML_LLVM_Tools/ml-llvm-project/build_loopdist/config " + " -S " + filePath + " --use-pipe-loop-dist " + " --loop-dist-data-format " +  self.config["data_format"]  + " -o /dev/null"     # f" --ml-config-path {REPO_DIR}/build_all/config " +
         elif(self.use_grpc):        
             # old cmd : 
             cmd = optPath + " -LoopDistributionServer -loopID " + loopId + " -funcName " + functionName + " -lc-function " + functionName + " -lc-lID " + loopId + " --server_address_loop_dist "+ serverAddress + " --ml-config-path /Pramana/ML_LLVM_Tools/ml-llvm-project/build_loopdist/config " + " -S " + filePath + " --use-grpc-loop-dist " + " -o /dev/null"

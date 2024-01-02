@@ -353,6 +353,7 @@ public:
   }
 
   void runOnOperation() override {
+    assert(MLConfig::mlconfig != "" && "ml-config-path required" );
     // Get the current operation being operated on.
     Operation *op = getOperation();
     // llvm::errs() << "Hello World pass\n";

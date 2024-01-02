@@ -27,6 +27,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/raw_ostream.h"
+#include "MLModelRunner/Utils/MLConfig.h"
 #include <algorithm>
 #include <fstream>
 #include <string>
@@ -260,7 +261,7 @@ bool RDGWrapperPass::computeRDG(Function &F) {
   // canonicalizeLoopsWithLoads(loadWorkList);
 
   auto ir2vec = IR2Vec::Embeddings(*F.getParent(),
-                                   IR2Vec::IR2VecMode::Symbolic, VOCAB_FILE);
+                                   IR2Vec::IR2VecMode::Symbolic, MLConfig::mlconfig + "/loopdist/seedEmbeddingVocab-300-llvm10.txt");
   instVecMap = ir2vec.getInstVecMap();
   // for (auto II : instVecMap) { II.first->dump(); }
   LLVM_DEBUG(for (auto II

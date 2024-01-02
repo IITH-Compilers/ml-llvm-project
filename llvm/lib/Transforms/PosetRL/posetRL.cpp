@@ -70,6 +70,7 @@ struct PosetRL : public ModulePass,
   static char ID;
   PosetRL() : ModulePass(ID) {}
   bool runOnModule(Module &M) override {
+    assert(MLConfig::mlconfig != "" && "ml-config-path required" );
     this->M = &M;
     // Establish pipe communication
     if (usePipe) {

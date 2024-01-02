@@ -20,7 +20,7 @@ import sys
 
 sys.path.extend(
     [
-        f"{REPO_DIR}/ml-llvm-tools/MLModelRunner/gRPCModelRunner/Python-Utilities",
+        f"{REPO_DIR}/MLCompilerBridge/MLModelRunner/gRPCModelRunner/Python-Utilities",
         f"{REPO_DIR}/model/ggnn_drl/static_v4/src",
         f"{REPO_DIR}/llvm/lib/Transforms/models"
     ]
@@ -242,7 +242,7 @@ class DistributionInference:
 
         self.config = config
 
-        self.temp_rootname = "loopdistppipe"
+        self.temp_rootname = "/tmp/loopdistppipe"
         self.tc = None
         self.fc = None
         self.tensor_specs = None

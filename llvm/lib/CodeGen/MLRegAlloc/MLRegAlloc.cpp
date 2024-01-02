@@ -2693,17 +2693,14 @@ void MLRA::inference() {
       allocatePhysRegsViaRL();
       return;
     } else {
-      errs() << "Creting gRPC model runner\n";
       MLRunner = std::make_unique<gRPCModelRunner<
           registerallocationinference::RegisterAllocationInference,
           registerallocationinference::RegisterAllocationInference::Stub,
           registerallocationinference::RegisterProfileList,
           registerallocationinference::Data>>(
           mlra_server_address, &ClientModeRequest, &ClientModeResponse);
-      errs() << "After Creting gRPC model runner\n";
       
       MLRunner->setResponse(&ClientModeResponse);
-      errs() << "After seting data runner\n";
       
       initPipeCommunication();
     }
@@ -2927,6 +2924,7 @@ void MLRA::MLRegAlloc(MachineFunction &MF, SlotIndexes &Indexes,
                       AAResults &AA, LiveDebugVariables &DebugVars,
                       SpillPlacement &SpillPlacer,
                       MachineOptimizationRemarkEmitter &ORE) {
+  assert(MLConfig::mlconfig != "" && "ml-config-path required" );
   FunctionCounter++;
   errs() << "In MLRegAlloc func...\n";
   // reinitialize values for new function

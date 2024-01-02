@@ -319,12 +319,12 @@ struct HelloMLBridge : public ModulePass,
   }
 
   inline void populateFeatureVector() {
-    FeatureVector.resize(n);
+    FeatureVector.clear();
     for (int i = 0; i < n; i++) {
-      FeatureVector[i] = dis(gen);
+      FeatureVector.push_back(dis(gen));
     }
   }
-
+  
   void setTFModelRunner(int n) {
     switch (n) {
 #define M(x)                                                                   \

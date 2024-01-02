@@ -165,7 +165,7 @@ struct LoopDistributionServerPass
   // Pipe and runner setup
 
     std::string pipe_name = "loopdistppipe";
-    std::string basename = "/home/cs21btech11051/ml-llvm-project/model/ggnn_drl/static_v4/src/" + pipe_name; // change
+    std::string basename = "/tmp/" + pipe_name; // change
 
     BaseSerDes::Kind SerDesType;
     if (data_format == "json") {
