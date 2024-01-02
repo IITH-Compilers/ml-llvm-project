@@ -40,6 +40,7 @@
 #include "llvm/Support/Valgrind.h"
 #include "llvm/Transforms/AddSizeAttr/AddSizeAttr.h"
 #include "llvm/Transforms/AggressiveInstCombine/AggressiveInstCombine.h"
+#include "llvm/Transforms/Hello-MLBridge/Hello.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/AlwaysInliner.h"
 #include "llvm/Transforms/IPO/Attributor.h"
@@ -203,7 +204,8 @@ namespace {
       (void) llvm::createMergeFunctionsPass();
       (void) llvm::createMergeICmpsLegacyPass();
       (void) llvm::createExpandMemCmpPass();
-      (void) llvm::createPosetRLPass();
+      (void)llvm::createPosetRLPass();
+      (void) llvm::createHelloMLBridgePass();
       // (void) llvm::createCodeSizeOptPass();
       std::string buf;
       llvm::raw_string_ostream os(buf);

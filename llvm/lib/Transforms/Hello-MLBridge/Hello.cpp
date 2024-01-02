@@ -464,5 +464,11 @@ private:
 } // namespace
 
 char HelloMLBridge::ID = 0;
-static RegisterPass<HelloMLBridge> Z("hello-MLBridge",
-                                     "Hello World Pass (with MLBridge)");
+// static RegisterPass<HelloMLBridge> Z("hello-MLBridge",
+//                                      "Hello World Pass (with MLBridge)");
+INITIALIZE_PASS_BEGIN(HelloMLBridge, "hello-MLBridge",
+                      "Hello World Pass (with MLBridge)", false, false)
+INITIALIZE_PASS_END(HelloMLBridge, "hello-MLBridge",
+                    "Hello World Pass (with MLBridge)", false, false)
+
+ModulePass *llvm::createHelloMLBridgePass() { return new HelloMLBridge(); }

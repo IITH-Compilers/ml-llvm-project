@@ -5,3 +5,4 @@
 [submodule "MLCompilerBridge"]
 	path = MLCompilerBridge
 	url = git@github.com:IITH-Compilers/MLCompilerBridge.git
+	branch = main

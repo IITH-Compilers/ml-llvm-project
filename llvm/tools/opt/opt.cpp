@@ -574,6 +574,7 @@ int main(int argc, char **argv) {
   initializeInstrumentation(Registry);
   initializeTarget(Registry);
   initializePosetRLPass(Registry);
+  initializeHelloMLBridgePass(Registry);
   // initializeCodeSizeOptPass(Registry);
   initializeAddSizeAttrPassPass(Registry);
   // For codegen passes, only passes that do IR to IR transformation are
