@@ -369,7 +369,7 @@ public:
     }
     if (usePipe) {
       populateFeatureVector(FeatureVector);
-      TFinitCommunication();
+      initCommunication();
     } else {
       if (training) {
         HelloMLIRTraining *gRPCTrainer = new HelloMLIRTraining();
@@ -440,8 +440,6 @@ private:
 };
 
 void MLIRHelloMLBridge::initCommunication() {
-  std::ofstream outputFile;
-  outputFile.open("pipe_" + data_format + "-inference.csv", std::ios::app);
   if (data_format == "bytes") {
     SerDesType = BaseSerDes::Kind::Bitstream;
   } else if (data_format == "json") {
@@ -462,6 +460,8 @@ void MLIRHelloMLBridge::initCommunication() {
 
   auto Duration = std::chrono::duration_cast<std::chrono::microseconds>(
       EndTime - StartTime);
+  std::ofstream outputFile;
+  outputFile.open("pipe-" + data_format + "-inference.csv", std::ios::app);
   outputFile << n << "," << Duration.count() << "\n";
   outputFile.close();
 }
