@@ -38,7 +38,7 @@ from ray.rllib.policy.torch_policy import TorchPolicy
 from Environment_pipe import PhaseOrder
 from ray.rllib.models import ModelCatalog
 from model import CustomPhaseOrderModel
-from po_config import BUILD_DIR
+from po_config import BUILD_DIR, MODEL_DIR
 
 from Filesystem import *
 import pprint
@@ -172,15 +172,22 @@ if __name__ == '__main__':
         },
         **cfg)
     # config = dict(config,**default_config)
-    config["timesteps_per_iteration"] = 1005
+    config["timesteps_per_iteration"] = 90
     # config["learning_starts"] = 20
     # config["prioritized_replay_beta_annealing_timesteps"] = 20
     # config["target_network_update_freq"] = 5
 
-    if args.use_grpc:
-        transfer_method = 'grpc'
+    if args.use_grpc:        
+        experiment_name = "grpc_results"
     elif args.use_pipe:
-        transfer_method = f"pipe-{args.data_format}"
+        experiment_name = f"pipe_{args.data_format}_results"
+    else:
+        experiment_name = "orignal_run_results"
 
     #Start model training with given config
-    tune.run(experiment, config=config, resources_per_trial=DQNTrainer.default_resource_request(config), local_dir=f"{BUILD_DIR}/model/POSET-RL/posetrl_checkpoint_dir/", name=f"posetrl-{transfer_method}") # name=args.log_dir
+    tune.run(
+        experiment, 
+        config=config, 
+        resources_per_trial=DQNTrainer.default_resource_request(config), 
+        local_dir=(MODEL_DIR + "/checkpoint_dir"), 
+        name=experiment_name) # name=args.log_dir

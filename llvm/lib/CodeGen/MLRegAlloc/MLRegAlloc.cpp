@@ -262,7 +262,7 @@ grpc::Status MLRA::codeGen(grpc::ServerContext *context,
       }
     }
     this->FunctionVirtRegToColorMap[MF->getName()] = colorMap;
-    exit_requested->set_value();
+    // exit_requested->set_value();
 
     unsigned step = TRI->getNumRegs() + 1;
     for (auto regId : spilledRegIds) {
@@ -3024,6 +3024,12 @@ void MLRA::MLRegAlloc(MachineFunction &MF, SlotIndexes &Indexes,
     // RunService(this, mlra_server_address);
     // training_flow();
     //????
+    MLRunner = std::make_unique<gRPCModelRunner<
+        registerallocationinference::RegisterAllocationInference::Service,
+        registerallocationinference::RegisterAllocationInference::Stub,
+        registerallocationinference::RegisterProfileList,
+        registerallocationinference::Data>>(mlra_server_address, this);
+    training_flow();
   }
 
   bool containsCall = false;

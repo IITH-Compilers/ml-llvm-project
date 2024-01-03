@@ -32,10 +32,13 @@ from model import SelectTaskNetwork, SelectNodeNetwork, ColorNetwork, SplitNodeN
 import logging
 from ray.rllib.utils.torch_utils import FLOAT_MIN, FLOAT_MAX
 from ray.rllib.utils.spaces.repeated import Repeated
+from config import MODEL_DIR
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--train-iterations", type=int, default=100000)
-
+parser.add_argument("--workers", type=int, default=1)
+parser.add_argument("--mode", type=str, default="CPU")
 torch.autograd.set_detect_anomaly(True) 
 
 checkpoint = None
@@ -295,6 +298,19 @@ if __name__ == "__main__":
     # for path in tqdm (training_graphs, desc="Running..."): # Number of the iterations        
         # set_config(path)
         # config["env_config"]["path"] = path
+    
+    config["num_rollout_workers"] = (int)(args.workers)
+
+    if args.mode == "GPU":
+        config["num_gpus_per_worker"] = 0.05
+        config["self.num_gpus"] = 0.5
+
+    config["env_config"]["current_batch"] = (int)(100/args.workers)
+    experiment_name = f"w{args.workers}_{args.mode}"
+        
+    def trail_name_fun(self):
+        return "trial_name_" + f"w{args.workers}_{args.mode}"
+    
     tune.run(
         experiment,
         config=config,
@@ -302,6 +318,9 @@ if __name__ == "__main__":
         resources_per_trial=PPO.default_resource_request(config),
         # fail_fast=True,
         # max_failures=10
+        trial_name_creator=trail_name_fun,
+        name=experiment_name,
+        local_dir=(MODEL_DIR + "/checkpoint_dir")
         )
         # resources_per_trial={"cpu": 16, "gpu": 2})
         # file_count += 1
