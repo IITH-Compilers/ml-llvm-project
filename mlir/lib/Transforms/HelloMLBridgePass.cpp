@@ -349,7 +349,10 @@ public:
 
     auto Duration = std::chrono::duration_cast<std::chrono::microseconds>(
         EndTime - StartTime);
-    errs() << n << " " << Duration.count() << "\n";
+    std::ofstream outputFile;
+    outputFile.open("tf-inference.csv", std::ios_base::app);
+    outputFile << n << "," << Duration.count() << "\n";
+    outputFile.close();
   }
 
   void runOnOperation() override {
