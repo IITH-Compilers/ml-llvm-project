@@ -455,7 +455,6 @@ struct HelloMLBridge : public ModulePass,
 
 private:
   std::unique_ptr<MLModelRunner> MLRunner;
-  std::vector<float> FeatureVector;
   std::string basename;
   BaseSerDes::Kind SerDesType;
   Module *M;
