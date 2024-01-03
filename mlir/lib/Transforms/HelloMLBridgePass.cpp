@@ -377,7 +377,7 @@ public:
             helloMLBridgegRPC::ActionRequest>(server_address, gRPCTrainer);
       } else if (useONNX) {
         std::ofstream outputFile;
-        outputFile.open("onnx.csv", std::ios::app);
+        outputFile.open("onnx-inference.csv", std::ios::app);
         Agent *agent = new Agent( MLConfig::mlconfig + 
                                  "/hellopass/onnx_test_dir/dummy-torch-model-" +
                                  std::to_string(n) + ".onnx");
@@ -438,7 +438,7 @@ private:
 
 void MLIRHelloMLBridge::initCommunication() {
   std::ofstream outputFile;
-  outputFile.open("pipe_" + data_format + ".csv", std::ios::app);
+  outputFile.open("pipe_" + data_format + "-inference.csv", std::ios::app);
   if (data_format == "bytes") {
     SerDesType = BaseSerDes::Kind::Bitstream;
   } else if (data_format == "json") {

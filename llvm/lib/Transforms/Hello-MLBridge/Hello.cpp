@@ -429,7 +429,7 @@ struct HelloMLBridge : public ModulePass,
         auto Duration = std::chrono::duration_cast<std::chrono::microseconds>(
             EndTime - StartTime);
         std::ofstream outputFile;
-        outputFile.open("grpc-interence.csv", std::ios_base::app);
+        outputFile.open("grpc-inference.csv", std::ios_base::app);
         outputFile << n << "," << Duration.count() << "\n";
         outputFile.close();
       }
