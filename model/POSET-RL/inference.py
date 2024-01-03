@@ -106,8 +106,8 @@ parser.add_argument(
     choices=["json", "protobuf", "bytes"],
     help="Data format to use for communication",
 )
+parser.add_argument("--pipe_name",type=str,help="String Pipe name") 
 parser.add_argument("--use_grpc", action='store_true', help = "Use grpc communication", required=False, default=False)
-
 class PhaseOrderInference:
     def __init__(self, model_path, use_pipe=False, use_grpc=False, data_format="json"):
         print("use_pipe {}".format(use_pipe))
@@ -156,7 +156,8 @@ class PhaseOrderInference:
                     "use_pipe": use_pipe,
                     "data_format": data_format,
                     "use_grpc": use_grpc,
-                    "server_port": args.server_port
+                    "server_port": args.server_port,
+                    "pipe_name": args.pipe_name
                 },
                 "framework": "torch",
                 "explore": False,

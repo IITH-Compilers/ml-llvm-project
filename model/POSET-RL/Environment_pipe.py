@@ -141,7 +141,8 @@ class PhaseOrder(gym.Env):
         self.tensor_specs = None
         self.advice_spec = None
 
-        self.temp_rootname = "/tmp/posetrl_pipe"
+        #self.temp_rootname = "/tmp/posetrl_pipe"
+        self.temp_rootname = "/tmp/" + config["pipe_name"]
         if self.use_pipe:
             self.compiler_interface = PipeCompilerInterface(self.data_format, self.temp_rootname)
             # self.compiler_interface.reset_pipes()
