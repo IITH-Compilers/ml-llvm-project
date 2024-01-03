@@ -1,7 +1,7 @@
 import sys
-from config import REPO_DIR, MODEL_PATH
+from config import BUILD_DIR, MODEL_PATH
 sys.path.append(
-    f"{REPO_DIR}/MLCompilerBridge/MLModelRunner/gRPCModelRunner/Python-Utilities"
+    f"{BUILD_DIR}/MLCompilerBridge/MLModelRunner/gRPCModelRunner/Python-Utilities"
 )
 import RegisterAllocationInference_pb2_grpc, RegisterAllocationInference_pb2
 
@@ -12,14 +12,12 @@ import traceback
 import ray
 
 sys.path.append(
-    f"{REPO_DIR}/model/RegAlloc/ggnn_drl/rllib_split_model/src"
+    f"{MODEL_DIR}"
 )
-# sys.path.append(f"{REPO_DIR}/llvm/lib/Transforms/models")
-# import SerDes
 import rollout as inference
 from argparse import Namespace
 
-sys.path.append(f"{REPO_DIR}/MLCompilerBridge/CompilerInterface/")
+sys.path.append(f"{BUILD_DIR}/MLCompilerBridge/CompilerInterface/")
 from PipeCompilerInterface import PipeCompilerInterface
 from GrpcCompilerInterface import GrpcCompilerInterface
 

@@ -46,9 +46,9 @@ import random
 import sys
 import re
 
-from config import REPO_DIR, BUILD_DIR
+from config import BUILD_DIR
 
-sys.path.append(f"{REPO_DIR}/MLCompilerBridge/MLModelRunner/gRPCModelRunner/Python-Utilities/")
+sys.path.append(f"{BUILD_DIR}/MLCompilerBridge/MLModelRunner/gRPCModelRunner/Python-Utilities/")
 # from client import *
 import RegisterAllocationInference_pb2, RegisterAllocation_pb2
 

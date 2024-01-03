@@ -6,7 +6,7 @@ import subprocess
 import re
 import signal
 from joblib import Parallel, delayed
-from config import REPO_DIR, BUILD_DIR
+from config import DATA_DIR, BUILD_DIR
 
 
 def startServer(filename, fun_name, fun_id, worker_index):
@@ -103,7 +103,7 @@ def run(path):
     
 
 start_time = time.time()
-dataset = f'{REPO_DIR}/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/LTS-ll-files_train_mlra_x86_split_data/'
+dataset = f'{DATA_DIR}/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/LTS-ll-files_train_mlra_x86_split_data/'
 training_graphs = glob.glob(os.path.join(dataset, 'graphs/IG/set_120-500/*.json'))
 throughput_map = {}
 cycle_map = {}

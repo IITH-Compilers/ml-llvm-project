@@ -11,7 +11,7 @@ Detailed documentation: https://docs.ray.io/en/master/rllib-algorithms.html#ppo
 
 import logging
 from typing import List, Optional, Type, Union
-from config import REPO_DIR, BUILD_DIR
+from config import MODEL_PATH, BUILD_DIR, CONFIG_DIR
 from ray.util.debug import log_once
 from ray.rllib.algorithms.algorithm import Algorithm
 from ray.rllib.algorithms.algorithm_config import AlgorithmConfig, NotProvided
@@ -136,11 +136,11 @@ class PPOConfig(PGConfig):
             "dump_color_graph": True,
             "intermediate_data": './temp',
             "build_path": BUILD_DIR,
-            "Register_config": f"{REPO_DIR}/llvm/lib/CodeGen/MLRegAlloc/config_json",
-            "log_path": f"{REPO_DIR}/model/RegAlloc/ggnn_drl/rllib_split_model/src/log",
-            "dataset": f"{REPO_DIR}/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/LTS-ll-files_train_mlra_x86_split_data",
+            "Register_config": CONFIG_DIR,
+            "log_path": f"{MODEL_PATH}/log",
+            "dataset": f"{MODEL_PATH}/LTS-ll-files_train_mlra_x86_split_data",
             "graphs_num": 10000,
-            "action_space_size": RegisterActionSpace("X86", f"{REPO_DIR}/llvm/lib/CodeGen/MLRegAlloc/config_json").ac_sp_normlize_size,
+            "action_space_size": RegisterActionSpace("X86", CONFIG_DIR).ac_sp_normlize_size,
             "check_point": None,
             "episode_number": 10000,
             "GPU_ID": '0',
@@ -156,8 +156,8 @@ class PPOConfig(PGConfig):
             "use_mca_self_play_reward": False,
             "mca_reward_clip": 10,
             "mca_timeout": 30,
-            "greedy_mca_throughput_file_path": f"{REPO_DIR}/model/RegAlloc/ggnn_drl/rllib_split_model/src/LTS_x86_greedy-throughput_set_120-500.json",
-            "mca_cycles_file_path": f"{REPO_DIR}/model/RegAlloc/ggnn_drl/rllib_split_model/src/LTS_x86_greedy-cycles_set_120-500.json"
+            "greedy_mca_throughput_file_path": f"{MODEL_DIR}/LTS_x86_greedy-throughput_set_120-500.json",
+            "mca_cycles_file_path": f"{MODEL_DIR}/LTS_x86_greedy-cycles_set_120-500.json"
         }
 
         self.horizon = 1000

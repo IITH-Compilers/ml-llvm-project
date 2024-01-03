@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import argparse
-from config import REPO_DIR
+from config import MODEL_DIR, CONFIG_DIR, BUILD_DIR, DATA_DIR
 import collections
 import copy
 import gym
@@ -26,7 +26,7 @@ from ray.tune.utils import merge_dicts
 from ray.tune.registry import get_trainable_cls, _global_registry, ENV_CREATOR
 
 import sys
-sys.path.append(f'{REPO_DIR}/model/RegAlloc/ggnn_drl/rllib_split_model/src')
+sys.path.append(f'{MODEL_DIR}')
 from multiagentEnv import HierarchicalGraphColorEnv
 import utils_1
 from register_action_space import RegisterActionSpace
@@ -419,8 +419,8 @@ class RollOutInference:
                 "use_mca_self_play_reward": False,
                 "mca_reward_clip": 10,
                 "mca_timeout": 30,
-                "greedy_mca_throughput_file_path": f"{REPO_DIR}/model/RegAlloc/ggnn_drl/rllib_split_model/src/greedy-throughput_set_70-120.json",
-                "mca_cycles_file_path": f"{REPO_DIR}/model/RegAlloc/ggnn_drl/rllib_split_model/src/greedy-cycles_set_70-120.json"
+                "greedy_mca_throughput_file_path": f"{MODEL_DIR}/greedy-throughput_set_70-120.json",
+                "mca_cycles_file_path": f"{MODEL_DIR}/greedy-cycles_set_70-120.json"
 
             }
         else:
@@ -435,15 +435,15 @@ class RollOutInference:
                 "dump_type": 'One',
                 "dump_color_graph": True,
                 "intermediate_data": './temp',
-                "build_path": f"{REPO_DIR}/X86Build_UPMM",
-                # "build_path": f"{REPO_DIR}/AArch64Build",
-                "Register_config": f"{REPO_DIR}/llvm/lib/CodeGen/MLRegAlloc/config_json",
-                "log_path": f"{REPO_DIR}/model/RegAlloc/ggnn_drl/rllib_split_model/src/log",
+                "build_path": f"{BUILD_DIR}",
+                # "build_path": f"{BUILD_DIR}",
+                "Register_config": f"{CONFIG_DIR}",
+                "log_path": f"{MODEL_DIR}/log",
                 #"dataset": "/raid/cs17m20P100001/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_new_data/",
-                "dataset": f"{REPO_DIR}/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_generated_at_05-05-22/",
-                # "dataset": f"{REPO_DIR}/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_aarch64_new_data/",
+                "dataset": f"{DATA_DIR}/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_generated_at_05-05-22/",
+                # "dataset": f"{DATA_DIR}/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_aarch64_new_data/",
                 "graphs_num": 10000,
-                "action_space_size": RegisterActionSpace("X86", f"{REPO_DIR}/llvm/lib/CodeGen/MLRegAlloc/config_json").ac_sp_normlize_size,
+                "action_space_size": RegisterActionSpace("X86", f"{CONFIG_DIR}").ac_sp_normlize_size,
                 "check_point": None,
                 "episode_number": 49999,
                 "GPU_ID": '0',
@@ -461,8 +461,8 @@ class RollOutInference:
                 "use_mca_self_play_reward": False,
                 "mca_reward_clip": 10,
                 "mca_timeout": 30,
-                "greedy_mca_throughput_file_path": f"{REPO_DIR}/model/RegAlloc/ggnn_drl/rllib_split_model/src/greedy-throughput_set_70-120.json",
-                "mca_cycles_file_path": f"{REPO_DIR}/model/RegAlloc/ggnn_drl/rllib_split_model/src/greedy-cycles_set_70-120.json"
+                "greedy_mca_throughput_file_path": f"{MODEL_DIR}/greedy-throughput_set_70-120.json",
+                "mca_cycles_file_path": f"{MODEL_DIR}/greedy-cycles_set_70-120.json"
         
             }       
         config["num_gpus"]=0

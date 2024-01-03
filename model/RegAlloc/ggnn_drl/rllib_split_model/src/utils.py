@@ -14,10 +14,10 @@ import pandas as pd
 import logging
 import json
 from argparse import Namespace
-from config import REPO_DIR
+from config import MODEL_DIR
 
 logger = logging.getLogger(__file__) 
-logging.basicConfig(filename=os.path.join(f"{REPO_DIR}/model/RegAlloc/ggnn_drl/rllib-basic/src", 'running.log'), format='%(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
+logging.basicConfig(filename=os.path.join(f"{MODEL_DIR}", 'running.log'), format='%(levelname)s - %(filename)s - %(message)s', level=logging.DEBUG)
 
 LL_DIR_CONST='llfiles'
 OUT_DIR_CONST='outfiles'

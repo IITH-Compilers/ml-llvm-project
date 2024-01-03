@@ -1,2 +1,0 @@
-model_checkpoint_path: "embedding.vec.json"
-all_model_checkpoint_paths: "embedding.vec.json"
