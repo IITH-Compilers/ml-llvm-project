@@ -1,6 +1,7 @@
 #include "llvm/Transforms/CodeSizeOpt/CodeSizeOpt.h"
 #include "MLModelRunner/MLModelRunner.h"
 #include "MLModelRunner/ONNXModelRunner/ONNXModelRunner.h"
+#include "MLModelRunner/Utils/MLConfig.h"
 #include "inference/CodeSizeOptEnv.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -32,10 +33,11 @@ struct CodeSizeOpt : public ModulePass, public CodeSizeOptEnv {
   static char ID;
   CodeSizeOpt() : ModulePass(ID) {}
   bool runOnModule(Module &M) override {
+    assert(MLConfig::mlconfig != "" && "ml-config-path required" );
     this->M = &M;
     llvm::Triple triple(M.getTargetTriple());
     tlii_ = llvm::TargetLibraryInfoImpl(triple);
-    Agent agent("/home/cs20btech11024/onnx/compiler_gym_ir2vec.onnx");
+    Agent agent(MLConfig::mlconfig + "/codesizeopt/compiler_gym_ir2vec.onnx");
     std::map<std::string, Agent *> agents;
     agents["agent"] = &agent;
     MLRunner = std::make_unique<ONNXModelRunner>(this, agents, &M.getContext());
@@ -64,8 +66,7 @@ struct CodeSizeOpt : public ModulePass, public CodeSizeOptEnv {
   Embedding getEmbeddings() override {
     auto Ir2vec =
         IR2Vec::Embeddings(*M, IR2Vec::IR2VecMode::FlowAware,
-                           "/Pramana/ML_LLVM_Tools/ml-llvm-project/IR2Vec/"
-                           "vocabulary/seedEmbeddingVocab-300-llvm10.txt");
+                           MLConfig::mlconfig + "/codesizeopt/seedEmbeddingVocab-300-llvm10.txt");
     auto ProgVector = Ir2vec.getProgramVector();
     Embedding Vector(ProgVector.begin(), ProgVector.end());
     // errs() << "Embedding: ";
