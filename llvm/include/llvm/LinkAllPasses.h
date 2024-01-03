@@ -235,7 +235,7 @@ namespace {
       (void) llvm::createWarnMissedTransformationsPass();
       (void) llvm::createHardwareLoopsPass();
       (void)llvm::createInjectTLIMappingsLegacyPass();
-      (void) llvm::createcustom_loop_distributionPass();
+      // (void) llvm::createcustom_loop_distributionPass();
       // (void)llvm::createRDGWrapperPass();
       // (void) llvm::createLoopDistributionWrapperPassPass();
 
