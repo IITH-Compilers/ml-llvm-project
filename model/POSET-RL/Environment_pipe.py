@@ -543,7 +543,7 @@ class PhaseOrder(gym.Env):
     # Get llvm-mca Block RThroughput for the IR
     def getMCACost(self, new_file):
         cmd1 = self.FileSys_Obj.LlcPath + " " + self.opt_arch_flag + \
-            " " + new_file + ".ll" + " -o " + new_file + ".s" + f" -ml-config-path={CONFIG_DIR}/config"
+            " " + new_file + ".ll" + " -o " + new_file + ".s" + f" -ml-config-path={CONFIG_DIR}"
         print("LLC cmd:", cmd1)
         os.system(cmd1)
         cmd2 = self.FileSys_Obj.MCAPath + " " + \
@@ -594,11 +594,11 @@ class PhaseOrder(gym.Env):
         # Here we can use gRPC server to apply the action
         command = self.FileSys_Obj.OptPath + " " + self.opt_arch_flag + \
             " -S -O34 -SubNum=" + str(action) + " " + \
-            self.CurrIR + " -o " + new_IR + f" -ml-config-path={CONFIG_DIR}/config"
+            self.CurrIR + " -o " + new_IR + f" -ml-config-path={CONFIG_DIR}"
         print("Opt Command: "+command)
         os.system(command)
         command = self.FileSys_Obj.ClangPath + " " + \
-            self.clang_arch_flag + " -c " + new_IR + " -o " + new_file + ".o" + f" -mllvm -ml-config-path={CONFIG_DIR}/config"
+            self.clang_arch_flag + " -c " + new_IR + " -o " + new_file + ".o" + f" -mllvm -ml-config-path={CONFIG_DIR}"
         os.system(command)
 
         print("clang command: "+command)

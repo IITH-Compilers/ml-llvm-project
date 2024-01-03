@@ -38,6 +38,7 @@ from ray.rllib.policy.torch_policy import TorchPolicy
 from Environment_pipe import PhaseOrder
 from ray.rllib.models import ModelCatalog
 from model import CustomPhaseOrderModel
+from po_config import BUILD_DIR
 
 from Filesystem import *
 import pprint
@@ -58,6 +59,7 @@ parser.add_argument("-size_reward_thresh", "--size_reward_thresh", required=Fals
 parser.add_argument("-mca_reward_thresh", "--mca_reward_thresh", required=False, type=float, default=0.2)
 parser.add_argument("--use_pipe", action='store_true', help = "Use pipe communication", required=False, default=False)
 parser.add_argument("--use_grpc", action='store_true', help = "Use grpc communication", required=False, default=False)
+parser.add_argument("--pipe_name",type=str,help="String Pipe name", default='posetrl_pipe') 
 parser.add_argument(
     "--data_format",
     type=str,
@@ -149,7 +151,8 @@ if __name__ == '__main__':
                 "use_pipe": args.use_pipe,
                 "data_format": args.data_format,
                 "use_grpc": args.use_grpc,
-                "server_port": args.server_port
+                "server_port": args.server_port,
+                "pipe_name": args.pipe_name
             },
             "train_batch_size": 512,
             "exploration_config": {
@@ -174,5 +177,10 @@ if __name__ == '__main__':
     # config["prioritized_replay_beta_annealing_timesteps"] = 20
     # config["target_network_update_freq"] = 5
 
+    if args.use_grpc:
+        transfer_method = 'grpc'
+    elif args.use_pipe:
+        transfer_method = f"pipe-{args.data_format}"
+
     #Start model training with given config
-    tune.run(experiment, config=config, resources_per_trial=DQNTrainer.default_resource_request(config)) # name=args.log_dir
+    tune.run(experiment, config=config, resources_per_trial=DQNTrainer.default_resource_request(config), local_dir=f"{BUILD_DIR}/model/POSET-RL/posetrl_checkpoint_dir/", name=f"posetrl-{transfer_method}") # name=args.log_dir
