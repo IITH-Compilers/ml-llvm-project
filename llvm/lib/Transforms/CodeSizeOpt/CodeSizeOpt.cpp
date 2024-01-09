@@ -8,6 +8,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR2Vec.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/CodeGen/MLConfig.h"
 #include "llvm/Pass.h"
 #include "llvm/PassSupport.h"
 #include "llvm/Support/CommandLine.h"
@@ -35,7 +36,7 @@ struct CodeSizeOpt : public ModulePass, public CodeSizeOptEnv {
     this->M = &M;
     llvm::Triple triple(M.getTargetTriple());
     tlii_ = llvm::TargetLibraryInfoImpl(triple);
-    Agent agent("/home/cs20btech11024/onnx/compiler_gym_ir2vec.onnx");
+    Agent agent(MLConfig::mlconfig + "/codesizeopt/compiler_gym_ir2vec.onnx");
     std::map<std::string, Agent *> agents;
     agents["agent"] = &agent;
     MLRunner = std::make_unique<ONNXModelRunner>(this, agents, &M.getContext());
@@ -81,8 +82,7 @@ struct CodeSizeOpt : public ModulePass, public CodeSizeOptEnv {
   void getEmbeddings() override {
     auto Ir2vec =
         IR2Vec::Embeddings(*M, IR2Vec::IR2VecMode::Symbolic,
-                           "/Pramana/ML_LLVM_Tools/ml-llvm-project/IR2Vec/"
-                           "vocabulary/seedEmbeddingVocab-300-llvm10.txt");
+                           MLConfig::mlconfig + "/codesizeopt/seedEmbeddingVocab-300-llvm10.txt");
     CurrEmbedding = Ir2vec.getProgramVector();
   }
 
