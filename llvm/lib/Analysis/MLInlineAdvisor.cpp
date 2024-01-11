@@ -51,7 +51,7 @@ static cl::opt<bool>
 #define LLVM_HAVE_TF_AOT_INLINERSIZEMODEL 1
 #if defined(LLVM_HAVE_TF_AOT_INLINERSIZEMODEL)
 // codegen-ed file
-#include "MLModelRunner/TFModel/InlinerSizeModel.h" // NOLINT
+#include "InlinerSizeModel.h" // NOLINT
 using CompiledModelType = llvm::InlinerSizeModel;
 #else
 using CompiledModelType = NoopSavedModelImpl;
