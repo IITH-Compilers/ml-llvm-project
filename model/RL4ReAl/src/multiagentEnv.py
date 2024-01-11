@@ -49,7 +49,7 @@ import re
 from config import BUILD_DIR
 
 sys.path.append(f"{BUILD_DIR}/MLCompilerBridge/MLModelRunner/gRPCModelRunner/Python-Utilities/")
-# from client import *
+from client import *
 import RegisterAllocationInference_pb2, RegisterAllocation_pb2
 
 config_path=None
