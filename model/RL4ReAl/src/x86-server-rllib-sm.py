@@ -1,5 +1,5 @@
-import sys
-from config import BUILD_DIR, MODEL_PATH
+import sys, os
+from config import BUILD_DIR, MODEL_PATH, MODEL_DIR
 sys.path.append(
     f"{BUILD_DIR}/MLCompilerBridge/MLModelRunner/gRPCModelRunner/Python-Utilities"
 )
@@ -21,6 +21,13 @@ sys.path.append(f"{BUILD_DIR}/MLCompilerBridge/CompilerInterface/")
 from PipeCompilerInterface import PipeCompilerInterface
 from GrpcCompilerInterface import GrpcCompilerInterface
 
+
+def blockPrint():
+    sys.stdout = open(os.devnull, 'w')
+
+# Restore
+def enablePrint():
+    sys.stdout = sys.__stdout__
 
 class NestedDict:
     def __init__(self, data):
@@ -66,42 +73,19 @@ class service_server(
         self.inference_model = inference.RollOutInference(args)
 
     def getAdvice1(self, req, context):
-        print('******************************************')
-        print(req)
         return RegisterAllocationInference_pb2.test(message="Hello from python")
     
     def getAdvice(self, request, context):
-        print("Test................")
         try:
-            print("------Hi--------- isnew {} ".format(request.new))
-            # print(request)
-            # print('******************************************')
-            # graph = request.graph
-            # print(graph)
+            if request.new:
+                print("Starting New Episode")
             inter_graphs = request  # graph.decode("utf-8")
-            # print(inter_graphs)
-            # if inter_graphs is not None and  inter_graphs !="":
-
-            # if not inter_graphs.result:
-            #     print('Nothing to update')
-            #     return RegisterAllocationInference_pb2.Data(message="Exit")
-            print(
-                "********************FUNC NAME FROM GETADVICE***************************"
-            )
-            print("request.funcName: ", request.funcName)
-            print("request.new: ", request.new)
-            print("request.result: ", request.result)
-            print("request.regProf: ", request.regProf)
-            # print_inter_graphs(inter_graphs)
             # assert len(inter_graphs.regProf) > 0, "Graphs has no nodes"
 
             if inter_graphs.new:
-                # model_path = os.path.abspath(model_path)
-                # print(inter_graphs)
                 inter_graph_list = []
                 if type(inter_graphs) is not list:
                     inter_graph_list.append(inter_graphs)
-                # print(inter_graph_list)
                 self.inference_model.setGraphInEnv(inter_graph_list)
                 status = self.inference_model.setGraphInEnv(inter_graph_list)
                 if status is None:
@@ -110,25 +94,16 @@ class service_server(
                     out = encode_action(out)
                     return RegisterAllocationInference_pb2.Data(data=out)
             elif inter_graphs.result:
-                # exit()
                 # self.inference_model.update_obs(request, self.inference_model.env.virtRegId, self.inference_model.env.split_point)
                 if not self.inference_model.update_obs(request):
                     print("Current split failed")
                     self.inference_model.setCurrentNodeAsNotVisited()
-                # else:
-                self.inference_model.updateSelectNodeObs()
-                # print('stopping for spliting check, enter to continue...')
-                # stop = input()
-                # if stop == 0:
-                #     exit()
+                self.inference_model.updateSelectNodeObs()                
             else:
-                # print("LLVM responce", inter_graphs)
                 self.inference_model.setCurrentNodeAsNotVisited()
                 self.inference_model.updateSelectNodeObs()
-                print("Inside else; doing nothing here")
             action, count = self.inference_model.compute_action()
             # action, count = self.inference_model.evaluate()
-            # print('action= {}, count={}'.format(action,count))
             select_node_agent = "select_node_agent_{}".format(count)
             select_task_agent = "select_task_agent_{}".format(count)
             split_agent = "split_node_agent_{}".format(count)
@@ -143,41 +118,25 @@ class service_server(
                     "payload": action[split_agent],
                 }
                 out = encode_action(out)
-                print(out)
                 reply = RegisterAllocationInference_pb2.Data(data=out)
-                # reply = RegisterAllocationInference_pb2.Data(
-                #     message="Split",
-                #     regidx=action[select_node_agent],
-                #     payload=action[split_agent],
-                # )
+                
             elif self.inference_model.getLastTaskDone() == 0:
                 print('Entered color...')
-                # print("Returned colour map is:", action[color_agent])
                 out = {
                     "action": "Color",
                     "color": action[color_agent],
                     "funcName": inter_graphs.funcName,
                 }
                 out = encode_action(out)
-                reply = RegisterAllocationInference_pb2.Data(data=out)
-                # reply = RegisterAllocationInference_pb2.Data(
-                #     message="Color",
-                #     color=action[color_agent],
-                #     funcName=request.funcName,
-                # )
+                reply = RegisterAllocationInference_pb2.Data(data=out)                
             else:
                 print('Entered exit...')
                 reply = RegisterAllocationInference_pb2.Data(message="Exit")
                 out = {"action": "Exit"}
                 out = encode_action(out)
                 return RegisterAllocationInference_pb2.Data(data=out)
-            # print('------Bye-----' , reply)
-            print(reply)
-            print("------Bye-----")
             return reply
         except:
-            print("Error")
-            # print(request)
             print("Error")
             traceback.print_exc()
             reply = RegisterAllocationInference_pb2.Data(
@@ -196,16 +155,7 @@ def print_inter_graphs(inter_graphs, f):
                 regProf.spillWeight,
                 regProf.useDistances,
             )
-        )
-        # print(
-        #     regProf.regID,
-        #     regProf.cls,
-        #     regProf.color,
-        #     regProf.spillWeight,
-        #     regProf.useDistances,
-        #     end=" ",
-        # )
-        # print()
+        )        
 
 def encode_action(data):
     msg = []
@@ -352,25 +302,18 @@ def run_pipe_communication(data_format, pipe_name):
 
 
 
-    # #########################################
 
     ray.init()
     inference_model = inference.RollOutInference(args)
     inference_model.env.use_pipe = True
-    print("Inference model created....")
     # serdes = SerDes.SerDes(data_format, "/tmp/" + pipe_name)
 
-    # print("Serdes init...")
-    # serdes.init()
-    print('df, pipename:', data_format, pipe_name)
+    print('Starting server for df, pipename:', data_format, pipe_name)
     compiler_interface = PipeCompilerInterface(data_format= data_format, pipe_name = "/tmp/" + pipe_name)          
     compiler_interface.reset_pipes()
 
     while True:
         try:
-            # print("Entered while loop...")
-            # input('Press enter to continue...')
-            # data = serdes.readObservation()
             data = compiler_interface.evaluate()
             inter_graphs = parseObservation(data)
             print_inter_graphs(inter_graphs, log_file)
@@ -425,39 +368,15 @@ def run_pipe_communication(data_format, pipe_name):
             compiler_interface.populate_buffer(out)
         except Exception as e:
             print("*******Exception*******", e)
-            # serdes.init()
             compiler_interface.init_pipes()
             compiler_interface.reset_pipes()
 
 
-# class Server:
-#     @staticmethod
-#     def run(server_address):
-#         ray.init()
-
-#         server = grpc.server(
-#             futures.ThreadPoolExecutor(max_workers=20),
-#             options=[
-#                 ("grpc.max_send_message_length", 200 * 1024 * 1024),  # 50MB
-#                 ("grpc.max_receive_message_length", 200 * 1024 * 1024),  # 50MB
-#             ],
-#         )
-
-#         RegisterAllocationInference_pb2_grpc.add_RegisterAllocationInferenceServicer_to_server(
-#             service_server(), server
-#         )
-
-#         server_add = "localhost:" + str(server_address)
-#         server.add_insecure_port(server_add)
-
-#         server.start()
-#         print("Server Running at " + server_add + "...")
-
-#         server.wait_for_termination()
-
 
 if __name__ == "__main__":
     # Server.run()
+    # blockPrint()
+    
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--server_port", type=str, help="Server port")
@@ -482,6 +401,5 @@ if __name__ == "__main__":
         if args.server_port is None:
             print("Please specify server address for gRPC communication")
             exit()
-        # Server.run(args.server_port)
         compiler_interface = GrpcCompilerInterface(mode = 'server', add_server_method=RegisterAllocationInference_pb2_grpc.add_RegisterAllocationInferenceServicer_to_server, grpc_service_obj=service_server(), hostport= args.server_port)
         compiler_interface.start_server()

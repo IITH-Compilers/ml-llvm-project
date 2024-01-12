@@ -98,12 +98,7 @@ class GatedGraphNeuralNetwork(nn.Module):
 
         
         # logging.info('Annotaion shape {shape} and value {value} '.format(shape=annotations.shape, value=annotations))
-        # logging.info(initial_node_representation.shape)
-        # print('initial node representation: {}'.format(initial_node_representation))
-        # print('Annotaion shape {shape} and value {value} '.format(shape=annotations.shape, value=annotations))
-        
-        # print("initial_node_representation: {}".format(np.array(initial_node_representation).shape))
-        # print("annotations: {}".format(np.array(annotations).shape))
+        # logging.info(initial_node_representation.shape)        
         initial_node_representation = torch.cat([initial_node_representation, annotations], dim=1)
         logging.info('DLOOP H+A {}'.format(initial_node_representation.shape))
         initial_node_representation = self.hidden_layer(initial_node_representation)
@@ -305,12 +300,10 @@ def get_observationsInf(graph):
     
     idx_nid = {}
     nid_idx = {}
-    # self.unique_type_map = {'pair' : []}
     all_edges = []
     spill_cost_list = []
     reg_class_list = []
     color_list = []
-    # allocate_type_list = []
     split_points_list = []
     use_distance_list = []
     raw_graph_mat = []
@@ -318,58 +311,31 @@ def get_observationsInf(graph):
     for idx, node in enumerate(nodes):
         
         nodeId = node.regID
-        # properties = re.findall("{[^}]*}", node['label'])
-        # print(properties)
-        # properties = properties.split()
-        # logging.debug('Node idx={} | {}'.format(idx, properties))
         regClass = node.cls #parseProp(properties[0]) 
         spill_cost = node.spillWeight #parseProp(properties[1])
         color = node.color # parseProp(properties[2])
         split_points = node.splitSlots
         use_distances = node.useDistances
         positionalSpillWeights = node.positionalSpillWeights
-        # if len(properties) > 3:
-        #     # print(properties)
-        #     split_points = parseProp(properties[3])
-        #     positionalSpillWeights = parseProp(properties[4])
-        #     # print("split_points for node id {} are {} {}".format(nodeId, split_points, positionalSpillWeights))
-        #     if len(split_points) > 0:
-        #         split_points = sorted(list(map(lambda x : int(x), split_points.split(', '))))
-        #     if len(positionalSpillWeights) > 0:
-        #         positionalSpillWeights = sorted(list(map(lambda x : float(x), positionalSpillWeights.split(', '))))
-            
-            
-        
         split_points_list.append(np.array(split_points))
         use_distance_list.append(np.array(use_distances))
         positionalSpillWeights_list.append(np.array(positionalSpillWeights))
 
         # logging.debug('Allocation type : {}'.format(allocate_type))
-        # print(spill_cost, type(spill_cost))
         if spill_cost in [float('inf'), "inf", "INF"]:
             spill_cost = float(1)
-        # node['label'] = re.sub(" {.*} ", '', node['label'])
         
-        # print(node.vectors)
         if len(node.vectors) > 0:
-            # print("Node vectors : ", node.vectors[0].vec)
             node_mat = [ vector.vec for vector in node.vectors]
         else:
             node_mat = [[0]*100]
         
-        # print(node_mat)
-        # print(type(node_mat)) 
         raw_graph_mat.append(node_mat)
         node_tansor_matrix = torch.FloatTensor(node_mat)
-        # print(node_tansor_matrix.shape)
         nodeVec = constructVectorFromMatrix(node_tansor_matrix)
         reg_class_list.append(regClass)
         spill_cost_list.append(spill_cost)
-        color_list.append(color)
-        # allocate_type_list.append(allocate_type)
-        
-        # print(nodeVec)
-        # logging.debug(nodeVec)
+        color_list.append(color)        
         initial_node_representation.append(nodeVec)
         nid_idx[nodeId] = idx
         idx_nid[idx] = nodeId
@@ -383,10 +349,8 @@ def get_observationsInf(graph):
                 all_edges.append((i, neighId))
                 all_edges.append((neighId, i))
 
-    # print("initial_node_representation shape",len(initial_node_representation), len(initial_node_representation[0]), len(initial_node_representation[36]))
     initial_node_representation = torch.stack(initial_node_representation, dim=0)# .to(device)
     
-    print(__file__, initial_node_representation.shape)
     logging.debug("Shape of the hidden nodes matrix N X D : {}".format(initial_node_representation.shape)) 
     # Create aGraph obj for getting the Zero incoming egdes nodes
     graph_topology = Graph(all_edges,  num_nodes)
@@ -410,13 +374,11 @@ def get_observationsInf(graph):
     
     for node_idx in range(num_nodes):
         if reg_class_list[node_idx] == 'Phy':
-            # color, phyReg = map( lambda x : int(x.split('=')[-1]), allocate_type_list[node_idx].split(';'))
             color = color_list[node_idx]
             logging.debug('creating graph; Marking node_idx={} with color={}'.format(node_idx, color))
             
             graph_topology.UpdateVisitList(node_idx)
             graph_topology.UpdateColorVisitedNode(node_idx, color) 
-            # ggnn.updateAnnotation(node_idx, color)
             annotations[node_idx][0] =  torch.tensor(0)# .to(device)
             # set the color assigned to the node
             annotations[node_idx][1] = torch.tensor(color)# .to(device)
@@ -457,23 +419,16 @@ def get_observations(graph):
 
         node['label'] = re.sub(" {.*} ", '', node['label'])
 
-        # print("aaaaaaaaaaaaaaaaaaa {}".format(node['label']))
         
         if node['label'] != "\"\"":
             matr = node['label'].replace("\"","")
-            # print(matr)
-            # matr = node['label'].replace(" ][",",").replace('\n','')
             matr = "[" + matr + "]"
-            # print(matr)
-            # print(type(matr))
-
+            
             # node_mat = json.loads(eval(matr))
             node_mat = json.loads(matr)
         else:
             node_mat = [[0]*300]
         
-        # print(node_mat)
-        # print(type(node_mat)) 
         raw_graph_mat.append(node_mat)
         node_tansor_matrix = torch.FloatTensor(node_mat)
         # print(node_tansor_matrix.shape)
@@ -486,7 +441,6 @@ def get_observations(graph):
         nid_idx[nodeId] = idx
         idx_nid[idx] = nodeId
 
-        # print("bbbbbbbbbbbbb {}".format(nodeId))
         
     for i, adj in enumerate(adjlist):
 
@@ -495,11 +449,8 @@ def get_observations(graph):
             if i != neighId:
                 all_edges.append((i, neighId))
 
-    # print(initial_node_representation)
-    # print("initial_node_representation shape",len(initial_node_representation), len(initial_node_representation[0]), len(initial_node_representation[36]))
     initial_node_representation = torch.stack(initial_node_representation, dim=0)# .to(device)
     
-    # print(initial_node_representation.shape)
     logging.debug("Shape of the hidden nodes matrix N X D : {}".format(initial_node_representation.shape)) 
     # Create aGraph obj for getting the Zero incoming egdes nodes
     graph_topology = Graph(all_edges,  num_nodes)
@@ -512,7 +463,6 @@ def get_observations(graph):
     annotation_zero = np.zeros((num_nodes, 2))
     # annotation_zero[:, 0] = spill_cost_list
     annotations = torch.FloatTensor(annotation_zero)# .to(device)
-    # print("annotations: {}".format(annotations))
     
     '''
     Support for already allocated registers.

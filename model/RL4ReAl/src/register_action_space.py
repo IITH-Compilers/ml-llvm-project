@@ -8,49 +8,32 @@ logger = logging.getLogger(__file__)
 class RegisterActionSpace:
 
     def __init__(self, target, config_path):
-        # :%s/\(.*"color":\).*\(,\n.*\n.*"phyReg":\)\(.*\)/\1\3\2\3/g
         self.spill = 0
         self.supported_regclasses, self.suppcls_regs_map, self.reg_idname_map, self.overlaps = RegisterActionSpace.loadRegConfig(target, config_path)
         
         self.regs_supp = list(set(list(itertools.chain(*self.suppcls_regs_map.values()))))
-        # print(self.regs_supp)
         self.num_regs_supp = len(self.regs_supp)
         logging.info('number of register :: {}'.format(self.num_regs_supp))
 
         self.ac_sp_normlize = np.arange(0, self.num_regs_supp+1) # 1.... Num of supported registers
         self.ac_sp_normlize_size = len(self.ac_sp_normlize)
         logging.info('Size of the action space  : {} '.format(len(self.ac_sp_normlize)))
-        # Original to
-
         
         assert len(self.ac_sp_normlize[1:]) == len(self.regs_supp), "Action space size (w/o spill) and supported register should be same"
         self.normal_org_map = dict(zip(self.ac_sp_normlize[1:], self.regs_supp))
-
-        # print(self.normal_org_map)
         self.org_normal_map = dict(zip(self.regs_supp, self.ac_sp_normlize[1:]))
-        # print(self.org_normal_map)
-        
-
-        
-        # list()
+                
         supp_regs_normal_values_map = list(map(lambda y: list(map(lambda reg: self.org_normal_map[reg],  y)), self.suppcls_regs_map.values()))
-        # print(self.suppcls_regs_map.values())
-        # print('==============================')
-        # print(supp_regs_normal_values_map)
-
         self.suppcls_regs_normalize_map  = dict(zip(self.supported_regclasses, supp_regs_normal_values_map))
-
 
         # reg_target = {"name":target, "regclasses" : self.supported_regclasses,"register" : [ {"color": int(self.org_normal_map[reg]), "name" : self.reg_idname_map[reg], "phyReg" : int(reg) } for reg in self.regs_supp] }
 
         # color2regmap = { "targets" : [reg_target]}
         # 
 
-        # print(color2regmap)
         # with open("RegColorMap_{}.json".format(target), "w") as f:
         #     json.dump(color2regmap, f, indent=4)
         
-        # print(self.suppcls_regs_normalize_map)
 
 
 #     @staticmethod
@@ -94,20 +77,14 @@ class RegisterActionSpace:
             extend_adj = []
             if len(adj_colors) > 0:
                 # adj_colors = RegisterActionSpace.adj_color_mask(adj_colors)
-                # print('action_space ', action_space)
-                # print('adj_colors ', adj_colors)
                 logging.debug('adj_colors -  {}  '.format(adj_colors))
                 extend_adj = adj_colors.copy()
                 for adj in adj_colors:
-                    # print(adj)
                     if adj in self.normal_org_map.keys():
                         reg = self.normal_org_map[adj]
                         if  str(reg) in self.overlaps.keys():
-                            # print(self.overlaps[str(reg)])
-                            # print(self.org_normal_map)
                             extend_adj += list(map(lambda x: self.org_normal_map[x], filter( lambda z : z in self.org_normal_map.keys(), self.overlaps[str(reg)])))
                 
-                # print('ext_adj_colors ', extend_adj)
                 # tmp_mask_sidi = [32, 57, 61, 59, 16, 53, 26, 18]
             tmp_mask_sidi = [33, 43, 45, 44, 17, 40, 27, 19]
             extend_adj.extend(tmp_mask_sidi)
