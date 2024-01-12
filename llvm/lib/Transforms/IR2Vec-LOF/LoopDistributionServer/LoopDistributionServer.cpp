@@ -25,6 +25,7 @@
 
 
 using namespace llvm;
+using namespace MLBridge;
 
 static cl::opt<std::string> funcName("funcName", cl::desc("Function name"),
                                      cl::value_desc("Function name"),
