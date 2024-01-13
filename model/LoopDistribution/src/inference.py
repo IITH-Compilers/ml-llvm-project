@@ -13,7 +13,7 @@ from tqdm import tqdm
 import os
 import json
 import glob
-from ld_config import MODEL_PATH, REPO_DIR, TEST_DIR, BUILD_DIR, MODEL_DIR
+from ld_config import MODEL_PATH, TEST_DIR, BUILD_DIR, MODEL_DIR
 import traceback
 import sys
 
@@ -41,6 +41,7 @@ import SerDes
 from gym.spaces import Discrete, Box, Dict
 import numpy as np
 from ray.tune import function
+from ray.rllib.utils.torch_ops import FLOAT_MIN, FLOAT_MAX
 
 logger = logging.getLogger(__file__)
 logging.basicConfig(
@@ -128,14 +129,14 @@ class DistributionInference:
         ModelCatalog.register_custom_model("distribution_model", DistributionTask)
 
         box_obs = Box(
-            -10000000000000.0,
-            10000000000000.0,
+            FLOAT_MIN,
+            FLOAT_MAX,
             shape=(config["env_config"]["state_size"],),
             dtype=np.float32,
         )
         box_obs_select_node = Box(
-            -10000000000000.0,
-            10000000000000.0,
+            FLOAT_MIN,
+            FLOAT_MAX,
             shape=(
                 config["env_config"]["max_number_nodes"],
                 config["env_config"]["state_size"],

@@ -2,7 +2,6 @@
 
 import os
 import shutil
-import random
 
 class fsystem:
     # Get paths relative to LLVM and IR2Vec directories
