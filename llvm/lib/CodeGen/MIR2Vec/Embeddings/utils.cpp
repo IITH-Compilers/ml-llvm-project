@@ -50,7 +50,7 @@ void IR2Vec::scaleVector(Vector &vec, float factor) {
 std::map<int, std::string>
 IR2Vec::createOpcodeMap(llvm::Triple::ArchType archType) {
   std::map<int, std::string> opcDescMap;
-  std::string extFile = MLConfig::mlconfig;
+  std::string extFile = MLBridge::MLConfig::mlconfig;
   switch (archType) {
   case Triple::ArchType::aarch64: {
     extFile += "/extracted_aarch64.csv";

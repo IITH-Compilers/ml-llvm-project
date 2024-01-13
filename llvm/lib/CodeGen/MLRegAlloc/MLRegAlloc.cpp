@@ -15,8 +15,8 @@
 #include "LiveDebugVariables.h"
 #include "MLModelRunner/ONNXModelRunner/ONNXModelRunner.h"
 #include "MLModelRunner/PipeModelRunner.h"
-#include "MLModelRunner/gRPCModelRunner.h"
 #include "MLModelRunner/Utils/MLConfig.h"
+#include "MLModelRunner/gRPCModelRunner.h"
 #include "RegAllocBase.h"
 #include "SerDes/baseSerDes.h"
 #include "SpillPlacement.h"
@@ -194,10 +194,13 @@ MLRA::MLRA() {
   // if (pred_file != "") {
   //   setPredictionFromFile(pred_file);
   // }
-  loadTargetRegisterConfig(MLConfig::mlconfig + "/regalloc/RegColorMap_Both.json");
-  symbolic = new MIR2Vec_Symbolic(MLConfig::mlconfig +
-  
-                                  "/regalloc/seedEmbedding_5500E_100D.txt");
+  if (enable_dump_ig_dot || enable_mlra_inference || enable_mlra_training) {
+    loadTargetRegisterConfig(MLConfig::mlconfig +
+                             "/regalloc/RegColorMap_Both.json");
+    symbolic = new MIR2Vec_Symbolic(MLConfig::mlconfig +
+
+                                    "/regalloc/seedEmbedding_5500E_100D.txt");
+  }
   //???
   // SetStub<registerallocationinference::RegisterAllocationInference>(
   //     mlra_server_address);
@@ -2699,9 +2702,9 @@ void MLRA::inference() {
           registerallocationinference::RegisterProfileList,
           registerallocationinference::Data>>(
           mlra_server_address, &ClientModeRequest, &ClientModeResponse);
-      
+
       MLRunner->setResponse(&ClientModeResponse);
-      
+
       initPipeCommunication();
     }
   }
@@ -2924,7 +2927,7 @@ void MLRA::MLRegAlloc(MachineFunction &MF, SlotIndexes &Indexes,
                       AAResults &AA, LiveDebugVariables &DebugVars,
                       SpillPlacement &SpillPlacer,
                       MachineOptimizationRemarkEmitter &ORE) {
-  assert(MLConfig::mlconfig != "" && "ml-config-path required" );
+  assert(MLConfig::mlconfig != "" && "ml-config-path required");
   FunctionCounter++;
   errs() << "In MLRegAlloc func...\n";
   // reinitialize values for new function
