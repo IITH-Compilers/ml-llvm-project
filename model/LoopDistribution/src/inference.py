@@ -13,16 +13,16 @@ from tqdm import tqdm
 import os
 import json
 import glob
-from ld_config import MODEL_PATH, REPO_DIR, TEST_DIR
+from ld_config import MODEL_PATH, REPO_DIR, TEST_DIR, BUILD_DIR, MODEL_DIR
 import traceback
 import sys
 
 
 sys.path.extend(
     [
-        f"{REPO_DIR}/MLCompilerBridge/MLModelRunner/gRPCModelRunner/Python-Utilities",
-        f"{REPO_DIR}/model/ggnn_drl/static_v4/src",
-        f"{REPO_DIR}/llvm/lib/Transforms/models"
+        f"{BUILD_DIR}/MLCompilerBridge/MLModelRunner/gRPCModelRunner/Python-Utilities",
+        f"{MODEL_DIR}",
+        # f"{REPO_DIR}/llvm/lib/Transforms/models"
     ]
 )
 import LoopDistribution_pb2, LoopDistribution_pb2_grpc
@@ -30,7 +30,6 @@ import ray
 from ray import tune
 from ray.rllib.agents import ppo
 
-# from mlra_trainer.dqn import DQNTrainer, DEFAULT_CONFIG
 from simple_q import SimpleQTrainer, DEFAULT_CONFIG
 from multiagentEnv import DistributeLoopEnv
 # from register_action_space import RegisterActionSpace
@@ -38,10 +37,6 @@ from ray.rllib.models import ModelCatalog
 from model import SelectNodeNetwork, DistributionTask
 import logging
 import SerDes
-
-# from ray.tune.registry import get_trainable_cls, _global_registry, ENV_CREATOR
-# from ray.rllib.evaluation.worker_set import WorkerSet
-# from ray.rllib.utils.spaces.space_utils import flatten_to_single_ndarray
 
 from gym.spaces import Discrete, Box, Dict
 import numpy as np
@@ -55,8 +50,6 @@ logging.basicConfig(
 )
 
 import networkx
-
-# import numpy as np
 import json
 
 # from dqn_agent import Agent
@@ -109,11 +102,6 @@ class DistributionInference:
             level=logging.DEBUG,
         )
 
-        # self.state = None
-        # config = { 'mode' :'inference', 'state_size':300, 'target' : 'X86', 'intermediate_data' : '/tmp'}
-        # config = utils.set_config(config)
-        # logdir='/tmp'
-
         logger = logging.getLogger(__file__)
         logging.basicConfig(
             filename=os.path.join(logdir, "loop-distribution.log"),
@@ -122,22 +110,16 @@ class DistributionInference:
         )
 
         config = DEFAULT_CONFIG.copy()
-        # config["train-iterations"] = args.train_iterations
         config["num_workers"] = 0
         config["explore"] = False
 
         from ray.tune.registry import register_env
 
-        # config["env"] = DistributeLoopEnv
         config["env_config"]["target"] = "X86"
-        # config["env_config"]["registerAS"] = RegisterActionSpace(config["env_config"]["target"])
-        # config["env_config"]["action_space_size"] = config["env_config"]["registerAS"].ac_sp_normlize_size
         config["env_config"]["state_size"] = 300
-        # config["env_config"]["test_dir"] = test_dir
 
         config["env_config"]["mode"] = "inference"
         config["env_config"]["dump_type"] = "One"
-        # config["env_config"]["dump_color_graph"] = True
         config["env_config"]["intermediate_data"] = "./temp"
         config["env_config"]["use_pipe"] = use_pipe
         config["env_config"]["data_format"] = data_format
@@ -235,8 +217,6 @@ class DistributionInference:
         self.trained_agent = SimpleQTrainer(env=DistributeLoopEnv, config=config)
         # self.train_agent = DistributionInference(model_path, test_dir)
         # logging.info("{} {}".format(self.trained_agent, type(self.trained_agent)))
-        # train_agent = DQNTrainer(config=config)
-        # print('Hi 2')
         checkpoint = model_path
         self.trained_agent.restore(checkpoint)
 
@@ -262,7 +242,6 @@ class DistributionInference:
 
         # Use for running with custom_loop_distribution
         graph = self.dot_to_json(test_file)
-        # print("test_file {}".format(graph))
         obs = env.reset(graph)
 
         env.advice_spec = self.advice_spec
@@ -294,12 +273,8 @@ class DistributionInference:
             # episode_reward += sum(reward.values())
 
             # action = self.trained_agent.compute_action(state)
-            # print("action {}".format(action))
 
             # next_state, reward, done, response  = env.step(action)
-
-            # # print("next_state {}".format(next_state))
-
             logging.debug("reward : {}".format(reward))
 
             # state = next_state
@@ -345,7 +320,6 @@ def predict_loop_distribution(rdgs: list, trained_dist_model: str):
     logging.info("Start the inference....")
     seqs = inference_obj.run_predict_multiple_loops(rdgs)
     logging.info("Distrubuted seqs : {}".format(seqs))
-    # print("seqs: " << seqs)
     ray.shutdown()
 
     return seqs
@@ -384,7 +358,6 @@ def run_pipe_communication(data_format, pipe_name):
                   continue
               _, seq = inference_obj.run_predict(msg)
               f.write(str(seq) + "\n")
-            #   print("Sequence", seq)
               serdes.sendData(seq)
           except Exception as e:
               print("*****Exception occured*******: ", e)
