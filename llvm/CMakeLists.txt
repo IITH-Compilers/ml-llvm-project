@@ -171,6 +171,16 @@ if ("libc" IN_LIST LLVM_ENABLE_RUNTIMES)
   endif()
 endif()
 
+# if MLCompilerBridge is enabled in LLVM_ENABLE_PROJECTS, then set LLVM_MLBRIDGE to ON
+
+option(LLVM_MLBRIDGE "MLCompilerBridge install for LLVM" OFF)
+
+if( "MLCompilerBridge" IN_LIST LLVM_ENABLE_PROJECTS )
+  set( LLVM_MLBRIDGE ON )
+  set( PROTOS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../Protos CACHE PATH "Path to the directory containing the proto files")
+  set( PYTHON_UTILITIES_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../Python-Utilities CACHE PATH "Path to the directory containing the python utilities")
+endif()
+
 # LLVM_ENABLE_PROJECTS_USED is `ON` if the user has ever used the
 # `LLVM_ENABLE_PROJECTS` CMake cache variable.  This exists for
 # several reasons:

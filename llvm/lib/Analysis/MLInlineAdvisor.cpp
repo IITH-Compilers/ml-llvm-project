@@ -32,6 +32,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
 
+using namespace MLBridge;
 using namespace llvm;
 
 static cl::opt<std::string> InteractiveChannelBaseName(
@@ -60,7 +61,7 @@ using CompiledModelType = NoopSavedModelImpl;
 std::unique_ptr<InlineAdvisor>
 llvm::getReleaseModeAdvisor(Module &M, ModuleAnalysisManager &MAM,
                             std::function<bool(CallBase &)> GetDefaultAdvice) {
-  if (!llvm::isEmbeddedModelEvaluatorValid<CompiledModelType>() &&
+  if (!MLBridge::isEmbeddedModelEvaluatorValid<CompiledModelType>() &&
       InteractiveChannelBaseName.empty())
     return nullptr;
   std::unique_ptr<MLModelRunner> AOTRunner;

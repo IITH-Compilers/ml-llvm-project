@@ -28,7 +28,7 @@ class MLInlineAdvice;
 class MLInlineAdvisor : public InlineAdvisor {
 public:
   MLInlineAdvisor(Module &M, ModuleAnalysisManager &MAM,
-                  std::unique_ptr<MLModelRunner> ModelRunner,
+                  std::unique_ptr<MLBridge::MLModelRunner> ModelRunner,
                   std::function<bool(CallBase &)> GetDefaultAdvice);
 
   virtual ~MLInlineAdvisor() = default;
@@ -44,7 +44,7 @@ public:
 
   bool isForcedToStop() const { return ForceStop; }
   int64_t getLocalCalls(Function &F);
-  const MLModelRunner &getModelRunner() const { return *ModelRunner.get(); }
+  const MLBridge::MLModelRunner &getModelRunner() const { return *ModelRunner.get(); }
   FunctionPropertiesInfo &getCachedFPI(Function &) const;
 
 protected:
@@ -63,7 +63,7 @@ protected:
   // TODO: should we keep this updated?
   unsigned getInitialFunctionLevel(const Function &F) const;
 
-  std::unique_ptr<MLModelRunner> ModelRunner;
+  std::unique_ptr<MLBridge::MLModelRunner> ModelRunner;
   std::function<bool(CallBase &)> GetDefaultAdvice;
 
 private:
