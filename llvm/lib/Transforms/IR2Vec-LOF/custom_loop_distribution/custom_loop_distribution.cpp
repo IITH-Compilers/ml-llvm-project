@@ -177,10 +177,12 @@ void custom_loop_distribution::initPipeCommunication(
     errs() << "Dist_seqs vec size: " << distSequence.size() << "\n";
   }
   errs() << "Covered all RDGs\n";
-  std::pair<std::string, int> p1("Exit", 1);
+  std::pair<std::string, std::string> p1("RDG", "Exit");
   MLRunner->populateFeatures(p1);
-  int res = MLRunner->evaluate<int>();
-  errs() << "Exit code: " << res << "\n";
+  int *out;
+  size_t size;
+  MLRunner->evaluate<int *>(out, size);
+  errs() << "Exit code: " << out[0] << "\n";
 }
 
 bool custom_loop_distribution::runOnFunction(Function &F) {
@@ -283,13 +285,13 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
     // errs() << "Code is Commented\n";
     // exit(0);
   } else {
-    loopdistribution::LoopDistributionRequest request;
-    loopdistribution::LoopDistributionResponse response;
+    loopdistribution::RDGData request;
+    loopdistribution::Advice response;
     MLRunner = std::make_unique<
         gRPCModelRunner<loopdistribution::LoopDistribution,
                         loopdistribution::LoopDistribution::Stub,
-                        loopdistribution::LoopDistributionRequest,
-                        loopdistribution::LoopDistributionResponse>>(
+                        loopdistribution::RDGData,
+                        loopdistribution::Advice>>(
         server_address, &request, &response, &M->getContext());
     MLRunner->setRequest(&request);
     MLRunner->setResponse(&response);
