@@ -1,6 +1,5 @@
 #include "llvm/Transforms/IR2Vec-LOF/IR2Vec-SCC.h"
 #include "llvm/IR/Instruction.h"
-#include "llvm/Transforms/IR2Vec-LOF/Config.h"
 #include "llvm/Transforms/IR2Vec-LOF/RDG.h"
 
 #include "MLModelRunner/Utils/MLConfig.h"
