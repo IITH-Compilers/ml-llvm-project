@@ -4,8 +4,8 @@
 #include "MLModelRunner/ONNXModelRunner/utils.h"
 #include "MLModelRunner/PipeModelRunner.h"
 #include "MLModelRunner/TFModelRunner.h"
-#include "MLModelRunner/gRPCModelRunner.h"
 #include "MLModelRunner/Utils/MLConfig.h"
+#include "MLModelRunner/gRPCModelRunner.h"
 #include "grpc/helloMLBridge/helloMLBridge.grpc.pb.h"
 #include "grpc/helloMLBridge/helloMLBridge.pb.h"
 #include "mlir/IR/MLIRContext.h"
@@ -228,36 +228,41 @@
   M(49500)                                                                     \
   M(50000)
 
-static cl::opt<bool> training("mlir-hello-training", cl::Hidden,
-                              cl::desc("whether it is training or inference"),
-                              cl::init(false));
-static cl::opt<std::string> server_address(
-    "mlir-hello-server-address", cl::Hidden,
-    cl::desc("Starts the server in the given address, format <ip>:<port>"),
-    cl::init("localhost:5050"));
+static llvm::cl::opt<bool>
+    training("mlir-hello-training", llvm::cl::Hidden,
+             llvm::cl::desc("whether it is training or inference"),
+             llvm::cl::init(false));
+static llvm::cl::opt<std::string> server_address(
+    "mlir-hello-server-address", llvm::cl::Hidden,
+    llvm::cl::desc(
+        "Starts the server in the given address, format <ip>:<port>"),
+    llvm::cl::init("localhost:5050"));
 
-static cl::opt<std::string> data_format(
-    "mlir-hello-data-format", cl::Hidden, cl::init("json"),
-    cl::desc("Data format to use for communication with python model"));
+static llvm::cl::opt<std::string> data_format(
+    "mlir-hello-data-format", llvm::cl::Hidden, llvm::cl::init("json"),
+    llvm::cl::desc("Data format to use for communication with python model"));
 
-static cl::opt<bool> useONNX("mlir-hello-use-onnx", cl::Hidden,
-                             cl::desc("Use ONNX for inferencing model"),
-                             cl::init(false));
+static llvm::cl::opt<bool>
+    useONNX("mlir-hello-use-onnx", llvm::cl::Hidden,
+            llvm::cl::desc("Use ONNX for inferencing model"),
+            llvm::cl::init(false));
 
-static cl::opt<bool>
-    usePipe("mlir-hello-use-pipe", cl::Hidden,
-            cl::desc("Use pipe based interation with python model"),
-            cl::init(false));
+static llvm::cl::opt<bool>
+    usePipe("mlir-hello-use-pipe", llvm::cl::Hidden,
+            llvm::cl::desc("Use pipe based interation with python model"),
+            llvm::cl::init(false));
 
-static cl::opt<std::string> pipe_name("mlir-hello-pipe-name", cl::Hidden,
-                                      cl::init("dummy"),
-                                      cl::desc("Name for pipe file"));
-static cl::opt<int> n("mlir-hello-data-size", cl::Hidden, cl::init(1000),
-                      cl::desc("Size of input vector"));
+static llvm::cl::opt<std::string>
+    pipe_name("mlir-hello-pipe-name", llvm::cl::Hidden, llvm::cl::init("dummy"),
+              llvm::cl::desc("Name for pipe file"));
+static llvm::cl::opt<int> n("mlir-hello-data-size", llvm::cl::Hidden,
+                            llvm::cl::init(1000),
+                            llvm::cl::desc("Size of input vector"));
 
-static cl::opt<bool> useTF("mlir-hello-use-tf", cl::Hidden,
-                           cl::desc("Use TF AOT for inferencing model"),
-                           cl::init(false));
+static llvm::cl::opt<bool>
+    useTF("mlir-hello-use-tf", llvm::cl::Hidden,
+          llvm::cl::desc("Use TF AOT for inferencing model"),
+          llvm::cl::init(false));
 
 using namespace mlir;
 using namespace grpc;
@@ -356,7 +361,7 @@ public:
   }
 
   void runOnOperation() override {
-    assert(MLConfig::mlconfig != "" && "ml-config-path required" );
+    assert(MLConfig::mlconfig != "" && "ml-config-path required");
     // Get the current operation being operated on.
     Operation *op = getOperation();
     // llvm::errs() << "Hello World pass\n";
@@ -381,7 +386,7 @@ public:
       } else if (useONNX) {
         std::ofstream outputFile;
         outputFile.open("onnx-inference.csv", std::ios::app);
-        Agent *agent = new Agent( MLConfig::mlconfig + 
+        Agent *agent = new Agent(MLConfig::mlconfig +
                                  "/hellopass/onnx_test_dir/dummy-torch-model-" +
                                  std::to_string(n) + ".onnx");
         std::map<std::string, Agent *> agents;
