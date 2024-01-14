@@ -128,7 +128,7 @@ void InnerMostLoopPass::computeIMLForFunction(Function &F) {
     auto ir2vec =
         IR2Vec::Embeddings(*F.getParent(), IR2Vec::IR2VecMode::FlowAware,
                            MLBridge::MLConfig::mlconfig +
-                               "/loopdist/seedEmbeddingVocab-300-llvm10.txt");
+                               "/ir2vec/seedEmbeddingVocab-300-llvm10.txt");
     instVecMap = ir2vec.getInstVecMap();
 
     LLVM_DEBUG(for (auto II : instVecMap) { II.first->dump(); });

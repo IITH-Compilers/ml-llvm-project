@@ -152,7 +152,7 @@ struct PosetRL : public ModulePass,
   Embedding getEmbeddings() override {
     auto Ir2vec =
         IR2Vec::Embeddings(*M, IR2Vec::IR2VecMode::FlowAware,
-                           MLConfig::mlconfig + "/posetrl/seedEmbeddingVocab-300-llvm10.txt");
+                           MLConfig::mlconfig + "/ir2vec/seedEmbeddingVocab-300-llvm10.txt");
     auto ProgVector = Ir2vec.getProgramVector();
     Embedding Vector(ProgVector.begin(), ProgVector.end());
     return Vector;

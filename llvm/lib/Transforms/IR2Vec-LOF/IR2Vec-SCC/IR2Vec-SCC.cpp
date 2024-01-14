@@ -262,7 +262,7 @@ bool RDGWrapperPass::computeRDG(Function &F) {
   auto ir2vec =
       IR2Vec::Embeddings(*F.getParent(), IR2Vec::IR2VecMode::Symbolic,
                          MLBridge::MLConfig::mlconfig +
-                             "/loopdist/seedEmbeddingVocab-300-llvm10.txt");
+                             "/ir2vec/seedEmbeddingVocab-300-llvm10.txt");
   instVecMap = ir2vec.getInstVecMap();
   // for (auto II : instVecMap) { II.first->dump(); }
   LLVM_DEBUG(for (auto II
