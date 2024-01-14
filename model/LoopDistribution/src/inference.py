@@ -20,8 +20,9 @@ import sys
 
 sys.path.extend(
     [
-        f"{BUILD_DIR}/MLCompilerBridge/MLModelRunner/gRPCModelRunner/Python-Utilities",
+        f"{BUILD_DIR}/Python-Utilities",
         f"{MODEL_DIR}",
+        f"{BUILD_DIR}/MLCompilerBridge/CompilerInterface/",
         # f"{REPO_DIR}/llvm/lib/Transforms/models"
     ]
 )
@@ -29,6 +30,8 @@ import LoopDistribution_pb2, LoopDistribution_pb2_grpc
 import ray
 from ray import tune
 from ray.rllib.agents import ppo
+from PipeCompilerInterface import PipeCompilerInterface
+from GrpcCompilerInterface import GrpcCompilerInterface
 
 from simple_q import SimpleQTrainer, DEFAULT_CONFIG
 from multiagentEnv import DistributeLoopEnv
@@ -36,7 +39,6 @@ from multiagentEnv import DistributeLoopEnv
 from ray.rllib.models import ModelCatalog
 from model import SelectNodeNetwork, DistributionTask
 import logging
-import SerDes
 
 from gym.spaces import Discrete, Box, Dict
 import numpy as np
@@ -342,27 +344,26 @@ def run_pipe_communication(data_format, pipe_name):
     ray.init()
     inference_obj = DistributionInference(MODEL_PATH, data_format=data_format)
     inference_obj.use_pipe = True
-    print("Inference model created, using pipe:", pipe_name)
-    serdes = SerDes.SerDes(data_format, "/tmp/" + pipe_name)
-    print("Serdes init...")
-    serdes.init()
+    compiler_interface = PipeCompilerInterface(data_format, '/tmp/' + pipe_name)
+    print("PipeCompilerInterface init...")
+    compiler_interface.reset_pipes()
 
     with open(f'{data_format}_seq_output.log', 'w') as f:
       while True:
           try:
               print("Entered while loop...")
-              msg = serdes.readObservation()
+              msg = compiler_interface.evaluate()
               msg = parseObservation(msg)
               if msg == "Exit":
                   out = 1
-                  serdes.sendData(out)
+                  compiler_interface.populate_buffer(out)
                   continue
               _, seq = inference_obj.run_predict(msg)
               f.write(str(seq) + "\n")
-              serdes.sendData(seq)
+              compiler_interface.populate_buffer(seq)
           except Exception as e:
               print("*****Exception occured*******: ", e)
-              serdes.init()
+              compiler_interface.reset_pipes()
 
 class service_server(LoopDistribution_pb2_grpc.LoopDistribution):
     def __init__(self, inference_obj) -> None:
@@ -372,12 +373,12 @@ class service_server(LoopDistribution_pb2_grpc.LoopDistribution):
         try:
             done = False
             while not done:
-                msg = request
+                msg = request.RDG
                 if msg == "Exit":
-                    out = 1
-                    continue
-                _, seq = self.inference_obj.run_predict(msg)
-                return seq
+                    seq = [1]
+                else:
+                    _, seq = self.inference_obj.run_predict(msg)
+                return LoopDistribution_pb2.Advice(action=seq)
         except Exception as e:
             print('Error')
             traceback.print_exc()
@@ -423,15 +424,8 @@ if __name__ == "__main__":
     if use_pipe:
         run_pipe_communication(args.data_format, args.pipe_name)
     elif use_grpc:
-        server = grpc.server(futures.ThreadPoolExecutor(max_workers=10), options = [
-                    ('grpc.max_send_message_length', 200*1024*1024), #50MB
-                            ('grpc.max_receive_message_length', 200*1024*1024) #50MB
-                                ])
         ray.init()
         inference_obj = DistributionInference(MODEL_PATH)
         inference_obj.use_pipe = False
-        LoopDistribution_pb2_grpc.add_LoopDistributionServicer_to_server(service_server(inference_obj), server)
-        server.add_insecure_port('localhost:' + args.server_port)
-        server.start()
-        print("Server running at port: " + args.server_port)
-        server.wait_for_termination()
+        compiler_interface = GrpcCompilerInterface(mode = 'server', add_server_method=LoopDistribution_pb2_grpc.add_LoopDistributionServicer_to_server, grpc_service_obj=service_server(inference_obj), hostport= args.server_port)
+        compiler_interface.start_server()

@@ -11,7 +11,7 @@ service LoopDistribution {
   rpc distributeLoopAndGetLoopCost(LoopDistributionRequest)
       returns (LoopDistributionResponse) {}
 
-  rpc getAdvice(LoopDistributionRequest) returns (LoopDistributionResponse) {}
+  rpc getAdvice(RDGData) returns (Advice) {}
 }
 
 message LoopDistributionRequest {
@@ -21,6 +21,10 @@ message LoopDistributionRequest {
 message LoopDistributionResponse {
   uint64 OrignialLoopCost = 1;
   uint64 distributedLoopCost = 2;
+}
+
+message RDGData {
+  string RDG = 1;
 }
 
 message Advice {
