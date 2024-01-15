@@ -7,6 +7,8 @@
 
 #include <map>
 
+#define DEBUG_TYPE "rl-loop-distribution"
+
 Observation &LDEnv::reset() {
   this->DistributionSeq = "";
   this->PrevNode = -1;
