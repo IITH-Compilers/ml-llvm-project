@@ -13,39 +13,37 @@ from tqdm import tqdm
 import os
 import json
 import glob
-from ld_config import MODEL_PATH, REPO_DIR, TEST_DIR
+from ld_config import MODEL_PATH, TEST_DIR, BUILD_DIR, MODEL_DIR
 import traceback
 import sys
 
 
 sys.path.extend(
     [
-        f"{REPO_DIR}/MLCompilerBridge/MLModelRunner/gRPCModelRunner/Python-Utilities",
-        f"{REPO_DIR}/model/ggnn_drl/static_v4/src",
-        f"{REPO_DIR}/llvm/lib/Transforms/models"
+        f"{BUILD_DIR}/Python-Utilities",
+        f"{MODEL_DIR}",
+        f"{BUILD_DIR}/MLCompilerBridge/CompilerInterface/",
+        # f"{REPO_DIR}/llvm/lib/Transforms/models"
     ]
 )
 import LoopDistribution_pb2, LoopDistribution_pb2_grpc
 import ray
 from ray import tune
 from ray.rllib.agents import ppo
+from PipeCompilerInterface import PipeCompilerInterface
+from GrpcCompilerInterface import GrpcCompilerInterface
 
-# from mlra_trainer.dqn import DQNTrainer, DEFAULT_CONFIG
 from simple_q import SimpleQTrainer, DEFAULT_CONFIG
 from multiagentEnv import DistributeLoopEnv
 # from register_action_space import RegisterActionSpace
 from ray.rllib.models import ModelCatalog
 from model import SelectNodeNetwork, DistributionTask
 import logging
-import SerDes
-
-# from ray.tune.registry import get_trainable_cls, _global_registry, ENV_CREATOR
-# from ray.rllib.evaluation.worker_set import WorkerSet
-# from ray.rllib.utils.spaces.space_utils import flatten_to_single_ndarray
 
 from gym.spaces import Discrete, Box, Dict
 import numpy as np
 from ray.tune import function
+from ray.rllib.utils.torch_ops import FLOAT_MIN, FLOAT_MAX
 
 logger = logging.getLogger(__file__)
 logging.basicConfig(
@@ -55,8 +53,6 @@ logging.basicConfig(
 )
 
 import networkx
-
-# import numpy as np
 import json
 
 # from dqn_agent import Agent
@@ -109,11 +105,6 @@ class DistributionInference:
             level=logging.DEBUG,
         )
 
-        # self.state = None
-        # config = { 'mode' :'inference', 'state_size':300, 'target' : 'X86', 'intermediate_data' : '/tmp'}
-        # config = utils.set_config(config)
-        # logdir='/tmp'
-
         logger = logging.getLogger(__file__)
         logging.basicConfig(
             filename=os.path.join(logdir, "loop-distribution.log"),
@@ -122,22 +113,16 @@ class DistributionInference:
         )
 
         config = DEFAULT_CONFIG.copy()
-        # config["train-iterations"] = args.train_iterations
         config["num_workers"] = 0
         config["explore"] = False
 
         from ray.tune.registry import register_env
 
-        # config["env"] = DistributeLoopEnv
         config["env_config"]["target"] = "X86"
-        # config["env_config"]["registerAS"] = RegisterActionSpace(config["env_config"]["target"])
-        # config["env_config"]["action_space_size"] = config["env_config"]["registerAS"].ac_sp_normlize_size
         config["env_config"]["state_size"] = 300
-        # config["env_config"]["test_dir"] = test_dir
 
         config["env_config"]["mode"] = "inference"
         config["env_config"]["dump_type"] = "One"
-        # config["env_config"]["dump_color_graph"] = True
         config["env_config"]["intermediate_data"] = "./temp"
         config["env_config"]["use_pipe"] = use_pipe
         config["env_config"]["data_format"] = data_format
@@ -146,14 +131,14 @@ class DistributionInference:
         ModelCatalog.register_custom_model("distribution_model", DistributionTask)
 
         box_obs = Box(
-            -10000000000000.0,
-            10000000000000.0,
+            FLOAT_MIN,
+            FLOAT_MAX,
             shape=(config["env_config"]["state_size"],),
             dtype=np.float32,
         )
         box_obs_select_node = Box(
-            -10000000000000.0,
-            10000000000000.0,
+            FLOAT_MIN,
+            FLOAT_MAX,
             shape=(
                 config["env_config"]["max_number_nodes"],
                 config["env_config"]["state_size"],
@@ -235,8 +220,6 @@ class DistributionInference:
         self.trained_agent = SimpleQTrainer(env=DistributeLoopEnv, config=config)
         # self.train_agent = DistributionInference(model_path, test_dir)
         # logging.info("{} {}".format(self.trained_agent, type(self.trained_agent)))
-        # train_agent = DQNTrainer(config=config)
-        # print('Hi 2')
         checkpoint = model_path
         self.trained_agent.restore(checkpoint)
 
@@ -262,7 +245,6 @@ class DistributionInference:
 
         # Use for running with custom_loop_distribution
         graph = self.dot_to_json(test_file)
-        # print("test_file {}".format(graph))
         obs = env.reset(graph)
 
         env.advice_spec = self.advice_spec
@@ -294,12 +276,8 @@ class DistributionInference:
             # episode_reward += sum(reward.values())
 
             # action = self.trained_agent.compute_action(state)
-            # print("action {}".format(action))
 
             # next_state, reward, done, response  = env.step(action)
-
-            # # print("next_state {}".format(next_state))
-
             logging.debug("reward : {}".format(reward))
 
             # state = next_state
@@ -345,7 +323,6 @@ def predict_loop_distribution(rdgs: list, trained_dist_model: str):
     logging.info("Start the inference....")
     seqs = inference_obj.run_predict_multiple_loops(rdgs)
     logging.info("Distrubuted seqs : {}".format(seqs))
-    # print("seqs: " << seqs)
     ray.shutdown()
 
     return seqs
@@ -367,28 +344,26 @@ def run_pipe_communication(data_format, pipe_name):
     ray.init()
     inference_obj = DistributionInference(MODEL_PATH, data_format=data_format)
     inference_obj.use_pipe = True
-    print("Inference model created, using pipe:", pipe_name)
-    serdes = SerDes.SerDes(data_format, "/tmp/" + pipe_name)
-    print("Serdes init...")
-    serdes.init()
+    compiler_interface = PipeCompilerInterface(data_format, '/tmp/' + pipe_name)
+    print("PipeCompilerInterface init...")
+    compiler_interface.reset_pipes()
 
     with open(f'{data_format}_seq_output.log', 'w') as f:
       while True:
           try:
               print("Entered while loop...")
-              msg = serdes.readObservation()
+              msg = compiler_interface.evaluate()
               msg = parseObservation(msg)
               if msg == "Exit":
                   out = 1
-                  serdes.sendData(out)
+                  compiler_interface.populate_buffer(out)
                   continue
               _, seq = inference_obj.run_predict(msg)
               f.write(str(seq) + "\n")
-            #   print("Sequence", seq)
-              serdes.sendData(seq)
+              compiler_interface.populate_buffer(seq)
           except Exception as e:
               print("*****Exception occured*******: ", e)
-              serdes.init()
+              compiler_interface.reset_pipes()
 
 class service_server(LoopDistribution_pb2_grpc.LoopDistribution):
     def __init__(self, inference_obj) -> None:
@@ -398,12 +373,12 @@ class service_server(LoopDistribution_pb2_grpc.LoopDistribution):
         try:
             done = False
             while not done:
-                msg = request
+                msg = request.RDG
                 if msg == "Exit":
-                    out = 1
-                    continue
-                _, seq = self.inference_obj.run_predict(msg)
-                return seq
+                    seq = [1]
+                else:
+                    _, seq = self.inference_obj.run_predict(msg)
+                return LoopDistribution_pb2.Advice(action=seq)
         except Exception as e:
             print('Error')
             traceback.print_exc()
@@ -449,15 +424,8 @@ if __name__ == "__main__":
     if use_pipe:
         run_pipe_communication(args.data_format, args.pipe_name)
     elif use_grpc:
-        server = grpc.server(futures.ThreadPoolExecutor(max_workers=10), options = [
-                    ('grpc.max_send_message_length', 200*1024*1024), #50MB
-                            ('grpc.max_receive_message_length', 200*1024*1024) #50MB
-                                ])
         ray.init()
         inference_obj = DistributionInference(MODEL_PATH)
         inference_obj.use_pipe = False
-        LoopDistribution_pb2_grpc.add_LoopDistributionServicer_to_server(service_server(inference_obj), server)
-        server.add_insecure_port('localhost:' + args.server_port)
-        server.start()
-        print("Server running at port: " + args.server_port)
-        server.wait_for_termination()
+        compiler_interface = GrpcCompilerInterface(mode = 'server', add_server_method=LoopDistribution_pb2_grpc.add_LoopDistributionServicer_to_server, grpc_service_obj=service_server(inference_obj), hostport= args.server_port)
+        compiler_interface.start_server()

@@ -13,17 +13,17 @@ import datetime
 import pandas as pd
 import logging
 
+from ld_config import BUILD_DIR, DATA_DIR
+
 logger = logging.getLogger('utils.py') 
 # logger.addHandler(logging.StreamHandler(sys.stdout))
 # error_runtime=100000000
 
-# LLVM_BUILD = '/home/shalini/LOF_test/LD_VF/IR2Vec-LoopOptimizationFramework/build_release/'
-# LLVM_BUILD = '/home/shalini/LOF_test/LD_VF/IR2Vec-LoopOptimizationFramework/debug_build/'
-LLVM_BUILD = '/home/cs21btech11051/ml-llvm-project/build_all/'
+LLVM_BUILD = BUILD_DIR
 llvm = LLVM_BUILD
-opt = '{}bin/opt'.format(LLVM_BUILD)
-CLANG = '{}bin/clang'.format(LLVM_BUILD)
-MCA = '{}bin/llvm-mca'.format(LLVM_BUILD)
+opt = '{}/bin/opt'.format(LLVM_BUILD)
+CLANG = '{}/bin/clang'.format(LLVM_BUILD)
+MCA = '{}/bin/llvm-mca'.format(LLVM_BUILD)
 
 LL_DIR_CONST='llfiles'
 OUT_DIR_CONST='outfiles'
@@ -36,10 +36,7 @@ O0_LL_DIR_CONST='{}/level-O0'.format(LL_DIR_CONST)
 SSA_LL_DIR_CONST='{}/ssa'.format(LL_DIR_CONST)
 META_SSA_LL_DIR_CONST='{}/meta_ssa'.format(LL_DIR_CONST)
 
-# TrainingGraphs = "/home/shalini/LOF_test/LD_VF/IR2Vec-LoopOptimizationFramework/data/Opt_cld_O3_individualfile/mutation/tsvc_train/GIF_train_v4/graphs/loops/json/"
-# TrainingGraphs = "/home/shalini/LOF_test/LD_VF/IR2Vec-LoopOptimizationFramework/data/Opt_cld_O3_individualfile/mutation/spec_train/GIF_train_v4/graphs/loops/json/"
-# TrainingGraphs = "/home/shalini/LOF_test/LD_VF/IR2Vec-LoopOptimizationFramework/data/Opt_cld_O3_individualfile/mutation/temp/GIF_train_v4/graphs/loops/json/"
-TrainingGraphs = "/Pramana/ML_LLVM_Tools/ml-llvm-project/data/tsvc_train/generated_final/graphs/loops/json/"
+TrainingGraphs = glob.glob(os.path.join(DATA_DIR, 'graphs/loops/json/'))[0]
 TrainingGraphList = []
 
 # test_dir = "/home/shalini/LOF_test/LD_VF/IR2Vec-LoopOptimizationFramework/data/Opt_cld_O3_individualfile/mutation/tsvc_train/GIF_train_v4/graphs/loops/json/"
@@ -56,7 +53,6 @@ config=None
 
 def generateTrainingData():
     # self.TrainingDataPath = os.path.join(self.TrainingGraphs,path)
-    # print(self.TrainingDataPath)
     for file in os.listdir(TrainingGraphs):
         TrainingGraphList.append(file)
     return TrainingGraphList
@@ -66,7 +62,6 @@ def getllFileAttributes_old(file):
     parts = file.split('/{graphs}/'.format(graphs=GRAPH_DIR_CONST))
     home_dir = parts[0]
     parts=parts[1].split('/')
-    # print(parts)
     file_name_parts = (parts[-1].split('I_'))[1].split('.json')[0]
     
     file_name_parts =file_name_parts.split('_L')
@@ -144,7 +139,6 @@ def call_distributionPass(filename, distributeSeq, method_name, loop_id, hfun_id
         logging.critical('CallLoopDistribute: Exception ocurred : {}'.format(err))
         # raise
     except:
-        print("EEEEEEEEEEEEEEEE")
         dist_llfile = None #None if fails
         logging.critical('CallLoopDistribute: Some error occured while calling the distribution pass for {filename}. '.format(filename=filename))
         raise 
@@ -213,22 +207,17 @@ def getLoopCost(filepath, loopId, fname):
     print("fname: {}".format(fname))
     try:
         # TODO 
-        # cmd = "{opt} -S -load {llvm}/lib/LoopCost.so {post_distribution_passes} -LoopCost -lc-lID {loopId} -lc-function {fname}  {input_file} -o /dev/null ".format(opt=os.environ['OPT'], llvm=os.environ['LLVM'], input_file=filepath, loopId=loopId,fname=fname, post_distribution_passes=POST_DIS_PASSES_MAP[config.post_pass_key])
         cmd = opt + " -S -load " + llvm + "lib/LoopCost.so " + POST_DIST_O3_PASSES + " -LoopCost -lc-lID " + loopId + " -lc-function " + fname + " " + filepath + " -o /dev/null" + " --ml-config-path /Pramana/ML_LLVM_Tools/ml-llvm-project/build_loopdist/config "
         # .format(opt=os.environ['OPT'], llvm=os.environ['LLVM'], input_file=filepath, loopId=loopId,fname=fname, post_distribution_passes=POST_DIS_PASSES_MAP[config.post_pass_key])
         # analysedInfo = subprocess.Popen(cmd, executable='/bin/bash', shell=True, stdout=subprocess.PIPE).stdout.read()
         # print("LoopCost cmd: {}".format(cmd))
         logging.info(cmd)
-        print("loop cost cmd:",cmd)
-        # print("Loopcost cmd: {}".format(cmd))
-
+        
         pro = subprocess.Popen(cmd, executable='/bin/bash', shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         output = pro.stdout
         line = output.readline()
-        # print("line: {}".format(line))
         
         if pro.stderr is not None:
-            # print("pro.stderr: {}".format(pro.stderr))
             logging.critical('Error : {}'.format(pro.stderr))
         
         logging.info('***Metric for the loop****')
@@ -236,7 +225,6 @@ def getLoopCost(filepath, loopId, fname):
             line = line.decode('utf-8').rstrip("\n")
             
             pair = line.split(':')
-            # print("pair: {}".format(pair))
             if pair[0] == 'TotalLoopCost for Loop':
                 lc=int(pair[1].strip(' '))
                 # print("lc: {}".format(lc))
@@ -255,12 +243,10 @@ def getLoopCost(filepath, loopId, fname):
         # factors = analysedInfo.split(',')
         # loopCost = analysedInfo
     except Exception as inst :
-        # print("insttttttttttttt: {}".format(sys.exc_info()))
         logging.critical(sys.exc_info())
         logging.critical(': Exception ocurred : {}'.format(inst))
         logging.critical('{this_function_name}: Some error occured .. for {filename}'.format(this_function_name=this_function_name,filename=filepath))
     except :
-        # print("exceptionnnnnnnnnnnnnnnnnnnnnn: {}".format(sys.exc_info()))
         logging.critical(sys.exc_info())
         logging.critical('{this_function_name}: Some Other Unknown error occured .. for {filename}'.format(this_function_name=this_function_name, filename=filepath))
     return loopCost
@@ -289,7 +275,6 @@ def getMCACost(filepath, loopId, fname):
             format(opt=os.environ['OPT'], clang=os.environ['CLANG'], llvm_mca=os.environ['MCA'], input_file=filepath,
             loopId=loopId, fname=fname, post_distribution_passes=POST_DIS_PASSES_MAP[config.post_pass_key], target=target)
         pro = subprocess.Popen(cmd, executable='/bin/bash', shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        # print(cmd) 
         
         output = pro.stdout
         line = output.readline()

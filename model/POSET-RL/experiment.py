@@ -22,18 +22,11 @@
 #                               --mca_reward_thresh 0.2
 
 import argparse
-import gym
 import os
-import glob
-import time
-import torch
 
 import ray
 from ray import tune
-from ray.rllib.agents import ppo
-from ray.rllib.agents import dqn
 from ray.rllib.agents.dqn import DQNTrainer, DEFAULT_CONFIG
-from ray.rllib.policy.torch_policy import TorchPolicy
 #from Environment_1 import PhaseOrder
 from Environment_pipe import PhaseOrder
 from ray.rllib.models import ModelCatalog
@@ -41,7 +34,6 @@ from model import CustomPhaseOrderModel
 from po_config import BUILD_DIR, MODEL_DIR
 
 from Filesystem import *
-import pprint
 
 import logging
 #import utils
@@ -69,8 +61,6 @@ parser.add_argument(
 parser.add_argument("--server_port", type=str, help="Server port", default=50051)
 
 # Use for resuming training from checkpoint
-# checkpoint = "/home/cs20btech11018/ray_results/0.2thresh-10alpha-5beta-aarch/experiment_PhaseOrder_54b91_00000_0_2023-02-04_18-33-34/checkpoint_000010/checkpoint-10"
-
 checkpoint = None
 
 def experiment(config):
@@ -79,24 +69,15 @@ def experiment(config):
     train_results = {}
     print(config)
     train_agent = DQNTrainer(config=config, env=PhaseOrder)
-    # checkpoint = "/home/cs20mtech12003/ray_results/experiment_2023-06-16_01-17-51/experiment_PhaseOrder_83255_00000_0_2023-06-16_01-17-51/checkpoint_000500/checkpoint-500"
     if checkpoint is not None:
-        train_agent.restore(checkpoint)
-
-    # model_path = "/home/cs20btech11018/repos/ML-Phase-Ordering/RLLib-PhaseOrder/poset-RL-onnx-model/model.onnx"
-    # policy = train_agent.get_policy()
-    # print(policy)
-    # policy.export_model(model_path)
-    # input_signature = policy.observation_space.sample().reshape(1, -1)
-    # print(input_signature)
-    # torch.onnx.export(policy.model, torch.from_numpy(input_signature), model_path, input_names=["input"], output_names=["output"])   
-
+        train_agent.restore(checkpoint)    
     
     for i in range(iterations):
         train_results = train_agent.train()
         # train_agent.export_policy_model("/home/cs20btech11018/repos/ML-Phase-Ordering/RLLib-PhaseOrder/poset-RL-onnx-model", onnx=int(os.getenv("ONNX_OPSET", "11")))
         # break
-        tune.report(**train_results)
+        
+        
         checkpoint = train_agent.save(tune.get_trial_dir())
     train_agent.stop()
 
@@ -173,9 +154,6 @@ if __name__ == '__main__':
         **cfg)
     # config = dict(config,**default_config)
     config["timesteps_per_iteration"] = 90
-    # config["learning_starts"] = 20
-    # config["prioritized_replay_beta_annealing_timesteps"] = 20
-    # config["target_network_update_freq"] = 5
 
     if args.use_grpc:        
         experiment_name = "grpc_results"

@@ -46,13 +46,10 @@ def experiment(config):
     iterations = config.pop("train-iterations")
     global checkpoint
     train_results = {}
-    # config["env_config"]["path"] = path
-    # train_agent = SimpleQTrainer(config=config, env=HierarchicalGraphColorEnv)
     train_agent = PPO(config=config, env=HierarchicalGraphColorEnv)
-    print('------------------------ aegent --------------------------------- ', train_agent)
+    print('Training agent used:', train_agent)
     # Train
     checkpoint = config["env_config"]["check_point"]
-    # train_agent = SimpleQTrainer(config=config, env=GraphColorEnv)
     if checkpoint is not None:
         train_agent.restore(checkpoint)
         print("Checkpoint restored")            
@@ -60,11 +57,9 @@ def experiment(config):
     last_checkpoint = 0
     for i in range(iterations):
         train_results = train_agent.train()
-        # auto_garbage_collect()
         if i == iterations - 1 or (train_results['episodes_total'] - last_checkpoint) > 499:
             last_checkpoint = train_results['episodes_total']
             checkpoint = train_agent.save(tune.get_trial_dir())
-            # print("***************Checkpoint****************", checkpoint)
         tune.report(**train_results)
         if train_results['episodes_total'] > config["env_config"]["episode_number"]:
             print("Traning Ended")
@@ -77,22 +72,6 @@ def experiment(config):
     train_agent.export_policy_model(export_dir="/home/cs20mtech12003/ml-llvm-project/model/RL4ReAl/src/split_node", policy_id="split_node_policy", onnx=11)
     train_agent.stop()
 
-    # Manual Eval
-    # config["num_workers"] = 0
-    # eval_agent = SimpleQTrainer(config=config, env=HierarchicalGraphColorEnv)
-    # eval_agent.restore(checkpoint)
-    # env = eval_agent.workers.local_worker().env
-
-    # obs = env.reset()
-    # done = False
-    # eval_results = {"eval_reward": 0, "eval_eps_length": 0}
-    # while not done:
-    #     action = eval_agent.compute_action(obs, policy_id="select_node_policy")
-    #     next_obs, reward, done, info = env.step(action)
-    #     eval_results["eval_reward"] += reward
-    #     eval_results["eval_eps_length"] += 1
-    # results = {**train_results, **eval_results}
-    # tune.report(results)
 
 def auto_garbage_collect(pct=50.0):
     """
@@ -109,7 +88,6 @@ class MyCallbacks(DefaultCallbacks):
     def  on_episode_start(self, *, worker: RolloutWorker, base_env: BaseEnv,
                        policies: type_dict[str, Policy], episode: MultiAgentEpisode,
                        env_index: int, **kwargs):
-        # print("Env object", base_env.get_sub_environments())
         if base_env.get_sub_environments()[0].server_pid is not None:
             episode.hist_data["server_pid"] = [base_env.get_sub_environments()[0].server_pid.pid]
         else:
@@ -129,7 +107,6 @@ class MyCallbacks(DefaultCallbacks):
     def on_sample_end(self, *, worker: "RolloutWorker", samples: SampleBatch,
                     **kwargs):
         print("Sample Batch size is {} bytes".format(samples.size_bytes()))
-        # print("Sample Batch is", samples.rows())
 
 @ray.remote
 class Counter:
@@ -166,16 +143,12 @@ if __name__ == "__main__":
     print("Log directory:", logdir)
     config['env_config']['log_dir'] = logdir
     python_log = os.path.join(logdir, 'running.log')
-    #if os.path.exists(python_log):
-     #   os.remove(python_log)
-    print(python_log)
     logging.basicConfig(filename='running.log', format='%(thread)d - %(threadName)s - %(levelname)s - %(filename)s - %(message)s', level=log_level, force=True)
     logging.info('Starting training')
     logging.info(args)
 
     ray.init(object_store_memory=10000000000, local_mode=False)
     
-    # c = Counter.remote()
 
     config["train-iterations"] = args.train_iterations
     config["framework"] = "torch"
@@ -192,9 +165,6 @@ if __name__ == "__main__":
     box_obs_select_node = Box(
             FLOAT_MIN, FLOAT_MAX, shape=(config["env_config"]["max_number_nodes"], config["env_config"]["state_size"]), dtype=np.float32)
     
-    # tuple_edge = Tuple((Discrete(config["env_config"]["max_number_nodes"]), Discrete(config["env_config"]["max_number_nodes"])))
-    # repeat_tuple_edges = Repeated(tuple_edge, max_len=max_edge_count)
-    # tuple_adjacency_lists = Tuple((Discrete(config["env_config"]["max_number_nodes"]), repeat_tuple_edges))
     max_edge_count = config["env_config"]["max_edge_count"]
     adjacency_lists = Dict({
         "node_num": Discrete(config["env_config"]["max_number_nodes"]),
@@ -298,11 +268,8 @@ if __name__ == "__main__":
         "policy_mapping_fn": policy_mapping_fn
     }
     print("Training Config", config)
-    # file_count = 0
     start_time = time.time()
-    # for path in tqdm (training_graphs, desc="Running..."): # Number of the iterations        
-        # set_config(path)
-        # config["env_config"]["path"] = path
+    
     
     config["num_rollout_workers"] = (int)(args.workers)
 
@@ -319,14 +286,10 @@ if __name__ == "__main__":
     tune.run(
         experiment,
         config=config,
-        # resources_per_trial=SimpleQTrainer.default_resource_request(config),
         resources_per_trial=PPO.default_resource_request(config),
-        # fail_fast=True,
-        # max_failures=10
         trial_name_creator=trail_name_fun,
         name=experiment_name,
         local_dir=(MODEL_DIR + "/checkpoint_dir")
         )
-        # resources_per_trial={"cpu": 16, "gpu": 2})
-        # file_count += 1
+        
     print("Total time in seconds is: ", (time.time() - start_time))

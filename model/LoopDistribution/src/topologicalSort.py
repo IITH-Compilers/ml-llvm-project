@@ -26,7 +26,6 @@ class Graph:
             self.indegree[dest] = self.indegree[dest] + 1
 
     def UpdateVisitList(self, v):
-        # print("11111111111111")
         try:
             if self.indegree[v] == 0 and not self.discovered[v]:
                 # for every adjacent vertex u of v, reduce in-degree of u by 1
@@ -118,7 +117,4 @@ if __name__ == '__main__':
     graph.UpdateVisitList(listm[1])
     graph.UpdateVisitList(listm[2])
     listm = graph.findAllVertaxWithZeroWeights()
-    print(listm)
-    # print all topological ordering of the graph
-    # printAllTopologicalOrders(graph)
 

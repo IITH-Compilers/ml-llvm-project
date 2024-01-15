@@ -20,10 +20,8 @@ import math
 import torch
 import signal
 from gym.spaces import Discrete, Box
-from ld_config import BUILD_DIR, REPO_DIR
-# from ggnn_1 import get_observations, get_observationsInf, GatedGraphNeuralNetwork, constructVectorFromMatrix, AdjacencyList
+from ld_config import BUILD_DIR, CONFIG_DIR
 from ggnn_1 import GatedGraphNeuralNetwork, AdjacencyList, get_observations
-# from register_action_space import RegisterActionSpace
 
 import ray
 from ray import tune
@@ -59,7 +57,7 @@ from functools import reduce
 import operator
 
 sys.path.extend([
-    f"{REPO_DIR}/MLCompilerBridge/MLModelRunner/gRPCModelRunner/Python-Utilities"
+    f"{BUILD_DIR}/MLCompilerBridge/MLModelRunner/gRPCModelRunner/Python-Utilities"
 ])
 
 config_path=None
@@ -127,23 +125,23 @@ class DistributeLoopEnv(MultiAgentEnv):
         self.read_stream_iter = None
 
         
-        # if self.use_pipe:
-        #     # pipes opening
-        #     self.temp_rootname = "loopdistppipe"
-        #     to_compiler = self.temp_rootname + ".in"
-        #     from_compiler = self.temp_rootname + ".out"
-        #     print("to_compiler", to_compiler)
-        #     print("from_compiler", from_compiler)
-        #     if os.path.exists(to_compiler):
-        #         os.remove(to_compiler)
-        #     if os.path.exists(from_compiler):
-        #         os.remove(from_compiler)
-        #     os.mkfifo(to_compiler, 0o666)
-        #     os.mkfifo(from_compiler, 0o666)
-        #     self.tc = None
-        #     self.fc = None
-        #     self.tensor_specs = None
-        #     self.advice_spec =  None
+        if self.use_pipe:
+            # pipes opening
+            self.temp_rootname = "/tmp/loopdistppipe"
+            to_compiler = self.temp_rootname + ".in"
+            from_compiler = self.temp_rootname + ".out"
+            print("to_compiler", to_compiler)
+            print("from_compiler", from_compiler)
+            if os.path.exists(to_compiler):
+                os.remove(to_compiler)
+            if os.path.exists(from_compiler):
+                os.remove(from_compiler)
+            os.mkfifo(to_compiler, 0o666)
+            os.mkfifo(from_compiler, 0o666)
+            self.tc = None
+            self.fc = None
+            self.tensor_specs = None
+            self.advice_spec =  None
         self.partition_seq = None
     
     def reward_formula(self, distributedLoopCost, OriginalLoopCost):
@@ -172,23 +170,17 @@ class DistributeLoopEnv(MultiAgentEnv):
         # key = "{filename}_{function_name}_{loopid}_{disSeq}".format(filename=ll_file_name, function_name=method_name, loopid=loop_id, disSeq=self.distribution)   
         # key = (ll_file_name, method_name, loop_id, '|'.join([ ','.join(sorted(seqdis.split(','))) for seqdis in self.distribution.split('|')]))   
         key = (ll_file_name, method_name, loop_id, '|'.join([ ','.join(list(map(lambda x: 'S{}'.format(x), sorted(seqdis.replace('S','').split(','))))) for seqdis in self.distribution.split('|')]))  
-        print(key)
 
         isFound = False
         try:
-            if self.mode == 'train':
-                print(self.loopcost_cache)
-                
+            if self.mode == 'train':                
                 record = self.loopcost_cache.iloc[self.loopcost_cache.index.get_loc(key)]
                 OriginalLoopCost=record['Undsitributed Cost']
                 distributedLoopCost = record['Distributed cost']
                 reward = self.reward_formula(distributedLoopCost, OriginalLoopCost)
-                # print("aaaaaaaa: {}".format(OriginalLoopCost))
-                # print("aaaaaaaa: {}".format(distributedLoopCost))
                 logging.info('ll_filename|OriginalLoopCost|distributedLoopCost|reward|distributeSeq|task {} {} {} {} {} {}'.format(ll_file_name, OriginalLoopCost, distributedLoopCost, reward, self.distribution, 'Distribution'))
                 logging.info('******Cache Found the data point******')
                 isFound=True
-                print('calling grpc exit in cache code')
                 if self.use_grpc:
                     self.stable_grpc("Exit")
                 self.killServer()
@@ -219,7 +211,7 @@ class DistributeLoopEnv(MultiAgentEnv):
             else:
                 # distributed_llfile = input_file_path
                 distributed_llfile = utils.call_distributionPass( input_file_path, self.distribution, method_name, loop_id, fun_id, loop_id, self.distributed_data)
-                print("distribution pattern: {}".format(self.distribution))
+                # print("distribution pattern: {}".format(self.distribution))
                 # self.speedup=0
                 if distributed_llfile is None:
                     logging.warning('distributed file  not generated...., reward={}'.format(reward))
@@ -229,9 +221,7 @@ class DistributeLoopEnv(MultiAgentEnv):
                         # logging.info('Get the loop_cost metric for original loop')
                         OriginalLoopCost = utils.getLoopCost(meta_ssa_file_path, loop_id, method_name)
                         logging.info('Get the loop_cost metric for distributed loop')
-                        distributedLoopCost = utils.getLoopCost(distributed_llfile, loop_id, method_name)
-                        # print("bbbbbbbb: {}".format(OriginalLoopCost))
-                        # print("bbbbbbbb: {}".format(distributedLoopCost))
+                        distributedLoopCost = utils.getLoopCost(distributed_llfile, loop_id, method_name)                        
                     else:
                         logging.info('Get the mca_cost metric for original loop')
                         OriginalLoopCost = utils.getMCACost(meta_ssa_file_path, loop_id, method_name)
@@ -240,8 +230,6 @@ class DistributeLoopEnv(MultiAgentEnv):
                         if self.mode != 'test':
                             os.remove(distributed_llfile)
             reward = self.reward_formula(distributedLoopCost, OriginalLoopCost) 
-            # print("distributedLoopCost: {}".format(distributedLoopCost))
-            # print("OriginalLoopCost: {}".format(OriginalLoopCost)) 
             # Remove, it is occupies a lot of space
             
             # update the cache 
@@ -254,21 +242,15 @@ class DistributeLoopEnv(MultiAgentEnv):
             # costly operation
             # self.loopcost_cache.loc[key,['Distributed cost', 'Undsitributed Cost']] = [ distributedLoopCost, OriginalLoopCost]      
 
-        print("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa: {}".format(reward))
         return reward
 
     def getReward(self):
         return self.getReward_Static()
 
     def _select_distribution_step(self, action):
-        print("444444444444444444444444444 (distr step) func name: {}".format(self.functionName))
         dist_flag = [1] * 1
         if(action == 0):
-            print("DO NOT DISTRIBUTE (MERGE)")
-            # dist_flag = [1] * 1
-            # print(self.obs.annotations)
-            # if startNode:
-            #     self.obs.annotations[v][1] = 1
+            # print("DO NOT DISTRIBUTE (MERGE)")
             self.obs.annotations[self.cur_node][0] = 1
             # print(self.obs.annotations)
             # self.ggnn.mpAfterDisplacement(self.cur_node)
@@ -278,28 +260,17 @@ class DistributeLoopEnv(MultiAgentEnv):
             # self.obs.addPairEdge(self.prev_node, self.cur_node)
             logging.info('DLOOP merge {prev_node} with {cur_node}'.format(prev_node=self.prev_node, cur_node=self.cur_node))
         else:
-            print("DISTRIBUTE")
-            dist_flag = [0] * 1
-            # print(self.obs.annotations)
-            # if startNode:
-            #     self.obs.annotations[v][1] = 1
-            ###########################################################
+            # print("DISTRIBUTE")
+            dist_flag = [0] * 1            
             self.obs.annotations[self.cur_node][0] = 1
-            # print(self.obs.annotations)
             # self.obs.mpAfterDisplacement(self.cur_node)
             self.node_id =  self.obs.idx_nid[self.cur_node]
             self.distribution = "{}|{}".format(self.distribution, self.node_id)
             logging.info('DLOOP distribute {prev_node} with {cur_node}'.format(prev_node=self.prev_node, cur_node=self.cur_node))
 
-        print("previous node: {} and current node: {}".format(self.prev_node, self.cur_node))
-        print('dist_flag: ', dist_flag)
-
         select_node_mask = self.createNodeSelectMask()
         state = self.obs
         self.hidden_state =  self.ggnn(initial_node_representation=state.initial_node_representation, annotations=state.annotations, adjacency_lists=state.adjacency_lists)
-
-        # print("action_mask: {}".format(select_node_mask))
-
 
         reward_final = 0
         done_all = False
@@ -321,12 +292,12 @@ class DistributeLoopEnv(MultiAgentEnv):
 
         node_mat = self.hidden_state.detach().numpy()    
 
-        cur_obs = np.zeros((self.max_number_nodes, self.emb_size))
+        cur_obs = np.zeros((self.max_number_nodes, self.emb_size), dtype=np.float32)
         cur_obs[0:node_mat.shape[0], :] = node_mat
 
         distribution_mask = [1] * 2
 
-        select_node_obs = {'action_mask':np.array(select_node_mask), 'state':cur_obs}
+        select_node_obs = {'action_mask':np.array(select_node_mask, dtype=np.float32), 'state':cur_obs}
         distribution_obs = {'prev_Node':self.prev_node_obs, 'curr_Node':self.cur_node_obs, 'dist_flag':dist_flag, 'action_mask':np.array(distribution_mask)}
     
         reward = {
@@ -344,9 +315,6 @@ class DistributeLoopEnv(MultiAgentEnv):
             "__all__": False
         }
         
-        # print("action_mask_dist: {}".format(np.array(select_node_mask).shape))
-        # print("obs_dist: {}".format(np.array(obs).shape))
-
         if done_all:
             done = {
                 self.select_node_agent_id: True,
@@ -419,11 +387,8 @@ class DistributeLoopEnv(MultiAgentEnv):
         if (self.prev_node == None):
             select_node_mask = self.createNodeSelectMask()
             state = self.obs
-            print("************************FROM MULTIAGENTENV.py***********************************************")
-            # print(state.shape)
             self.hidden_state =  self.ggnn(initial_node_representation=state.
             initial_node_representation, annotations=state.annotations, adjacency_lists=state.adjacency_lists)
-            print(self.hidden_state.shape)
             # self.obs.initial_node_representation = self.hidden_state
             self.current_obs = self.hidden_state[self.cur_node][0:self.emb_size]
             if self.current_obs is not None and not isinstance(self.current_obs, np.ndarray):
@@ -433,7 +398,7 @@ class DistributeLoopEnv(MultiAgentEnv):
 
             node_mat = self.hidden_state.detach().numpy()    
 
-            cur_obs = np.zeros((self.max_number_nodes, self.emb_size))
+            cur_obs = np.zeros((self.max_number_nodes, self.emb_size), dtype=np.float32)
             cur_obs[0:node_mat.shape[0], :] = node_mat
         
             reward = {
@@ -445,10 +410,8 @@ class DistributeLoopEnv(MultiAgentEnv):
             self.obs.annotations[self.cur_node][0] = 1
             self.distribution = self.node_id
 
-            # print("action mask: {}".format(np.array(select_node_mask).shape))
-            # print("state: {}".format(cur_obs.shape))
             obs = {
-                self.select_node_agent_id: { 'action_mask': np.array(select_node_mask), 'state': cur_obs}
+                self.select_node_agent_id: { 'action_mask': np.array(select_node_mask, dtype=np.float32), 'state': cur_obs}
             }
         else:  
             state = self.obs
@@ -467,15 +430,11 @@ class DistributeLoopEnv(MultiAgentEnv):
                 self.distribution_agent_id: 0
             }
             done = {"__all__": False}
-            # print("prev node: {}".format(np.array(self.prev_node_obs).shape))
-            # print("cur node: {}".format(np.array(self.cur_node_obs).shape))
-            # print("cur obs: {}".format(np.array(self.cur_obs).shape))
             obs = {
-                self.distribution_agent_id: { 'action_mask': np.array(distribution_mask), 'prev_Node': np.array(self.prev_node_obs), 'curr_Node' : np.array(self.cur_node_obs), 'dist_flag':dist_flag},
+                self.distribution_agent_id: { 'action_mask': np.array(distribution_mask, dtype=np.float32), 'prev_Node': np.array(self.prev_node_obs, dtype=np.float32), 'curr_Node' : np.array(self.cur_node_obs, dtype=np.float32), 'dist_flag':np.array(dist_flag, dtype=np.float32)},
             }
 
         # self.cur_obs = hidden_state[node_index]
-        # print("Select Node Reward", reward)
 
         logging.debug("Exit _select_node_step")
         return obs, reward, done, {}
@@ -516,8 +475,6 @@ class DistributeLoopEnv(MultiAgentEnv):
         select_node_mask = self.createNodeSelectMask()
 
         state = self.obs
-        # print("Some node in eligible nodes", self.obs.graph_topology.get_eligibleNodes())
-        # print('Print the mask : ', select_node_mask)
         # import math
         # for i, vec in enumerate(state.initial_node_representation):
         #     for v in vec:
@@ -532,14 +489,12 @@ class DistributeLoopEnv(MultiAgentEnv):
         self.hidden_state =  self.ggnn(initial_node_representation=state.initial_node_representation, annotations=state.annotations, adjacency_lists=state.adjacency_lists)
         node_mat = self.hidden_state.detach().numpy()
 
-        cur_obs = np.zeros((self.max_number_nodes, self.emb_size))
+        cur_obs = np.zeros((self.max_number_nodes, self.emb_size), dtype=np.float32)
         cur_obs[0:node_mat.shape[0], :] = node_mat
 
         obs = {
-            self.select_node_agent_id: {'action_mask': np.array(select_node_mask), 'state': cur_obs}
+            self.select_node_agent_id: {'action_mask': np.array(select_node_mask, dtype=np.float32), 'state': cur_obs}
         }
-        # print("action_mask_reset: {}".format(np.array(select_node_mask).shape))
-        # print("cur_obs_reset: {}".format(cur_obs.shape))
         
         return obs
 
@@ -549,12 +504,10 @@ class DistributeLoopEnv(MultiAgentEnv):
     def reset_env(self, graph=None, path=None):
         self.ggnn = GatedGraphNeuralNetwork(hidden_size=self.emb_size, annotation_size=2, num_edge_types=1, layer_timesteps=[1], residual_connections={}, nodelevel=True)
         
-        if graph is None:
-            print("graph is None")
-        else:
-            print("graph is present")
-
-        print("path: {}".format(path))
+        # if graph is None:
+        #     print("graph is None")
+        # else:
+        #     print("graph is present")
 
         self.topology = None # Have the graph formed from adjency list using dependence edges only
         self.distribution = ""
@@ -590,72 +543,72 @@ class DistributeLoopEnv(MultiAgentEnv):
                         self.serverAddress)
                 self.stub = LoopDistribution_pb2_grpc.LoopDistributionStub(self.channel)
             
-            # print("self use pipe: ", self.use_pipe)
-            # if self.use_pipe:
-            #     # Opening pipe files
-            #     to_compiler = self.temp_rootname + ".in"
-            #     from_compiler = self.temp_rootname + ".out"
-            #     print("Creating pipe files", to_compiler, from_compiler)
-            #     self.tc = io.BufferedWriter(io.FileIO(to_compiler, "wb"))
-            #     print("Opened the write pipe")
-            #     self.fc = io.BufferedReader(io.FileIO(from_compiler, "rb"))
-            #     print("Opened the read pipe")
-            #     # self.tensor_specs, _, self.advice_spec = log_reader.read_header(self.fc)
-            #     # print("Tensor and Advice spec", self.tensor_specs, self.advice_spec)                
-            #     # result = self.readObservation()
-            #     # element = result[0].__getitem__(0)
-            #     # print("Pipe init result:", element)
-            #     # exit(0)
+            if self.use_pipe:
+                # Opening pipe files
+                to_compiler = self.temp_rootname + ".in"
+                from_compiler = self.temp_rootname + ".out"
+                print("Creating pipe files", to_compiler, from_compiler)
+                self.tc = io.BufferedWriter(io.FileIO(to_compiler, "wb"))
+                print("Opened the write pipe")
+                self.fc = io.BufferedReader(io.FileIO(from_compiler, "rb"))
+                print("Opened the read pipe")
+                # self.tensor_specs, _, self.advice_spec = log_reader.read_header(self.fc)
+                # print("Tensor and Advice spec", self.tensor_specs, self.advice_spec)                
+                # result = self.readObservation()
+                # element = result[0].__getitem__(0)
+                # print("Pipe init result:", element)
+                # exit(0)
         
-    # def readObservation(self):
+    def readObservation(self):
         
-        # next_event = self.fc.readline()
-        # # if not next_event:
-        # #     break
-        # context = None
-        # last_context, observation_id, features,_ = log_reader.read_one_observation(
-        #     context, next_event, self.fc, self.tensor_specs, None
-        # )
-        # if last_context != context:
-        #     print(f"context: {last_context}")
-        # context = last_context
-        # # print(f"observation: {observation_id}")
-        # tensor_values = []
-        # for fv in features:
-        #     # log_reader.pretty_print_tensor_value(fv)
-        #     tensor_values.append(fv)
+        next_event = self.fc.readline()
+        # if not next_event:
+        #     break
+        print("Reading next line:", next_event)
+        context = None
+        last_context, observation_id, features,_ = log_reader.read_one_observation(
+            context, next_event, self.fc, self.tensor_specs, None
+        )
+        if last_context != context:
+            print(f"context: {last_context}")
+        context = last_context
+        print(f"observation: {observation_id}")
+        tensor_values = []
+        for fv in features:
+            # log_reader.pretty_print_tensor_value(fv)
+            tensor_values.append(fv)
         # return tensor_values
 
-        # loopcost = None
+        loopcost = None
 
-        # if self.data_format == "bytes":
-        #     #read first 8 bytes to be compatible with protobuf
-        #     # if self.read_stream_iter is None:
-        #     self.read_stream_iter = log_reader.read_stream2(self.fc)
-        #     print("Before reading cost")
-        #     hdr = self.fc.read(8)
-        #     print("Header", hdr)
-        #     context, observation_id, features, score = next(self.read_stream_iter)
-        #     print("Obtained feature value is", features[0].__getitem__(0))
-        #     # assert len(features[0]) == 1
-        #     loopcost = features[0].__getitem__(0)
-        #     # loopcost = np.empty([1])
-        #     # for i in range(len(features[0])):
-        #     #     loopcost[i] = features[0][i]
+        if self.data_format == "bytes":
+            #read first 8 bytes to be compatible with protobuf
+            # if self.read_stream_iter is None:
+            self.read_stream_iter = log_reader.read_stream2(self.fc)
+            print("Before reading cost")
+            hdr = self.fc.read(8)
+            print("Header", hdr)
+            context, observation_id, features, score = next(self.read_stream_iter)
+            print("Obtained feature value is", features[0].__getitem__(0))
+            # assert len(features[0]) == 1
+            loopcost = features[0].__getitem__(0)
+            # loopcost = np.empty([1])
+            # for i in range(len(features[0])):
+            #     loopcost[i] = features[0][i]
 
-        # elif self.data_format == "json":
-        #     print("reading json...")
-        #     #read first 8 bytes to be compatible with protobuf
-        #     hdr = self.fc.read(8)
-        #     print("hdr: ",hdr)
-        #     size = int.from_bytes(hdr, "little")
-        #     print("size: ", size)
-        #     msg = self.fc.read(size)
-        #     loopcost = json.loads(msg.decode('utf-8'))["loopcost"]
-        #     # assert len(embedding) == 300
-        #     # embedding = np.array(embedding) 
+        elif self.data_format == "json":
+            print("reading json...")
+            #read first 8 bytes to be compatible with protobuf
+            hdr = self.fc.read(8)
+            print("hdr: ",hdr)
+            size = int.from_bytes(hdr, "little")
+            print("size: ", size)
+            msg = self.fc.read(size)
+            loopcost = json.loads(msg.decode('utf-8'))["loopcost"]
+            # assert len(embedding) == 300
+            # embedding = np.array(embedding) 
 
-        # return loopcost
+        return loopcost
     
     def sendResponseV1(self, f: io.BufferedWriter, value, spec: log_reader.TensorSpec):
         try:
@@ -664,7 +617,6 @@ class DistributeLoopEnv(MultiAgentEnv):
             assert spec.element_type == ctypes.c_int64
             # to_send = ctypes.c_int64(int(value))
             to_send = (ctypes.c_int64 * len(value))(*value)
-            # print("to_send", f.write(bytes(to_send)), ctypes.sizeof(spec.element_type) * reduce(operator.mul, spec.shape, 1))
             assert f.write(bytes(to_send)) == ctypes.sizeof(spec.element_type) * reduce(operator.mul, spec.shape, 1)
             # assert f.write(bytes(to_send)) == ctypes.sizeof(spec.element_type) * math.prod(
             #     spec.shape
@@ -693,10 +645,6 @@ class DistributeLoopEnv(MultiAgentEnv):
     def step(self, action_dict):
         
         # assert(self.ggnn is not None, 'ggnn is None')
-        # print("3333333333333333333333333 (in step)")
-        # print(self.select_node_agent_id)
-        # print(self.distribution_agent_id)
-        # print(action_dict)
         if self.select_node_agent_id in action_dict:
             return self._select_node_step(action_dict[self.select_node_agent_id])
         if self.distribution_agent_id in action_dict:
@@ -715,10 +663,10 @@ class DistributeLoopEnv(MultiAgentEnv):
 
         # edit server, path
         if(self.use_pipe):
-            cmd = optPath + " -LoopDistributionServer -loopID " + loopId + " -funcName " + functionName + " -lc-function " + functionName + " -lc-lID " + loopId + " --ml-config-path /Pramana/ML_LLVM_Tools/ml-llvm-project/build_loopdist/config " + " -S " + filePath + " --use-pipe-loop-dist " + " --loop-dist-data-format " +  self.config["data_format"]  + " -o /dev/null"     # f" --ml-config-path {REPO_DIR}/build_all/config " +
+            cmd = optPath + " -LoopDistributionServer -loopID " + loopId + " -funcName " + functionName + " -lc-function " + functionName + " -lc-lID " + loopId + " --ml-config-path " + CONFIG_DIR + " -S " + filePath + " --use-pipe-loop-dist " + " --loop-dist-data-format " +  self.config["data_format"]  + " -o /dev/null"     # f" --ml-config-path {REPO_DIR}/build_all/config " +
         elif(self.use_grpc):        
             # old cmd : 
-            cmd = optPath + " -LoopDistributionServer -loopID " + loopId + " -funcName " + functionName + " -lc-function " + functionName + " -lc-lID " + loopId + " --server_address_loop_dist "+ serverAddress + " --ml-config-path /Pramana/ML_LLVM_Tools/ml-llvm-project/build_loopdist/config " + " -S " + filePath + " --use-grpc-loop-dist " + " -o /dev/null"
+            cmd = optPath + " -LoopDistributionServer -loopID " + loopId + " -funcName " + functionName + " -lc-function " + functionName + " -lc-lID " + loopId + " --server_address_loop_dist "+ serverAddress + " --ml-config-path " + CONFIG_DIR + " -S " + filePath + " --use-grpc-loop-dist " + " -o /dev/null"
 
         print("server start command: ",cmd)
         pid = subprocess.Popen(cmd, executable='/bin/bash', shell=True, preexec_fn= os.setsid)
@@ -780,7 +728,6 @@ class DistributeLoopEnv(MultiAgentEnv):
     
     def killServer(self):
     
-        #print(self.process.pid) 
         # self.process.kill()
         # self.process.communicate()
         os.killpg(os.getpgid(self.process.pid), signal.SIGKILL)
@@ -806,13 +753,9 @@ class DistributeLoopEnv(MultiAgentEnv):
                 self.grpc_rtt += t2-t1
                 # time.sleep(.1)
                 break
-            # except ValueError as e:
             except grpc.RpcError as e:
 
                 if e.code() == grpc.StatusCode.UNAVAILABLE:
-                    # print("Error in grpc")
-                    # if op == 'Exit' and self.last_task_done == 0:
-                    # raise
                     attempt += 1
                     if attempt > max_retries:
                         print("Maximum attempts completed")

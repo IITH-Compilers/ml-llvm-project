@@ -18,12 +18,9 @@
 #                              --mca_reward_thresh 0.2
 
 import argparse
-import gym
 import numpy as np
 import argparse
-from argparse import Namespace
 import os
-import shutil
 
 # import utils
 import logging
@@ -268,19 +265,7 @@ if __name__ == "__main__":
         # ray.init()
         compiler_interface = GrpcCompilerInterface(mode = 'server', add_server_method=posetRL_pb2_grpc.add_PosetRLServiceServicer_to_server, grpc_service_obj=service_server(inference_obj), hostport= args.server_port)
         compiler_interface.start_server()
-        # server=grpc.server(futures.ThreadPoolExecutor(max_workers=20),options = [
-        #             ('grpc.max_send_message_length', 200*1024*1024), #50MB
-        #                     ('grpc.max_receive_message_length', 200*1024*1024) #50MB
-        #                         ])
-
-        # # RegisterAllocationInference_pb2_grpc.add_RegisterAllocationInferenceServicer_to_server(service_server(inference_obj),server)
-        # posetRL_pb2_grpc.add_PosetRLServiceServicer_to_server(service_server(inference_obj),server)
-        # # server.add_insecure_port('localhost:' + str(sys.argv[1]))
-        # server.add_insecure_port('127.0.0.1:50051')
-
-        # server.start()
-        # print("Server Running")        
-        # server.wait_for_termination()
+        
     else:
         now = datetime.now()
         date_time = now.strftime("%m-%d-%Y-%H-%M-%S")

@@ -1,9 +1,9 @@
 #include "llvm/Transforms/IR2Vec-LOF/custom_loop_distribution.h"
-#include "MLModelRunner/gRPCModelRunner.h"
-#include "MLModelRunner/PipeModelRunner.h"
 #include "MLModelRunner/ONNXModelRunner/ONNXModelRunner.h"
+#include "MLModelRunner/PipeModelRunner.h"
 #include "MLModelRunner/Utils/MLConfig.h"
-#include "Python.h"
+#include "MLModelRunner/gRPCModelRunner.h"
+
 #include "grpc/LoopDistribution/LoopDistribution.grpc.pb.h"
 #include "grpc/LoopDistribution/LoopDistribution.pb.h"
 #include "llvm/ADT/DepthFirstIterator.h"
@@ -36,7 +36,6 @@
 #include <bits/stdint-intn.h>
 #include <memory>
 #include <string>
-// #include <ray/api.h>
 
 #define DEBUG_TYPE "custom_loop_distribution"
 
@@ -47,8 +46,8 @@ static cl::opt<bool> usePipe("cld-use-pipe-inf",
                              cl::Optional, cl::init(false));
 static cl::opt<bool> useOnnx("cld-use-onnx", cl::desc("Use onnx for inference"),
                              cl::Hidden, cl::Optional, cl::init(false));
-static cl::opt<bool> useOrg("cld-use-org", cl::desc("Use org for inference"),
-                            cl::Hidden, cl::Optional, cl::init(false));
+// static cl::opt<bool> useOrg("cld-use-org", cl::desc("Use org for inference"),
+//                             cl::Hidden, cl::Optional, cl::init(false));
 static cl::opt<std::string> pipe_name("cld-pipe-name", cl::Hidden,
                                       cl::init("loopdistppipe"));
 static cl::opt<std::string> data_format("cld-data-format", cl::Hidden,
@@ -58,17 +57,15 @@ cl::opt<std::string> server_address(
     cl::desc("Starts the server in the given address; format <ip>:<port>"),
     cl::init("0.0.0.0:50051"));
 
-cl::opt<std::string> model_src(
-    "cld-model-src", cl::Hidden,
-    cl::desc("Path to src directory containing model"),
-    cl::init(""));
+cl::opt<std::string>
+    model_src("cld-model-src", cl::Hidden,
+              cl::desc("Path to src directory containing model"), cl::init(""));
 
 custom_loop_distribution::custom_loop_distribution() : FunctionPass(ID) {
   initializecustom_loop_distributionPass(*PassRegistry::getPassRegistry());
-  Py_Initialize();
 }
 
-custom_loop_distribution::~custom_loop_distribution() { Py_Finalize(); }
+custom_loop_distribution::~custom_loop_distribution() {}
 
 void custom_loop_distribution::canonicalizeLoopsWithLoads() {
   auto LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
@@ -148,7 +145,7 @@ void custom_loop_distribution::canonicalizeLoopsWithLoads() {
 }
 
 void custom_loop_distribution::initPipeCommunication(
-    const std::vector<std::string>& RDG_List) {
+    const std::vector<std::string> &RDG_List) {
   int cnt = 1;
   for (auto rdg : RDG_List) {
     std::pair<std::string, std::string> p1("RDG", rdg);
@@ -180,14 +177,16 @@ void custom_loop_distribution::initPipeCommunication(
     errs() << "Dist_seqs vec size: " << distSequence.size() << "\n";
   }
   errs() << "Covered all RDGs\n";
-  std::pair<std::string, int> p1("Exit", 1);
+  std::pair<std::string, std::string> p1("RDG", "Exit");
   MLRunner->populateFeatures(p1);
-  int res = MLRunner->evaluate<int>();
-  errs() << "Exit code: " << res << "\n";
+  int *out;
+  size_t size;
+  MLRunner->evaluate<int *>(out, size);
+  errs() << "Exit code: " << out[0] << "\n";
 }
 
 bool custom_loop_distribution::runOnFunction(Function &F) {
-  assert(MLConfig::mlconfig != "" && "ml-config-path required" );
+  assert(MLConfig::mlconfig != "" && "ml-config-path required");
   // if (F.getName() != "s222")
   //   return false;
   // F.dump();
@@ -285,142 +284,14 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
     outfile.close();
     // errs() << "Code is Commented\n";
     // exit(0);
-  } else if (useOrg) {
-    assert(model_src != "" && "ml-config-path required" );
-    std::vector<std::string> RDG_List;
-    RDG_List.insert(RDG_List.end(), data.input_rdgs_str.begin(),
-                    data.input_rdgs_str.end());
-
-    assert(RDG_List.size() == SCCGraphs.size() &&
-           RDG_List.size() == loops.size() &&
-           "RDG_List, SCCgraphs and loops list should of same size.");
-
-    if (RDG_List.size() == 0) {
-      errs() << "No RDGs\n";
-      return false;
-    }
-    LLVM_DEBUG(errs() << "Number rdg generated : " << RDG_List.size() << "\n");
-
-    PyObject *pName, *pModule, *pFunc, *presult;
-
-    // PySys_SetArgv(argc, argv);
-    errs() << "Importing python libs\n";
-    PyRun_SimpleString("import sys");
-    PyRun_SimpleString("import os");
-
-    // errs() << "sys.path: " << MODEL_SRC << "\n";
-    PyRun_SimpleString(std::string("sys.path.append('")
-                          .append(model_src)
-                          .append("')")
-                          .c_str());
-    // Build the name object
-    pName = PyUnicode_FromString("inference");
-
-    LLVM_DEBUG(errs() << "pName: " << pName << "............"
-                      << "\n");
-
-    // Load the module object
-    pModule = PyImport_Import(pName);
-
-    PyErr_Print();
-
-    if (pModule == NULL) {
-      printf("ERROR importing module\n");
-      PyErr_Print();
-      exit(-1);
-    } else {
-      LLVM_DEBUG(errs() << "pModule: " << pModule << "............"
-                        << "\n");
-      Py_INCREF(pModule);
-
-      pFunc = PyObject_GetAttrString(pModule, "predict_loop_distribution");
-      errs() << "Setting function name\n";
-      if (pFunc == NULL) {
-        errs() << "ERROR getting function attribute";
-        PyErr_Print();
-      } else {
-
-        Py_INCREF(pFunc);
-
-        if (PyCallable_Check(pFunc)) {
-          PyObject *my_list = PyList_New(0);
-          Py_INCREF(my_list);
-          for (auto rdg : RDG_List) {
-            PyObject *py_rdg = PyUnicode_FromString(rdg.c_str());
-            PyList_Append(my_list, py_rdg);
-            Py_INCREF(py_rdg);
-          }
-
-          PyObject *distModelPath = PyUnicode_FromString(MLConfig::mlconfig.append("/model/dist-checkpoint-final.pth").c_str());
-          // PyObject *vfModelPath = PyUnicode_FromString(VF_INFERENCE_MODEL);
-
-          PyObject *arglist = PyTuple_Pack(2, my_list, distModelPath);
-          // PyTuple_Pack(3, my_list, distModelPath, vfModelPath);
-
-          if (!arglist) {
-            errs() << "no arglist\n";
-            PyErr_Print();
-          }
-
-          Py_INCREF(arglist);
-          presult = PyObject_CallObject(pFunc, arglist);
-
-          if (!presult) {
-            errs() << "no presult\n";
-            PyErr_Print();
-          }
-          Py_INCREF(presult);
-
-          if (!PyList_Check(presult)) {
-            errs() << "Result is not list";
-            PyErr_BadArgument();
-            return false;
-          }
-
-          int size = PyList_Size(presult);
-          // assert(size == 2);
-          // LLVM_DEBUG(errs() << size << " is the size of result list.\n");
-
-          for (int j = 0; j < size; j++) {
-            PyObject *plobj = PyList_GetItem(presult, j);
-            if (!PyList_Check(plobj)) {
-              errs() << "Result is not list";
-              PyErr_BadArgument();
-              assert(false);
-            }
-            int objSize = PyList_Size(plobj);
-            for (int k = 0; k < objSize; k++) {
-              PyObject *seq = PyList_GetItem(plobj, k);
-              const char *char_seq = PyUnicode_AsUTF8(seq);
-              LLVM_DEBUG(errs() << char_seq << "\n");
-              // errs() << j << "\n";
-              if (j == 0)
-                distributed_seqs.push_back(char_seq);
-
-              // errs() << char_seq << "\n";
-              // else if (j == 1)
-              //   vf_seqs.push_back(char_seq);
-            }
-          }
-          Py_DECREF(presult);
-          Py_DECREF(my_list);
-          Py_DECREF(arglist);
-        } else {
-          PyErr_Print();
-        }
-
-        // Clean up
-        Py_DECREF(pModule);
-        Py_DECREF(pName);
-      }
-    }
   } else {
-    loopdistribution::LoopDistributionRequest request;
-    loopdistribution::LoopDistributionResponse response;
-    MLRunner = std::make_unique<gRPCModelRunner<
-        loopdistribution::LoopDistribution,
-        loopdistribution::LoopDistribution::Stub,
-        loopdistribution::LoopDistributionRequest, loopdistribution::LoopDistributionResponse>>(
+    loopdistribution::RDGData request;
+    loopdistribution::Advice response;
+    MLRunner = std::make_unique<
+        gRPCModelRunner<loopdistribution::LoopDistribution,
+                        loopdistribution::LoopDistribution::Stub,
+                        loopdistribution::RDGData,
+                        loopdistribution::Advice>>(
         server_address, &request, &response, &M->getContext());
     MLRunner->setRequest(&request);
     MLRunner->setResponse(&response);

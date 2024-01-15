@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "io.grpc.examples.loopdistribution";
+option java_outer_classname = "LoopDistributionProto";
+option objc_class_prefix = "LD";
+
+package loopdistribution;
+
+service LoopDistribution {
+  rpc distributeLoopAndGetLoopCost(LoopDistributionRequest)
+      returns (LoopDistributionResponse) {}
+
+  rpc getAdvice(RDGData) returns (Advice) {}
+}
+
+message LoopDistributionRequest {
+  string partitionPattern = 3;
+}
+
+message LoopDistributionResponse {
+  uint64 OrignialLoopCost = 1;
+  uint64 distributedLoopCost = 2;
+}
+
+message RDGData {
+  string RDG = 1;
+}
+
+message Advice {
+  repeated int32 action=1;
+}

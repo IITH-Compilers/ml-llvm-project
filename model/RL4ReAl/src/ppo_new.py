@@ -11,7 +11,7 @@ Detailed documentation: https://docs.ray.io/en/master/rllib-algorithms.html#ppo
 
 import logging
 from typing import List, Optional, Type, Union
-from config import MODEL_PATH, BUILD_DIR, CONFIG_DIR, MODEL_DIR, DATA_DIR
+from config import MODEL_DIR, BUILD_DIR, CONFIG_DIR, DATA_DIR
 from ray.util.debug import log_once
 from ray.rllib.algorithms.algorithm import Algorithm
 from ray.rllib.algorithms.algorithm_config import AlgorithmConfig, NotProvided
@@ -105,7 +105,7 @@ class PPOConfig(PGConfig):
         self.kl_target = 0.01
 
         # Override some of PG/AlgorithmConfig's default values with PPO-specific values.
-        self.num_rollout_workers = 10
+        self.num_rollout_workers = 1
         self.train_batch_size = 32
         self.lr = 5e-4
         self.model["vf_share_layers"] = False
@@ -136,13 +136,13 @@ class PPOConfig(PGConfig):
             "dump_color_graph": True,
             "intermediate_data": './temp',
             "build_path": BUILD_DIR,
-            "Register_config": "/home/cs20mtech12003/ml-llvm-project/llvm/lib/CodeGen/MLRegAlloc/config_json",
+            "Register_config": CONFIG_DIR,
             "log_path": f"{MODEL_DIR}/log",
             "dataset": f"{DATA_DIR}",
             "graphs_num": 10000,
-            "action_space_size": RegisterActionSpace("X86", "/home/cs20mtech12003/ml-llvm-project/llvm/lib/CodeGen/MLRegAlloc/config_json").ac_sp_normlize_size,
+            "action_space_size": RegisterActionSpace("X86", CONFIG_DIR).ac_sp_normlize_size,
             "check_point": None,
-            "episode_number": 5,
+            "episode_number": 1,
             "GPU_ID": '0',
             "X86_CFLAGS": "-mllvm -regalloc=greedy  -march=core2",
             "AArch64_CFLAGS": "-mllvm -regalloc=greedy  -mcpu=cortex-a72",
