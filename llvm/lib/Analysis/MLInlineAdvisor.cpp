@@ -12,24 +12,27 @@
 //
 //===----------------------------------------------------------------------===//
 #include "llvm/Analysis/MLInlineAdvisor.h"
+#include "MLModelRunner/MLModelRunner.h"   //MLModelRunner
+#include "MLModelRunner/PipeModelRunner.h" //PipeModelRunner
+#include "MLModelRunner/TFModelRunner.h"   //TFModelRunner
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/FunctionPropertiesAnalysis.h"
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/InlineModelFeatureMaps.h"
-#include "llvm/Analysis/InteractiveModelRunner.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/LoopInfo.h"
-#include "llvm/Analysis/MLModelRunner.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
-#include "llvm/Analysis/ReleaseModeModelRunner.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/raw_ostream.h"
+#include <memory>
 
+using namespace MLBridge;
 using namespace llvm;
 
 static cl::opt<std::string> InteractiveChannelBaseName(
@@ -46,6 +49,7 @@ static cl::opt<bool>
     InteractiveIncludeDefault("inliner-interactive-include-default", cl::Hidden,
                               cl::desc(InclDefaultMsg));
 
+#define LLVM_HAVE_TF_AOT_INLINERSIZEMODEL 1
 #if defined(LLVM_HAVE_TF_AOT_INLINERSIZEMODEL)
 // codegen-ed file
 #include "InlinerSizeModel.h" // NOLINT
@@ -57,21 +61,20 @@ using CompiledModelType = NoopSavedModelImpl;
 std::unique_ptr<InlineAdvisor>
 llvm::getReleaseModeAdvisor(Module &M, ModuleAnalysisManager &MAM,
                             std::function<bool(CallBase &)> GetDefaultAdvice) {
-  if (!llvm::isEmbeddedModelEvaluatorValid<CompiledModelType>() &&
+  if (!MLBridge::isEmbeddedModelEvaluatorValid<CompiledModelType>() &&
       InteractiveChannelBaseName.empty())
     return nullptr;
   std::unique_ptr<MLModelRunner> AOTRunner;
-  if (InteractiveChannelBaseName.empty())
-    AOTRunner = std::make_unique<ReleaseModeModelRunner<CompiledModelType>>(
-        M.getContext(), FeatureMap, DecisionName);
-  else {
+  if (InteractiveChannelBaseName.empty()) {
+    AOTRunner = std::make_unique<TFModelRunner<CompiledModelType>>(
+        DecisionName, M.getContext()); // a TFModelRunner
+  } else {
     auto Features = FeatureMap;
     if (InteractiveIncludeDefault)
       Features.push_back(DefaultDecisionSpec);
-    AOTRunner = std::make_unique<InteractiveModelRunner>(
-        M.getContext(), Features, InlineDecisionSpec,
+    AOTRunner = std::make_unique<PipeModelRunner>(
         InteractiveChannelBaseName + ".out",
-        InteractiveChannelBaseName + ".in");
+        InteractiveChannelBaseName + ".in",BaseSerDes::Kind::Protobuf); // a PipeModelRunner
   }
   return std::make_unique<MLInlineAdvisor>(M, MAM, std::move(AOTRunner),
                                            GetDefaultAdvice);
@@ -131,7 +134,7 @@ MLInlineAdvisor::MLInlineAdvisor(
       CG(MAM.getResult<LazyCallGraphAnalysis>(M)),
       InitialIRSize(getModuleIRSize()), CurrentIRSize(InitialIRSize) {
   assert(ModelRunner);
-  ModelRunner->switchContext("");
+  // ModelRunner->switchContext("");
   // Extract the 'call site height' feature - the position of a call site
   // relative to the farthest statically reachable SCC node. We don't mutate
   // this value while inlining happens. Empirically, this feature proved
@@ -363,7 +366,6 @@ std::unique_ptr<InlineAdvice> MLInlineAdvisor::getAdviceImpl(CallBase &CB) {
     }
     CostEstimate = *IsCallSiteInlinable;
   }
-
   const auto CostFeatures =
       llvm::getInliningCostFeatures(CB, TIR, GetAssumptionCache);
   if (!CostFeatures) {
@@ -381,44 +383,81 @@ std::unique_ptr<InlineAdvice> MLInlineAdvisor::getAdviceImpl(CallBase &CB) {
   auto &CallerBefore = getCachedFPI(Caller);
   auto &CalleeBefore = getCachedFPI(Callee);
 
-  *ModelRunner->getTensor<int64_t>(FeatureIndex::callee_basic_block_count) =
-      CalleeBefore.BasicBlockCount;
-  *ModelRunner->getTensor<int64_t>(FeatureIndex::callsite_height) =
-      getInitialFunctionLevel(Caller);
-  *ModelRunner->getTensor<int64_t>(FeatureIndex::node_count) = NodeCount;
-  *ModelRunner->getTensor<int64_t>(FeatureIndex::nr_ctant_params) =
-      NrCtantParams;
-  *ModelRunner->getTensor<int64_t>(FeatureIndex::edge_count) = EdgeCount;
-  *ModelRunner->getTensor<int64_t>(FeatureIndex::caller_users) =
-      CallerBefore.Uses;
-  *ModelRunner->getTensor<int64_t>(
-      FeatureIndex::caller_conditionally_executed_blocks) =
-      CallerBefore.BlocksReachedFromConditionalInstruction;
-  *ModelRunner->getTensor<int64_t>(FeatureIndex::caller_basic_block_count) =
-      CallerBefore.BasicBlockCount;
-  *ModelRunner->getTensor<int64_t>(
-      FeatureIndex::callee_conditionally_executed_blocks) =
-      CalleeBefore.BlocksReachedFromConditionalInstruction;
-  *ModelRunner->getTensor<int64_t>(FeatureIndex::callee_users) =
-      CalleeBefore.Uses;
-  *ModelRunner->getTensor<int64_t>(FeatureIndex::cost_estimate) = CostEstimate;
+  // auto p1 = make_pair(std::string("callee_basic_block_count"),
+  //                     CalleeBefore.BasicBlockCount);
+
+  auto p1 = make_pair(std::string("callee_basic_block_count"),CalleeBefore.BasicBlockCount);
+  auto p2 = make_pair("callsite_height", getInitialFunctionLevel(Caller));
+  auto p3 = make_pair("node_count", NodeCount);
+  auto p4 = make_pair("nr_ctant_params", NrCtantParams);
+  auto p5 = make_pair("edge_count", EdgeCount);
+  auto p6 = make_pair("caller_users", CallerBefore.Uses);
+  auto p7 = make_pair("caller_conditionally_executed_blocks",
+                      CallerBefore.BlocksReachedFromConditionalInstruction);
+  auto p8 = make_pair("caller_basic_block_count", CallerBefore.BasicBlockCount);
+  auto p9 = make_pair("callee_conditionally_executed_blocks",
+                      CalleeBefore.BlocksReachedFromConditionalInstruction);
+  auto p10 = make_pair("callee_users", CalleeBefore.Uses);
+  auto p11 = make_pair("cost_estimate", CostEstimate);
+
+  std::vector<std::pair<std::string, int64_t>> FeatureSet = {
+      p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11};
+#define setCostFeatures(DTYPE, SHAPE, NAME, __)                                \
+  FeatureSet.push_back(make_pair(#NAME, CostFeatures->at(static_cast<size_t>(  \
+                                            InlineCostFeatureIndex::NAME))));
+  INLINE_COST_FEATURE_ITERATOR(setCostFeatures)
+#undef setCostFeatures
+
+  for (auto V : FeatureSet) {
+    ModelRunner->populateFeatures(V);
+  }
+
+  // if (!InteractiveChannelBaseName.empty() && InteractiveIncludeDefault)
+  //   FeatureSet.push_back(make_pair("default_decision",
+  //   GetDefaultAdvice(CB)));
+
+  // *ModelRunner->getTensor<int64_t>(FeatureIndex::callee_basic_block_count) =
+  //     CalleeBefore.BasicBlockCount;
+  // *ModelRunner->getTensor<int64_t>(FeatureIndex::callsite_height) =
+  //     getInitialFunctionLevel(Caller);
+  // *ModelRunner->getTensor<int64_t>(FeatureIndex::node_count) = NodeCount;
+  // *ModelRunner->getTensor<int64_t>(FeatureIndex::nr_ctant_params) =
+  //     NrCtantParams;
+  // *ModelRunner->getTensor<int64_t>(FeatureIndex::edge_count) = EdgeCount;
+  // *ModelRunner->getTensor<int64_t>(FeatureIndex::caller_users) =
+  //     CallerBefore.Uses;
+  // *ModelRunner->getTensor<int64_t>(
+  //     FeatureIndex::caller_conditionally_executed_blocks) =
+  //     CallerBefore.BlocksReachedFromConditionalInstruction;
+  // *ModelRunner->getTensor<int64_t>(FeatureIndex::caller_basic_block_count) =
+  //     CallerBefore.BasicBlockCount;
+  // *ModelRunner->getTensor<int64_t>(
+  //     FeatureIndex::callee_conditionally_executed_blocks) =
+  //     CalleeBefore.BlocksReachedFromConditionalInstruction;
+  // *ModelRunner->getTensor<int64_t>(FeatureIndex::callee_users) =
+  //     CalleeBefore.Uses;
+  // *ModelRunner->getTensor<int64_t>(FeatureIndex::cost_estimate) =
+  // CostEstimate;
 
   // Add the cost features
-  for (size_t I = 0;
-       I < static_cast<size_t>(InlineCostFeatureIndex::NumberOfFeatures); ++I) {
-    *ModelRunner->getTensor<int64_t>(inlineCostFeatureToMlFeature(
-        static_cast<InlineCostFeatureIndex>(I))) = CostFeatures->at(I);
-  }
-  // This one would have been set up to be right at the end.
-  if (!InteractiveChannelBaseName.empty() && InteractiveIncludeDefault)
-    *ModelRunner->getTensor<int64_t>(InlineCostFeatureIndex::NumberOfFeatures) =
-        GetDefaultAdvice(CB);
+  // for (size_t I = 0;
+  //      I < static_cast<size_t>(InlineCostFeatureIndex::NumberOfFeatures);
+  //      ++I) {
+  //   *ModelRunner->getTensor<int64_t>(inlineCostFeatureToMlFeature(
+  //       static_cast<InlineCostFeatureIndex>(I))) = CostFeatures->at(I);
+  // }
+  // // This one would have been set up to be right at the end.
+  // if (!InteractiveChannelBaseName.empty() && InteractiveIncludeDefault)
+  //   *ModelRunner->getTensor<int64_t>(InlineCostFeatureIndex::NumberOfFeatures) =
+  //       GetDefaultAdvice(CB);
+
   return getAdviceFromModel(CB, ORE);
 }
 
 std::unique_ptr<MLInlineAdvice>
 MLInlineAdvisor::getAdviceFromModel(CallBase &CB,
                                     OptimizationRemarkEmitter &ORE) {
+
   return std::make_unique<MLInlineAdvice>(
       this, CB, ORE, static_cast<bool>(ModelRunner->evaluate<int64_t>()));
 }
@@ -483,9 +522,9 @@ void MLInlineAdvice::reportContextForRemark(
   using namespace ore;
   OR << NV("Callee", Callee->getName());
   for (size_t I = 0; I < NumberOfFeatures; ++I)
-    OR << NV(FeatureMap[I].name(),
-             *getAdvisor()->getModelRunner().getTensor<int64_t>(I));
-  OR << NV("ShouldInline", isInliningRecommended());
+    // OR << NV(FeatureMap[I].name(),
+    //          *getAdvisor()->getModelRunner().getTensor<int64_t>(I));
+    OR << NV("ShouldInline", isInliningRecommended());
 }
 
 void MLInlineAdvice::updateCachedCallerFPI(FunctionAnalysisManager &FAM) const {

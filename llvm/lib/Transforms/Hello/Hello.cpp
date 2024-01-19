@@ -22,43 +22,43 @@ using namespace llvm;
 STATISTIC(HelloCounter, "Counts number of functions greeted");
 
 namespace {
-  // Hello - The first implementation, without getAnalysisUsage.
-  struct Hello : public FunctionPass {
-    static char ID; // Pass identification, replacement for typeid
-    Hello() : FunctionPass(ID) {}
+// Hello - The first implementation, without getAnalysisUsage.
+struct Hello : public FunctionPass {
+  static char ID; // Pass identification, replacement for typeid
+  Hello() : FunctionPass(ID) {}
 
-    bool runOnFunction(Function &F) override {
-      ++HelloCounter;
-      errs() << "Hello: ";
-      errs().write_escaped(F.getName()) << '\n';
-      return false;
-    }
-  };
-}
+  bool runOnFunction(Function &F) override {
+    ++HelloCounter;
+    errs() << "Hello: ";
+    errs().write_escaped(F.getName()) << '\n';
+    return false;
+  }
+};
+} // namespace
 
 char Hello::ID = 0;
 static RegisterPass<Hello> X("hello", "Hello World Pass");
 
 namespace {
-  // Hello2 - The second implementation with getAnalysisUsage implemented.
-  struct Hello2 : public FunctionPass {
-    static char ID; // Pass identification, replacement for typeid
-    Hello2() : FunctionPass(ID) {}
+// Hello2 - The second implementation with getAnalysisUsage implemented.
+struct Hello2 : public FunctionPass {
+  static char ID; // Pass identification, replacement for typeid
+  Hello2() : FunctionPass(ID) {}
 
-    bool runOnFunction(Function &F) override {
-      ++HelloCounter;
-      errs() << "Hello: ";
-      errs().write_escaped(F.getName()) << '\n';
-      return false;
-    }
+  bool runOnFunction(Function &F) override {
+    ++HelloCounter;
+    errs() << "Hello: ";
+    errs().write_escaped(F.getName()) << '\n';
+    return false;
+  }
 
-    // We don't modify the program, so we preserve all analyses.
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.setPreservesAll();
-    }
-  };
-}
+  // We don't modify the program, so we preserve all analyses.
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesAll();
+  }
+};
+} // namespace
 
 char Hello2::ID = 0;
 static RegisterPass<Hello2>
-Y("hello2", "Hello World Pass (with getAnalysisUsage implemented)");
+    Y("hello2", "Hello World Pass (with getAnalysisUsage implemented)");

@@ -40,6 +40,7 @@ add_llvm_tool_subdirectory(llvm-profdata)
 add_llvm_external_project(clang)
 add_llvm_external_project(lld)
 add_llvm_external_project(lldb)
+add_llvm_external_project(IR2Vec)
 add_llvm_external_project(mlir)
 # Flang depends on mlir, so place it afterward
 add_llvm_external_project(flang)
@@ -50,6 +51,7 @@ add_llvm_external_project(bolt)
 add_llvm_implicit_projects()
 
 add_llvm_external_project(polly)
+add_llvm_external_project(MLCompilerBridge)
 
 # Add subprojects specified using LLVM_EXTERNAL_PROJECTS
 foreach(p ${LLVM_EXTERNAL_PROJECTS})

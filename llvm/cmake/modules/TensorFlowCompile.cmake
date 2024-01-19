@@ -47,6 +47,13 @@ endfunction()
 function(tf_compile model tag_set signature_def_key fname cpp_class hdr_file obj_file)
   tf_get_absolute_path(${model} ${CMAKE_CURRENT_BINARY_DIR} LLVM_ML_MODELS_ABSOLUTE)
   message("Using model at " ${LLVM_ML_MODELS_ABSOLUTE})
+    message("TENSORFLOW_AOT_COMPILER is " ${TENSORFLOW_AOT_COMPILER})
+  message("LLVM_ML_MODELS_ABSOLUTE is " ${LLVM_ML_MODELS_ABSOLUTE})
+  message("tag_set is " ${tag_set})
+  message("signature_def_key is " ${signature_def_key})
+  message("prefix is " ${prefix})
+  message("cpp_class is " ${cpp_class})
+  message("LLVM_HOST_TRIPLE is " ${LLVM_HOST_TRIPLE})
   add_custom_command(OUTPUT ${obj_file} ${hdr_file}
     COMMAND ${TENSORFLOW_AOT_COMPILER} aot_compile_cpu
           --multithreading false
@@ -70,8 +77,8 @@ function(tf_compile model tag_set signature_def_key fname cpp_class hdr_file obj
 
   endfunction()
 
-function(tf_find_and_compile model default_url default_path test_model_generator tag_set signature_def_key fname cpp_class)
-  set(prefix ${CMAKE_CURRENT_BINARY_DIR}/${fname})
+function(tf_find_and_compile model default_url default_path test_model_generator tag_set signature_def_key fname cpp_class opath)
+  set(prefix ${opath}/${fname})
   set(obj_file ${prefix}.o)
   set(hdr_file ${prefix}.h)
   string(TOUPPER ${fname} fname_allcaps)
