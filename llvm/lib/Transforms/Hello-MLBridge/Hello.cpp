@@ -240,6 +240,8 @@
   M(49500)                                                                     \
   M(50000)
 
+#define DEBUG_TYPE "hello_mlbridge"
+
 using namespace llvm;
 using namespace grpc;
 using namespace helloMLBridgegRPC;
