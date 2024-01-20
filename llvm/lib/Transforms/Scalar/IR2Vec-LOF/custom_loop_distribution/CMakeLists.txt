@@ -1,4 +1,4 @@
-add_llvm_component_library(LLVMcustom_loop_distribution STATIC BUILDTREE_ONLY
+add_llvm_component_library(LLVMcustom_loop_distribution STATIC
   custom_loop_distribution.cpp
 
 DEPENDS

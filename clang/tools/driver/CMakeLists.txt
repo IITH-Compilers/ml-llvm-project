@@ -17,13 +17,10 @@ set( LLVM_LINK_COMPONENTS
   Support
   TransformUtils
   Vectorize
-  PosetRL
   CodeSizeOpt
   AddSizeAttr
   IR2Vec
   CollectMachineIR
-  custom_loop_distribution
-  RDG
   )
 
 option(CLANG_PLUGIN_SUPPORT "Build clang with plugin support" ON)

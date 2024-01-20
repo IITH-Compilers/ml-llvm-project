@@ -85,4 +85,9 @@ add_llvm_component_library(LLVMScalarOpts
   intrinsics_gen
   )
 
-target_link_libraries(LLVMScalarOpts PUBLIC ${IR2VecLOF})
+target_link_libraries(LLVMScalarOpts PRIVATE LLVMcustom_loop_distribution
+LLVMIML
+LLVMRDG
+LLVMLoopCost
+LLVMLoopDistribution
+LLVMLoopDistributionServer)
