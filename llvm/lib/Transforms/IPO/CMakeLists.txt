@@ -1,3 +1,5 @@
+add_subdirectory(PosetRL)
+
 add_llvm_component_library(LLVMipo
   AlwaysInliner.cpp
   ArgumentPromotion.cpp
@@ -45,5 +47,5 @@ add_llvm_component_library(LLVMipo
   intrinsics_gen
   )
 
-target_link_libraries(LLVMipo PUBLIC LLVMMLBridge)
-# target_link_libraries(LLVMipo PUBLIC LLVMMLBridge LLVMPosetRL LLVMIRReader LLVMSupport LLVMIR2Vec)
+target_link_libraries(LLVMipo PUBLIC LLVMPosetRL)
+target_link_libraries(LLVMipo PRIVATE LLVMMLBridge)

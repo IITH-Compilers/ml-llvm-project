@@ -10,7 +10,6 @@ set(LLVM_LINK_COMPONENTS
   MC
   MCParser
   Support
-  PosetRL
   CodeSizeOpt
   IR2Vec
   )

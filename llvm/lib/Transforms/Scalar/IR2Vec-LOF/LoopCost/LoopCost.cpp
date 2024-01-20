@@ -1,9 +1,9 @@
-#include "llvm/Transforms/IR2Vec-LOF/LoopCost.h"
+#include "llvm/Transforms/Scalar/IR2Vec-LOF/LoopCost.h"
 #include "llvm/Analysis/LoopCacheAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/PassSupport.h"
-#include "llvm/Transforms/IR2Vec-LOF/Locality.h"
-#include "llvm/Transforms/IR2Vec-LOF/RDG.h"
+#include "llvm/Transforms/Scalar/IR2Vec-LOF/Locality.h"
+#include "llvm/Transforms/Scalar/IR2Vec-LOF/RDG.h"
 
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SCCIterator.h"

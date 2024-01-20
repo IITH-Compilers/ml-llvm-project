@@ -11,13 +11,13 @@
 #include "llvm/PassSupport.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/IR2Vec-LOF/LoopCost.h"
-#include "llvm/Transforms/IR2Vec-LOF/LoopDistribution.h"
+#include "llvm/Transforms/Scalar/IR2Vec-LOF/LoopCost.h"
+#include "llvm/Transforms/Scalar/IR2Vec-LOF/LoopDistribution.h"
 // grpc includes
 #include "grpc/LoopDistribution/LoopDistribution.grpc.pb.h"
 #include "grpc/LoopDistribution/LoopDistribution.pb.h"
 // #include "grpc/gRPCUtil.h"
-#include "llvm/Transforms/IR2Vec-LOF/RDG.h"
+#include "llvm/Transforms/Scalar/IR2Vec-LOF/RDG.h"
 #include "llvm/Transforms/Vectorize.h"
 #include <bits/stdint-intn.h>
 #include <cstdint>

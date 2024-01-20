@@ -20,7 +20,6 @@ set(LLVM_LINK_COMPONENTS
   TransformUtils
   Vectorize
   IPO
-  PosetRL
   CodeSizeOpt
   IR2Vec
   CollectMachineIR

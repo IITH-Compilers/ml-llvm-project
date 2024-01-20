@@ -1,7 +1,7 @@
 #ifndef __IR2Vec_LOOP_DISTRIBUTION_H__
 #define __IR2Vec_LOOP_DISTRIBUTION_H__
 
-#include "llvm/Transforms/IR2Vec-LOF/RDG.h"
+#include "llvm/Transforms/Scalar/IR2Vec-LOF/RDG.h"
 
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Analysis/LoopInfo.h"

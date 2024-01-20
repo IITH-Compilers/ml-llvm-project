@@ -1,4 +1,4 @@
-#include "llvm/Transforms/IR2Vec-LOF/DependenceDistanceMutation.h"
+#include "llvm/Transforms/Scalar/IR2Vec-LOF/DependenceDistanceMutation.h"
 
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SCCIterator.h"

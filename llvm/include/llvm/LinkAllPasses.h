@@ -49,7 +49,7 @@
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Instrumentation/BoundsChecking.h"
 #include "llvm/Transforms/ObjCARC.h"
-#include "llvm/Transforms/PosetRL/PosetRL.h"
+#include "llvm/Transforms/IPO/PosetRL/PosetRL.h"
 #include "llvm/Transforms/CodeSizeOpt/CodeSizeOpt.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/GVN.h"
@@ -60,9 +60,9 @@
 #include "llvm/Transforms/Utils/UnifyFunctionExitNodes.h"
 #include "llvm/Transforms/Vectorize.h"
 #include <cstdlib>
-#include "llvm/Transforms/IR2Vec-LOF/custom_loop_distribution.h"
-#include "llvm/Transforms/IR2Vec-LOF/LoopDistribution.h"
-#include "llvm/Transforms/IR2Vec-LOF/IR2Vec-SCC.h"
+#include "llvm/Transforms/Scalar/IR2Vec-LOF/custom_loop_distribution.h"
+#include "llvm/Transforms/Scalar/IR2Vec-LOF/LoopDistribution.h"
+#include "llvm/Transforms/Scalar/IR2Vec-LOF/IR2Vec-SCC.h"
 namespace {
   struct ForcePassLinking {
     ForcePassLinking() {

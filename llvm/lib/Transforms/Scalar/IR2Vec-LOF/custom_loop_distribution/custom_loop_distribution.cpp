@@ -1,4 +1,4 @@
-#include "llvm/Transforms/IR2Vec-LOF/custom_loop_distribution.h"
+#include "llvm/Transforms/Scalar/IR2Vec-LOF/custom_loop_distribution.h"
 #include "MLModelRunner/ONNXModelRunner/ONNXModelRunner.h"
 #include "MLModelRunner/PipeModelRunner.h"
 #include "MLModelRunner/Utils/MLConfig.h"
@@ -29,9 +29,9 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/IR2Vec-LOF/IR2Vec-SCC.h"
-#include "llvm/Transforms/IR2Vec-LOF/LoopDistribution.h"
-#include "llvm/Transforms/IR2Vec-LOF/RDG.h"
+#include "llvm/Transforms/Scalar/IR2Vec-LOF/IR2Vec-SCC.h"
+#include "llvm/Transforms/Scalar/IR2Vec-LOF/LoopDistribution.h"
+#include "llvm/Transforms/Scalar/IR2Vec-LOF/RDG.h"
 #include <algorithm>
 #include <bits/stdint-intn.h>
 #include <memory>

@@ -1,4 +1,4 @@
-#include "llvm/Transforms/IR2Vec-LOF/InnerMostLoop.h"
+#include "llvm/Transforms/Scalar/IR2Vec-LOF/InnerMostLoop.h"
 #include "MLModelRunner/Utils/MLConfig.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/MapVector.h"

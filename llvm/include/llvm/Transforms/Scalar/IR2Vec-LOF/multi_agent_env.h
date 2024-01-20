@@ -7,8 +7,8 @@
 #include "llvm/IR2Vec.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/IR2Vec-LOF/IR2Vec-SCC.h"
-#include "llvm/Transforms/IR2Vec-LOF/topological_sort.h"
+#include "llvm/Transforms/Scalar/IR2Vec-LOF/IR2Vec-SCC.h"
+#include "llvm/Transforms/Scalar/IR2Vec-LOF/topological_sort.h"
 #include <cassert>
 
 #define DISTRIBUTION_AGENT "distribution_agent"

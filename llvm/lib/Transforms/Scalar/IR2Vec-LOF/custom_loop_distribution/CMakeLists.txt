@@ -7,4 +7,4 @@ intrinsics_gen
         
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 add_subdirectory(inference)
-target_link_libraries(LLVMcustom_loop_distribution LLVMLoopDistribution LLVMCLDInference)
+target_link_libraries(LLVMcustom_loop_distribution LLVMLoopDistribution LLVMCLDInference LLVMMLBridge)

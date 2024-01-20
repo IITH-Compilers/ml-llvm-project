@@ -1,4 +1,4 @@
-#include "llvm/Transforms/PosetRL/PosetRL.h"
+#include "llvm/Transforms/IPO/PosetRL/PosetRL.h"
 #include "inference/poset_rl_env.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"

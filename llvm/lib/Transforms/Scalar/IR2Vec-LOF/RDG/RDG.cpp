@@ -1,4 +1,4 @@
-#include "llvm/Transforms/IR2Vec-LOF/RDG.h"
+#include "llvm/Transforms/Scalar/IR2Vec-LOF/RDG.h"
 // #include "IR2Vec.h"
 
 #include "llvm/ADT/DepthFirstIterator.h"

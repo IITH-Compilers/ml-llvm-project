@@ -1,3 +1,5 @@
+add_subdirectory(IR2Vec-LOF)
+
 add_llvm_component_library(LLVMScalarOpts
   ADCE.cpp
   AlignmentFromAssumptions.cpp
@@ -82,3 +84,5 @@ add_llvm_component_library(LLVMScalarOpts
   DEPENDS
   intrinsics_gen
   )
+
+target_link_libraries(LLVMScalarOpts PUBLIC ${IR2VecLOF})

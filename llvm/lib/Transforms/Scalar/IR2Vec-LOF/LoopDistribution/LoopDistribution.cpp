@@ -1,4 +1,4 @@
-#include "llvm/Transforms/IR2Vec-LOF/LoopDistribution.h"
+#include "llvm/Transforms/Scalar/IR2Vec-LOF/LoopDistribution.h"
 
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"

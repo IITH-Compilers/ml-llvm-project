@@ -23,7 +23,6 @@ set(LLVM_LINK_COMPONENTS
   TransformUtils
   Vectorize
   Passes
-  PosetRL
   CodeSizeOpt
   IR2Vec
 )

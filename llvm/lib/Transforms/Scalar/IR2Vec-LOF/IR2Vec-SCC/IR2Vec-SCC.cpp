@@ -1,6 +1,6 @@
-#include "llvm/Transforms/IR2Vec-LOF/IR2Vec-SCC.h"
+#include "llvm/Transforms/Scalar/IR2Vec-LOF/IR2Vec-SCC.h"
 #include "llvm/IR/Instruction.h"
-#include "llvm/Transforms/IR2Vec-LOF/RDG.h"
+#include "llvm/Transforms/Scalar/IR2Vec-LOF/RDG.h"
 
 #include "MLModelRunner/Utils/MLConfig.h"
 #include "llvm/ADT/DepthFirstIterator.h"

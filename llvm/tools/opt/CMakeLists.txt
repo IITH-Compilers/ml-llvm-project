@@ -1,4 +1,3 @@
-link_directories("${ONNXRUNTIME_ROOTDIR}/lib")
 set(LLVM_LINK_COMPONENTS
   AllTargetsAsmParsers
   AllTargetsCodeGens
@@ -24,7 +23,6 @@ set(LLVM_LINK_COMPONENTS
   TransformUtils
   Vectorize
   Passes
-  PosetRL
   HelloMLBridge
  CodeSizeOpt
   AddSizeAttr
