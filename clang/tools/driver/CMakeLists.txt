@@ -17,7 +17,6 @@ set( LLVM_LINK_COMPONENTS
   Support
   TransformUtils
   Vectorize
-  CodeSizeOpt
   AddSizeAttr
   IR2Vec
   CollectMachineIR

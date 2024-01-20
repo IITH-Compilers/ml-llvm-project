@@ -5,7 +5,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2")
 
 find_package(Protobuf CONFIG REQUIRED)
 message(STATUS "Using protobuf ${Protobuf_VERSION}")
-message(STATUS "Using protobuf ${Protobuf_INCLUDE_DIRS}")
+message(STATUS "Using protobuf Include Dirs ${Protobuf_INCLUDE_DIRS}")
 
 add_llvm_component_library(LLVMMLRegAlloc
 MLRegAlloc.cpp
