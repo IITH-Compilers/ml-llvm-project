@@ -231,6 +231,27 @@
   M(49500)                                                                     \
   M(50000)
 
+<<<<<<< HEAD
+=======
+#define DEBUG_TYPE "hello_mlbridge"
+
+using namespace llvm;
+using namespace grpc;
+using namespace helloMLBridgegRPC;
+
+// #define DEBUG_TYPE "hello_mlbridge"
+
+STATISTIC(hellomodule, "Counts number of functions greeted");
+
+static cl::opt<bool> training("hello-training", cl::Hidden,
+                              cl::desc("whether it is training or inference"),
+                              cl::init(false));
+
+static cl::opt<std::string> server_address(
+    "hello-server-address", cl::Hidden,
+    cl::desc("Starts the server in the given address, format <ip>:<port>"),
+    cl::init("localhost:5050"));
+>>>>>>> 2d00f46f0790... DEBUG_TYPE fix in Hello-MLBridge pass
 
 using namespace llvm;
 using namespace MLBridge;
