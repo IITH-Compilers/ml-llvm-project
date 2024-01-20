@@ -766,6 +766,7 @@ class RollOutInference:
         return self.env.last_task_done
 
     def compute_action(self):
+        
         #obs = env.reset()
     
         # steps = 0
@@ -780,8 +781,9 @@ class RollOutInference:
         done = False
         reward_total = 0.0
         # while not done and keep_going(steps, num_steps, episodes,
-        #                               num_episodes):
+        #                           num_episodes):
         actions_response = {}
+        #that means this loop is executed until the first split occurs.
         while not done:        
             # print('agent states : ', agent_states)
             multi_obs = self.obs if self.multiagent else {_DUMMY_AGENT_ID: obs}
@@ -792,8 +794,8 @@ class RollOutInference:
                     policy_id = mapping_cache.setdefault(
                         agent_id, self.policy_agent_mapping(agent_id))
                     # print(policy_id)
-                    p_use_lstm = self.use_lstm[policy_id]
-                    if p_use_lstm:
+                    p_use_lstm = self.use_lstm[policy_id]         #what LSTM
+                    if p_use_lstm:  
                         a_action, p_state, _ = self.agent.compute_single_action(
                         # a_action, p_state, _ = self.agent.compute_single_action(
                             a_obs,
