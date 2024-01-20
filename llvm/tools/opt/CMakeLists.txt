@@ -29,6 +29,13 @@ set(LLVM_LINK_COMPONENTS
   TransformUtils
   Vectorize
   Passes
+<<<<<<< HEAD
+=======
+  HelloMLBridge
+  AddSizeAttr
+  IR2Vec
+  CollectMachineIR
+>>>>>>> fb9f173c59b7... Moved CodeSizeOpt to IPO
   )
 
 add_llvm_tool(opt

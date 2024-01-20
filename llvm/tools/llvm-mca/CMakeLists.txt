@@ -10,7 +10,11 @@ set(LLVM_LINK_COMPONENTS
   MC
   MCParser
   Support
+<<<<<<< HEAD
   TargetParser
+=======
+  IR2Vec
+>>>>>>> fb9f173c59b7... Moved CodeSizeOpt to IPO
   )
 
 add_llvm_tool(llvm-mca

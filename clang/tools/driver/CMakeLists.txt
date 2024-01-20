@@ -16,6 +16,12 @@ set( LLVM_LINK_COMPONENTS
   TargetParser
   TransformUtils
   Vectorize
+<<<<<<< HEAD
+=======
+  AddSizeAttr
+  IR2Vec
+  CollectMachineIR
+>>>>>>> fb9f173c59b7... Moved CodeSizeOpt to IPO
   )
 
 # Support plugins.

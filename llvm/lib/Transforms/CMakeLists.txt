@@ -12,4 +12,10 @@ add_subdirectory(Hello-IR2Vec)
 add_subdirectory(ObjCARC)
 add_subdirectory(Coroutines)
 add_subdirectory(CFGuard)
+<<<<<<< HEAD
 add_subdirectory(Hello-MLBridge)
+=======
+add_subdirectory(AddSizeAttr)
+add_subdirectory(MCAInstrumentation)
+add_subdirectory(PipeIR)
+>>>>>>> fb9f173c59b7... Moved CodeSizeOpt to IPO

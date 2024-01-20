@@ -1,3 +1,9 @@
+<<<<<<< HEAD
+=======
+add_subdirectory(PosetRL)
+add_subdirectory(CodeSizeOpt)
+
+>>>>>>> fb9f173c59b7... Moved CodeSizeOpt to IPO
 add_llvm_component_library(LLVMipo
   AlwaysInliner.cpp
   Annotation2Metadata.cpp
@@ -50,6 +56,7 @@ add_llvm_component_library(LLVMipo
   intrinsics_gen
   omp_gen
 
+<<<<<<< HEAD
   COMPONENT_NAME
   IPO
 
@@ -72,3 +79,7 @@ add_llvm_component_library(LLVMipo
   Vectorize
   Instrumentation
   )
+=======
+target_link_libraries(LLVMipo PUBLIC LLVMPosetRL LLVMCodeSizeOpt)
+target_link_libraries(LLVMipo PRIVATE LLVMMLBridge)
+>>>>>>> fb9f173c59b7... Moved CodeSizeOpt to IPO
