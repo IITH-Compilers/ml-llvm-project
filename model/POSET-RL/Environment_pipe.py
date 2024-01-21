@@ -16,12 +16,13 @@ from google.protobuf.json_format import MessageToJson
 import json
 from po_config import BUILD_DIR, CONFIG_DIR
 import grpc
-sys.path.append(f"{BUILD_DIR}/MLCompilerBridge/MLModelRunner/gRPCModelRunner/Python-Utilities/")
+sys.path.append(f"{BUILD_DIR}/tools/MLCompilerBridge/Python-Utilities/")
 import posetRL_pb2_grpc, posetRL_pb2
 from google.protobuf.empty_pb2 import Empty
 from typing import Union
+import signal
 
-sys.path.append(f"{BUILD_DIR}/MLCompilerBridge/CompilerInterface/")
+sys.path.append(f"{BUILD_DIR}/tools/MLCompilerBridge/CompilerInterface/")
 from PipeCompilerInterface import PipeCompilerInterface
 from GrpcCompilerInterface import GrpcCompilerInterface
 
@@ -262,8 +263,7 @@ class PhaseOrder(gym.Env):
             # Compute O0 Binary size
             command = self.FileSys_Obj.ClangPath + " " + self.clang_arch_flag + " -c " + \
                 self.Curr_Dir + "/" + fileName + ".ll -o " + \
-                self.Curr_Dir + "/" + "base_binary.o" + f" -mllvm -ml-config-path={CONFIG_DIR}"
-            # print("O0 binary object compile command: "+command)
+                self.Curr_Dir + "/" + "base_binary.o"
             os.system(command)
             baseBinarySize = os.path.getsize(self.Curr_Dir + "/base_binary.o")
             logging.info("base {}".format(baseBinarySize))
@@ -271,14 +271,14 @@ class PhaseOrder(gym.Env):
             # Compute Oz Binary size
             command = self.FileSys_Obj.OptPath + " " + self.opt_arch_flag + " -S  -add-size-attr --enableMinSizeAttr --removeNoInlineAttr " + \
                 self.Curr_Dir + "/" + fileName + ".ll -o " + \
-                self.Curr_Dir + "/" + fileName + ".ll" + f"-ml-config-path={CONFIG_DIR} "
+                self.Curr_Dir + "/" + fileName + ".ll" #+ f"-ml-config-path={CONFIG_DIR} "
             command = self.FileSys_Obj.OptPath + " " + self.opt_arch_flag + " -S -Oz " + \
                 self.Curr_Dir + "/" + fileName + ".ll -o " + \
-                self.Curr_Dir + "/" + fileName + "_Oz.ll" + f" -ml-config-path={CONFIG_DIR} "
+                self.Curr_Dir + "/" + fileName + "_Oz.ll" #+ f" -ml-config-path={CONFIG_DIR} "
             os.system(command)
             command = self.FileSys_Obj.ClangPath + " " + self.clang_arch_flag + " -c " + \
                 self.Curr_Dir + "/" + fileName + "_Oz.ll -o " + \
-                self.Curr_Dir + "/" + "Oz_binary.o" + f" -mllvm -ml-config-path={CONFIG_DIR} "
+                self.Curr_Dir + "/" + "Oz_binary.o" #+ f" -mllvm -ml-config-path={CONFIG_DIR} "
             os.system(command)
             minBinarySize = os.path.getsize(self.Curr_Dir + "/Oz_binary.o")
 
@@ -347,7 +347,8 @@ class PhaseOrder(gym.Env):
                 if not self.use_pipe:
                     self.stable_grpc("Exit", None)
                     try:
-                        outs, errs = self.server_pid.communicate(timeout=5)
+                        # outs, errs = self.server_pid.communicate(timeout=5)
+                        self.stable_grpc("Exit", None)
                     except:
                         self.serverId.kill()
                         print("Clang failing")
@@ -373,7 +374,7 @@ class PhaseOrder(gym.Env):
     # Get llvm-mca Block RThroughput for the IR
     def getMCACost(self, new_file):
         cmd1 = self.FileSys_Obj.LlcPath + " " + self.opt_arch_flag + \
-            " " + new_file + ".ll" + " -o " + new_file + ".s" + f" -ml-config-path={CONFIG_DIR}"
+            " " + new_file + ".ll" + " -o " + new_file + ".s" #+ f" -ml-config-path={CONFIG_DIR}"
         os.system(cmd1)
         cmd2 = self.FileSys_Obj.MCAPath + " " + \
             self.opt_arch_flag + " " + new_file + ".s" 
@@ -414,10 +415,10 @@ class PhaseOrder(gym.Env):
         # Here we can use gRPC server to apply the action
         command = self.FileSys_Obj.OptPath + " " + self.opt_arch_flag + \
             " -S -O34 -SubNum=" + str(action) + " " + \
-            self.CurrIR + " -o " + new_IR + f" -ml-config-path={CONFIG_DIR}"
+            self.CurrIR + " -o " + new_IR #+ f" -ml-config-path={CONFIG_DIR}"
         os.system(command)
         command = self.FileSys_Obj.ClangPath + " " + \
-            self.clang_arch_flag + " -c " + new_IR + " -o " + new_file + ".o" + f" -mllvm -ml-config-path={CONFIG_DIR}"
+            self.clang_arch_flag + " -c " + new_IR + " -o " + new_file + ".o" #+ f" -mllvm -ml-config-path={CONFIG_DIR}"
         os.system(command)
         # Size reward
         currBinarySize = os.path.getsize(new_file + ".o")
@@ -472,8 +473,8 @@ class PhaseOrder(gym.Env):
         # object size reward
         objectFilePath = f"{self.temporaryDirectory}/objectfile_{self.worker_index}.o"
         objectFileGenerationCommand = self.FileSys_Obj.ClangPath + " -c " + \
-            self.clang_arch_flag + " " + AssemblyFilePath + " -o " + objectFilePath + f" -mllvm -ml-config-path={CONFIG_DIR}"
-
+            self.clang_arch_flag + " " + AssemblyFilePath + " -o " + objectFilePath #+ f" -mllvm -ml-config-path={CONFIG_DIR}"
+        print("Obj gen cmd:", objectFileGenerationCommand)
         os.system(objectFileGenerationCommand)
 
         currentBinarySize = os.path.getsize(objectFilePath)
@@ -568,12 +569,11 @@ class PhaseOrder(gym.Env):
         # response = self.stub.applyActionGetEmbeddings(request)
         return self.repeatedgRPCFieldToNumpyArray(response)
 
-    def stopServer(self):
-        request = posetRL_pb2.ActionRequest(action=-1)
-        self.compiler_interface.populate_buffer(request)
-        self.compiler_interface.evaluate()
-        # self.stub.applyActionGetEmbeddings(request)
-
+    def stopServer(self, sig):
+        self.serverId.send_signal(sig)
+        return_code = self.serverId.wait()
+        print("Return code:", return_code)
+    
     def stable_grpc(self, op, action):
         attempt = 0
         max_retries = 5
@@ -587,7 +587,7 @@ class PhaseOrder(gym.Env):
                 if op != "Exit":
                     result = self.applyActionGetEmbeddings(action=action)
                 else:
-                    result = self.stopServer()
+                    result = self.stopServer(signal.SIGTERM)
                 t2 = time.time()
                 self.grpc_rtt += t2-t1
                 break
