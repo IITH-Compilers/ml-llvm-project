@@ -197,3 +197,5 @@ if(LLVM_WITH_Z3)
     ${Z3_INCLUDE_DIR}
     )
 endif()
+
+target_link_libraries(LLVMSupport PRIVATE LLVMMLBridge)

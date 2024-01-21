@@ -23,49 +23,6 @@ using namespace llvm;
 #define DEBUG_TYPE "hello"
 
 STATISTIC(HelloCounter, "Counts number of functions greeted");
-
-namespace {
-// Hello - The first implementation, without getAnalysisUsage.
-struct Hello : public FunctionPass {
-  static char ID; // Pass identification, replacement for typeid
-  Hello() : FunctionPass(ID) {}
-// namespace {
-// // Hello - The first implementation, without getAnalysisUsage.
-// struct Hello : public FunctionPass,gRPCUtil {
-//   static char ID; // Pass identification, replacement for typeid
-//   RegisterAllocationInference::Stub *Stub = nullptr;
-//   GraphList request;
-//   ColorData reply;
-//   Hello() : FunctionPass(ID) {
-//     SetStub<RegisterAllocationInference>();
-//     Stub = (RegisterAllocationInference::Stub *)this->getStub();
-//   }
-
-  bool runOnFunction(Function &F) override {
-    ++HelloCounter;
-    errs() << "Hello: ";
-    errs().write_escaped(F.getName()) << '\n';
-    return false;
-  }
-};
-} // namespace
-//   bool runOnFunction(Function &F) override {
-//     ++HelloCounter;
-//     errs() << "Hello: ";
-//     errs().write_escaped(F.getName()) << '\n';
-//     request.set_payload(F.getName());
-//     grpc::ClientContext context;
-//     grpc::Status status = Stub->getColouring(&context, request, &reply);
-
-//     outs() << reply.payload();
-//     return false;
-//   }
-// };
-// } // namespace
-
-// char Hello::ID = 0;
-// static RegisterPass<Hello> X("hello", "Hello World Pass");
-
 namespace {
 // Hello - The second implementation with getAnalysisUsage implemented.
 struct Hello : public FunctionPass {
