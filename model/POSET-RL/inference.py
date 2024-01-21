@@ -177,8 +177,9 @@ class PhaseOrderInference:
         self.train_agent.restore(checkpoint)
 
         self.config = config
-
-        # torch.onnx.export(self.train_agent.get_policy().model, ({"obs": torch.randn(1, 334)}, {}), f="/Pramana/ML_LLVM_Tools/ml-llvm-project/onnx_checkpoints_posetrl/posetrl_model.onnx", verbose=True, input_names=["obs"], output_names=["output"])
+        # DO NOT DELETE THE BELOW LINE , uncomment to dump the onnx model from checkpoint
+        # torch.onnx.export(self.train_agent.get_policy().model, ({"obs": torch.randn(1, 334)}, {}), export_params=True, f="/home/cs22mtech12011/Hackathon/ml-llvm-project/model/POSET-RL/onnx-model/posetrl_model-test.onnx", verbose=True, input_names=["obs"], output_names=["output"])
+        
 
     def dot_to_json(self, dot_):
         py_dot_graph = pydot.graph_from_dot_data(dot_)[0]
