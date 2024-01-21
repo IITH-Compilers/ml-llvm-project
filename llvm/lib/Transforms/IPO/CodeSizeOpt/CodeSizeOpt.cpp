@@ -1,10 +1,8 @@
-#include "llvm/Transforms/CodeSizeOpt/CodeSizeOpt.h"
+#include "llvm/Transforms/IPO/CodeSizeOpt/CodeSizeOpt.h"
 #include "MLModelRunner/MLModelRunner.h"
 #include "MLModelRunner/ONNXModelRunner/ONNXModelRunner.h"
 #include "MLModelRunner/Utils/MLConfig.h"
 #include "inference/CodeSizeOptEnv.h"
-#include "llvm/ADT/Triple.h"
-#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR2Vec.h"
@@ -17,14 +15,16 @@
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/CodeSizeOpt/ActionSpace/ActionEnum.h"
-#include "llvm/Transforms/CodeSizeOpt/ActionSpace/ActionHeaders.h"
-#include "llvm/Transforms/CodeSizeOpt/ActionSpace/ActionSwitch.h"
+#include "llvm/Transforms/IPO/CodeSizeOpt/ActionSpace/ActionEnum.h"
+#include "llvm/Transforms/IPO/CodeSizeOpt/ActionSpace/ActionHeaders.h"
+#include "llvm/Transforms/IPO/CodeSizeOpt/ActionSpace/ActionSwitch.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include <cstdlib>
 #include <fstream>
 #include <utility>
 #include <vector>
+
+#define DEBUG_TYPE "codesizeopt"
 
 using namespace llvm;
 
@@ -33,7 +33,7 @@ struct CodeSizeOpt : public ModulePass, public CodeSizeOptEnv {
   static char ID;
   CodeSizeOpt() : ModulePass(ID) {}
   bool runOnModule(Module &M) override {
-    assert(MLConfig::mlconfig != "" && "ml-config-path required" );
+    assert(MLConfig::mlconfig != "" && "ml-config-path required");
     this->M = &M;
     llvm::Triple triple(M.getTargetTriple());
     tlii_ = llvm::TargetLibraryInfoImpl(triple);
@@ -50,23 +50,26 @@ struct CodeSizeOpt : public ModulePass, public CodeSizeOptEnv {
     return true;
   }
 
-  inline const llvm::TargetLibraryInfoImpl& tlii() const { return tlii_; }
+  inline const llvm::TargetLibraryInfoImpl &tlii() const { return tlii_; }
 
-  void addPassToPM(llvm::legacy::FunctionPassManager* PM, Pass* P) {
-    errs() << "Adding Pass: Profilesummaryinfo" << "\n";
+  void addPassToPM(llvm::legacy::FunctionPassManager *PM, Pass *P) {
+    errs() << "Adding Pass: Profilesummaryinfo"
+           << "\n";
     PM->add(new ProfileSummaryInfoWrapperPass());
-    errs() << "Adding Pass: TargetLibraryInfo" << "\n";
+    errs() << "Adding Pass: TargetLibraryInfo"
+           << "\n";
     PM->add(new TargetLibraryInfoWrapperPass(tlii()));
-    errs() << "Adding Pass: TargetTransformInfo" << "\n";
+    errs() << "Adding Pass: TargetTransformInfo"
+           << "\n";
     PM->add(createTargetTransformInfoWrapperPass(TargetIRAnalysis()));
     errs() << "Adding Pass: " << P->getPassName() << "\n";
     PM->add(P);
   }
 
   Embedding getEmbeddings() override {
-    auto Ir2vec =
-        IR2Vec::Embeddings(*M, IR2Vec::IR2VecMode::FlowAware,
-                           MLConfig::mlconfig + "/ir2vec/seedEmbeddingVocab-300-llvm10.txt");
+    auto Ir2vec = IR2Vec::Embeddings(
+        *M, IR2Vec::IR2VecMode::FlowAware,
+        MLConfig::mlconfig + "/ir2vec/seedEmbeddingVocab-300-llvm10.txt");
     auto ProgVector = Ir2vec.getProgramVector();
     Embedding Vector(ProgVector.begin(), ProgVector.end());
     // errs() << "Embedding: ";

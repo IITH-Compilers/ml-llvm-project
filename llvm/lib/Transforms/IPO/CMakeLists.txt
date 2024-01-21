@@ -1,7 +1,6 @@
 <<<<<<< HEAD
 =======
 add_subdirectory(PosetRL)
-add_subdirectory(CodeSizeOpt)
 
 >>>>>>> fb9f173c59b7... Moved CodeSizeOpt to IPO
 add_llvm_component_library(LLVMipo
@@ -60,6 +59,7 @@ add_llvm_component_library(LLVMipo
   COMPONENT_NAME
   IPO
 
+<<<<<<< HEAD
   LINK_COMPONENTS
   AggressiveInstCombine
   Analysis
@@ -83,3 +83,7 @@ add_llvm_component_library(LLVMipo
 target_link_libraries(LLVMipo PUBLIC LLVMPosetRL LLVMCodeSizeOpt)
 target_link_libraries(LLVMipo PRIVATE LLVMMLBridge)
 >>>>>>> fb9f173c59b7... Moved CodeSizeOpt to IPO
+=======
+target_link_libraries(LLVMipo PUBLIC LLVMPosetRL)
+target_link_libraries(LLVMipo PRIVATE LLVMMLBridge)
+>>>>>>> e4011a594dc3... Added MLConfig in Support/CommandLine.cpp

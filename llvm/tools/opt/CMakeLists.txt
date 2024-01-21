@@ -30,8 +30,11 @@ set(LLVM_LINK_COMPONENTS
   Vectorize
   Passes
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
   HelloMLBridge
+=======
+>>>>>>> e4011a594dc3... Added MLConfig in Support/CommandLine.cpp
   AddSizeAttr
   IR2Vec
   CollectMachineIR

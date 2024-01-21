@@ -351,6 +351,24 @@ void initializeWasmEHPreparePass(PassRegistry&);
 void initializeWinEHPreparePass(PassRegistry&);
 void initializeWriteBitcodePassPass(PassRegistry&);
 void initializeXRayInstrumentationPass(PassRegistry&);
+<<<<<<< HEAD
+=======
+void initializePosetRLPass(PassRegistry &);
+void initializeHelloMLBridgePass(PassRegistry &);
+void initializeCollectMachineIRPass(PassRegistry &);
+void initializeConfigGenPass(PassRegistry &);
+
+
+void initializeRDGWrapperPassPass(PassRegistry&);
+
+void initializeLoopDistributionWrapperPassPass(PassRegistry&);
+
+void initializecustom_loop_distributionPass(PassRegistry&);
+
+void initializeInnerMostLoopPassPass(PassRegistry &);
+
+void initializeLoopDistributionServerPassPass(PassRegistry &);
+>>>>>>> e4011a594dc3... Added MLConfig in Support/CommandLine.cpp
 
 } // end namespace llvm
 
