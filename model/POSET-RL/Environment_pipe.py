@@ -271,14 +271,14 @@ class PhaseOrder(gym.Env):
             # Compute Oz Binary size
             command = self.FileSys_Obj.OptPath + " " + self.opt_arch_flag + " -S  -add-size-attr --enableMinSizeAttr --removeNoInlineAttr " + \
                 self.Curr_Dir + "/" + fileName + ".ll -o " + \
-                self.Curr_Dir + "/" + fileName + ".ll" #+ f"-ml-config-path={CONFIG_DIR} "
+                self.Curr_Dir + "/" + fileName + ".ll"
             command = self.FileSys_Obj.OptPath + " " + self.opt_arch_flag + " -S -Oz " + \
                 self.Curr_Dir + "/" + fileName + ".ll -o " + \
-                self.Curr_Dir + "/" + fileName + "_Oz.ll" #+ f" -ml-config-path={CONFIG_DIR} "
+                self.Curr_Dir + "/" + fileName + "_Oz.ll" 
             os.system(command)
             command = self.FileSys_Obj.ClangPath + " " + self.clang_arch_flag + " -c " + \
                 self.Curr_Dir + "/" + fileName + "_Oz.ll -o " + \
-                self.Curr_Dir + "/" + "Oz_binary.o" #+ f" -mllvm -ml-config-path={CONFIG_DIR} "
+                self.Curr_Dir + "/" + "Oz_binary.o" 
             os.system(command)
             minBinarySize = os.path.getsize(self.Curr_Dir + "/Oz_binary.o")
 
@@ -374,7 +374,7 @@ class PhaseOrder(gym.Env):
     # Get llvm-mca Block RThroughput for the IR
     def getMCACost(self, new_file):
         cmd1 = self.FileSys_Obj.LlcPath + " " + self.opt_arch_flag + \
-            " " + new_file + ".ll" + " -o " + new_file + ".s" #+ f" -ml-config-path={CONFIG_DIR}"
+            " " + new_file + ".ll" + " -o " + new_file + ".s" 
         os.system(cmd1)
         cmd2 = self.FileSys_Obj.MCAPath + " " + \
             self.opt_arch_flag + " " + new_file + ".s" 
@@ -415,10 +415,10 @@ class PhaseOrder(gym.Env):
         # Here we can use gRPC server to apply the action
         command = self.FileSys_Obj.OptPath + " " + self.opt_arch_flag + \
             " -S -O34 -SubNum=" + str(action) + " " + \
-            self.CurrIR + " -o " + new_IR #+ f" -ml-config-path={CONFIG_DIR}"
+            self.CurrIR + " -o " + new_IR 
         os.system(command)
         command = self.FileSys_Obj.ClangPath + " " + \
-            self.clang_arch_flag + " -c " + new_IR + " -o " + new_file + ".o" #+ f" -mllvm -ml-config-path={CONFIG_DIR}"
+            self.clang_arch_flag + " -c " + new_IR + " -o " + new_file + ".o" 
         os.system(command)
         # Size reward
         currBinarySize = os.path.getsize(new_file + ".o")
@@ -473,8 +473,8 @@ class PhaseOrder(gym.Env):
         # object size reward
         objectFilePath = f"{self.temporaryDirectory}/objectfile_{self.worker_index}.o"
         objectFileGenerationCommand = self.FileSys_Obj.ClangPath + " -c " + \
-            self.clang_arch_flag + " " + AssemblyFilePath + " -o " + objectFilePath #+ f" -mllvm -ml-config-path={CONFIG_DIR}"
-        print("Obj gen cmd:", objectFileGenerationCommand)
+            self.clang_arch_flag + " " + AssemblyFilePath + " -o " + objectFilePath 
+        
         os.system(objectFileGenerationCommand)
 
         currentBinarySize = os.path.getsize(objectFilePath)
@@ -488,7 +488,7 @@ class PhaseOrder(gym.Env):
 
         self.lastBinarySize = currentBinarySize
 
-        llvmMcaCommand = f"{self.FileSys_Obj.MCAPath} {self.opt_arch_flag} {AssemblyFilePath}" #+ " -ml-config-path={CONFIG_DIR}"
+        llvmMcaCommand = f"{self.FileSys_Obj.MCAPath} {self.opt_arch_flag} {AssemblyFilePath}" 
         pro = subprocess.Popen(llvmMcaCommand, executable='/bin/bash', shell=True,
                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding='utf8')
 
@@ -612,3 +612,4 @@ class PhaseOrder(gym.Env):
                     else:
                         raise
         return result
+
