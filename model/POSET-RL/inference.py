@@ -39,10 +39,10 @@ from datetime import datetime
 from po_config import BUILD_DIR
 
 import sys
-sys.path.append(f"{BUILD_DIR}/MLCompilerBridge/MLModelRunner/gRPCModelRunner/Python-Utilities")
+sys.path.append(f"{BUILD_DIR}/tools/MLCompilerBridge/Python-Utilities")
 import posetRL_pb2_grpc, posetRL_pb2
 
-sys.path.append(f"{BUILD_DIR}/MLCompilerBridge/CompilerInterface/")
+sys.path.append(f"{BUILD_DIR}/tools/MLCompilerBridge/CompilerInterface/")
 from GrpcCompilerInterface import GrpcCompilerInterface
 
 from Filesystem import *

@@ -1,7 +1,7 @@
 import sys, os
 from config import BUILD_DIR, MODEL_PATH, MODEL_DIR
 sys.path.append(
-    f"{BUILD_DIR}/MLCompilerBridge/MLModelRunner/gRPCModelRunner/Python-Utilities"
+    f"{BUILD_DIR}/tools/MLCompilerBridge/Python-Utilities"
 )
 import RegisterAllocationInference_pb2_grpc, RegisterAllocationInference_pb2
 
@@ -17,7 +17,7 @@ sys.path.append(
 import rollout as inference
 from argparse import Namespace
 
-sys.path.append(f"{BUILD_DIR}/MLCompilerBridge/CompilerInterface/")
+sys.path.append(f"{BUILD_DIR}/tools/MLCompilerBridge/CompilerInterface/")
 from PipeCompilerInterface import PipeCompilerInterface
 from GrpcCompilerInterface import GrpcCompilerInterface
 
