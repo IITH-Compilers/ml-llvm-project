@@ -327,7 +327,7 @@ class PhaseOrder(gym.Env):
         self.cur_obs = next_observation
 
         # Max number of actions (optimaztions sub-sequences) to be applied
-        if self.action_count >= 15:
+        if self.action_count >= 34:
             done = True
             logging.info(self.cur_action_seq)
             if self.mode == 'inference':
