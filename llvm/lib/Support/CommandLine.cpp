@@ -41,6 +41,7 @@
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
+#include "MLModelRunner/Utils/MLConfig.h"
 #include <cstdlib>
 #include <map>
 #include <string>
@@ -74,6 +75,10 @@ template class opt<char>;
 template class opt<bool>;
 }
 } // end namespace llvm::cl
+
+llvm::cl::opt<std::string> MLBridge::MLConfig::mlconfig(
+    "ml-config-path", llvm::cl::Hidden, llvm::cl::Optional,
+    llvm::cl::desc("Path to ML config files"), llvm::cl::init(""));
 
 // Pin the vtables to this file.
 void GenericOptionValue::anchor() {}

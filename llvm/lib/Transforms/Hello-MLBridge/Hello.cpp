@@ -246,8 +246,6 @@ using namespace llvm;
 using namespace grpc;
 using namespace helloMLBridgegRPC;
 
-// #define DEBUG_TYPE "hello_mlbridge"
-
 STATISTIC(hellomodule, "Counts number of functions greeted");
 
 static cl::opt<bool> training("hello-training", cl::Hidden,
@@ -359,6 +357,8 @@ struct HelloMLBridge : public ModulePass,
   }
 
   bool runOnModule(Module &M) override {
+    // unregister MLConfig::mlconfig
+    MLConfig::mlconfig.removeArgument();
     this->M = &M;
     if (useTF) {
       populateFeatureVector();
@@ -465,11 +465,6 @@ private:
 } // namespace
 
 char HelloMLBridge::ID = 0;
-// static RegisterPass<HelloMLBridge> Z("hello-MLBridge",
-//                                      "Hello World Pass (with MLBridge)");
-INITIALIZE_PASS_BEGIN(HelloMLBridge, "hello-MLBridge",
-                      "Hello World Pass (with MLBridge)", false, false)
-INITIALIZE_PASS_END(HelloMLBridge, "hello-MLBridge",
-                    "Hello World Pass (with MLBridge)", false, false)
-
-ModulePass *llvm::createHelloMLBridgePass() { return new HelloMLBridge(); }
+static RegisterPass<HelloMLBridge> Z("hello-MLBridge",
+                                     "Hello World Pass (with MLBridge)");
+                                     

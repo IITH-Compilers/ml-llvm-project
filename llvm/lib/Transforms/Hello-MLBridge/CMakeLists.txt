@@ -5,7 +5,7 @@ if(WIN32 OR CYGWIN)
   set(LLVM_LINK_COMPONENTS Core Support)
 endif()
 
-add_llvm_component_library(LLVMHelloMLBridge
+add_llvm_library(LLVMHelloMLBridge MODULE BUILDTREE_ONLY
   Hello.cpp
 
   DEPENDS
