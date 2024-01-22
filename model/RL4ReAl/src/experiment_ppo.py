@@ -39,6 +39,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--train-iterations", type=int, default=100000)
 parser.add_argument("--workers", type=int, default=1)
 parser.add_argument("--mode", type=str, default="CPU")
+parser.add_argument("--dump_onnx_model", type=bool, default=False, help="Dump onnx model files or not")
 torch.autograd.set_detect_anomaly(True) 
 
 checkpoint = None
@@ -65,11 +66,14 @@ def experiment(config):
             print("Traning Ended")
             checkpoint = train_agent.save(tune.get_trial_dir())
             break
-        
-    train_agent.export_policy_model(export_dir="/home/cs20mtech12003/ml-llvm-project/model/RL4ReAl/src/select_node", policy_id="select_node_policy", onnx=11)
-    train_agent.export_policy_model(export_dir="/home/cs20mtech12003/ml-llvm-project/model/RL4ReAl/src/select_task", policy_id="select_task_policy", onnx=11)
-    train_agent.export_policy_model(export_dir="/home/cs20mtech12003/ml-llvm-project/model/RL4ReAl/src/color_node", policy_id="colour_node_policy", onnx=11)
-    train_agent.export_policy_model(export_dir="/home/cs20mtech12003/ml-llvm-project/model/RL4ReAl/src/split_node", policy_id="split_node_policy", onnx=11)
+
+    if config['dump_onnx_model']:   
+        train_agent.export_policy_model(export_dir=MODEL_DIR + "/select_node", policy_id="select_node_policy", onnx=11)
+        train_agent.export_policy_model(export_dir=MODEL_DIR + "/select_task", policy_id="select_task_policy", onnx=11)
+        train_agent.export_policy_model(export_dir=MODEL_DIR + "/color_node", policy_id="colour_node_policy", onnx=11)
+        train_agent.export_policy_model(export_dir=MODEL_DIR + "/split_node", policy_id="split_node_policy", onnx=11)
+    
+    
     train_agent.stop()
 
 
@@ -154,6 +158,7 @@ if __name__ == "__main__":
     config["framework"] = "torch"
     config["env"] = HierarchicalGraphColorEnv    
     config["callbacks"] = MyCallbacks
+    config["dump_onnx_model"] = args.dump_onnx_model
 
     ModelCatalog.register_custom_model("select_node_model", SelectNodeNetwork)
     ModelCatalog.register_custom_model("select_task_model", SelectTaskNetwork)
