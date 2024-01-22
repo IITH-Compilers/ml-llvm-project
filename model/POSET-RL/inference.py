@@ -105,8 +105,10 @@ parser.add_argument(
 )
 parser.add_argument("--pipe_name",type=str,help="String Pipe name") 
 parser.add_argument("--use_grpc", action='store_true', help = "Use grpc communication", required=False, default=False)
+parser.add_argument("--export_onnx", action="store_true", help="Export the model to ONNX")
+
 class PhaseOrderInference:
-    def __init__(self, model_path, use_pipe=False, use_grpc=False, data_format="json"):
+    def __init__(self, model_path, use_pipe=False, use_grpc=False, data_format="json", export_onnx=False):
         print("use_pipe {}".format(use_pipe))
         logdir = "/tmp"
         logger = logging.getLogger(__file__)
@@ -154,7 +156,8 @@ class PhaseOrderInference:
                     "data_format": data_format,
                     "use_grpc": use_grpc,
                     "server_port": args.server_port,
-                    "pipe_name": args.pipe_name
+                    "pipe_name": args.pipe_name,
+                    "export_onnx": export_onnx
                 },
                 "framework": "torch",
                 "explore": False,
@@ -177,8 +180,10 @@ class PhaseOrderInference:
         self.train_agent.restore(checkpoint)
 
         self.config = config
-        # DO NOT DELETE THE BELOW LINE , uncomment to dump the onnx model from checkpoint
-        # torch.onnx.export(self.train_agent.get_policy().model, ({"obs": torch.randn(1, 334)}, {}), export_params=True, f="/home/cs22mtech12011/Hackathon/ml-llvm-project/model/POSET-RL/onnx-model/posetrl_model-test.onnx", verbose=True, input_names=["obs"], output_names=["output"])
+
+        # Dump the onnx model from the checkpoint
+        if args.export_onnx:
+            torch.onnx.export(self.train_agent.get_policy().model, ({"obs": torch.randn(1, 334)}, {}), export_params=True, f="/path/to/ml-llvm-project/model/POSET-RL/onnx-model/posetrl_model.onnx", verbose=True, input_names=["obs"], output_names=["output"])
         
 
     def dot_to_json(self, dot_):
@@ -256,7 +261,7 @@ if __name__ == "__main__":
     ray.init()
 
     inference_obj = PhaseOrderInference(
-        args.model, args.use_pipe, args.use_grpc, args.data_format
+        args.model, args.use_pipe, args.use_grpc, args.data_format, args.export_onnx
     )
     if args.use_pipe:
         print("about to enter while loop...")
