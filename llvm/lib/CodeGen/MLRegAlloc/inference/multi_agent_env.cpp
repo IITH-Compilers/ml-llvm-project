@@ -7,13 +7,15 @@
 
 using namespace llvm;
 
+
+
 Observation& MultiAgentEnv::reset() {
   // RegisterProfileMap regProfMapHelper_new;
   this->clearDataStructures();
-  LLVM_DEBUG(errs() << "RegProgMap size at reset: " << this->regProfMapHelper.size()
-                    << "\n");
-  errs() << "RegProgMap size at reset: " << this->regProfMapHelper.size()
-         << "\n";
+  //LLVM_DEBUG(errs() << "RegProgMap size at reset: " << this->regProfMapHelper.size()
+  //                  << "\n");
+  //errs() << "RegProgMap size at reset: " << this->regProfMapHelper.size()
+  //       << "\n";
   for (auto &rpi : regProfMap) {
     auto rp = rpi.second;
     if (rp.cls == "Phy" &&
@@ -35,16 +37,16 @@ Observation& MultiAgentEnv::reset() {
     RegisterProfile &rp = rpi.second;
     // errs( << "Node mat size: " << rpi.first << " "
     //                   << rp.vecRep.size() << " " << rp.cls << "\n");
-    LLVM_DEBUG(errs() << "Adding node Representation for: " << rpi.first
-                      << " at idx: " << idx << "\n");
-    LLVM_DEBUG(errs() << "NodeRepresentaion size: "
-                      << this->nodeRepresentation.size() << "\n");
+    //LLVM_DEBUG(errs() << "Adding node Representation for: " << rpi.first
+    //                 << " at idx: " << idx << "\n");
+    //LLVM_DEBUG(errs() << "NodeRepresentaion size: "
+    //                  << this->nodeRepresentation.size() << "\n");
     auto tempVec = IR2Vec::Vector(IR2Vec_size);
     this->nodeRepresentation.push_back(tempVec);
     // this->nodeRepresentation.push_back(std::vector<float>(IR2Vec_size));
     // this->nodeRepresentation.at(10);
     this->constructNodeVector(rp.vecRep, nodeRepresentation.back());
-
+    // this->nodeRep
     // this->nodeRepresentation[idx] = nodeVec;
     this->nid_idx[rpi.first] = idx;
     this->idx_nid[idx] = rpi.first;
@@ -125,21 +127,33 @@ void MultiAgentEnv::clearDataStructures() {
 }
 
 Observation& MultiAgentEnv::step(Action action) {
+  std::ofstream of;
+  of.open("observation_onnx.txt", std::ios::app);
+  //of.open("observation_oracle_onnx.txt", std::ios::app);  // Oracle File
+
+  std::ofstream af;
+  af.open("advice_onnx.txt", std::ios::app);
+  //af.open("advice_oracle_onnx.txt", std::ios::app); // Oracle File
   // errs() << "Action: " << action << "\n";
+
+  of << this->getNextAgent() << ": " << action << "\n";
   if (this->getNextAgent() == NODE_SELECTION_AGENT) {
-    // errs() << "Selected node is: " << action << "\n";
+    
     CurrObs = this->select_node_step(action);
   } else if (this->getNextAgent() == TASK_SELECTION_AGENT) {
+    
     CurrObs = this->select_task_step(action);
     if (this->getNextAgent() == SPLIT_NODE_AGENT) {
       // auto splitNodeObs = this->getCurrentObservation(SPLIT_NODE_AGENT);
     }
     // errs() << "Selected Task is: " << action << "\n";
   } else if (this->getNextAgent() == COLOR_NODE_AGENT) {
+    
     CurrObs = this->colour_node_step(action);
     // errs() << "Node coloured is: " << action << "\n";
     
   } else if (this->getNextAgent() == SPLIT_NODE_AGENT) {
+    
     splitStepCount++;
     CurrObs = this->split_node_step(action);
     // errs() << "Node spliting is: " << action << "\n";
@@ -149,12 +163,14 @@ Observation& MultiAgentEnv::step(Action action) {
   LLVM_DEBUG(errs() << "Next Agent is: " << this->getNextAgent() << "\n");
   if (this->graph_topology->all_discovered() &&
       this->getNextAgent() == NODE_SELECTION_AGENT) {
+    //std:cout << action << "\n";
     // LLVM_DEBUG(errs() << "Next Agent before Done is called: "
     //                   << this->getNextAgent() << "\n");
     LLVM_DEBUG(errs() << "Discovered All\n");
     // errs() << "Exiting form onnx\n";
     // exit(0);
     this->setDone();
+    af << action << " ";
     LLVM_DEBUG(errs() << "nodeRepresentation size before done: "
                       << this->nodeRepresentation.size() << "\n");
     // this->nodeRepresentation.clear();
@@ -423,12 +439,12 @@ void MultiAgentEnv::createNodeSplitMask(Observation &mask) {
             splitSlots.end() &&
         i != useDistanceList.size() - 1) {
       mask[i] = 1;
-      LLVM_DEBUG(errs() << i << ", ");
+      //LLVM_DEBUG(errs() << i << ", ");
     } else {
       mask[i] = 0;
     }
   }
-  LLVM_DEBUG(errs() << "\n");
+  //LLVM_DEBUG(errs() << "\n");
 }
 
 void MultiAgentEnv::getSplitPointProperties(Observation &usepointProperties) {

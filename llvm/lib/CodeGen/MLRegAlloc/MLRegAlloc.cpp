@@ -275,13 +275,11 @@ grpc::Status MLRA::codeGen(grpc::ServerContext *context,
       spilledRegs.push_back(VirtReg);
     }
     // spilledRegs = mlSpilledRegs;
-    LLVM_DEBUG(errs() << "Spilled Register count: " << spilledRegs.size()
-                      << "\n");
+    LLVM_DEBUG(errs() << "Spilled Register count: " << spilledRegs.size() << "\n");
     float moveCostAfter = countCopyAndMoveInstructions(*MF);
     float movesCost = moveCostAfter - this->moveCostBefore;
     float totalCost = computeAllocationCost(movesCost);
-    LLVM_DEBUG(errs() << "Computed cost score from MLRA is: " << totalCost
-                      << "\n");
+    LLVM_DEBUG(errs() << "Computed cost score from MLRA is: " << totalCost << "\n");
     response->set_cost(totalCost);
   }
 
@@ -291,11 +289,11 @@ grpc::Status MLRA::codeGen(grpc::ServerContext *context,
     int splitPoint = request->payload();
     SmallVector<unsigned, 2> NewVRegs;
     LLVM_DEBUG(errs() << "==========================BEFORE "
-                         "SPLITTING==================================\n");
+                        "SPLITTING==================================\n");
     MF->dump();
     LLVM_DEBUG(
         errs()
-        << "============================================================\n");
+       << "============================================================\n");
 
     if (splitVirtReg(splitRegIdx, splitPoint, NewVRegs)) {
       SmallSetVector<unsigned, 8> updatedRegIdxs;
@@ -543,13 +541,13 @@ void MLRA::serializeRegProfData(
 
       continue;
     }
-    errs() << rpm.first << " " << rp.cls << " " << rp.color << " "
-           << rp.spillWeight << " ";
-    errs() << "[";
-    for (auto &val : rp.useDistances) {
-      errs() << val << " ";
-    }
-    errs() << "]\n";
+    //errs() << rpm.first << " " << rp.cls << " " << rp.color << " "
+    //       << rp.spillWeight << " ";
+    //errs() << "[";
+    //for (auto &val : rp.useDistances) {
+    //  errs() << val << " ";
+    //}
+    //errs() << "]\n";
     auto regprofResponse = response->add_regprof();
     regprofResponse->set_regid(rpm.first);
 
@@ -624,13 +622,13 @@ void MLRA::sendRegProfData(T *response,
     // interferences
     // if (rp.frwdInterferences.begin() == rp.frwdInterferences.end())
     //   continue;
-    errs() << reg << " " << rp.cls << " " << rp.color << " " << rp.spillWeight
-           << " ";
-    errs() << "[";
-    for (auto &val : rp.useDistances) {
-      errs() << val << " ";
-    }
-    errs() << "]\n";
+    //errs() << reg << " " << rp.cls << " " << rp.color << " " << rp.spillWeight
+    //       << " ";
+    //errs() << "[";
+    //for (auto &val : rp.useDistances) {
+    //  errs() << val << " ";
+    //}
+    //errs() << "]\n";
 
     auto regprofResponse = response->add_regprof();
     regprofResponse->set_regid(reg);
@@ -685,7 +683,7 @@ Observation MLRA::split_node_step(unsigned action) {
     if (enable_mlra_checks)
       verifyRegisterProfile();
     LLVM_DEBUG(errs() << "Splitted register successfuly: " << splitRegIdx
-                      << "\n");
+                     << "\n");
     this->update_env(&regProfMap, updatedRegIdxs);
   } else {
     this->graph_topology->markNodeAsNotVisited(
@@ -712,7 +710,7 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
   unsigned splitReg = Register::index2VirtReg(splitRegIdx - step);
   assert(LIS->hasInterval(splitReg) && "VirtReg should be present");
   LLVM_DEBUG(errs() << "Virtreg to split = " << printReg(splitReg, TRI)
-                    << "\n");
+                   << "\n");
 
   LiveInterval *VirtReg = &LIS->getInterval(splitReg);
   LLVM_DEBUG(VirtReg->dump());
@@ -767,7 +765,7 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
       LLVM_DEBUG(errs() << "UseSlot size: " << useSlots.size() << "\n");
       if (use.getBoundaryIndex() >= useSlots.back().getBoundaryIndex()) {
         LLVM_DEBUG(errs() << "No use of splitting at/after the last use "
-                             "slot -- exiting\n");
+                            "slot -- exiting\n");
         llvm_unreachable("No use of splitting at/after the last use slot");
         return false;
       }
@@ -978,7 +976,7 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
           prevEnd = endIdx;
           prevBI = UB;
           LLVM_DEBUG(errs()
-                     << "prev blk same as the current- just changing the "
+                    << "prev blk same as the current- just changing the "
                         "prevend\n");
         }
       }
@@ -1036,7 +1034,7 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
     auto thisMBBLastIdx = LIS->getMBBEndIdx(LIS->getMBBFromIndex(i.second));
     auto tempUses = SA->getUseSlots();
     LLVM_DEBUG(errs() << "Dumping last use index: ");
-    tempUses.back().dump();
+    //tempUses.back().dump();
     LLVM_DEBUG(errs() << "New interval added is: \n");
     if (itr >= (newLRIntervals.size() - 1) &&
         (tempUses.back() < thisMBBLastIdx)) {
@@ -1559,7 +1557,7 @@ void MLRA::findLastUseBefore(const SmallVector<SlotIndex, 8> &startpts,
       else {
         if (mid < useSlots.size() - 1 && pt < useSlots[mid + 1]) {
           LLVM_DEBUG(errs() << "5 Found last use -- "; useSlots[mid].dump();
-                     errs() << "; Idx -- " << mid + 1 << "\n");
+                    errs() << "; Idx -- " << mid + 1 << "\n");
           lastUseSlot.insert(useSlots[mid].getBaseIndex());
           // lastUsePt.insert(mid + 1);
           found = true;
@@ -1847,7 +1845,7 @@ void MLRA::printRegisterProfile() const {
     LLVM_DEBUG(errs() << "cls =" << rp.cls << "\n");
     if (!rp.cls.equals("Phy")) {
       unsigned step = TRI->getNumRegs() + 1;
-      LIS->getInterval(Register::index2VirtReg(rpi.first - step)).dump();
+      //LIS->getInterval(Register::index2VirtReg(rpi.first - step)).dump();
     }
     LLVM_DEBUG(errs() << "[" << MF->getName() << "]Interferences: ");
 
@@ -2155,7 +2153,7 @@ unsigned MLRA::getPhyRegForColor(LiveInterval &VirtReg, unsigned color,
   // ExtraRegInfo.grow(VirtReg.reg);
   // setStage(VirtReg, RS_Done);
   LLVM_DEBUG(errs() << "\ngetPhyRegForColor " << color << "===>" << phyReg
-                    << " " << printReg(phyReg, TRI) << "\n");
+                   << " " << printReg(phyReg, TRI) << "\n");
   return phyReg;
 #endif
 }
@@ -2208,15 +2206,14 @@ void MLRA::allocatePhysRegsViaRL() {
       // enqueue(&LIS->getInterval(Reg));
       continue;
     } else {
-      LLVM_DEBUG(errs() << "\ngetPhyRegForColor "
-                        << TRI->getRegClassName(MRI->getRegClass(VirtReg->reg))
-                        << ':' << *VirtReg << " w=" << VirtReg->weight << '\n';
-                 // auto rci_order =
-                 // RCI.getOrder(MRI->getRegClass(VirtReg->reg)); for (auto O
-                 //      : rci_order) { errs() << ' ' << printReg(O, TRI) << "="
-                 //      << O;
-                 // }
-      );
+      //LLVM_DEBUG(errs() << "\ngetPhyRegForColor "
+      //                  << TRI->getRegClassName(MRI->getRegClass(VirtReg->reg))
+      //                  << ':' << *VirtReg << " w=" << VirtReg->weight << '\n';
+      //            auto rci_order = RCI.getOrder(MRI->getRegClass(VirtReg->reg)); 
+      //            for (auto O : rci_order) { 
+      //              errs() << ' ' << printReg(O, TRI) << "=" << O;
+      //            }
+      //);
       // LastEvicted.clearEvicteeInfo(VirtReg->reg);
 
       // Get the physical register mapped  to color
@@ -2226,7 +2223,7 @@ void MLRA::allocatePhysRegsViaRL() {
     if (AvailablePhysReg != 0) {
       LLVM_DEBUG(errs() << "[" << MF->getName() << "]Assigning "
                         << printReg(VirtReg->reg, TRI) << "  to Insert ot VMAP "
-                        << printReg(AvailablePhysReg, TRI) << "\n");
+                      << printReg(AvailablePhysReg, TRI) << "\n");
       // errs() << "---" << AvailablePhysReg << "\n";
       // errs() << "TRI->getNumRegs() + 1 = " << TRI->getNumRegs() + 1 << "\n";
       // errs() << "node_id = " << node_id << "\n";
@@ -2255,7 +2252,7 @@ void MLRA::allocatePhysRegsViaRL() {
       LLVM_DEBUG(errs() << "Dumping LR: "; VirtReg->dump());
       LLVM_DEBUG(errs() << "Post alloc VirtRegMap:\n"
                         << *VRM << "\n";
-                 errs() << "Insertion done\n");
+                errs() << "Insertion done\n");
     } else {
       LLVM_DEBUG(errs() << "pushing vreg to mlSpilledRegs list: "
                         << printReg(VirtReg->reg, TRI) << "\n");
@@ -2612,7 +2609,11 @@ void MLRA::inference() {
       // registerallocationinference::RegisterProfileList,
       // registerallocationinference::Data>>(mlra_server_address, this);
     } else if (enable_rl_inference_engine) {
-      errs() << "In RL inference engine\n";
+      std::ofstream output_colormap;
+      output_colormap.open("colormap_output_onnx.txt",std::ios::app);
+      //output_colormap.open("colormap_output__oracle_onnx.txt",std::ios::app); // Oracle File Stream
+      
+      //errs() << "In RL inference engine\n";
 #define nodeSelectionModelPath                                                 \
   MLConfig::mlconfig + "/regalloc/onnx-checkpoint/SELECT_NODE_MODEL_PATH.onnx"
 #define taskSelectionModelPath                                                 \
@@ -2674,7 +2675,7 @@ void MLRA::inference() {
 
       // errs() << "Before calling model \n";
       MLRunner->evaluate<int>();
-
+      
       std::map<std::string, int64_t> colorMap;
       // errs() << "Returned color map: \n";
       for (auto pair : this->nid_colour) {
@@ -2684,9 +2685,11 @@ void MLRA::inference() {
       // inference_driver->getInfo(regProfMap, colorMap);
       LLVM_DEBUG(errs() << "Processing funtion: " << MF->getName() << "\n");
       LLVM_DEBUG(errs() << "Colour Map: \n");
+      output_colormap << "Colour Map: \n";
       unsigned numSpills = 0;
       for (auto pair : colorMap) {
         LLVM_DEBUG(errs() << pair.first << " : " << pair.second << "\n");
+        output_colormap << pair.first << " : " << pair.second << "\n";
         if (pair.second == 0)
           numSpills++;
       }
@@ -2929,7 +2932,7 @@ void MLRA::MLRegAlloc(MachineFunction &MF, SlotIndexes &Indexes,
                       MachineOptimizationRemarkEmitter &ORE) {
   assert(MLConfig::mlconfig != "" && "ml-config-path required");
   FunctionCounter++;
-  errs() << "In MLRegAlloc func...\n";
+  //errs() << "In MLRegAlloc func...\n";
   // reinitialize values for new function
   splitInvalidRegs.clear();
   regProfMap.clear();
