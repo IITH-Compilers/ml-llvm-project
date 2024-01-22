@@ -65,11 +65,11 @@ from concurrent import futures
 import traceback
 
 parser = argparse.ArgumentParser()
-parser.add_argument(
-    "--ir2vec_dir",
-    required=False,
-    help="path to IR2vec directory which has seed embedding and IR2Vec binary files",
-)
+# parser.add_argument(
+#     "--ir2vec_dir",
+#     required=False,
+#     help="path to IR2vec directory which has seed embedding and IR2Vec binary files",
+# )
 parser.add_argument(
     "--test_dir", help="Path to test directory", required=False, default="./"
 )
@@ -105,8 +105,10 @@ parser.add_argument(
 )
 parser.add_argument("--pipe_name",type=str,help="String Pipe name") 
 parser.add_argument("--use_grpc", action='store_true', help = "Use grpc communication", required=False, default=False)
+parser.add_argument("--export_onnx", action="store_true", help="Export the model to ONNX")
+
 class PhaseOrderInference:
-    def __init__(self, model_path, use_pipe=False, use_grpc=False, data_format="json"):
+    def __init__(self, model_path, use_pipe=False, use_grpc=False, data_format="json", export_onnx=False):
         print("use_pipe {}".format(use_pipe))
         logdir = "/tmp"
         logger = logging.getLogger(__file__)
@@ -143,7 +145,7 @@ class PhaseOrderInference:
                     "dump_type": "One",
                     "intermediate_data": "./temp",
                     "llvm_dir": BUILD_DIR,
-                    "ir2vec_dir": args.ir2vec_dir,
+                    # "ir2vec_dir": args.ir2vec_dir,
                     "test_dir": args.test_dir,
                     "alpha": args.alpha,
                     "beta": args.beta,
@@ -154,7 +156,8 @@ class PhaseOrderInference:
                     "data_format": data_format,
                     "use_grpc": use_grpc,
                     "server_port": args.server_port,
-                    "pipe_name": args.pipe_name
+                    "pipe_name": args.pipe_name,
+                    "export_onnx": export_onnx
                 },
                 "framework": "torch",
                 "explore": False,
@@ -178,7 +181,10 @@ class PhaseOrderInference:
 
         self.config = config
 
-        # torch.onnx.export(self.train_agent.get_policy().model, ({"obs": torch.randn(1, 334)}, {}), f="/Pramana/ML_LLVM_Tools/ml-llvm-project/onnx_checkpoints_posetrl/posetrl_model.onnx", verbose=True, input_names=["obs"], output_names=["output"])
+        # Dump the onnx model from the checkpoint
+        if args.export_onnx:
+            torch.onnx.export(self.train_agent.get_policy().model, ({"obs": torch.randn(1, 334)}, {}), export_params=True, f="/path/to/ml-llvm-project/model/POSET-RL/onnx-model/posetrl_model.onnx", verbose=True, input_names=["obs"], output_names=["output"])
+        
 
     def dot_to_json(self, dot_):
         py_dot_graph = pydot.graph_from_dot_data(dot_)[0]
@@ -255,7 +261,7 @@ if __name__ == "__main__":
     ray.init()
 
     inference_obj = PhaseOrderInference(
-        args.model, args.use_pipe, args.use_grpc, args.data_format
+        args.model, args.use_pipe, args.use_grpc, args.data_format, args.export_onnx
     )
     if args.use_pipe:
         print("about to enter while loop...")
