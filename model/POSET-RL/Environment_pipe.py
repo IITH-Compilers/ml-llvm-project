@@ -46,7 +46,7 @@ class PhaseOrder(gym.Env):
         self.embedding = None
         self.iteration_counter = 0
         self.rename_Dir = False
-        self.FileSys_Obj = fsystem(config["llvm_dir"], config["ir2vec_dir"])
+        self.FileSys_Obj = fsystem(config["llvm_dir"], f"{CONFIG_DIR}/ir2vec")
         self.FileSys_Obj.createFolder("env")
         self.temporaryDirectory = tempfile.gettempdir()
 
@@ -120,17 +120,17 @@ class PhaseOrder(gym.Env):
         self.FileSys_Obj.generateTrainingData(TrainingPath)
         self.Obs = self.FileSys_Obj.LLFileList
 
-    def getEmbedding(self, fileName) :
-        EmbFile = self.Curr_Dir + "/" + str(self.StateIndex)
-        # Get IR2Vec FlowAware embeddings
-        command = self.FileSys_Obj.IR2VecBin + " -fa -vocab " + \
-            self.FileSys_Obj.SeedEmbeddingPath + " -o " + EmbFile + " -level p " + fileName
-        os.system(command)
-        emb = np.loadtxt(EmbFile)
-        # Threshold for embedding values
-        emb[emb > 100000.0] = 100000.0
-        emb[emb < -100000.0] = -100000.0
-        return emb
+    # def getEmbedding(self, fileName) :
+    #     EmbFile = self.Curr_Dir + "/" + str(self.StateIndex)
+    #     # Get IR2Vec FlowAware embeddings
+    #     command = self.FileSys_Obj.IR2VecBin + " -fa -vocab " + \
+    #         self.FileSys_Obj.SeedEmbeddingPath + " -o " + EmbFile + " -level p " + fileName
+    #     os.system(command)
+    #     emb = np.loadtxt(EmbFile)
+    #     # Threshold for embedding values
+    #     emb[emb > 100000.0] = 100000.0
+    #     emb[emb < -100000.0] = -100000.0
+    #     return emb
 
     def createEnv(self, fileName):
         # env folder will contain folders for separate files with ll and executables
@@ -226,8 +226,8 @@ class PhaseOrder(gym.Env):
                 self.embedding = np.array(embedding)
             else:
                 self.embedding = self.stable_grpc("Action", 0) # LLVMgRPC way
-        else:
-            self.embedding = self.getEmbedding(self.BaseIR)
+        # else:
+        #     self.embedding = self.getEmbedding(self.BaseIR)
 
         action_mask = [1] * self.action_space_size
         next_observation = {'action_mask': np.array(
@@ -310,10 +310,10 @@ class PhaseOrder(gym.Env):
                 result = self.readObservation()
             elif self.use_grpc:
                 result = self.stable_grpc("Action", action_index) # LLVMgRPC way                
-            else:
-                Reward, NextStateIR = self.getLocalReward(action_index)
-                result = self.getEmbedding(NextStateIR)
-                self.CurrIR = NextStateIR
+            # else:
+            #     Reward, NextStateIR = self.getLocalReward(action_index)
+            #     result = self.getEmbedding(NextStateIR)
+            #     self.CurrIR = NextStateIR
             if result is None:
                 raise Exception("result is None")
             else:
@@ -398,76 +398,76 @@ class PhaseOrder(gym.Env):
         return currMcaThroughtput
 
     # Get reward for an action
-    def getLocalReward(self, action):
-        self.StateIndex += 1
-        fileName = os.path.splitext(os.path.basename(self.BaseIR))[0]
+    # def getLocalReward(self, action):
+    #     self.StateIndex += 1
+    #     fileName = os.path.splitext(os.path.basename(self.BaseIR))[0]
 
-        logging.info("fileName {}".format(fileName))
-        logging.info("StateIndex {}".format(self.StateIndex))
-        logging.info("BaseIR {}".format(self.CurrIR))
+    #     logging.info("fileName {}".format(fileName))
+    #     logging.info("StateIndex {}".format(self.StateIndex))
+    #     logging.info("BaseIR {}".format(self.CurrIR))
 
-        # Modified IR path
-        new_IR = self.Curr_Dir + "/" + fileName + \
-            "_" + str(self.StateIndex) + ".ll"
-        new_file = self.Curr_Dir + "/" + fileName + "_" + str(self.StateIndex)
+    #     # Modified IR path
+    #     new_IR = self.Curr_Dir + "/" + fileName + \
+    #         "_" + str(self.StateIndex) + ".ll"
+    #     new_file = self.Curr_Dir + "/" + fileName + "_" + str(self.StateIndex)
 
-        # Applying the action and saving the IR file as <filename>_<StateIndex>
-        # Here we can use gRPC server to apply the action
-        command = self.FileSys_Obj.OptPath + " " + self.opt_arch_flag + \
-            " -S -O34 -SubNum=" + str(action) + " " + \
-            self.CurrIR + " -o " + new_IR 
-        os.system(command)
-        command = self.FileSys_Obj.ClangPath + " " + \
-            self.clang_arch_flag + " -c " + new_IR + " -o " + new_file + ".o" 
-        os.system(command)
-        # Size reward
-        currBinarySize = os.path.getsize(new_file + ".o")
+    #     # Applying the action and saving the IR file as <filename>_<StateIndex>
+    #     # Here we can use gRPC server to apply the action
+    #     command = self.FileSys_Obj.OptPath + " " + self.opt_arch_flag + \
+    #         " -S -O34 -SubNum=" + str(action) + " " + \
+    #         self.CurrIR + " -o " + new_IR 
+    #     os.system(command)
+    #     command = self.FileSys_Obj.ClangPath + " " + \
+    #         self.clang_arch_flag + " -c " + new_IR + " -o " + new_file + ".o" 
+    #     os.system(command)
+    #     # Size reward
+    #     currBinarySize = os.path.getsize(new_file + ".o")
 
-        logging.info("lastBinarySize {}".format(self.lastBinarySize))
-        logging.info("currBinarySize {}".format(currBinarySize))
+    #     logging.info("lastBinarySize {}".format(self.lastBinarySize))
+    #     logging.info("currBinarySize {}".format(currBinarySize))
 
-        if ((self.baseBinarySize - self.minBinarySize) > 0):
-            reward_binarySize = (self.lastBinarySize - currBinarySize) / \
-                (self.baseBinarySize - self.minBinarySize)
-        else:
-            reward_binarySize = (self.lastBinarySize -
-                                 currBinarySize) / self.baseBinarySize
+    #     if ((self.baseBinarySize - self.minBinarySize) > 0):
+    #         reward_binarySize = (self.lastBinarySize - currBinarySize) / \
+    #             (self.baseBinarySize - self.minBinarySize)
+    #     else:
+    #         reward_binarySize = (self.lastBinarySize -
+    #                              currBinarySize) / self.baseBinarySize
 
-        self.lastBinarySize = currBinarySize
+    #     self.lastBinarySize = currBinarySize
 
-        # Throughput reward
-        currMcaThroughtput = self.getMCACost(new_file)
-        logging.info("currMcaThroughtput: {}".format(currMcaThroughtput))
-        logging.info("OzMcaThroughtput: {}".format(self.OzMcaThroughtput))
-        logging.info("lastMcaThroughtput: {}".format(self.lastMcaThroughtput))
+    #     # Throughput reward
+    #     currMcaThroughtput = self.getMCACost(new_file)
+    #     logging.info("currMcaThroughtput: {}".format(currMcaThroughtput))
+    #     logging.info("OzMcaThroughtput: {}".format(self.OzMcaThroughtput))
+    #     logging.info("lastMcaThroughtput: {}".format(self.lastMcaThroughtput))
 
-        if self.lastMcaThroughtput is None:
-            mca_cost = (self.OzMcaThroughtput -
-                        currMcaThroughtput) / self.OzMcaThroughtput
-        else:
-            mca_cost = (self.lastMcaThroughtput -
-                        currMcaThroughtput) / self.OzMcaThroughtput
+    #     if self.lastMcaThroughtput is None:
+    #         mca_cost = (self.OzMcaThroughtput -
+    #                     currMcaThroughtput) / self.OzMcaThroughtput
+    #     else:
+    #         mca_cost = (self.lastMcaThroughtput -
+    #                     currMcaThroughtput) / self.OzMcaThroughtput
 
-        self.lastMcaThroughtput = currMcaThroughtput
+    #     self.lastMcaThroughtput = currMcaThroughtput
 
-        logging.info("Thr-debug:{}".format(mca_cost))
-        logging.info("Size-debug:{}".format(reward_binarySize))
+    #     logging.info("Thr-debug:{}".format(mca_cost))
+    #     logging.info("Size-debug:{}".format(reward_binarySize))
 
-        # Reward thresholds
-        if mca_cost > self.mca_reward_thresh:
-            mca_cost = self.mca_reward_thresh
-        elif mca_cost < -self.mca_reward_thresh:
-            mca_cost = -self.mca_reward_thresh
+    #     # Reward thresholds
+    #     if mca_cost > self.mca_reward_thresh:
+    #         mca_cost = self.mca_reward_thresh
+    #     elif mca_cost < -self.mca_reward_thresh:
+    #         mca_cost = -self.mca_reward_thresh
 
-        if reward_binarySize > self.size_reward_thresh:
-            reward_binarySize = self.size_reward_thresh
-        elif reward_binarySize < -self.size_reward_thresh:
-            reward_binarySize = -self.size_reward_thresh
+    #     if reward_binarySize > self.size_reward_thresh:
+    #         reward_binarySize = self.size_reward_thresh
+    #     elif reward_binarySize < -self.size_reward_thresh:
+    #         reward_binarySize = -self.size_reward_thresh
 
-        # Cumulative reward with alpha and beta hyperparameters
-        reward = self.alpha*reward_binarySize + self.beta*mca_cost
+    #     # Cumulative reward with alpha and beta hyperparameters
+    #     reward = self.alpha*reward_binarySize + self.beta*mca_cost
 
-        return reward, new_IR
+    #     return reward, new_IR
 
     def getReward(self, AssemblyFilePath):
         # object size reward
