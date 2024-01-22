@@ -65,11 +65,11 @@ from concurrent import futures
 import traceback
 
 parser = argparse.ArgumentParser()
-parser.add_argument(
-    "--ir2vec_dir",
-    required=False,
-    help="path to IR2vec directory which has seed embedding and IR2Vec binary files",
-)
+# parser.add_argument(
+#     "--ir2vec_dir",
+#     required=False,
+#     help="path to IR2vec directory which has seed embedding and IR2Vec binary files",
+# )
 parser.add_argument(
     "--test_dir", help="Path to test directory", required=False, default="./"
 )
@@ -143,7 +143,7 @@ class PhaseOrderInference:
                     "dump_type": "One",
                     "intermediate_data": "./temp",
                     "llvm_dir": BUILD_DIR,
-                    "ir2vec_dir": args.ir2vec_dir,
+                    # "ir2vec_dir": args.ir2vec_dir,
                     "test_dir": args.test_dir,
                     "alpha": args.alpha,
                     "beta": args.beta,
