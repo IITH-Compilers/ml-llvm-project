@@ -198,6 +198,7 @@ python  experiment_ppo.py
 
 # Model Logs
 
+- Initial model logs are present in `ray_results`
 - customize model log directory using `ray.init(_temp_dir="<path_to_raylog>")`
-- llvm logs can be found at `/ml-llvm-project/model/RL4ReAl/src/log`
+- llvm logs can be found at `/model/RL4ReAl/src/log`
 
