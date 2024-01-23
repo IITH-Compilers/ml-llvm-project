@@ -142,6 +142,16 @@ python x86-server-rllib-sm.py --server_port=50031 --use_pipe=rl4realpipe --data_
 
 ```
 ```bash
+# Dump ONNX Model
+
+python x86-server-rllib-sm.py --server_port=50031 --use_pipe=rl4realpipe --data_format=json --pipe_name=default_pipe5 --dump_onnx_model=1
+
+# setup model files
+
+# rename generated model files
+
+COLOR_NODE_MODEL_PATH.onnx, SELECT_NODE_MODEL_PATH.onnx, SELECT_TASK_MODEL_PATH.onnx ,SPLIT_NODE_MODEL_PATH.onnx
+
 # ONNX Query
 
 export LD_LIBRARY_PATH=/home/$USER/onnxruntime-linux-x64-1.16.3/lib/:$LD_LIBRARY_PATH
@@ -150,4 +160,44 @@ export LIBRARY_PATH=/home/$USER/onnxruntime-linux-x64-1.16.3/lib/:$LIBRARY_PATH
 {BUILD_DIR}/bin/clang++ -march=core2 -O3 -g -mllvm -regalloc=greedy -mllvm -mlra-inference -mllvm -ml-config-path=/home/$USER/ml-llvm-project/config -mllvm -rl-inference-engine <file-to-run>
 
 ```
+
+# Training
+
+- create `.env` file in `/ml-llvm-project/model/RL4ReAl/src/`
+- Refer `.env.example` for creating the `.env`
+
+```bash
+conda activate rllib_env_2.2.0
+
+cd /model/RL4ReAl/preprocessing/v0/
+
+bash  flow.sh <target_architecure> <mode> <model>
+
+```
+
+- `Target Architecture`: Specify either x86 or aarch64.
+- `Mode`: Choose between train or test.
+- `Model`: Indicate the model type, e.g., mlra. 
+- set `DATA_DIR` in `.env` file
+
+```bash
+# run the training
+
+python  experiment_ppo.py
+
+# Parameter tuning can be done in:
+
+/model/RL4ReAl/src/ppo_new.py
+```
+- `data_bucket` : specify the folder_name where your dataset is present
+- `num_rollout_workers`: Specifies the number of workers that can compute the task in parallel.
+- `num_gpus`: Specifies the number of GPUs that can be utilized.
+- `current_batch`: Specify the size of the current batch.
+- `episode_number`: Specify the number of episodes for training the model.
+- `checkpoint`: Specifies the point at which the model training starts. (Default value is None)
+
+# Model Logs
+
+- customize model log directory using `ray.init(_temp_dir="<path_to_raylog>")`
+- llvm logs can be found at `/ml-llvm-project/model/RL4ReAl/src/log`
 
