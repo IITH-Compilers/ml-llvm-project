@@ -186,7 +186,7 @@ public:
   std::string PGOInstrUse;
   /// Path of the sample Profile data file.
   std::string PGOSampleUse;
-  static std::string str_check;
+  static bool check_flag;
 
 
 private:
