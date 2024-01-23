@@ -1,271 +1,200 @@
-# ML-Register-Allocation
-> Support - LLVM 10.0.1 release on **X86** architecture
+# ML LLVM Project
 
-## Shared Drive
-* [`GDrive to MLRA`](https://drive.google.com/drive/folders/1wVRZZ2qyLUrX8fv4AeZ2VF5FofanqJbv)
-* `Design Diagram`
-* `Preprocessed Data`
-* `Result, sheets and documents`
+## Contents
+-	[About](#about)
+-	[Setup](#setup)
+    - Requirements
+    - Build
+    - Exporting ONNX Path Variables
+    - Conda env set-up
+    - A small hack to prevent the conda environtments from clashing (To Be removed)
+    - Clone the Repo
+    - Cmake Command
+    - Build
+-	[All implemented Passes](#list-of-optimizations-supported)
+    - Reinforcement Learning assisted Loop Distribution for Locality and Vectorization
+    - RL4Real
+    - POSET-RL
 
-## Build LLVM
-* `mkdir -p build_release && cd build_release`
-* For X86: `cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="clang;llvm-grpc" -DLLVM_TARGETS_TO_BUILD="X86" -DLLVM_ENABLE_ASSERTIONS=ON -DCOLORMAP=<path to colormap file> -DVOCAB=<path to vocab file> -DOPCODEDESC=<path to ML-Register-Allocation/llvm/lib/CodeGen/MIR2Vec> ../llvm`
-* For AArch64: `cmake -DCMAKE_CROSSCOMPILING=True -DLLVM_DEFAULT_TARGET_TRIPLE=aarch64-linux-gnueabihf -DLLVM_TARGET_ARCH=AArch64 -DLLVM_TARGETS_TO_BUILD=AArch64 -DLLVM_ENABLE_PIC=False -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;llvm-grpc" -DLLVM_ENABLE_ASSERTIONS=ON -G Ninja -DCOLORMAP=<path to colormap file> -DVOCAB=<path to vocab file> -DOPCODEDESC=<path to ML-Register-Allocation/llvm/lib/CodeGen/MIR2Vec> ../llvm`
-* `ninja clang opt llc`
 
-## Run MLRegAlloc Pass
-*  _`mlra`_` flag to choice our pass`
-* `{BUILD}/bin/clang -03 -mllvm -regalloc=greedy -mllvm -mlra-inference -mllvm -mlra-server-address="0.0.0.0:50051"  <Input_file>`
-* `{BUILD}/bin/llc -03 -regalloc=mlra <Input_file>`
-* `{BUILD}/bin/llc -regalloc=mlra <Input_file>`
+## About
+This GitHub repository encompasses the complete Compiler Infrastructure for ML-Driven Optimizations developed by researchers at IIT H. The repository serves as a valuable reference, illustrating the integration of ML-driven optimization techniques into the LLVM project through the ML Compiler Bridge infrastructure.
 
-## Dump Interference Graph as dot file
-*  _`-mlra-dump-ig-dot`_` to enable the dot file dump.`
-* `{BUILD}/bin/clang -03 -mllvm -regalloc=mlra -mllvm -mlra-dump-ig-dot <Input_file>`
-* `{BUILD}/bin/llc -03 -regalloc=mlra -mlra-dump-ig-dot <Input_file>`
-* `{BUILD}/bin/llc -regalloc=mlra -mlra-dump-ig-dot <Input_file>`
-* `File name format - <LL_file_name>_F<Function_id>.dot`
-### Schema
+We strongly encourage you to delve into this repository, explore its contents, and consider building additional tools leveraging the existing infrastructure. We presume you are fimiliar with LLVM and build upon that, but if you are not fimiliar with llvm them, here are a few resources that might help :
 
-```
-graph G {
-FileName=<FileName>;
-Function=<funcName>;
-Registers=164;
-<LABEL_ID> [label=" {RegClass} {SpillCost} <Matrix of Live Range/Interval>"];
-<LABEL_ID>--<LABEL_ID>; // Show the interference between two Live Range/Interval
-<LABEL_ID>--<LABEL_ID>; // Show the interference between two Live Range/Interval
-......
-<LABEL_ID> [label=" {RegClass} {SpillCost} <Matrix of Live Range/Interval>"];
-<LABEL_ID>--<LABEL_ID>; // Show the interference between two Live Range/Interval
-}
-```
-
-### Example
-```
-graph G {
-FileName="/home/venkat/IF-DV/Rohit/regAlloc/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles/510.parest_r_98.ll";
-Function="_ZSt18uninitialized_copyIN9__gnu_cxx17__normal_iteratorIPKN6dealii5PointILi2EEESt6vectorIS4_SaIS4_EEEEPS4_ET0_T_SD_SC_";
-Registers=164;
-0 [label=" {GR64} {inf} [[ 0.216859, 0.900013, 0.719607, 0.600799, 0.624573 ]]"];
-0 -- 1;
-0 -- 2;
-1 [label=" {GR64} {0.004509} [[ 0.216859, 0.900013, 0.719607, 0.600799, 0.624573 ], 
-[ 0.216859, 0.900013, 0.719607, 0.600799, 0.624573 ], 
-[ 0.216859, 0.900013, 0.719607, 0.600799, 0.624573 ]]"];
-1 -- 2;
-2 [label=" {GR64} {0.004208} [[ 0.216859, 0.900013, 0.719607, 0.600799, 0.624573 ], 
-[ 0.216859, 0.900013, 0.719607, 0.600799, 0.624573 ], 
-[ 0.216859, 0.900013, 0.719607, 0.600799, 0.624573 ], 
-[ 0.216859, 0.900013, 0.719607, 0.600799, 0.624573 ], 
-[ 0.216859, 0.900013, 0.719607, 0.600799, 0.624573 ]]"];
-```
-## Data Generation
-* `Get the initial ll files from the desired benchmarks`
-* `Create conda environment using `[`requirement.yaml`](https://github.com/rohitaggarwal007/ML-Register-Allocation/blob/main/requirement.yaml)
-* `Activate the conda env. - conda activate `_`mlra`_
-* `Make changes to `[`config.sh`](./preprocessing/v0/config.sh)` as per needed`
-* `Run the` [`preprocess.sh`](./preprocessing/v0/preprocess.sh)
-  *  `Example - bash preprocess.sh`
-
-## Training
-* `Create conda environment using ` [`requirement.yaml`](https://github.com/rohitaggarwal007/ML-Register-Allocation/blob/main/requirement.yaml)
-* `Activate the conda env. - conda activate `_`mlra`_
-* `Goto model's src directory`[`model/ggnn_drl/v0/src`](https://github.com/rohitaggarwal007/ML-Register-Allocation/tree/main/model/ggnn_drl/v0/src)
-* `Run the Command - bash run.sh trainInv <Data_set> [Optional Remarks]`
-  * `Example - bash run.sh trainInv ../../../../data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/G_O3_1/ first`
-* `Note- Update ` [`utils.py`](./preprocessing/v0/utils.py) or [`run.sh`](./preprocessing/v0/run.sh)` to set the hyperparameters and others`
-
-### Traning Performance check
-* `Run the tensorboard to view the graphs`
-  * `Example - tensorboard --logdir=${REPO}/model/ggnn_drl/v0/trained_model --host 0.0.0.0` 
-
-### Dump color graphs
-* `Pass the argument `**`--dump-color-graph`**` by updating run.sh`
-
-**Schema**
-```
-{
-    "Predictions" : ArrayOf(Prediction4function)
-}
-Prediction4function = {
-                       "FileName": string,
-                       "Function": string,
-                       "mapping": Vir2ColorMap
-                      }    
-Vir2ColorMap        = { 
-                       ListOf("VIR_REG_ID": COLOR_ID)
-                      }
-```
-
-**Prediction Colored Json Dump**
-```
-{
-    "Predictions": [
-        {
-            "FileName": "/home/venkat/IF-DV/Rohit/regAlloc/ML-Register-Allocation/sample/data/fibonaccidevS/level-O0-llfiles/fib.ll",
-            "Function": "fib",
-            "mapping": {
-                "2": 24,
-                "3": 24,
-                "6": 15
-            }
-        },
-        {
-            "FileName": "/home/venkat/IF-DV/Rohit/regAlloc/ML-Register-Allocation/sample/data/fibonaccidevS/level-O0-llfiles/fib.ll",
-            "Function": "main",
-            "mapping": {
-                "1": 20
-            }
-        }
-    ]
-}
-```
-
-### Registers X86
-![Registers](./Registers%20X86.png)
-
-## CodeGen
-> Initial version is ready to be tested.
-* `Initial version is pushed`
-* `{BUILD}/bin/clang -03 -mllvm -regalloc=mlra -mllvm `_`-mlra-experimental`_` -mllvm `_`-mlra-pred-file=<PredFileDump>`_ `<Input_file>`
- * `{BUILD}/clang -O3 -S -mllvm -regalloc=mlra  -mllvm -mlra-experimental -mllvm -mlra-dump-ig-dot -mllvm -mlra-pred-file=../sample/predictedColorMap/predColor-526.blender_r_910.ll_F105.json ../data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles/526.blender_r_910.ll`
- * **`Note`** - `Greedy RA will run for some function when the dot file does not contains the prediction coresponding to the them`
-
-====================================================================================================
-
-`conda env create -f poset-rl-odg.yml`
-
-`conda activate poset-rl-odg`
-
-Generate sub-sequences from the Oz pass sequence
-
-`python gen-odg.py <Path_to_opt> -Oz`
-
-The graph and sub-sequences can be generated for other LLVM optimization levels. The required optimization flag needs to be provided as an argument when calling the above script.
-
-## Experiments
-Install and activate the conda environment
-
-`conda env create -f rllib_env.yml`
-
-`conda activate rllib_env`
-
-Use `-mcpu=cortex-a72` for AArch64 architecture when calling `clang` or `opt` in (RLLib-PhaseOrder/Environment.py)[RLLib-PhaseOrder/Environment.py]
-
-### Training
-
-Add path to directory containing LLVM IR files to be used for training in [RLLib-PhaseOrder/Environment.py](RLLib-PhaseOrder/Environment.py)
-
-`python experiment.py --llvm_dir <Path to llvm build directory> --ir2vec_dir <Path to directory with IR2Vec binary and seed embedding>`
-
-### Inference
-
-Add paths to `llvm_dir`, `ir2vec_dir` and saved RLLib model to run-inference.sh
-
-`bash run-inference.sh`
-
-Print size, throughput and sub-sequences chosen by the model to a csv
-
-`bash results-binsize-reuse`
-
-Clean temporary files generated
-
-<<<<<<< HEAD
-        * ``-DCMAKE_BUILD_TYPE=type`` --- Valid options for *type* are Debug,
-          Release, RelWithDebInfo, and MinSizeRel. Default is Debug.
-
-        * ``-DLLVM_ENABLE_ASSERTIONS=On`` --- Compile with assertion checks enabled
-          (default is Yes for Debug builds, No for all other build types).
-
-      * Run your build tool of choice!
-
-        * The default target (i.e. ``ninja`` or ``make``) will build all of LLVM.
-
-        * The ``check-all`` target (i.e. ``ninja check-all``) will run the
-          regression tests to ensure everything is in working order.
-
-        * CMake will generate build targets for each tool and library, and most
-          LLVM sub-projects generate their own ``check-<project>`` target.
-
-        * Running a serial build will be *slow*.  To improve speed, try running a
-          parallel build. That's done by default in Ninja; for ``make``, use
-          ``make -j NNN`` (NNN is the number of parallel jobs, use e.g. number of
-          CPUs you have.)
-
-      * For more information see [CMake](https://llvm.org/docs/CMake.html)
-
-Consult the
-[Getting Started with LLVM](https://llvm.org/docs/GettingStarted.html#getting-started-with-llvm)
+* [Getting Started with LLVM](https://llvm.org/docs/GettingStarted.html#getting-started-with-llvm)
 page for detailed information on configuring and compiling LLVM. You can visit
-[Directory Layout](https://llvm.org/docs/GettingStarted.html#directory-layout)
+* [Directory Layout](https://llvm.org/docs/GettingStarted.html#directory-layout)
 to learn about the layout of the source code tree.
-# POSET-RL
 
-POSET-RL is a framework that predicts the optimal optimization sequence for a program to primarly achieve reduction in binary size along with reduction in execution time.
+### ML Compiler Bridge
+As a part of the ML-Compiler-Bridge [research](https://arxiv.org/pdf/2311.10800.pdf), it is possible to have multiple ways of integrating compiler and the Machine learning model. These methods primarily use server client communication techniques like gRPC, and pipes. The ONNX flow which is capable of representation of ML models into DAG-based IRs with callable APIs in multiple langugages (C/C++/Python),doesnt require a server-client model or inter process communication.
+> The Next 700 ML-Enabled Compiler Optimizations: S.VenkataKeerthy, Siddharth Jain, Umesh Kalvakuntla, Pranav Sai Gorantla, Rajiv Sailesh Chitale, Eugene Brevdo, Albert Cohen, Mircea Troffin, Ramakrishna Upadrasta
 
-The details of this framework can be found in our [paper]() [(arXiv)](https://arxiv.org/abs/2208.04238) and on our [page](https://compilers.cse.iith.ac.in/projects/posetrl/).
+## Setup
 
-## Table of Contents
-* [Requirements](#requirements)
-* [Oz Dependence Graph](#oz-dependence-graphodg)
-* [Experiments](#experiments)
-    * [Training](#training)
-    * [Inference](#inference)
+### Requirements
 
+* cmake (>= 3.10)
+* GNU Make (4.2.1)
+* LLVM (10.X) - [src](https://github.com/llvm/llvm-project/tree/release/10.x), [release](https://releases.llvm.org/download.html#10.0.1) ## ask isn't it included with the repo
+* Python (3.10), C++17
+* gRPC v1.34 and protobuf v3.13 - for gRPC Model Runner
+    * Building GRPC from Source: Please follow [`Build GRPC with cmake`](https://grpc.io/docs/languages/cpp/quickstart/) **v1.34 (protobuf v3.13)** to build GRPC from source. 
+    * In the above tutorial setting `DCMAKE_INSTALL_PREFIX` is necessary as it would give you an easy way to uninstall GRPC later.
+> [!WARNING]
+> The version of gRPC that you clone should be 1.34.0 not 1.34.x
+* Eigen library (3.3.7)
+    * If your system already have Eigen (3.3.7) setup, you can skip this step.
+    * Download and extract the released version.
+```bash
+	 wget https://gitlab.com/libeigen/eigen/-/archive/3.3.7/eigen-3.3.7.tar.gz
+	 tar -xvzf eigen-3.3.7.tar.gz
+	 mkdir eigen-build && cd eigen-build
+	 cmake ../eigen-3.3.7 && make
+	 cd ../ 
+```
 
-## Requirements
+* [ONNXRuntime](https://github.com/microsoft/onnxruntime/releases) v1.16.3
+```bash
+	 wget https://github.com/microsoft/onnxruntime/releases/download/v1.16.3/onnxruntime-linux-x64-1.16.3.tgz
+	 tar -xvf onnxruntime-linux-x64-1.16.3.tgz
+```
+* TensorFlow - for TF Model Runner (AOT flow)
+    * Tested with TensorFlow 2.13.0
+* Other python requirements are available in [mlbridge.yml]
+    * Conda/Anaconda based virtual environment is assumed
 
-* Conda environment: [RLLib-PhaseOrder/rllib_env.yml](RLLib-PhaseOrder/rllib_env.yml)
-* Build [LLVM-10](https://github.com/llvm/llvm-project/tree/release/10.x)
-    * LLVM can be configured and built with the instructions on this [page](https://llvm.org/docs/CMake.html)
-    * LLVM-10 sources with our custom ODG sub-sequences implemented can be found in [llvm-project-10](llvm-project-10)
-    * Use the following flags to build for AArch64: -DCMAKE_CROSSCOMPILING=True -DLLVM_DEFAULT_TARGET_TRIPLE=aarch64-linux-gnueabihf -DLLVM_TARGET_ARCH=AArch64 -DLLVM_TARGETS_TO_BUILD=AArch64 -DLLVM_ENABLE_PIC=False
-* [IR2Vec](https://github.com/IITH-Compilers/IR2Vec) binary and seed embedding to be used
-* LLVM IR files for training or inference
+> [!NOTE]
+>TODO: mlbridge.yml should be replaced with a unanimous env
 
-## Oz Dependence Graph
-Generate ODG plot and sub-sequences derived from it using (ODG/gen-odg.py)[ODG/gen-odg.py]
+(Experiments are done on an Ubuntu 20.04 machine)
 
-Install and activate the conda environment (ODG/poset-rl-odg.yml)[ODG/poset-rl-odg.yml]
+### Exporting ONNX Path Variables
+The path of ONNX Runtime is required a lot of times, hence it is a better Idea to export these paths and also add them to the PATH and LD_LIBRARY_PATH
 
-`conda env create -f poset-rl-odg.yml`
+```bash
+ export ONNX_DIR= #path to your onnx runtime
+ export LD_LIBRARY_PATH=${ONNX_DIR}:$LD_LIBRARY_PATH
+ export LIBRARY_PATH=${ONNX_DIR}:$LIBRARY_PATH
+ export PATH=${ONNX_DIR}/include:$PATH 
+```
+> [!TIP] 
+> It is adviced to add these commands to your **~/.bashrc** as the'll be needed when you switch shells.
 
-`conda activate poset-rl-odg`
+### Conda env set-up
+The following commands will help you install the and set up the nessesary conda environments.
+```bash
+# install the env using the following commands
+conda env create -f ./mlgo-new.yml
 
-Generate sub-sequences from the Oz pass sequence
+# switch to mlgo-new env which would be required for the build process
+conda activate mlgo-new.yml 
+```
 
-`python gen-odg.py <Path_to_opt> -Oz`
+### A small hack to prevent the conda environtments from clashing (To Be removed)
+```bash
+# rename files in your conda enviornment
+mv ~/anaconda3/envs/mlgo-new/lib/python3.10/site-packages/tensorflow/include/google/ ~/anaconda3/envs/mlgo-new/lib/python3.10/site-packages/tensorflow/include/google_new/
 
-The graph and sub-sequences can be generated for other LLVM optimization levels. The required optimization flag needs to be provided as an argument when calling the above script.
+mv ~/anaconda3/envs/mlgo-new/include/google/ ~/anaconda3/envs/mlgo-new/include/google_new/
+```
 
-## Experiments
-Install and activate the conda environment
+### Clone the Repo
+You need to clone the repository and initilize all the sub modules.
 
-`conda env create -f rllib_env.yml`
+```bash
+git clone git@github.com:IITH-Compilers/ml-llvm-project.git
+cd ml-llvm-project
+git checkout mlbridge-lib
+git pull
+git submodule update --init --recursive
+```
 
-`conda activate rllib_env`
+### Cmake Command
+make a build directory and in side the directory run the cmake command
 
-Use `-mcpu=cortex-a72` for AArch64 architecture when calling `clang` or `opt` in (RLLib-PhaseOrder/Environment.py)[RLLib-PhaseOrder/Environment.py]
+```bash
+# build command
+mkdir build
+cd build
+cmake -G "Unix Makefiles" -S ../llvm -B . \                                         
+	-DCMAKE_BUILD_TYPE="Release" \
+	-DLLVM_ENABLE_PROJECTS="clang;IR2Vec;ml-llvm-tools;mlir;MLCompilerBridge" \
+	-DLLVM_TARGETS_TO_BULID="X86" \
+	-DLLVM_ENABLE_ASSERTIONS=ON \
+	-DCMAKE_EXPORT_COMPILE_COMMANDS=1 \
+	-DLLVM_CCACHE_BUILD=ON \
+	-DONNXRUNTIME_ROOTDIR= $ONNX_DIR
+	-DLLVM_TF_AOT_RUNTIME= # change to your path 
+	-DTENSORFLOW_AOT_PATH= # change to your path
+	-DLLVM_INLINER_MODEL_PATH=download \
+	-DLLVM_INLINER_MODEL_CURRENT_URL=https://github.com/google/ml-compiler-opt/releases/download/inlining-Oz-v1.1/inlining-Oz-99f0063-v1.1.tar.gz \
+	-DLLVM_RAEVICT_MODEL_PATH=download \
+	-DLLVM_RAEVICT_MODEL_CURRENT_URL=https://github.com/google/ml-compiler-opt/releases/download/regalloc-evict-v1.0/regalloc-evict-e67430c-v1.0.tar.gz	       
+```
 
-### Training
+### Build
+Finally time to sit back and build the project.
+```bash
+make clang opt -j50
+```
+> [!WARNING]  
+> Do not make all, your build will break. Only make clang and opt
+## List of optimizations supported
 
-Add path to directory containing LLVM IR files to be used for training in [RLLib-PhaseOrder/Environment.py](RLLib-PhaseOrder/Environment.py)
+### Reinforcement Learning assisted Loop Distribution for Locality and Vectorization
 
-`python experiment.py --llvm_dir <Path to llvm build directory> --ir2vec_dir <Path to directory with IR2Vec binary and seed embedding>`
+We propose a Reinforcement Learning (RL) approach for loop distribution, optimizing for both vectorization and locality. Using SCC Dependence Graphs (SDGs), our RL model learns loop distribution order through topological walks. The reward is based on instruction cost and cache misses. We introduce a strategy to expand the training set by generating new loops. This method aims to enhance loop parallelization and improve overall code performance.
 
-### Inference
+This is described in the paper [here](https://ieeexplore.ieee.org/abstract/document/10026979) .
+Please see [here](https://compilers.cse.iith.ac.in/publications/rl_loop_distribution/) for more details.
 
-Add paths to `llvm_dir`, `ir2vec_dir` and saved RLLib model to run-inference.sh
+> Reinforcement Learning assisted Loop Distribution for Locality and Vectorization, Shalini Jain, S. VenkataKeerthy, Rohit Aggarwal, Tharun Kumar Dangeti, Dibyendu Das, Ramakrishna Upadrasta
 
-`bash run-inference.sh`
+#### Try it out !!!
 
-Print size, throughput and sub-sequences chosen by the model to a csv
+> We assueme you have already done the setup and built the project.
 
-`bash results-binsize-reuse`
+```bash
+# ONNX command for inference:
+# this script will generate the optimized llfile
+./build/bin/opt -S \
+	-custom_loop_distribution \
+	-cld-use-onnx \
+	-ml-config-path= # path to your ml config  \
+	<file name> 
+```
+to learn more head to the Pass specific readme [here].
 
-Clean temporary files generated
+### RL4Real
 
-=======
->>>>>>> bef7ad00ae452ec2924f50ff8258256b57f33301
-`make clean`
+`RL4ReAl` is a retargetable Reinforcement Learning (RL) approach for solving the REgister ALlocation (REAL) problem on diverse architectures.
+
+This is described in the paper [here](https://dl.acm.org/doi/abs/10.1145/3578360.3580273) ([arXiv](https://arxiv.org/abs/2204.02013)).
+Please see [here](https://compilers.cse.iith.ac.in/publications/rl4real/) for more details.
+
+#### Try it out
+```bash
+./build/bin/clang  -O3 -mllvm \ #use clang or clang++ depending on your file type
+  -regalloc=greedy -mllvm -mlra-inference -mllvm \
+  -ml-config-path= #path to your ml config  \ 
+  -mllvm -rl-inference-engine \
+  <input_data_file>
+```
+
+### POSET-RL
+
+POSET-RL uses a reinforcement learning approach as the search space of optimization sequences is too big to enumerate. For a compiler with m optimization passes, if the sequence length is fixed as n, then there can be potentially mn combinations, allowing repetitions. The reinforcement learning model is trained and evaluated on programs that are represented using IR2Vec embeddings. The action space contains the subsequences created using the Oz dependence graph (ODG). Sequences are constructed from this graph by finding walks that start and end at critical nodes (with degree greater than a value k).[slides](https://llvm.org/devmtg/2022-04-03/slides/POSET-RL.Phase.ordering.for.Optimizing.Size.and.Execution.Time.using.Reinforcement.Learning.pdf)
+
+> POSET-RL: Phase ordering for Optimizing Size and Execution Time using Reinforcement Learning: Shalini Jain, Yashas Andaluri, S. VenkataKeerthy and Ramakrishna Upadrasta
+
+#### Try it out
+```bash
+./build/bin/opt \
+  -poset-rl \
+  -use-onnx \
+  -ml-config-path=<config_path> # path to your ml config \
+  <input .ll file> \
+  -o <output .ll file>
+```
