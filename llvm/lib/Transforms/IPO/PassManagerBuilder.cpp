@@ -53,7 +53,7 @@
 
 using namespace llvm;
 
-std::string PassManagerBuilder::str_check = "unSet";
+bool PassManagerBuilder::check_flag = false;
 static cl::opt<bool>
     OPosetRL("OPosetRL", cl::init(false), cl::Hidden,
                        cl::desc("poset rl pass sequence"));
@@ -204,8 +204,6 @@ PassManagerBuilder::PassManagerBuilder() {
     PrepareForThinLTO = EnablePrepareForThinLTO;
     PerformThinLTO = EnablePerformThinLTO;
     DivergentTarget = false;
-    
-   
 }
 
 PassManagerBuilder::~PassManagerBuilder() {
@@ -1441,11 +1439,11 @@ void PassManagerBuilder::populateModulePassManager(
   bool DefaultOrPreLinkPipeline = !PerformThinLTO;
 
   if (OPosetRL){
-      if (str_check == "unSet"){
+      if (check_flag == false){
         errs() << "opt level "<< OptLevel << " SizeLevel " << SizeLevel << "\n";
         MPM.add(createPosetRLPass());
       }
-      str_check = "Set";      
+      check_flag = true;      
       return;
   }
 
@@ -2179,4 +2177,3 @@ void LLVMPassManagerBuilderPopulateLTOPassManager(LLVMPassManagerBuilderRef PMB,
 
   Builder->populateLTOPassManager(*LPM);
 }
-
