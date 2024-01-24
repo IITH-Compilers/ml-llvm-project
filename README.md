@@ -1,3 +1,140 @@
+# ML LLVM Project
+
+## Contents
+-	About
+-	Setup
+	-	Requirements
+	-	Build
+-	All implemented Passes
+
+## About
+
+enter about
+
+## Setup
+
+### Requirements
+
+* cmake (>= 3.10)
+* GNU Make (4.2.1)
+* LLVM (10.X) - [src](https://github.com/llvm/llvm-project/tree/release/10.x), [release](https://releases.llvm.org/download.html#10.0.1) ## ask isn't it included with the repo
+* Python (3.10), C++17
+* gRPC v1.34 and protobuf v3.13 - for gRPC Model Runner
+    * Building GRPC from Source: Please follow [`Build GRPC with cmake`](https://grpc.io/docs/languages/cpp/quickstart/) **v1.34 (protobuf v3.13)** to build GRPC from source. 
+    * In the above tutorial setting `DCMAKE_INSTALL_PREFIX` is necessary as it would give you an easy way to uninstall GRPC later.
+* [ONNXRuntime](https://github.com/microsoft/onnxruntime/releases) v1.16.3
+* TensorFlow - for TF Model Runner (AOT flow) # this should be in the yml only don't need to set it up separately
+    * Tested with TensorFlow 2.13.0
+* Other python requirements are available in [mlbridge.yml] # needs to be updated with sangamesh's.yml
+    * Conda/Anaconda based virtual environment is assumed
+
+(Experiments are done on an Ubuntu 20.04 machine)
+
+Commands to install the conda evironment and set up onnx
+
+```bash
+#TODO: change this to what ever will be the location of the envs
+cp -r /Pramana/ML_LLVM_Tools/AE/envs/ ~/
+
+# install the env using the following commands
+conda env create -f ~/env/LOF_original_env.yml
+conda env create -f ~/env/mlgo-new
+
+wget https://github.com/microsoft/onnxruntime/releases/download/v1.16.3/onnxruntime-linux-x64-1.16.3.tgz
+tar -xvf onnxruntime-linux-x64-1.16.3.tgz
+
+# get GRPC working 
+# check GRPC version
+# check again it should be exactly 1.34.0 not 1.34.x
+
+```
+
+
+### Build 
+
+Following are the requied steps to build the project, if you would like you could run them in a script too after changing the required parameters.
+
+```bash
+# switch to mlgo-new env as you will need it to build the setup
+conda activate mlgo-new 
+
+# rename files in your conda enviornment
+mv ~/anaconda3/envs/mlgo-new/lib/python3.10/site-packages/tensorflow/include/google/ ~/anaconda3/envs/mlgo-new/lib/python3.10/site-packages/tensorflow/include/google_new/
+
+mv ~/anaconda3/envs/mlgo-new/include/google/ ~/anaconda3/envs/mlgo-new/include/google_new/
+
+git clone git@github.com:IITH-Compilers/ml-llvm-project.git
+cd ml-llvm-project
+git checkout mlbridge-lib
+git pull
+git submodule update --init --recursive
+mkdir build
+cd build
+
+# build command 
+	cmake -G "Unix Makefiles" -S ../llvm -B . \                                         
+	-DCMAKE_BUILD_TYPE="Release" \
+	-DLLVM_ENABLE_PROJECTS="clang;IR2Vec;ml-llvm-tools;mlir;MLCompilerBridge" \
+	-DLLVM_TARGETS_TO_BULID="X86" \
+	-DLLVM_ENABLE_ASSERTIONS=on \
+	-DCMAKE_EXPORT_COMPILE_COMMANDS=1 \
+	-DLLVM_CCACHE_BUILD=ON \
+	-DONNXRUNTIME_ROOTDIR= # change to your path where you wget the onnxruntime
+	-DLLVM_TF_AOT_RUNTIME= # change to your path 
+	-DTENSORFLOW_AOT_PATH= # change to your path
+	-DLLVM_INLINER_MODEL_PATH=download \
+	-DLLVM_INLINER_MODEL_CURRENT_URL=https://github.com/google/ml-compiler-opt/releases/download/inlining-Oz-v1.1/inlining-Oz-99f0063-v1.1.tar.gz \
+	-DLLVM_RAEVICT_MODEL_PATH=download \
+	-DLLVM_RAEVICT_MODEL_CURRENT_URL=https://github.com/google/ml-compiler-opt/releases/download/regalloc-evict-v1.0/regalloc-evict-e67430c-v1.0.tar.gz
+	       
+
+# don't make all
+make clang opt -j50
+```
+## List of optimizations supported
+
+### Reinforcement Learning assisted Loop Distribution for Locality and Vectorization
+
+We propose a Reinforcement Learning (RL) approach for loop distribution, optimizing for both vectorization and locality. Using SCC Dependence Graphs (SDGs), our RL model learns loop distribution order through topological walks. The reward is based on instruction cost and cache misses. We introduce a strategy to expand the training set by generating new loops. This method aims to enhance loop parallelization and improve overall code performance.
+
+#### Try it out !!!
+
+> We assueme you have already done the setup and built the project.
+
+```bash
+# ONNX command for inference:
+# this script will generate the optimized llfile
+./build/bin/opt -S \
+	-custom_loop_distribution \
+	-cld-use-onnx \
+	-ml-config-path=/home/intern24007/ml-llvm-project/config \
+	<file name> 
+```
+to learn more head to the Pass specific readme [here].
+
+### RL4Real
+
+<\write info here\>
+
+#### Try it out
+```bash
+# write your bash commands here
+```
+
+### POSET-RL
+
+<\write info here\>
+
+#### Try it out
+```bash
+# write your bash commands here
+```
+
+
+---
+Everthing after this is old . This is kept just for reference
+---
+
 # ML-Register-Allocation
 > Support - LLVM 10.0.1 release on **X86** architecture
 
@@ -171,7 +308,6 @@ Print size, throughput and sub-sequences chosen by the model to a csv
 
 Clean temporary files generated
 
-<<<<<<< HEAD
         * ``-DCMAKE_BUILD_TYPE=type`` --- Valid options for *type* are Debug,
           Release, RelWithDebInfo, and MinSizeRel. Default is Debug.
 
@@ -266,6 +402,4 @@ Print size, throughput and sub-sequences chosen by the model to a csv
 
 Clean temporary files generated
 
-=======
->>>>>>> bef7ad00ae452ec2924f50ff8258256b57f33301
 `make clean`
