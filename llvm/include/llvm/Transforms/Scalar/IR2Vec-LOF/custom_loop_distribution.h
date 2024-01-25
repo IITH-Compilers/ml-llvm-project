@@ -2,6 +2,7 @@
 #define __IR2Vec_CUSTOM_LOOP_DISTRIBUTION_H__
 
 #include "MLModelRunner/MLModelRunner.h"
+#include "grpc/LoopDistribution/LoopDistribution.grpc.pb.h"
 #include "llvm/Analysis/DDG.h"
 #include "llvm/Analysis/DependenceGraphBuilder.h"
 #include "llvm/Analysis/LoopInfo.h"

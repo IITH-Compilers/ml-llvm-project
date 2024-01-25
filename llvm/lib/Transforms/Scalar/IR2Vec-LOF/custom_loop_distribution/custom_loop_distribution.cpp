@@ -153,6 +153,7 @@ void custom_loop_distribution::initPipeCommunication(
     errs() << "Features populated END...\n";
     int *out;
     size_t size;
+    // MLRunner->evaluate<int  >();
     MLRunner->evaluate<int *>(out, size);
     errs() << "Func name: " << this->FName << " : " << cnt++ << "\n";
     std::vector<int> distSequence;
@@ -276,7 +277,7 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
       MLRunner =
           std::make_unique<ONNXModelRunner>(this, agents, &M->getContext());
       // runInference();
-      MLRunner->evaluate<int64_t>();
+      // MLRunner->evaluate<int64_t>();
       errs() << this->DistributionSeq << "\n";
       outfile << this->DistributionSeq << "\n";
       distributed_seqs.push_back(this->DistributionSeq);
@@ -296,6 +297,7 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
     MLRunner->setRequest(&request);
     MLRunner->setResponse(&response);
 
+    outfile.open("grpc_out.log", std::ios_base::app);
     std::vector<std::string> RDG_List;
     RDG_List.insert(RDG_List.end(), data.input_rdgs_str.begin(),
                     data.input_rdgs_str.end());
@@ -310,6 +312,7 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
     }
     (errs() << "Number rdg generated : " << RDG_List.size() << "\n");
     initPipeCommunication(RDG_List);
+    outfile.close();
   }
 
   LLVM_DEBUG(errs() << "Call to runwihAnalysis...\n");

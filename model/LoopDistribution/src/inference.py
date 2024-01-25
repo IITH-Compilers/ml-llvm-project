@@ -20,9 +20,9 @@ import sys
 
 sys.path.extend(
     [
-        f"{BUILD_DIR}/Python-Utilities",
-        f"{MODEL_DIR}",
-        f"{BUILD_DIR}/MLCompilerBridge/CompilerInterface/",
+        f"{BUILD_DIR}/tools/MLCompilerBridge/Python-Utilities/",
+        # f"{MODEL_DIR}",
+        f"{BUILD_DIR}/../MLCompilerBridge/CompilerInterface/",
         # f"{REPO_DIR}/llvm/lib/Transforms/models"
     ]
 )
