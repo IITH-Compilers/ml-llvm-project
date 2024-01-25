@@ -59,8 +59,6 @@ class PassManagerBuilder {
 public:
   /// Extensions are passed to the builder itself (so they can see how it is
   /// configured) as well as the pass manager to add stuff to.
-  
-
   typedef std::function<void(const PassManagerBuilder &Builder,
                              legacy::PassManagerBase &PM)>
       ExtensionFn;
@@ -188,7 +186,6 @@ public:
   std::string PGOSampleUse;
   static bool check_flag;
 
-
 private:
   /// ExtensionList - This is list of all of the extensions that are registered.
   std::vector<std::pair<ExtensionPointTy, ExtensionFn>> Extensions;
@@ -211,7 +208,6 @@ public:
   /// \param ExtensionID Identifier of the extension to be removed.
   static void removeGlobalExtension(GlobalExtensionID ExtensionID);
   void addExtension(ExtensionPointTy Ty, ExtensionFn Fn);
-  
 
 private:
   void addExtensionsToPM(ExtensionPointTy ETy,
