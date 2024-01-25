@@ -184,6 +184,7 @@ public:
   std::string PGOInstrUse;
   /// Path of the sample Profile data file.
   std::string PGOSampleUse;
+  static bool check_flag;
 
 private:
   /// ExtensionList - This is list of all of the extensions that are registered.
