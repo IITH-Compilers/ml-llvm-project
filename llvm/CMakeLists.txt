@@ -181,6 +181,11 @@ if( "MLCompilerBridge" IN_LIST LLVM_ENABLE_PROJECTS )
   set( PYTHON_UTILITIES_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../Python-Utilities CACHE PATH "Path to the directory containing the python utilities")
 endif()
 
+option(LLVM_IR2VEC "IR2Vec install for LLVM" OFF)
+
+if( "IR2Vec" IN_LIST LLVM_ENABLE_PROJECTS )
+  set( LLVM_IR2VEC ON )
+endif()
 # LLVM_ENABLE_PROJECTS_USED is `ON` if the user has ever used the
 # `LLVM_ENABLE_PROJECTS` CMake cache variable.  This exists for
 # several reasons:
