@@ -39,7 +39,7 @@ inline Observation& PosetRLEnv::step(Action Action) {
   CurrActionMask[Action % ActionMaskSize] = 0;
   CurrEmbedding = getEmbeddings();
 
-  if (Actioncount >= 15)
+  if (Actioncount >= 34)
     setDone();
 
   CurrObs.clear();

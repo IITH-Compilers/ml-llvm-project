@@ -53,7 +53,7 @@
 
 using namespace llvm;
 
-
+bool PassManagerBuilder::check_flag = false;
 static cl::opt<bool>
     OPosetRL("OPosetRL", cl::init(false), cl::Hidden,
                        cl::desc("poset rl pass sequence"));
@@ -1439,8 +1439,11 @@ void PassManagerBuilder::populateModulePassManager(
   bool DefaultOrPreLinkPipeline = !PerformThinLTO;
 
   if (OPosetRL){
-      errs() << "opt level "<< OptLevel << " SizeLevel " << SizeLevel << "\n";
-      MPM.add(createPosetRLPass());
+      if (check_flag == false){
+        errs() << "opt level "<< OptLevel << " SizeLevel " << SizeLevel << "\n";
+        MPM.add(createPosetRLPass());
+      }
+      check_flag = true;      
       return;
   }
 
