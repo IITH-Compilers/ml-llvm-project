@@ -6,7 +6,7 @@
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Transforms/AddSizeAttr/AddSizeAttr.h"
+#include "llvm/Transforms/IPO/AddSizeAttr/AddSizeAttr.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "addsizeattr"
