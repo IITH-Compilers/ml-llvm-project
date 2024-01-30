@@ -31,11 +31,14 @@ set(LLVM_LINK_COMPONENTS
   Passes
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
   HelloMLBridge
 =======
 >>>>>>> e4011a594dc3... Added MLConfig in Support/CommandLine.cpp
   AddSizeAttr
+=======
+>>>>>>> 92e0943e9769... Fixed cmake linking issues
   IR2Vec
   CollectMachineIR
 >>>>>>> fb9f173c59b7... Moved CodeSizeOpt to IPO

@@ -29,7 +29,13 @@ add_llvm_library(LLVMHelloMLBridge MODULE BUILDTREE_ONLY
 
   PLUGIN_TOOL
   opt
+<<<<<<< HEAD
 )
+=======
+  )
+
+target_link_libraries(LLVMHelloMLBridge PUBLIC LLVMMLBridge)
+>>>>>>> 92e0943e9769... Fixed cmake linking issues
 
 file(GLOB MODEL_OBJECTS ${CMAKE_CURRENT_SOURCE_DIR}/tf_model/*.o)
 

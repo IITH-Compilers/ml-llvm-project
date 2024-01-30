@@ -17,8 +17,11 @@ set( LLVM_LINK_COMPONENTS
   TransformUtils
   Vectorize
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
   AddSizeAttr
+=======
+>>>>>>> 92e0943e9769... Fixed cmake linking issues
   IR2Vec
   CollectMachineIR
 >>>>>>> fb9f173c59b7... Moved CodeSizeOpt to IPO

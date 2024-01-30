@@ -36,6 +36,10 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRPrintingPasses.h"
 #include "llvm/Support/Valgrind.h"
+<<<<<<< HEAD
+=======
+#include "llvm/Transforms/IPO/AddSizeAttr/AddSizeAttr.h"
+>>>>>>> 92e0943e9769... Fixed cmake linking issues
 #include "llvm/Transforms/AggressiveInstCombine/AggressiveInstCombine.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/AlwaysInliner.h"

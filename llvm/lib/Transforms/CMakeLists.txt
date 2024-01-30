@@ -16,9 +16,12 @@ add_subdirectory(ObjCARC)
 add_subdirectory(Coroutines)
 add_subdirectory(CFGuard)
 <<<<<<< HEAD
+<<<<<<< HEAD
 add_subdirectory(Hello-MLBridge)
 =======
 add_subdirectory(AddSizeAttr)
+=======
+>>>>>>> 92e0943e9769... Fixed cmake linking issues
 add_subdirectory(MCAInstrumentation)
 <<<<<<< HEAD
 add_subdirectory(PipeIR)
