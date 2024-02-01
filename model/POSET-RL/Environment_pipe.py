@@ -16,12 +16,11 @@ from google.protobuf.json_format import MessageToJson
 import json
 from po_config import BUILD_DIR, CONFIG_DIR
 import grpc
-sys.path.append(f"{BUILD_DIR}/tools/MLCompilerBridge/Python-Utilities/")
+sys.path.append(f"{BUILD_DIR}/tools/MLCompilerBridge/Python-Utilities")
 import posetRL_pb2_grpc, posetRL_pb2
 from google.protobuf.empty_pb2 import Empty
 from typing import Union
 import signal
-
 sys.path.append(f"{BUILD_DIR}/tools/MLCompilerBridge/CompilerInterface/")
 from PipeCompilerInterface import PipeCompilerInterface
 from GrpcCompilerInterface import GrpcCompilerInterface
@@ -88,7 +87,7 @@ class PhaseOrder(gym.Env):
             self.FileSys_Obj.TrainingDataPath = os.path.join(
                 self.FileSys_Obj.PhaseOrderDir, "inference")
             self.test_Benchmark = os.path.join(
-                self.FileSys_Obj.PhaseOrderDir, config["test_dir"])
+                self.FileSys_Obj.PhaseOrderDir, "")
 
         self.assembly_file_path = f"{self.temporaryDirectory}/assemblyfile_{self.worker_index}.s"
 
@@ -107,8 +106,8 @@ class PhaseOrder(gym.Env):
 
         self.temp_rootname = "/tmp/" + config["pipe_name"]
         if self.use_pipe:
+           # self.temp_rootname = "/tmp/" + config["pipe_name"]
             self.compiler_interface = PipeCompilerInterface(self.data_format, self.temp_rootname)            
-            
         self.use_grpc = config["use_grpc"]  
         if self.use_grpc:
            self.compiler_interface = None
