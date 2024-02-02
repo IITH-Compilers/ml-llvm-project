@@ -57,7 +57,7 @@ from functools import reduce
 import operator
 
 sys.path.extend([
-    f"{BUILD_DIR}tools/MLCompilerBridge/Python-Utilities/"
+    f"{BUILD_DIR}/tools/MLCompilerBridge/Python-Utilities/"
 ])
 
 config_path=None

@@ -153,7 +153,6 @@ void custom_loop_distribution::initPipeCommunication(
     errs() << "Features populated END...\n";
     int *out;
     size_t size;
-    // MLRunner->evaluate<int  >();
     MLRunner->evaluate<int *>(out, size);
     errs() << "Func name: " << this->FName << " : " << cnt++ << "\n";
     std::vector<int> distSequence;
