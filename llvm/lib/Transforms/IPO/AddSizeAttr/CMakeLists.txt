@@ -8,3 +8,5 @@ add_llvm_component_library(LLVMAddSizeAttr
   DEPENDS
   intrinsics_gen
   )
+
+target_link_libraries(LLVMAddSizeAttr PUBLIC LLVMMLBridge)
