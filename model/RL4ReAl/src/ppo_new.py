@@ -93,7 +93,7 @@ class PPOConfig(PGConfig):
         self.use_gae = True
         self.lambda_ = 1.0
         self.kl_coeff = 1.0
-        self.sgd_minibatch_size = 32
+        self.sgd_minibatch_size = 128
         self.num_sgd_iter = 1
         self.shuffle_sequences = True
         self.vf_loss_coeff = 1.0
@@ -106,12 +106,12 @@ class PPOConfig(PGConfig):
 
         # Override some of PG/AlgorithmConfig's default values with PPO-specific values.
         self.num_rollout_workers = 1
-        self.train_batch_size = 32
-        self.lr = 5e-4
+        self.train_batch_size = 256
+        self.lr = 0.0001
         self.model["vf_share_layers"] = False
         self._disable_preprocessor_api = False
 
-        self.num_gpus = 0
+        self.num_gpus = 1
         self.num_cpus_per_worker = 1
         self.num_gpus_per_worker = 0
         self.num_envs_per_worker = 1
@@ -141,16 +141,17 @@ class PPOConfig(PGConfig):
             "dataset": f"{DATA_DIR}",
             "graphs_num": 10000,
             "action_space_size": RegisterActionSpace("X86", CONFIG_DIR).ac_sp_normlize_size,
-            "check_point": None,
-            "episode_number": 1,
+            #"check_point": "/home/intern24002/ray_results/experiment_2024-02-05_08-25-11/trial_name_w1_CPU_0_2024-02-05_08-25-11/checkpoint_040833",
+            "check_point":None,
+            "episode_number": 10,
             "GPU_ID": '0',
             "X86_CFLAGS": "-mllvm -regalloc=greedy  -march=core2",
             "AArch64_CFLAGS": "-mllvm -regalloc=greedy  -mcpu=cortex-a72",
             "dataset_bucket": "set_120-500",
-            "enable_GGNN": False,
+            "enable_GGNN": True,
             "file_repeat_frequency": 1,
-            "current_batch": 4,
-            "Workers_starting_port": "50035",
+            "current_batch": 100, #batch_size is nothing but current_batch  (10*100 = 1000) where 10 is current_rollout_workers * current_batch so we are using 1000 files in total
+            "Workers_starting_port": "52147",
             "disable_spliting": False,
             "use_costbased_reward": False,
             "use_local_reward": True,
@@ -212,7 +213,7 @@ class PPOConfig(PGConfig):
             entropy_coeff_schedule: Decay schedule for the entropy regularizer.
             clip_param: PPO clip parameter.
             vf_clip_param: Clip param for the value function. Note that this is
-                sensitive to the scale of the rewards. If your expected V is large,
+                sensitive to the scale of the rewards. If your expected V is large,ps aux | grep .vscode-server | awk '{print $2}' | xargs kill
                 increase this.
             grad_clip: If specified, clip the global norm of gradients by this amount.
             kl_target: Target value for KL divergence.

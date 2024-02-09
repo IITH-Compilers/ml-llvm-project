@@ -21,12 +21,10 @@ import math
 import torch
 import signal
 from gym.spaces import Discrete, Box
-# from memory_profiler import profile
 
 # from ggnn import constructGraph
 from ggnn_1 import get_observations, get_observationsInf, GatedGraphNeuralNetwork, constructVectorFromMatrix, AdjacencyList, SPILL_COST_THRESHOLD
 from register_action_space import RegisterActionSpace
-
 import ray
 from ray import tune
 from ray.tune import grid_search
@@ -50,6 +48,7 @@ from config import BUILD_DIR
 
 sys.path.append(f"{BUILD_DIR}/tools/MLCompilerBridge/Python-Utilities/")
 from client import *
+from client import RegisterAllocationClient
 import RegisterAllocationInference_pb2, RegisterAllocation_pb2
 
 config_path=None
@@ -92,6 +91,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.action_space_size = self.registerAS.ac_sp_normlize_size
         self.max_usepoint_count = env_config["max_usepoint_count"]
         self.worker_index = env_config.worker_index
+        print("Worker index: ", env_config.worker_index)
 
         self.max_number_nodes = env_config["max_number_nodes"]
         self.emb_size = env_config["state_size"]
@@ -920,8 +920,9 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                     try:
                         outs, errs = self.server_pid.communicate(timeout=self.mca_timeout)
                     except:
-                        self.server_pid.kill()
+                        # self.server_pid.kill()
                         process_completed = False
+                        os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
                         print("Clang failing")
                     outs, errs = self.server_pid.communicate()
                     mlra_throughput = 0
@@ -1047,9 +1048,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                         f.close()
                 else:
                     # print("Killing Server pid", self.server_pid.pid)         
-                    # os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
-                    self.server_pid.send_signal(signal.SIGTERM)
-
+                    os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
+                    
                 if self.server_pid.poll() is not None:
                     print('Force stop')
                 self.server_pid = None                
@@ -1102,7 +1102,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 print('terminate the pid if alive : {}'.format(self.server_pid.pid))
                 os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
             hostip = "0.0.0.0"
-
             hostport = str(int(self.env_config['Workers_starting_port']) + self.worker_index)
             ipadd = "{}:{}".format(hostip, hostport)
             build_path = self.env_config["build_path"]
@@ -1136,9 +1135,9 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
     def stable_grpc(self, op, register_id, split_point):
         attempt = 0
-        max_retries=5
-        retry_wait_seconds=0.1
-        retry_wait_backoff_exponent=1.5
+        max_retries=6
+        retry_wait_seconds=0.0625
+        retry_wait_backoff_exponent=2
         while True:
             try:
                 logging.debug("Observation {}, register id {} and split point {}".format(op, register_id,  split_point))
@@ -1156,6 +1155,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                     attempt += 1
                     if attempt > max_retries:
                         print("Maximum attempts completed")
+                        print("Error details:", e.details())  #added by harika
                         return None
                         # exit(0)
                     remaining = max_retries - attempt

@@ -16,6 +16,7 @@ import json
 from argparse import Namespace
 import multiprocessing
 import subprocess
+from config import CONFIG_DIR
 logger = logging.getLogger(__file__) 
 
 from config import CONFIG_DIR
@@ -140,8 +141,8 @@ def startServer(filename, fun_name, fun_id, ip, build_path, cflags, logdir, work
         if use_mca_reward:
             cmd = "{build_path}/bin/clang++ -S -Xclang -load -Xclang {build_path}/lib/MCAInstrument.so -O3 -mllvm -ml-config-path={CONFIG_DIR} -mllvm -mca-funcID={fun_name} {cflags} -mllvm -mlra-training -mllvm -debug-only=mlra-regalloc -mllvm -mlra-funcID={fun_id} -mllvm -mlra-server-address={ip} {src_file} -o {logdir}/mca-out{worker_index}.s &> {llvm_log}".format(build_path=build_path, cflags=cflags, src_file=filename, fun_name=fun_name, fun_id=fun_id, ip=ip, worker_index=worker_index, logdir=logdir, llvm_log=llvm_log, CONFIG_DIR=CONFIG_DIR)# + datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
         else:
-            cmd = "{build_path}/bin/clang++ -O3 -mllvm -ml-config-path={CONFIG_DIR} {cflags} -mllvm -mlra-training -mllvm -debug-only=mlra-regalloc -mllvm -mlra-funcID={fun_id} -mllvm -mlra-server-address={ip} {src_file} -o /dev/null &> {llvm_log}".format(build_path=build_path, cflags=cflags, src_file=filename, fun_name=fun_name, fun_id=fun_id, ip=ip, llvm_log=llvm_log, CONFIG_DIR=CONFIG_DIR)# + datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
-        # print(cmd)
+            cmd = "{build_path}/bin/clang++ -O3 -mllvm -ml-config-path={CONFIG_DIR} {cflags} -mllvm -mlra-training -mllvm -debug-only=mlra-regalloc -mllvm -mlra-funcID={fun_id} -mllvm -mlra-server-address={ip} {src_file} -o /dev/null &> {llvm_log}_{fun_name}".format(build_path=build_path, cflags=cflags, src_file=filename, fun_name=fun_name, fun_id=fun_id, ip=ip, llvm_log=llvm_log, CONFIG_DIR=CONFIG_DIR)# + datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
+        print("Start server cmd:", cmd)
         #os.system(cmd)
         pid = subprocess.Popen(cmd, executable='/bin/bash', shell=True, preexec_fn=os.setsid, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
         return pid
