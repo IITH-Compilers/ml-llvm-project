@@ -27,7 +27,7 @@ from gym.spaces import Discrete, Box, Dict, Tuple
 # from simple_q import SimpleQTrainer, DEFAULT_CONFIG
 from ppo_new import PPO, DEFAULT_CONFIG
 # from env import GraphColorEnv, set_config
-from multiagentEnv import HierarchicalGraphColorEnv
+from multiagent_profiler import HierarchicalGraphColorEnv
 from register_action_space import RegisterActionSpace
 from ray.rllib.models import ModelCatalog
 from model import SelectTaskNetwork, SelectNodeNetwork, ColorNetwork, SplitNodeNetwork
@@ -63,10 +63,11 @@ def experiment(config):
         if i == iterations - 1 or (train_results['episodes_total'] - last_checkpoint) > 499:
             last_checkpoint = train_results['episodes_total']
             checkpoint = train_agent.save(tune.get_trial_dir())
-        tune.report(**train_results)
+        # tune.report(**train_results)
         if train_results['episodes_total'] > config["env_config"]["episode_number"]:
             print("Traning Ended")
             checkpoint = train_agent.save(tune.get_trial_dir())
+            tune.report(**train_results)           
             break
 
     if config['dump_onnx_model']:   

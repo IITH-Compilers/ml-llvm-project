@@ -619,6 +619,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                     self.split_node_agent_id: colour_reward
                 }
             done['__all__'] = True
+            #raise
             from csv import writer
             with open('traning_stats_'+str(self.worker_index)+'.csv', 'a') as f_object:
   
