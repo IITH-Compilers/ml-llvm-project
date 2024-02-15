@@ -1,7 +1,7 @@
 import sys
 from config import BUILD_DIR, MODEL_PATH,MODEL_DIR
 sys.path.append(
-    f"{BUILD_DIR}/tools/MLCompilerBridge/Python-Utilities"
+    f"{BUILD_DIR}/../Python-Utilities"
 )
 import RegisterAllocationInference_pb2_grpc, RegisterAllocationInference_pb2
 
@@ -147,6 +147,7 @@ class service_server(
             reply = RegisterAllocationInference_pb2.Data(
                 message="Split", regidx=0, payload=0
             )
+            exit(0)
             return reply
 
 
@@ -310,7 +311,6 @@ def run_pipe_communication(data_format, pipe_name, dump_onnx_model=False):
 
     # #########################################
 
-    ray.init()
     inference_model = inference.RollOutInference(args)
     inference_model.env.use_pipe = True
     # serdes = SerDes.SerDes(data_format, "/tmp/" + pipe_name)
@@ -384,6 +384,8 @@ if __name__ == "__main__":
     # Server.run()
     # blockPrint()
     
+    
+    ray.init(_temp_dir="/home/intern24002/ray_log")
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--server_port", type=str, help="Server port")

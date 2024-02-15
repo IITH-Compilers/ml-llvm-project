@@ -46,7 +46,7 @@ import re
 
 from config import BUILD_DIR
 
-sys.path.append(f"{BUILD_DIR}/tools/MLCompilerBridge/Python-Utilities/")
+sys.path.append(f"{BUILD_DIR}/../Python-Utilities/")
 from client import *
 from client import RegisterAllocationClient
 import RegisterAllocationInference_pb2, RegisterAllocation_pb2
@@ -431,6 +431,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         if type(splitpoints) == np.ndarray:
             splitpoints = splitpoints.tolist()
         if action == 0 or len(splitpoints) < 1 or self.split_steps > self.split_threshold: # Colour node
+            print("Selecting colouring, last action", action)
             self.last_task_done = 0
             self.colour_steps += 1
             if self.task_selected == 1:
@@ -465,6 +466,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 self.colour_node_agent_id : { 'action_mask': np.array(colour_node_mask),'node_properties': np.array(prop_value_list_colouring), 'state' : self.cur_obs},
             }
         else:
+            print("Selecting spliting, last action", action)
+
             self.last_task_done = 1
             self.split_steps += 1
             usepoint_prop = self.getUsepointProperties()
@@ -617,6 +620,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                     self.split_node_agent_id: colour_reward
                 }
             done['__all__'] = True
+            print("Setting done all true for colouring")
+
             from csv import writer
             with open('traning_stats_'+str(self.worker_index)+'.csv', 'a') as f_object:
   
@@ -804,6 +809,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 self.split_node_agent_id: True,
                 "__all__": True 
             }
+            print("Setting done all true for splitting")
             self.obs.next_stage = 'end'
             self.stable_grpc('Exit', 0, 0)   
             # os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
@@ -893,6 +899,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             else:
                 response = self.color_assignment_map
                 self.colormap = response
+                print("Setting color map", self.colormap)
             # print("Colour map ", self.colormap)
             done = True
             self.obs.next_stage = 'end'
