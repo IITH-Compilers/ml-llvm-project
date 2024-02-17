@@ -1,0 +1,4 @@
+input: node_selection_agent: 8
+input: task_selection_agent: 0
+input: color_node_agent: 38
+output: node_selection_agent: 38
