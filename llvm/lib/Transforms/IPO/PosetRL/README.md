@@ -66,6 +66,23 @@ Note: Both `opt` and `inference.py` should be invoked with same `format`.
 ### Invoking the POSET-RL pass with ONNX:
 ```bash
 ${BUILD_DIR}/bin/opt -poset-rl -use-onnx -ml-config-path=${LLVM_DIR}/config <input .ll file> -o <output .ll file> 
-```   
+```
+## Dumping Model files
+
+```bash
+cd ml-llvm-project/model/POSET_RL/src
+
+python inference.py --test-dir=<Path to the test directory>  --use_grpc --server_address=<loopback_address:port_no> --model=<path_to_the_model_in_config_in_main_project>  --export_onnx 
+
+```
+- The -export_onnx option in inference.py is responsible for dumping the onnx model 
+- The Model files will be dumped in `model/onnx-model` 
+- Rename the Model files in each directory as `<MODEL_TYPE>_MODEL_PATH.onnx`. 
+- Move the Model files from their respective directory to the path `config/posetrl/onnx-checkpoint`
+
+- Make sure to regenerate new ONNX models for new checkpoints.
+
+
+### Model Training: [Refer to Model Training](../../../../../model/POSET-RL/README.md) 
 
 
