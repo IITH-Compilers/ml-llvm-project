@@ -57,4 +57,4 @@ python inference.py --test-dir=<Path to the test directory>  --use_grpc --server
 
 ```
 
-### Model Inference: [Refer to Model Training](../llvm/lib/Transforms/IPO/PosetRL/README.md) 
+### Model Inference: [Refer to Model Training](ml-llvm-project/llvm/lib/Transforms/IPO/PosetRL/README.md) 
