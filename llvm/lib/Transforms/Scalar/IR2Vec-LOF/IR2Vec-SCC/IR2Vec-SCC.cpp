@@ -132,12 +132,6 @@ void RDGWrapperPass::Print_IR2Vec_File(DataDependenceGraph &G,
           if (tgtNode->NodeLabel != "") {
             if ((*E).isMemoryDependence()) {
               md++;
-              // errs() << NodeNumber.find(N)->second << " -> "
-              //        << NodeNumber.find(&E->getTargetNode())->second << " :
-              //        "
-              //        << (*E).getKind() << " : " << (*E).getEdgeWeight() <<
-              //        "\n";
-
               File << NodeNumber.find(N)->second << " -> "
                    << NodeNumber.find(&E->getTargetNode())->second
                    << "[label=\"" << (*E).getKind() << ": "
@@ -200,9 +194,6 @@ void RDGWrapperPass::addMCACalls(Loop *L, int loopID) const {
 bool RDGWrapperPass::runOnFunction(Function &F) { return computeRDG(F); }
 
 bool RDGWrapperPass::computeRDG(Function &F) {
-  // errs()<<"Inside RDGWrapperPass:\n";
-  // F.dump();
-
   DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
 
@@ -289,17 +280,11 @@ void RDGWrapperPass::canonicalizeLoopsWithLoads(
     auto dest = tuples[1];
     auto insv = tuples[2];
     auto inst = dyn_cast<Instruction>(insv);
-    // errs() << "inst: ";
-    // inst->dump();
     auto ldInst = new LoadInst(dest, "");
     ldInst->insertBefore(inst);
     for (unsigned i = 0; i < inst->getNumOperands(); i++) {
       if (inst->getOperand(i) == src) {
         inst->setOperand(i, ldInst);
-        // errs() << "Operand set successfully - ";
-        // inst->dump();
-        // errs() << "===\n";
-        // inst->getParent()->dump();
         break;
       }
     }
@@ -342,11 +327,6 @@ void RDGWrapperPass::populateDOTData(DataDependenceGraph &G,
         continue;
 
       auto Vec = instVecMap.find(II)->second;
-      // errs() << "Vec[" << II << "] = ";
-      // for (unsigned I = 0; I < DIM; ++I)
-      //   errs() << Vec[I] << " ";
-      // errs() << "\n";
-      // errs() << "End\n";
       if (!Found) {
         NodeVec = Vec;
         Found = true;
@@ -356,13 +336,7 @@ void RDGWrapperPass::populateDOTData(DataDependenceGraph &G,
       }
     }
     // rdg.NodeRepresentations[stoi(N->NodeLabel.substr(1)) - 1] = NodeVec;
-    // errs() << "Nodevecd : ---\n";
-    // for(unsigned I = 0; I < DIM; ++I)
-    // {
-    //   errs() << NodeVec[I] << " ";
-    // }
-    // errs() << "\n";
-    // errs() << "End\n";
+    
     NodeNumber.insert(std::make_pair(N, N->NodeLabel));
   }
   LLVM_DEBUG(errs() << "**before adjlist filling\n");
@@ -412,26 +386,18 @@ RDGData RDGWrapperPass::computeRDGForFunction(Function &F) {
   int loopNum = 0;
   for (LoopInfo::iterator i = LI->begin(), e = LI->end(); i != e; ++i) {
     Loop *L = *i;
-    // L->dump();
-    // errs() << " came lo line 376\n";
     for (auto il = df_begin(L), el = df_end(L); il != el; ++il) {
       if (il->getSubLoops().size() > 0) {
-        // errs() << "IR2Vec-SCC.cpp : line 377\n";
         continue;
       }
 
-      // for (auto i : il->blocks()) {
-      //   i->dump();
-      // }
-
+      
       // Append Memory Dependence Edges with weights into Graph
       loopNum++;
       auto *LAA = &getAnalysis<LoopAccessLegacyAnalysis>();
       const LoopAccessInfo &LAI = LAA->getInfo(*il);
       auto RDGraph = RDG(*AA, *SE, *LI, DI, LAI, ORE);
-      // errs() << "Function Name: " << F.getName() <<"\n";
-      // errs() << "**** LOOP No. :" << loopNum << "\n";
-
+      
       auto SCC_Graph = RDGraph.computeRDGForInnerLoop(**il);
 
       if (SCC_Graph == nullptr) {
@@ -458,7 +424,6 @@ RDGData RDGWrapperPass::computeRDGForFunction(Function &F) {
       std::string SCC_Filename = "S_" + s2 + "_F" +
                                  std::to_string(FunctionNumber) + "_L" +
                                  std::to_string(loopNum) + ".dot";
-      // "S_" + s3 + "_F_" + s4 + "_L" + std::to_string(loopNum) + ".dot";
 
       LLVM_DEBUG(errs() << "Writing " + SCC_Filename + "\n");
       RDGraph.PrintDotFile_LAI(SCCGraph, SCC_Filename, s1);
@@ -468,13 +433,10 @@ RDGData RDGWrapperPass::computeRDGForFunction(Function &F) {
       content.assign((std::istreambuf_iterator<char>(ifs)),
                      (std::istreambuf_iterator<char>()));
 
-      // errs() << "String: " << content << "\n";
-
       // Print Input File
       std::string Input_Filename = "I_" + s2 + "_F" +
                                    std::to_string(FunctionNumber) + "_L" +
                                    std::to_string(loopNum) + ".dot";
-      // "I_" + s3 + "_F_" + s4 + "_L" + std::to_string(loopNum) + ".dot";
 
       LLVM_DEBUG(errs() << "Writing " + Input_Filename + "\n");
       Print_IR2Vec_File(SCCGraph, Input_Filename, s2, loopNum);

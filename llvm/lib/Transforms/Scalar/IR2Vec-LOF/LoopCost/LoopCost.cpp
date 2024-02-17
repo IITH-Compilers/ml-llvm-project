@@ -183,10 +183,7 @@ bool LoopCost::runOnFunction(Function &F) {
     }
 
     L->dump();
-    // dbgs() << "VF: " << VF << "\n";
-    // dbgs() << "IF: " << IF << "\n";
-    // dbgs() << "TC: " << TripCount << "\n";
-
+    
     Loop *InstCostLoop = nullptr;
     if (VecLoop)
       InstCostLoop = VecLoop;
@@ -204,7 +201,6 @@ bool LoopCost::runOnFunction(Function &F) {
     }
 
     LoopCost = LoopCost * (TripCount / (VF * IF));
-    // dbgs() << "Loop cost with only instructions: " << LoopCost << "\n";
 
     for (auto BB : L->getBlocks()) {
       for (auto &I : *BB) {
@@ -220,17 +216,12 @@ bool LoopCost::runOnFunction(Function &F) {
     Locality CL(TTI);
     int64_t CacheMisses = CL.computeLocalityCost(L, TripCount, SE, DI);
     LoopCost = LoopCost * (TripCount / (VF * IF));
-    // dbgs() << "Loop cost with only instructions: " << LoopCost << "\n";
     uint64_t TotalMemAccess =
         NumMemInsts * ((TripCount == 1000) ? TripCount : TripCount * (VF * IF));
-    // dbgs() << "Total memory accesses : " << NumMemInsts << " * " << TripCount
-          //  << " = " << TotalMemAccess << "\n";
     uint64_t CacheCost =
         CacheMisses * (0.7 * MemoryInstCost) +
         (TotalMemAccess - CacheMisses) * (0.3 * MemoryInstCost);
-    // dbgs() << "Cache cost: " << CacheCost << "\n";
     uint64_t TotalLoopCost = LoopCost + CacheCost;
-    // dbgs() << "TotalLoopCost for Loop: " << TotalLoopCost << "\n";
 
     this->loop_cost= TotalLoopCost;
   }

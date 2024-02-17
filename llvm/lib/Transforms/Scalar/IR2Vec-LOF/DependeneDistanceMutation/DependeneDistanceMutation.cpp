@@ -22,17 +22,13 @@ using namespace llvm;
 void DependenceDistanceMutation::Mutate_InstList(
     InstructionListType StoreInstList, LLVMContext &Context) {
   for (auto S : StoreInstList) {
-    // errs() << "StoreInstList: " << *S << "\n";
 
     for (auto i = S->op_begin(), e = S->op_end(); i != e; ++i) {
       if (dyn_cast<Instruction>(&(**i))) {
         Instruction *OP = dyn_cast<Instruction>(&(**i));
-        // errs() << "OP: " << *OP << "\n";
         if (isa<GetElementPtrInst>(OP)) {
           auto array_OP = dyn_cast<GetElementPtrInst>(OP);
-          // errs() << "Number of indices: " << array_OP->getNumOperands() << "\n";
-          // errs() << "Name: " << OP->getName() << "\n";
-
+          
           bool flag_Name = 0;
           for (auto n : NameList) {
             if (n == OP->getName()) {
@@ -43,27 +39,19 @@ void DependenceDistanceMutation::Mutate_InstList(
 
           if (flag_Name == 0) {
             NameList.push_back(OP->getName());
-            // errs() << "Name3: " << OP->getName() << "\n";
 
             unsigned op_i = array_OP->getNumOperands() - 1;
-            // for (unsigned op_i = 1; op_i < array_OP->getNumOperands(); ++op_i)
-            // {
             auto array_index = dyn_cast<Instruction>(array_OP->getOperand(op_i));
-            // errs() << "op_i: " << *array_index << "\n";
 
             // Create new "add" instruction
             IRBuilder<> builder(array_OP);
             auto *OP_type = array_OP->getOperand(op_i)->getType();
             Value *Right = ConstantInt::get(Type::getInt64Ty(Context), mutate);
-            // errs() << "aaaaaaaaaaa: " << *OP_type << " : " << *Right->getType()
-            //        << "\n";
             Value *Result = builder.CreateAdd(array_OP->getOperand(op_i), Right);
-            errs() << "bbbbbbbbbbbbbbbbbb: " << *Result << "\n";
 
             array_OP->setOperand(op_i, Result);
           }
 
-          // }
         }
       }
       // errs() << "\n";
@@ -221,27 +209,16 @@ bool DependenceDistanceMutation::runOnFunction(Function &F) {
                 break;
             }
             if (flag_MergedList == 0) {
-              // errs() << "StoreInstList: " << *S << "\n";
               MergedInstList.push_back(S);
             }
           }
           else {
-            // errs() << "StoreInstList: " << *S << "\n";
             MergedInstList.push_back(S);
           }
         }
       }
 
       Mutate_InstList(MergedInstList, Context);
-
-
-      // Mutate all instruction inside StoreInstList
-      // errs() << "aaaaaaaaaaaaaaaaaaaa\n";
-      // Mutate_InstList(StoreInstList, Context);
-
-      // Mutate all instruction inside WAWInstList
-      // errs() << "bbbbbbbbbbbbbbbbbbbbb\n";
-      // Mutate_InstList(WAWInstList, Context);
     }
   }
   return false;

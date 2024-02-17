@@ -15,8 +15,7 @@ Observation &LDEnv::reset() {
   this->CurrentNode = -1;
   this->resetDone();
   int idx = 0;
-  errs() << "NodeRepresentation size = " << currRDG.NodeRepresentations.size()
-         << "\n";
+
   this->NodeRepresentation.clear();
   for (auto &E : currRDG.NodeRepresentations) {
     this->NodeRepresentation.push_back(E.second);
@@ -25,16 +24,13 @@ Observation &LDEnv::reset() {
     this->idx_nid[idx] = E.first;
     idx++;
   }
-  // this->resetDone();
 
-  // delete this->GraphTopology;
   this->GraphTopology =
       new Graph(currRDG.AdjList, currRDG.NodeRepresentations.size());
 
   CurrObs.resize(SELECT_NODE_OBS_SIZE);
   this->select_node_obs_constructor(CurrObs);
   this->setNextAgent(SELECT_NODE_AGENT);
-  // this->setCurrentObservation(Obs, SELECT_NODE_AGENT);
   return CurrObs;
 }
 
@@ -58,11 +54,6 @@ void LDEnv::create_node_select_mask(SmallVector<int, 8> &Mask) {
   SmallVector<int, 8> EligibleNodes;
   this->GraphTopology->getEligibleNodes(EligibleNodes);
 
-  (errs() << "EligibleNodes = ");
-  for (auto Node : EligibleNodes) {
-    (errs() << Node << " ");
-  }
-  (errs() << "\n");
   LLVM_DEBUG(errs() << "\n");
   for (auto Node : EligibleNodes) {
     if (Node >= MAX_NODES_COUNT) {
@@ -91,7 +82,6 @@ void LDEnv::select_node_obs_constructor(Observation &Obs) {
                }
                errs() << "]\n\n";
              });
-  errs() << "\n\n";
   for (auto V : this->NodeRepresentation) {
     for (auto e : V) {
       Obs[CurrIdx++] = e;
@@ -102,7 +92,6 @@ void LDEnv::select_node_obs_constructor(Observation &Obs) {
 Observation LDEnv::select_node_step(Action Action) {
   this->PrevNode = this->CurrentNode;
   this->CurrentNode = Action;
-  errs() << "current node: " << this->CurrentNode << "\n";
   this->GraphTopology->updateVisitList(this->CurrentNode);
   LLVM_DEBUG(errs() << "select_node_step: line: " << 53 << "\n");
   int CurrIdx = 0;
@@ -113,12 +102,10 @@ Observation LDEnv::select_node_step(Action Action) {
   // fill the Obs vector
   LLVM_DEBUG(errs() << "prevnode = " << this->PrevNode << "\n");
   if (this->PrevNode < 0) {
-    printIdx(59);
     Observation Obs(SELECT_NODE_OBS_SIZE);
 
     this->select_node_obs_constructor(Obs);
 
-    // setCurrentObservation(Obs, SELECT_NODE_AGENT);
     this->DistributionSeq = "S" + std::to_string(this->CurrentNode + 1);
     return Obs;
   } else {
@@ -126,7 +113,6 @@ Observation LDEnv::select_node_step(Action Action) {
     // Action mask
     Obs[CurrIdx++] = 1;
     Obs[CurrIdx++] = 1;
-    printIdx(95);
     // CurrentNode
     for (auto e : this->NodeRepresentation[this->CurrentNode]) {
       Obs[CurrIdx++] = e;
@@ -134,16 +120,13 @@ Observation LDEnv::select_node_step(Action Action) {
 
     // dist_flag
     Obs[CurrIdx++] = 0;
-    printIdx(103);
     // PrevNode
     for (auto e : this->NodeRepresentation[this->PrevNode]) {
       Obs[CurrIdx++] = e;
     }
-    // setCurrentObservation(Obs, DISTRIBUTION_AGENT);
     setNextAgent(DISTRIBUTION_AGENT);
     return Obs;
   }
-  // printIdx(119);
 }
 
 Observation LDEnv::select_distribution_step(Action Action) {
@@ -156,8 +139,6 @@ Observation LDEnv::select_distribution_step(Action Action) {
     this->DistributionSeq =
         this->DistributionSeq + "|S" + std::to_string(this->CurrentNode + 1);
   }
-  errs() << "previous node: " << this->PrevNode
-         << " and current node: " << this->CurrentNode << "\n";
   Observation Obs(SELECT_NODE_OBS_SIZE);
   // Action mask
   SmallVector<int, 8> ActionMask(MAX_NODES_COUNT, 0);
@@ -167,11 +148,9 @@ Observation LDEnv::select_distribution_step(Action Action) {
                       << "\n");
   };
   this->create_node_select_mask(ActionMask);
-  printIdx(138);
   for (auto e : ActionMask) {
     Obs[CurrIdx++] = e;
   }
-  printIdx(141);
   // state
   for (auto V : this->NodeRepresentation) {
     for (auto e : V) {
@@ -180,6 +159,5 @@ Observation LDEnv::select_distribution_step(Action Action) {
   }
   // setCurrentObservation(Obs, SELECT_NODE_AGENT);
   setNextAgent(SELECT_NODE_AGENT);
-  printIdx(148);
   return Obs;
 }

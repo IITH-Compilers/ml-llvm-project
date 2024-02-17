@@ -46,8 +46,6 @@ static cl::opt<bool> usePipe("cld-use-pipe-inf",
                              cl::Optional, cl::init(false));
 static cl::opt<bool> useOnnx("cld-use-onnx", cl::desc("Use onnx for inference"),
                              cl::Hidden, cl::Optional, cl::init(false));
-// static cl::opt<bool> useOrg("cld-use-org", cl::desc("Use org for inference"),
-//                             cl::Hidden, cl::Optional, cl::init(false));
 static cl::opt<std::string> pipe_name("cld-pipe-name", cl::Hidden,
                                       cl::init("loopdistppipe"));
 static cl::opt<std::string> data_format("cld-data-format", cl::Hidden,
@@ -127,17 +125,11 @@ void custom_loop_distribution::canonicalizeLoopsWithLoads() {
     auto dest = tuples[1];
     auto insv = tuples[2];
     auto inst = dyn_cast<Instruction>(insv);
-    // errs() << "inst: ";
-    // inst->dump();
     auto ldInst = new LoadInst(dest, "");
     ldInst->insertBefore(inst);
     for (unsigned i = 0; i < inst->getNumOperands(); i++) {
       if (inst->getOperand(i) == src) {
         inst->setOperand(i, ldInst);
-        // errs() << "Operand set successfully - ";
-        // inst->dump();
-        // errs() << "===\n";
-        // inst->getParent()->dump();
         break;
       }
     }
@@ -150,11 +142,9 @@ void custom_loop_distribution::initPipeCommunication(
   for (auto rdg : RDG_List) {
     std::pair<std::string, std::string> p1("RDG", rdg);
     MLRunner->populateFeatures(p1);
-    errs() << "Features populated END...\n";
     int *out;
     size_t size;
     MLRunner->evaluate<int *>(out, size);
-    errs() << "Func name: " << this->FName << " : " << cnt++ << "\n";
     std::vector<int> distSequence;
     for (int i = 0; i < size; i++) {
       distSequence.push_back(out[i]);
@@ -171,12 +161,9 @@ void custom_loop_distribution::initPipeCommunication(
       else
         partition.append("S" + std::to_string(element));
     }
-    errs() << "Reseved partition:" << partition << "\n";
     distributed_seqs.push_back(partition);
     outfile << partition << "\n";
-    errs() << "Dist_seqs vec size: " << distSequence.size() << "\n";
   }
-  errs() << "Covered all RDGs\n";
   std::pair<std::string, std::string> p1("RDG", "Exit");
   MLRunner->populateFeatures(p1);
   int *out;
@@ -187,9 +174,6 @@ void custom_loop_distribution::initPipeCommunication(
 
 bool custom_loop_distribution::runOnFunction(Function &F) {
   assert(MLConfig::mlconfig != "" && "ml-config-path required");
-  // if (F.getName() != "s222")
-  //   return false;
-  // F.dump();
   errs() << "Entered custom_loop_distribution pass\n";
   this->M = F.getParent();
   this->FName = F.getName();
@@ -202,8 +186,6 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
   R.computeRDG(F);
   RDGData data = R.getRDGInfo();
 
-  // RDG_List.insert(RDG_List.end(), data.input_rdgs.begin(),
-  // data.input_rdgs.end());
   SCCGraphs.insert(SCCGraphs.end(), data.SCCGraphs.begin(),
                    data.SCCGraphs.end());
   loops.insert(loops.end(), data.loops.begin(), data.loops.end());
@@ -275,15 +257,12 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
       agents[DISTRIBUTION_AGENT] = &distribution_agent;
       MLRunner =
           std::make_unique<ONNXModelRunner>(this, agents, &M->getContext());
-      // runInference();
       MLRunner->evaluate<int64_t>();
       errs() << this->DistributionSeq << "\n";
       outfile << this->DistributionSeq << "\n";
       distributed_seqs.push_back(this->DistributionSeq);
     }
     outfile.close();
-    // errs() << "Code is Commented\n";
-    // exit(0);
   } else {
     loopdistribution::RDGData request;
     loopdistribution::Advice response;
@@ -327,10 +306,6 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
   bool isdis = dist_helper.runwithAnalysis(SCCGraphs, loops, distributed_seqs,
                                            SE, LI, DT, AA, ORE, GetLAA, DI);
 
-  // bool isdis =
-  //     dist_helper.runwithAnalysis(SCCGraphs, loops, distributed_seqs,
-  //     vf_seqs,
-  //                                 SE, LI, DT, AA, ORE, GetLAA, DI);
   distributed_seqs.clear();
   LLVM_DEBUG(if (isdis) { errs() << "Code is distributed..\n"; });
   return isdis;
