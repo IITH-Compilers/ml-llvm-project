@@ -75,7 +75,7 @@ cd ml-llvm-project/model/POSET_RL/src
 python inference.py --test-dir=<Path to the test directory>  --use_grpc --server_address=<loopback_address:port_no> --model=<path_to_the_model_in_config_in_main_project>  --export_onnx 
 
 ```
-- The -export_onnx option in inference.py is responsible for dumping the onnx model 
+- The `-export_onnx` option in `inference.py` is responsible for dumping the onnx model 
 - The Model files will be dumped in `model/onnx-model` 
 - Rename the Model files as `<MODEL_NAME>.onnx`. 
 - Move the Model files from their respective directory to the path `config/posetrl/onnx-checkpoint`
