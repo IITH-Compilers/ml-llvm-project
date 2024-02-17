@@ -77,9 +77,8 @@ python inference.py --test-dir=<Path to the test directory>  --use_grpc --server
 ```
 - The -export_onnx option in inference.py is responsible for dumping the onnx model 
 - The Model files will be dumped in `model/onnx-model` 
-- Rename the Model files in each directory as `<MODEL_TYPE>_MODEL_PATH.onnx`. 
+- Rename the Model files as `<MODEL_NAME>.onnx`. 
 - Move the Model files from their respective directory to the path `config/posetrl/onnx-checkpoint`
-
 - Make sure to regenerate new ONNX models for new checkpoints.
 
 
