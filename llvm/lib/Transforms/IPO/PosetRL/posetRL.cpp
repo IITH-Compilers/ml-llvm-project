@@ -15,23 +15,17 @@
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include <cstdlib>
 #include <fstream>
-// gRPC includes
 #include "grpc/posetRL/posetRL.grpc.pb.h"
 #include "grpc/posetRL/posetRL.pb.h"
-// #include "grpc/posetRL/posetRL.pb.h"
 #include <google/protobuf/text_format.h>
-// #include <grpcpp/grpcpp.h>
 #include <utility>
 #include <vector>
-
 #include "MLModelRunner/MLModelRunner.h"
 #include "MLModelRunner/ONNXModelRunner/ONNXModelRunner.h"
 #include "MLModelRunner/PipeModelRunner.h"
 #include "MLModelRunner/gRPCModelRunner.h"
 #include "MLModelRunner/Utils/MLConfig.h"
-
 #include "grpcpp/impl/codegen/status.h"
-
 
 using namespace llvm;
 using namespace grpc;
@@ -94,11 +88,8 @@ struct PosetRL : public ModulePass,
           basename + ".out", basename + ".in", SerDesType, &M.getContext());
       posetRLgRPC::EmbeddingResponse response;
       posetRLgRPC::ActionRequest request;
-      // errs() << "set MLRunner request and response...\n";
       MLRunner->setRequest(&response);
       MLRunner->setResponse(&request);
-      // errs() << "end set MLRunner request and response...\n";
-      // errs() << "Using pipe communication...\n";
       initPipeCommunication();
     } else {
       if (training) {
@@ -138,8 +129,6 @@ struct PosetRL : public ModulePass,
       std::pair<std::string, std::vector<float>> p1("embedding",
                                                     getEmbeddings());
       MLRunner->populateFeatures(p1);
-      // static_cast<gRPCModelRunner>(MLRunner)->printMessage();
-      
       int Res = MLRunner->evaluate<int>();
       processMLAdvice(Res);
       passSequence = Res;
@@ -196,8 +185,6 @@ struct PosetRL : public ModulePass,
   queryCompiler(grpc::ServerContext *context,
                            const ::posetRLgRPC::ActionRequest *request,
                            ::posetRLgRPC::EmbeddingResponse *response) {
-    // errs() << "Action requested: " << request->action() << "\n";
-
     if (request->action() == -1) {
       return grpc::Status::OK;
     } else if (request->action() != 0)
@@ -209,7 +196,6 @@ struct PosetRL : public ModulePass,
     }
     return grpc::Status::OK;
   }
-
 
 private:
   Module *M;

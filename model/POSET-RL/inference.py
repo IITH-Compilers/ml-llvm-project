@@ -103,7 +103,7 @@ parser.add_argument(
     choices=["json", "protobuf", "bytes"],
     help="Data format to use for communication",
 )
-parser.add_argument("--pipe_name",type=str,help="String Pipe name") 
+parser.add_argument("--pipe_name",type=str,help="String Pipe name",default="posetrl_pipe") 
 parser.add_argument("--use_grpc", action='store_true', help = "Use grpc communication", required=False, default=False)
 parser.add_argument("--export_onnx", action="store_true", help="Export the model to ONNX")
 
