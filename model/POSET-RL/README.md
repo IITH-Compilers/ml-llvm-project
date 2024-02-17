@@ -1,7 +1,13 @@
 # POSET-RL
 
-POSET-RL uses a reinforcement learning approach as the search space of optimization sequences is too big to enumerate. For a compiler with m optimization passes, if the sequence length is fixed as n, then there can be potentially mn combinations, allowing repetitions. The reinforcement learning model is trained and evaluated on programs that are represented using IR2Vec embeddings. The action space contains the subsequences created using the Oz dependence graph (ODG). Sequences are constructed from this graph by finding walks that start and end at critical nodes (with degree greater than a value k).[slides](https://llvm.org/devmtg/2022-04-03/slides/POSET-RL.Phase.ordering.for.Optimizing.Size.and.Execution.Time.using.Reinforcement.Learning.pdf)
+# POSET-RL
+POSET-RL uses a reinforcement learning approach to find pass sequence (for optimal code size + execution time), as the search space of optimization sequences is too big to enumerate. For a compiler with `m` optimization passes, if the sequence length is fixed as `n`, then there can be potentially `mxn` combinations, allowing repetitions. 
+
+This repo contains the source code and relevant information described in the [paper](https://ieeexplore.ieee.org/abstract/document/9804673) ([arXiv](https://arxiv.org/abs/2208.04238), [slides](https://llvm.org/devmtg/2022-04-03/slides/POSET-RL.Phase.ordering.for.Optimizing.Size.and.Execution.Time.using.Reinforcement.Learning.pdf)).
+Please see [here](https://compilers.cse.iith.ac.in/projects/posetrl) for more details.
+
 > POSET-RL: Phase ordering for Optimizing Size and Execution Time using Reinforcement Learning: Shalini Jain, Yashas Andaluri, S. VenkataKeerthy and Ramakrishna Upadrasta
+
 
 ## Environment Setup
 
@@ -28,25 +34,27 @@ POSET-RL uses a reinforcement learning approach as the search space of optimizat
 ```bash
 cd ml-llvm-project/model/POSET_RL/src 
         
-python experiment.py --llvm_dir=<ml-llvm-project/build> --train_dir=<path_to_training_data> --train_iterations=<no.ofiterations in training> --use_grpc 
+python experiment.py --llvm_dir=<ml-llvm-project/build> --train_dir=<path_to_training_data> --train_iterations=<no.ofiterations in training> --use_grpc
+
+#The --train_dir option must specify a path to a directory of .ll files 
 ```        
 ### Pipes
 ```bash
 cd ml-llvm-project/model/POSET_RL/src
 
-python experiment.py --llvm_dir=<ml-llvm-project/build> --train_dir=<path_to_training_data> --train_iterations=<no.ofiterations in training>         --use_pipe --data_format=<json or bytes>
+python experiment.py --llvm_dir=<ml-llvm-project/build> --train_dir=<path_to_training_data> --train_iterations=<no.ofiterations in training> --use_pipe --data_format=<json or bytes>
 
+#The --train_dir option must specify a path to a directory of .ll files 
 #Model will be generated as a pytorch checkpoint in ml-llvm-project/model/checkpoint_dir after every 10 epochs
 #The output of the above generates the training logs 
 ```
 ### ONNX
- The -export_onnx option in inference.py is responsible for dumping the onnx model     
 
 ```bash   
 cd ml-llvm-project/model/POSET_RL/src
 
-python inference.py --test-dir=<Path to the test directory>  --use_grpc --server_address=<loopback_address:port_no> --model=<path_to_the_model_in_config_in_main_project>  --export_onnx 
+python inference.py --test-dir=<Path to the test directory>  --use_grpc --server_address=<loopback_address:port_no> --model=<path_to_the_model_in_config_in_main_project>  
 
-# The model will be dumped inside the onnx-model directory residing inside /path/to/ml-llvm-project/model/POSET-RL/ 
-# Copy the generated onnx model from the above mentioned directory into /path/to/ml-llvm-project/config/posetrl
-```        
+```
+
+### Model Inference: [Refer to Model Training](../llvm/lib/Transforms/IPO/PosetRL/README.md) 
