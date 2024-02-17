@@ -34,12 +34,11 @@ python inference.py --use_grpc --server_port=<port_no> --model=<model_path>
 ### Invoking the POSET-RL Pass via gRPC:
 ```bash
 #Open a new terminal 
-${BUILD_DIR}/bin/opt -poset-rl -use_grpc -ml-config-path=${LLVM_DIR}/config -server_address=127.0.0.1:<port_no> 
+${BUILD_DIR}/bin/opt -poset-rl -ml-config-path=${LLVM_DIR}/config -server_address=127.0.0.1:<port_no> 
 <input .ll file> -o <output .ll file>
 ```
 - `BUILD_DIR`: Directory where the project is built
 - `-poset-rl`: The optimisation flag for invoing the pass
-- `-use_grpc`: The flag to denote grpc Modelrunner in the pass
 - `-ml-config-path`: The path to config directory 
 - `-server_address`: The address with port number  
 
