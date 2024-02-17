@@ -44,7 +44,6 @@ import posetRL_pb2_grpc, posetRL_pb2
 
 sys.path.append(f"{BUILD_DIR}/tools/MLCompilerBridge/CompilerInterface/")
 from GrpcCompilerInterface import GrpcCompilerInterface
-
 from Filesystem import *
 
 logger = logging.getLogger(__file__)
@@ -65,14 +64,6 @@ from concurrent import futures
 import traceback
 
 parser = argparse.ArgumentParser()
-# parser.add_argument(
-#     "--ir2vec_dir",
-#     required=False,
-#     help="path to IR2vec directory which has seed embedding and IR2Vec binary files",
-# )
-parser.add_argument(
-    "--test_dir", help="Path to test directory", required=False, default="./"
-)
 parser.add_argument("--model", help="Path to saved checkpoint")
 parser.add_argument(
     "-a", "--isAArch", required=False, default=False, action="store_true"
@@ -145,8 +136,6 @@ class PhaseOrderInference:
                     "dump_type": "One",
                     "intermediate_data": "./temp",
                     "llvm_dir": BUILD_DIR,
-                    # "ir2vec_dir": args.ir2vec_dir,
-                    "test_dir": args.test_dir,
                     "alpha": args.alpha,
                     "beta": args.beta,
                     "size_reward_thresh": args.size_reward_thresh,
@@ -273,17 +262,5 @@ if __name__ == "__main__":
         compiler_interface.start_server()
         
     else:
-        now = datetime.now()
-        date_time = now.strftime("%m-%d-%Y-%H-%M-%S")
-        file_name = "timetaken-spec06-posetrl-orignal-" + date_time + ".txt"
-        repeat_count = 3
-        for file in os.listdir(args.test_dir):
-            f = open(file_name, "a")
-            count = 0            
-            while count < repeat_count:
-                start = time.time()
-                reward, response = inference_obj.run_predict(file)
-                end = time.time()
-                f.write("Time taken for {} is {}\n".format(file, end - start))
-                count+=1
-            f.close()
+        print("Please use options use_grpc or use_pipe")
+        
