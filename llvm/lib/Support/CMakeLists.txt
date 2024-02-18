@@ -198,4 +198,4 @@ if(LLVM_WITH_Z3)
     )
 endif()
 
-target_link_libraries(LLVMSupport PRIVATE LLVMMLBridge)
+target_link_libraries(LLVMSupport PUBLIC ModelRunnerUtils)
