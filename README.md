@@ -4,14 +4,15 @@
 -	[About](#about)
 -	[Setup](#setup)
     - Requirements
-    - Build
-    - Exporting ONNX Path Variables
-    - Conda env set-up
-    - A small hack to prevent the conda environtments from clashing (To Be removed)
-    - Clone the Repo
-    - Cmake Command
-    - Build
--	[All implemented Passes](#list-of-optimizations-supported)
+    - Building the Project
+        - Clone the Repository
+        - Setting up the build environment.
+            - Exporting ONNX Path Variables
+            - Conda env set-up
+            - A small hack to prevent the conda environtments from clashing (To Be removed)
+        - Cmake Command
+        - make Command
+-	[List of optimizations supported](#list-of-optimizations-supported)
     - Reinforcement Learning assisted Loop Distribution for Locality and Vectorization
     - RL4Real
     - POSET-RL
@@ -56,6 +57,9 @@ As a part of the ML-Compiler-Bridge [research](https://arxiv.org/pdf/2311.10800.
 ```
 
 * [ONNXRuntime](https://github.com/microsoft/onnxruntime/releases) v1.16.3
+    
+    * The following commands will download ONNX Runtime v1.16.3 in your present working directory and then untar the contents.
+    The path for this will be used in this [section](#exporting-onnx-path-variables)
 ```bash
 	 wget https://github.com/microsoft/onnxruntime/releases/download/v1.16.3/onnxruntime-linux-x64-1.16.3.tgz
 	 tar -xvf onnxruntime-linux-x64-1.16.3.tgz
@@ -70,8 +74,22 @@ As a part of the ML-Compiler-Bridge [research](https://arxiv.org/pdf/2311.10800.
 
 (Experiments are done on an Ubuntu 20.04 machine)
 
-### Exporting ONNX Path Variables
-The path of ONNX Runtime is required a lot of times, hence it is a better Idea to export these paths and also add them to the PATH and LD_LIBRARY_PATH
+## Building the Project
+The following section outlines the build process for our repository.
+
+### Clone the Repository
+You need to clone the repository and initilize all the sub modules. The following commands would clone the Repository from github in your local and will initialize all submodules i.e clone the all the submodules within it.
+
+```bash
+git clone git@github.com:IITH-Compilers/ml-llvm-project.git
+cd ml-llvm-project
+git checkout mlbridge-lib
+git pull
+git submodule update --init --recursive
+```
+
+#### Exporting ONNX Path Variables
+As the name suggests this is the Path to the ONNX Runtime that we downloaded in [Setup](#setup) . The path of ONNX Runtime is required not only for building the project but also it is required when running inference using the ONNX Model Runner. Hence it is a better idea to export these paths and also add them to the PATH and LD_LIBRARY_PATH
 
 ```bash
  export ONNX_DIR= #path to your onnx runtime
@@ -82,7 +100,7 @@ The path of ONNX Runtime is required a lot of times, hence it is a better Idea t
 > [!TIP] 
 > It is adviced to add these commands to your **~/.bashrc** as the'll be needed when you switch shells.
 
-### Conda env set-up
+#### Conda environment set-up
 The following commands will help you install the and set up the nessesary conda environments.
 ```bash
 # install the env using the following commands
@@ -92,7 +110,7 @@ conda env create -f ./mlgo-new.yml
 conda activate mlgo-new.yml 
 ```
 
-### A small hack to prevent the conda environtments from clashing (To Be removed)
+#### A small hack to prevent the conda environtments from clashing (To Be removed)
 ```bash
 # rename files in your conda enviornment
 mv ~/anaconda3/envs/mlgo-new/lib/python3.10/site-packages/tensorflow/include/google/ ~/anaconda3/envs/mlgo-new/lib/python3.10/site-packages/tensorflow/include/google_new/
@@ -100,24 +118,17 @@ mv ~/anaconda3/envs/mlgo-new/lib/python3.10/site-packages/tensorflow/include/goo
 mv ~/anaconda3/envs/mlgo-new/include/google/ ~/anaconda3/envs/mlgo-new/include/google_new/
 ```
 
-### Clone the Repo
-You need to clone the repository and initilize all the sub modules.
+#### Cmake Command
+Now we need to create a build directory for our build. Use the following commands to make a build dir inside the cloned reposiotry 
 
 ```bash
-git clone git@github.com:IITH-Compilers/ml-llvm-project.git
-cd ml-llvm-project
-git checkout mlbridge-lib
-git pull
-git submodule update --init --recursive
-```
-
-### Cmake Command
-make a build directory and in side the directory run the cmake command
-
-```bash
-# build command
+# create a build dir and move to it
 mkdir build
 cd build
+```
+After moving to the build directory, we'll use CMake to generate our build files and directories
+
+```bash
 cmake -G "Unix Makefiles" -S ../llvm -B . \                                         
 	-DCMAKE_BUILD_TYPE="Release" \
 	-DLLVM_ENABLE_PROJECTS="clang;IR2Vec;ml-llvm-tools;mlir;MLCompilerBridge" \
@@ -125,23 +136,28 @@ cmake -G "Unix Makefiles" -S ../llvm -B . \
 	-DLLVM_ENABLE_ASSERTIONS=ON \
 	-DCMAKE_EXPORT_COMPILE_COMMANDS=1 \
 	-DLLVM_CCACHE_BUILD=ON \
-	-DONNXRUNTIME_ROOTDIR= $ONNX_DIR
-	-DLLVM_TF_AOT_RUNTIME= # change to your path 
-	-DTENSORFLOW_AOT_PATH= # change to your path
+	-DONNXRUNTIME_ROOTDIR= # path to your onnx runtime, use $ONNX_DIR if you already exported this environment variable \
+	-DLLVM_TF_AOT_RUNTIME= # <insert your path here>\ 
+	-DTENSORFLOW_AOT_PATH= # <insert your path here> \
 	-DLLVM_INLINER_MODEL_PATH=download \
 	-DLLVM_INLINER_MODEL_CURRENT_URL=https://github.com/google/ml-compiler-opt/releases/download/inlining-Oz-v1.1/inlining-Oz-99f0063-v1.1.tar.gz \
 	-DLLVM_RAEVICT_MODEL_PATH=download \
 	-DLLVM_RAEVICT_MODEL_CURRENT_URL=https://github.com/google/ml-compiler-opt/releases/download/regalloc-evict-v1.0/regalloc-evict-e67430c-v1.0.tar.gz	       
 ```
 
-### Build
-Finally time to sit back and build the project.
+#### Make command
+After following the above steps you have successfully exproted all the required environment variables and have also created the Makefile which shall be used to build the project. Use the following command to start your build.
 ```bash
 make clang opt -j50
 ```
 > [!WARNING]  
 > Do not make all, your build will break. Only make clang and opt
 ## List of optimizations supported
+
+This section will contain information about all the ML driven optimizations. Here is a brief about each optimization, and a simple onnx command which we can use to get one output (i.e give it an input .c/.cpp/.ll and get the optimized binary) .
+
+> [!TIP] 
+> if you'd like to see the LLVM IR that is resulted from these optimization , you can pass the appropriate flags to generate the .ll files
 
 ### Reinforcement Learning assisted Loop Distribution for Locality and Vectorization
 
@@ -196,5 +212,4 @@ POSET-RL uses a reinforcement learning approach as the search space of optimizat
   -use-onnx \
   -ml-config-path=<config_path> # path to your ml config \
   <input .ll file> \
-  -o <output .ll file>
 ```
