@@ -57,3 +57,5 @@ Training logs are written in `~/ray_results` directory by default.
     ```py
     ray.init(_temp_dir="<path_to_raylog>")  
     ```
+
+### Inference Flows: [Refer to Inference flow](../../llvm/lib/Transforms/Scalar/IR2Vec-LOF/custom_loop_distribution/Readme.md)
