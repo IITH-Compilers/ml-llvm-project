@@ -4,11 +4,30 @@
 # ML LLVM Project
 
 ## Contents
+<<<<<<< HEAD
 -	About
 -	Setup
 	-	Requirements
 	-	Build
 -	All implemented Passes
+=======
+-	[About](#about)
+-	[Setup](#setup)
+    - Requirements
+    - Building the Project
+        - Clone the Repository
+        - Setting up the build environment.
+            - Exporting ONNX Path Variables
+            - Conda env set-up
+            - A small hack to prevent the conda environtments from clashing (To Be removed)
+        - Cmake Command
+        - make Command
+-	[List of optimizations supported](#list-of-optimizations-supported)
+    - Reinforcement Learning assisted Loop Distribution for Locality and Vectorization
+    - RL4Real
+    - POSET-RL
+
+>>>>>>> e15d6372eff5... ReadMe Updated
 
 ## About
 
@@ -26,19 +45,55 @@ enter about
     * Building GRPC from Source: Please follow [`Build GRPC with cmake`](https://grpc.io/docs/languages/cpp/quickstart/) **v1.34 (protobuf v3.13)** to build GRPC from source. 
     * In the above tutorial setting `DCMAKE_INSTALL_PREFIX` is necessary as it would give you an easy way to uninstall GRPC later.
 * [ONNXRuntime](https://github.com/microsoft/onnxruntime/releases) v1.16.3
+<<<<<<< HEAD
 * TensorFlow - for TF Model Runner (AOT flow) # this should be in the yml only don't need to set it up separately
+=======
+    
+    * The following commands will download ONNX Runtime v1.16.3 in your present working directory and then untar the contents.
+    The path for this will be used in this [section](#exporting-onnx-path-variables)
+```bash
+	 wget https://github.com/microsoft/onnxruntime/releases/download/v1.16.3/onnxruntime-linux-x64-1.16.3.tgz
+	 tar -xvf onnxruntime-linux-x64-1.16.3.tgz
+```
+* TensorFlow - for TF Model Runner (AOT flow)
+>>>>>>> e15d6372eff5... ReadMe Updated
     * Tested with TensorFlow 2.13.0
 * Other python requirements are available in [mlbridge.yml] # needs to be updated with sangamesh's.yml
     * Conda/Anaconda based virtual environment is assumed
 
 (Experiments are done on an Ubuntu 20.04 machine)
 
+<<<<<<< HEAD
 Commands to install the conda evironment and set up onnx
+=======
+## Building the Project
+The following section outlines the build process for our repository.
+
+### Clone the Repository
+You need to clone the repository and initilize all the sub modules. The following commands would clone the Repository from github in your local and will initialize all submodules i.e clone the all the submodules within it.
+
+```bash
+git clone git@github.com:IITH-Compilers/ml-llvm-project.git
+cd ml-llvm-project
+git checkout mlbridge-lib
+git pull
+git submodule update --init --recursive
+```
+
+#### Exporting ONNX Path Variables
+As the name suggests this is the Path to the ONNX Runtime that we downloaded in [Setup](#setup) . The path of ONNX Runtime is required not only for building the project but also it is required when running inference using the ONNX Model Runner. Hence it is a better idea to export these paths and also add them to the PATH and LD_LIBRARY_PATH
+>>>>>>> e15d6372eff5... ReadMe Updated
 
 ```bash
 #TODO: change this to what ever will be the location of the envs
 cp -r /Pramana/ML_LLVM_Tools/AE/envs/ ~/
 
+<<<<<<< HEAD
+=======
+#### Conda environment set-up
+The following commands will help you install the and set up the nessesary conda environments.
+```bash
+>>>>>>> e15d6372eff5... ReadMe Updated
 # install the env using the following commands
 conda env create -f ~/env/LOF_original_env.yml
 conda env create -f ~/env/mlgo-new
@@ -52,11 +107,15 @@ tar -xvf onnxruntime-linux-x64-1.16.3.tgz
 
 ```
 
+<<<<<<< HEAD
 
 ### Build 
 
 Following are the requied steps to build the project, if you would like you could run them in a script too after changing the required parameters.
 
+=======
+#### A small hack to prevent the conda environtments from clashing (To Be removed)
+>>>>>>> e15d6372eff5... ReadMe Updated
 ```bash
 # switch to mlgo-new env as you will need it to build the setup
 conda activate mlgo-new 
@@ -66,6 +125,7 @@ mv ~/anaconda3/envs/mlgo-new/lib/python3.10/site-packages/tensorflow/include/goo
 
 mv ~/anaconda3/envs/mlgo-new/include/google/ ~/anaconda3/envs/mlgo-new/include/google_new/
 
+<<<<<<< HEAD
 git clone git@github.com:IITH-Compilers/ml-llvm-project.git
 cd ml-llvm-project
 git checkout mlbridge-lib
@@ -76,25 +136,56 @@ cd build
 
 # build command 
 	cmake -G "Unix Makefiles" -S ../llvm -B . \                                         
+=======
+#### Cmake Command
+Now we need to create a build directory for our build. Use the following commands to make a build dir inside the cloned reposiotry 
+
+```bash
+# create a build dir and move to it
+mkdir build
+cd build
+```
+After moving to the build directory, we'll use CMake to generate our build files and directories
+
+```bash
+cmake -G "Unix Makefiles" -S ../llvm -B . \                                         
+>>>>>>> e15d6372eff5... ReadMe Updated
 	-DCMAKE_BUILD_TYPE="Release" \
 	-DLLVM_ENABLE_PROJECTS="clang;IR2Vec;ml-llvm-tools;mlir;MLCompilerBridge" \
 	-DLLVM_TARGETS_TO_BULID="X86" \
 	-DLLVM_ENABLE_ASSERTIONS=on \
 	-DCMAKE_EXPORT_COMPILE_COMMANDS=1 \
 	-DLLVM_CCACHE_BUILD=ON \
+<<<<<<< HEAD
 	-DONNXRUNTIME_ROOTDIR= # change to your path where you wget the onnxruntime
 	-DLLVM_TF_AOT_RUNTIME= # change to your path 
 	-DTENSORFLOW_AOT_PATH= # change to your path
+=======
+	-DONNXRUNTIME_ROOTDIR= # path to your onnx runtime, use $ONNX_DIR if you already exported this environment variable \
+	-DLLVM_TF_AOT_RUNTIME= # <insert your path here>\ 
+	-DTENSORFLOW_AOT_PATH= # <insert your path here> \
+>>>>>>> e15d6372eff5... ReadMe Updated
 	-DLLVM_INLINER_MODEL_PATH=download \
 	-DLLVM_INLINER_MODEL_CURRENT_URL=https://github.com/google/ml-compiler-opt/releases/download/inlining-Oz-v1.1/inlining-Oz-99f0063-v1.1.tar.gz \
 	-DLLVM_RAEVICT_MODEL_PATH=download \
 	-DLLVM_RAEVICT_MODEL_CURRENT_URL=https://github.com/google/ml-compiler-opt/releases/download/regalloc-evict-v1.0/regalloc-evict-e67430c-v1.0.tar.gz
 	       
 
+<<<<<<< HEAD
 # don't make all
+=======
+#### Make command
+After following the above steps you have successfully exproted all the required environment variables and have also created the Makefile which shall be used to build the project. Use the following command to start your build.
+```bash
+>>>>>>> e15d6372eff5... ReadMe Updated
 make clang opt -j50
 ```
 ## List of optimizations supported
+
+This section will contain information about all the ML driven optimizations. Here is a brief about each optimization, and a simple onnx command which we can use to get one output (i.e give it an input .c/.cpp/.ll and get the optimized binary) .
+
+> [!TIP] 
+> if you'd like to see the LLVM IR that is resulted from these optimization , you can pass the appropriate flags to generate the .ll files
 
 ### Reinforcement Learning assisted Loop Distribution for Locality and Vectorization
 
@@ -130,7 +221,15 @@ to learn more head to the Pass specific readme [here].
 
 #### Try it out
 ```bash
+<<<<<<< HEAD
 # write your bash commands here
+=======
+./build/bin/opt \
+  -poset-rl \
+  -use-onnx \
+  -ml-config-path=<config_path> # path to your ml config \
+  <input .ll file> \
+>>>>>>> e15d6372eff5... ReadMe Updated
 ```
 
 
