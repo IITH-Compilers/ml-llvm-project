@@ -173,7 +173,6 @@ if __name__ == "__main__":
 
     config["multiagent"] = {
         "policies" : policies,
-      
         "policy_mapping_fn": policy_mapping_fn
     }
 

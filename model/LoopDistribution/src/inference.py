@@ -208,7 +208,6 @@ class DistributionInference:
             "policy_mapping_fn": function(policy_mapping_fn),
         }
 
-        
         self.trained_agent = SimpleQTrainer(env=DistributeLoopEnv, config=config)
         # self.train_agent = DistributionInference(model_path, test_dir)
         # logging.info("{} {}".format(self.trained_agent, type(self.trained_agent)))
@@ -319,7 +318,6 @@ def run_pipe_communication(data_format, pipe_name):
             pass
 
     ray.init()
-    
     inference_obj = DistributionInference(MODEL_PATH, data_format=data_format)
     inference_obj.use_pipe = True
     compiler_interface = PipeCompilerInterface(data_format, '/tmp/' + pipe_name)
@@ -409,7 +407,6 @@ if __name__ == "__main__":
         distribution_agent = "distribution_agent_{}".format(count)
 
     if use_pipe:
-        print("Use pipe")
         run_pipe_communication(args.data_format, args.pipe_name)
     elif use_grpc:
         ray.init()

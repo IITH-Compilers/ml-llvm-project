@@ -508,7 +508,6 @@ class DistributeLoopEnv(MultiAgentEnv):
 
         # edit server, path
         if(self.use_pipe):
-
             cmd = optPath + " -LoopDistributionServer -loopID " + loopId + " -funcName " + functionName + " -lc-function " + functionName + " -lc-lID " + loopId + " --ml-config-path " + CONFIG_DIR + " -S " + filePath + " --use-pipe-loop-dist " + " --loop-dist-data-format " +  self.config["data_format"]  + " -o /dev/null "     # f" --ml-config-path {REPO_DIR}/build_all/config " +
         elif(self.use_grpc):        
             # old cmd : 

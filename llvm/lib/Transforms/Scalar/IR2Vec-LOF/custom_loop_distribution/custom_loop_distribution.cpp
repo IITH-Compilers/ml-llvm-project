@@ -262,8 +262,6 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
       distributed_seqs.push_back(this->DistributionSeq);
     }
     outfile.close();
-    errs() << "Code is Commented\n";
-    exit(0);
   } else {
     loopdistribution::RDGData request;
     loopdistribution::Advice response;
@@ -276,11 +274,10 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
     MLRunner->setRequest(&request);
     MLRunner->setResponse(&response);
 
-    outfile.open("grpc_out.log", std::ios_base::app);
     std::vector<std::string> RDG_List;
     RDG_List.insert(RDG_List.end(), data.input_rdgs_str.begin(),
                     data.input_rdgs_str.end());
-
+                    
     assert(RDG_List.size() == SCCGraphs.size() &&
            RDG_List.size() == loops.size() &&
            "RDG_List, SCCgraphs and loops list should of same size.");
@@ -291,7 +288,6 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
     }
     (errs() << "Number rdg generated : " << RDG_List.size() << "\n");
     initPipeCommunication(RDG_List);
-    outfile.close();
   }
 
   LLVM_DEBUG(errs() << "Call to runwihAnalysis...\n");
