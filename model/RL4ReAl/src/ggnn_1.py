@@ -323,6 +323,8 @@ def get_observationsInf(graph):
     use_distance_list = []
     raw_graph_mat = []
     positionalSpillWeights_list = []
+    print("Start processing**********")
+    print("len(nodes):", num_nodes)
     for idx, node in enumerate(nodes):
         
         nodeId = node.regID
@@ -353,6 +355,8 @@ def get_observationsInf(graph):
         initial_node_representation.append(nodeVec)
         nid_idx[nodeId] = idx
         idx_nid[idx] = nodeId
+
+        print("idx and nid", idx, nodeId)
 
         assert not torch.isnan(nodeVec).any(), "Nan is present"
         

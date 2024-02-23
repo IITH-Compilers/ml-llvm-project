@@ -48,7 +48,7 @@ def experiment(config):
     global checkpoint
     train_results = {}
     train_agent = PPO(config=config, env=HierarchicalGraphColorEnv)
-    print('Training agent used:', train_agent)
+    #print('Training agent used:', train_agent)
     # Train
     checkpoint = config["env_config"]["check_point"]
     if checkpoint is not None:
@@ -61,7 +61,7 @@ def experiment(config):
         if i == iterations - 1 or (train_results['episodes_total'] - last_checkpoint) > 499:
             last_checkpoint = train_results['episodes_total']
             checkpoint = train_agent.save(tune.get_trial_dir())
-        tune.report(**train_results)
+            tune.report(**train_results)
         if train_results['episodes_total'] > config["env_config"]["episode_number"]:
             print("Traning Ended")
             checkpoint = train_agent.save(tune.get_trial_dir())
@@ -151,7 +151,7 @@ if __name__ == "__main__":
     logging.info('Starting training')
     logging.info(args)
 
-    ray.init(object_store_memory=10000000000, local_mode=False)
+    ray.init(object_store_memory=10000000000, local_mode=False,_temp_dir="/home/intern24002/ray_log")
     
 
     config["train-iterations"] = args.train_iterations
@@ -292,8 +292,8 @@ if __name__ == "__main__":
         experiment,
         config=config,
         resources_per_trial=PPO.default_resource_request(config),
-        trial_name_creator=trail_name_fun,
-        name=experiment_name,
+        # trial_name_creator=trail_name_fun,
+        # name=experiment_name,
         local_dir=(MODEL_DIR + "/checkpoint_dir")
         )
         

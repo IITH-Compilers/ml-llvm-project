@@ -385,7 +385,7 @@ if __name__ == "__main__":
     # blockPrint()
     
     
-    ray.init(_temp_dir="/home/intern24002/ray_log")
+    ray.init(_temp_dir="/home/intern24002/ray_log1")
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--server_port", type=str, help="Server port")

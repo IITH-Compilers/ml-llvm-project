@@ -330,6 +330,7 @@ void MLRA::processMLInputsProtobuf(SmallSetVector<unsigned, 8> *updatedRegIdxs,
 
   regIdxs.clear();
 
+  errs() << regProfMap.size() << "\n";
   if (!updatedRegIdxs) {
     for (auto rpm : regProfMap) {
       regIdxs.insert(rpm.first);
@@ -344,7 +345,7 @@ void MLRA::processMLInputsProtobuf(SmallSetVector<unsigned, 8> *updatedRegIdxs,
 
     // errs() << reg << " " << rp.cls << " " << rp.color << " " <<
     // rp.spillWeight
-    //        << " ";
+          //  << "\n";
     // errs() << "[";
     // for (auto &val : rp.useDistances) {
     //   errs() << val << " ";
@@ -401,6 +402,7 @@ void MLRA::processMLInputsProtobuf(SmallSetVector<unsigned, 8> *updatedRegIdxs,
     MLRunner->populateFeatures(regID, cls, color, spillWeights, spillWeight,
                                interferences, splitSlots, useDistances,
                                vectors);
+    // MLRunner->populateFeatures(regID, cls, color);
     regProfList.second.push_back(regProfMsg);
   }
   MLRunner->setRequest(&ServerModeResponse);
@@ -421,6 +423,8 @@ void MLRA::processMLInputsProtobuf(SmallSetVector<unsigned, 8> *updatedRegIdxs,
     }
   }
   MLRunner->populateFeatures(result, newBool);
+  errs() << "INPUT STR: " << ServerModeResponse.DebugString() << "\n";
+  // exit(0);
 
   // printFeatures();
   // assert(0);
@@ -455,9 +459,9 @@ void MLRA::processMLInputs(SmallSetVector<unsigned, 8> *updatedRegIdxs,
   for (auto &reg : regIdxs) {
     auto &rp = regProfMap[reg];
 
-    // errs() << reg << " " << rp.cls << " " << rp.color << " " <<
-    // rp.spillWeight
-    //        << " ";
+    errs() << reg << " " << rp.cls << " " << rp.color << " " <<
+    rp.spillWeight
+           << " ";
     // errs() << "[";
     // for (auto &val : rp.useDistances) {
     //   errs() << val << " ";
@@ -2435,9 +2439,6 @@ void MLRA::initPipeCommunication() {
         errs() << "regProf size is not between 120 and 500\n";
         return;
       }
-      processMLInputs(nullptr, true, IsJson);
-
-      errs() << "Call model first time\n";
 
       for (auto it = MF->begin(); it != MF->end(); it++) {
         if (it->isEHFuncletEntry() || it->isEHPad() || it->isEHScopeEntry() ||
@@ -2450,6 +2451,12 @@ void MLRA::initPipeCommunication() {
           }
         }
       }
+
+      processMLInputs(nullptr, true, IsJson);
+
+      errs() << "Call model first time\n";
+
+      
       isGraphSet = true;
       // errs() << "Processing funtion: " << MF->getName() << "\n";
     } else {

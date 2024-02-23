@@ -139,12 +139,14 @@ def experiment(config):
         print("Checkpoint restored")            
 
     last_checkpoint = 0
-    print("Iterations: ",iterations)
+    #print("Iterations: ",iterations)
     for i in range(iterations):
         train_results = train_agent.train()
-        #print("train results: ",train_results)
+        print("Train results are: ",train_results)
+        
         print("value of i is: ",i)
         print("train_results['episodes_total']: ",train_results['episodes_total'])
+        print("train results episode_reward_min: ",train_results['episode_reward_min'])
         if train_results['episode_reward_max'] > max_reward:
             max_reward = train_results['episode_reward_max']
             best_episode = train_results['episodes_total']
@@ -156,11 +158,19 @@ def experiment(config):
             checkpoint = train_agent.save(tune.get_trial_dir())
             # print("***************Checkpoint****************", checkpoint)
             #tune.report(**train_results)
+        
         if train_results['episodes_total'] > config["env_config"]["episode_number"]:
             print("Traning Ended")
             checkpoint = train_agent.save(tune.get_trial_dir())
-            tune.report("Tune report is: ",**train_results)
+            print("Reporting tune results.....")
+            #tune.report("Tune report is: ",**train_results)
             break
+        # episode_reward_mean = train_results['episode_reward_min']
+        # print("episode_reward_min of: ",episode_reward_mean)
+        #print("Train results type", **train_results)
+        train.report({"episode_reward_min": train_results['episode_reward_min']})
+        # tune.report({"episode_reward_min": train_results['sampler_results']['episode_reward_min']})
+        #tune.report(**train_results)
     # tune.report(
     #     episode_reward_mean=mean_reward,
     #     best_episode=best_episode,
@@ -421,11 +431,11 @@ if __name__ == "__main__":
     #max_t in ASHA scheduler indicates that trials running for more than max_t iterations will be eliminated, 
     #and grace_period indicates that no trials will be eliminated before grace_period iteraions.
     asha_scheduler = ASHAScheduler(
-        time_attr="episodes_total",
-        metric="episode_reward_mean",
+        # time_attr="episodes_total",
+        metric="episode_reward_min",
         mode="max",
-        max_t=10,
-        grace_period=5,
+        max_t=3,
+        grace_period=1,
         #reduction_factor=2
     )
 
@@ -436,15 +446,15 @@ if __name__ == "__main__":
     )
     
     results = tune.run(
-    experiment,
-    config=config,
-    search_alg=optuna_search,
-    scheduler=asha_scheduler,
-    num_samples=20,
-    resources_per_trial=PPO.default_resource_request(config),
-    #max_concurrent_trials=1
-    #trial_name_creator=Trainable().trial_name,
-    #max_concurrent_trials=1
+        experiment,
+        config=config,
+        search_alg=optuna_search,
+        scheduler=asha_scheduler,
+        num_samples=2,
+        resources_per_trial=PPO.default_resource_request(config),
+        #max_concurrent_trials=1
+        #trial_name_creator=Trainable().trial_name,
+        #max_concurrent_trials=1
     )
 
     #current time in epoch

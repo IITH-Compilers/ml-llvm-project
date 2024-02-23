@@ -395,7 +395,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
     def _select_node_step(self, action):        
         logging.debug("Enter _select_node_step")                
-
         self.cur_node = action
         update_status = self.obs.graph_topology.UpdateVisitList(self.cur_node)
         if not update_status:
@@ -403,6 +402,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             assert False, 'discovered node visited.'
         self.virtRegId = self.obs.idx_nid[self.cur_node]
         # logging.info("Node selected = {}, corresponding register id = {}".format(action, self.virtRegId))
+        print("Node selected = {}, corresponding register id = {}".format(action, self.virtRegId))
         state = self.obs
         self.cur_obs = self.node_representation_mat[self.cur_node][0:self.emb_size]
         if self.cur_obs is not None and not isinstance(self.cur_obs, np.ndarray):
@@ -431,7 +431,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         if type(splitpoints) == np.ndarray:
             splitpoints = splitpoints.tolist()
         if action == 0 or len(splitpoints) < 1 or self.split_steps > self.split_threshold: # Colour node
-            print("Selecting colouring, last action", action)
+            #print("Selecting colouring, last action", action)
             self.last_task_done = 0
             self.colour_steps += 1
             if self.task_selected == 1:
@@ -654,11 +654,12 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         return obs, reward, done, {}
 
     def _split_node_step(self, action):
+        #print("Action selected: ",action)
         logging.debug("Enter _split_node_step")
         # self.cur_obs = self.flat_env.reset()
-        logging.debug("{} {} {}".format(self.virtRegId, self.obs.idx_nid[self.cur_node], self.cur_node))
+        #logging.debug("{} {} {}".format(self.virtRegId, self.obs.idx_nid[self.cur_node], self.cur_node))
         logging.debug("{} {}".format(self.obs.idx_nid, self.obs.nid_idx))
-        assert self.virtRegId == self.obs.idx_nid[self.cur_node], "Virtual should be same." # 
+        #assert self.virtRegId == self.obs.idx_nid[self.cur_node], "Virtual should be same." # 
         use_distances = self.obs.use_distances[self.cur_node]
         done = False
         logging.debug("****Split index****** {} {}".format( len(use_distances), use_distances))
@@ -861,6 +862,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         return reward, done
 
     def step_colorTask(self, action):
+        # this method allocated the cur_node to chooosen register
         reg_allocated = action
         # add the node to the visited list
         nodeChoosen = self.cur_node
@@ -900,7 +902,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 response = self.color_assignment_map
                 self.colormap = response
                 print("Setting color map", self.colormap)
-            # print("Colour map ", self.colormap)
+            print("Colour map ", self.colormap)
             done = True
             self.obs.next_stage = 'end'
             if self.mode != 'inference':

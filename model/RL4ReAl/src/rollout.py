@@ -328,9 +328,9 @@ class RollOutInference:
                 "enable_GGNN": True,
                 "Workers_starting_port": "50001",
                 "disable_spliting": False,
-                "use_costbased_reward": True,
+                "use_costbased_reward": False,
                 "use_local_reward": True,
-                "use_mca_reward": True,
+                "use_mca_reward": False,
                 "use_mca_self_play_reward": False,
                 "mca_reward_clip": 10,
                 "mca_timeout": 30,
@@ -556,6 +556,7 @@ class RollOutInference:
         
         assert len(inter_graph_list) == 1, "Only one graph at a time supported."
         inter_graph = inter_graph_list[0]
+        # print("inter_graph: ",inter_graph)
         graph = inter_graph 
         self.obs = self.env.reset(graph)
         if self.obs is None:

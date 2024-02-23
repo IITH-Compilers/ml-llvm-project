@@ -124,56 +124,56 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
         # print("Obs keys are:", input_dict['obs'].keys())
         # print("State shape:", input_dict["obs"]["state"].shape)
         input_state_list = torch.zeros(input_dict["obs"]["state"].shape[0], self.max_number_nodes, self.emb_size)
-        # if self.enable_ggnn:
-        #     # print("*************************** SHAPES PRINTING *****************************")
-        #     # print("-----------------BEFORE GGNN-------------")
+        if self.enable_ggnn:
+            # print("*************************** SHAPES PRINTING *****************************")
+            # print("-----------------BEFORE GGNN-------------")
 
-        #     # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        #     # print("from select node forward func : ", device)
-        #     # print("adjacency list device = ", input_dict["obs"]["adjacency_lists"][0].data.device)
-        #     # print("annotations device = ", input_dict["obs"]["annotations"].device)
-        #     # assert not torch.isnan(input_dict["obs"]["state"]).any(), "Nan in select node model obs:state"
-        #     # assert not torch.isnan(input_dict['obs']['adjacency_lists']['data'].values).any(), "Nan in select node model adjlist"
-
-
-        #     ggnn_input_x = torch.dstack((input_dict["obs"]["state"], input_dict["obs"]["annotations"]))
-        #     edge_index = input_dict['obs']['adjacency_lists']['data'].values.mT
+            # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+            # print("from select node forward func : ", device)
+            # print("adjacency list device = ", input_dict["obs"]["adjacency_lists"][0].data.device)
+            # print("annotations device = ", input_dict["obs"]["annotations"].device)
+            # assert not torch.isnan(input_dict["obs"]["state"]).any(), "Nan in select node model obs:state"
+            # assert not torch.isnan(input_dict['obs']['adjacency_lists']['data'].values).any(), "Nan in select node model adjlist"
 
 
-
-
-        #     # print("ggnn_input_x.device = ", ggnn_input_x.device)
-        #     # print("edge_index.device = ", edge_index.device)
-        #     batch_size = ggnn_input_x.shape[0]
-        #     # #################### batch method #######################
-        #     data_list = []
-
-        #     data_list = [Data(x=ggnn_input_x[i], edge_index=edge_index[i].long()) for i in range(batch_size)]
-        #     batch_data = Batch.from_data_list(data_list=data_list)
-
-        #     node_mat = self.ggnn(batch_data.x, batch_data.edge_index).reshape(batch_size, -1, 100)
-        #     # assert not torch.isnan(node_mat).any(), "Nan in select node model input after ggnn"
-
-
-        #     # print(batch_data)
-        #     # # print('num_graphs = ', batch_data.num_graphs)
+            ggnn_input_x = torch.dstack((input_dict["obs"]["state"], input_dict["obs"]["annotations"]))
+            edge_index = input_dict['obs']['adjacency_lists']['data'].values.mT
 
 
 
-        #     # outs = [self.ggnn(ggnn_input_x[i], edge_index[i].long()) for i in range(batch_size)]
-        #     # node_mat = torch.stack(outs)
-        #     # print("GOT NODE_MAT!!!!!!!!!!!!", node_mat.shape)
-        #     # return
-        #     # node_mat = self.ggnn(initial_node_representation=input_dict["obs"]["state"], annotations=input_dict["obs"]["annotations"], adjacency_lists=input_dict["obs"]["adjacency_lists"])
 
-        #     # print("node_mat device = ", node_mat.device)
-        #     # print("-----------------AFTER GGNN-------------")
-        #     # print("node mat shape - ", node_mat.shape)
-        #     # return
+            # print("ggnn_input_x.device = ", ggnn_input_x.device)
+            # print("edge_index.device = ", edge_index.device)
+            batch_size = ggnn_input_x.shape[0]
+            # #################### batch method #######################
+            data_list = []
+
+            data_list = [Data(x=ggnn_input_x[i], edge_index=edge_index[i].long()) for i in range(batch_size)]
+            batch_data = Batch.from_data_list(data_list=data_list)
+
+            node_mat = self.ggnn(batch_data.x, batch_data.edge_index).reshape(batch_size, -1, 100)
+            # assert not torch.isnan(node_mat).any(), "Nan in select node model input after ggnn"
+
+
+            # print(batch_data)
+            # # print('num_graphs = ', batch_data.num_graphs)
+
+
+
+            # outs = [self.ggnn(ggnn_input_x[i], edge_index[i].long()) for i in range(batch_size)]
+            # node_mat = torch.stack(outs)
+            # print("GOT NODE_MAT!!!!!!!!!!!!", node_mat.shape)
+            # return
+            # node_mat = self.ggnn(initial_node_representation=input_dict["obs"]["state"], annotations=input_dict["obs"]["annotations"], adjacency_lists=input_dict["obs"]["adjacency_lists"])
+
+            # print("node_mat device = ", node_mat.device)
+            # print("-----------------AFTER GGNN-------------")
+            # print("node mat shape - ", node_mat.shape)
+            # return
             
-        #     input_state_list = node_mat
-        # else:
-        #     input_state_list = initial_node_representation=input_dict["obs"]["state"]
+            input_state_list = node_mat
+        else:
+            input_state_list = initial_node_representation=input_dict["obs"]["state"]
         
         input_state_list = input_dict["obs"]["state"]
         
