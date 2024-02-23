@@ -142,7 +142,7 @@ class PPOConfig(PGConfig):
             "graphs_num": 10000,
             "action_space_size": RegisterActionSpace("X86", CONFIG_DIR).ac_sp_normlize_size,
             "check_point": None,
-            "episode_number": 50,        #change
+            "episode_number":1000,        #change
             "GPU_ID": '0',
             "X86_CFLAGS": "-mllvm -regalloc=greedy  -march=core2",
             "AArch64_CFLAGS": "-mllvm -regalloc=greedy  -mcpu=cortex-a72",
@@ -150,7 +150,8 @@ class PPOConfig(PGConfig):
             "enable_GGNN": True,
             "file_repeat_frequency": 1,
             "current_batch": 10, #batch_size is nothing but current_batch  (10*100 = 1000) where 10 is current_rollout_workers * current_batch so we are using 1000 files in total
-            "Workers_starting_port_placeholder": "52012",  #added by me
+            "Workers_starting_port_placeholder": "54812",  #added by me
+            "trial_ports":None,
             "disable_spliting": False,
             "use_costbased_reward": False,
             "use_local_reward": True,
