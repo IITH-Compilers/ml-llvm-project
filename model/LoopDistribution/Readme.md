@@ -8,20 +8,20 @@ This directory contains the Python model related files for training and inferenc
 This repo contains the source code and relevant information described in the [paper](https://ieeexplore.ieee.org/abstract/document/10026979)
 Please see [here](https://compilers.cse.iith.ac.in/publications/rl_loop_distribution/) for more details.
 
-> Reinforcement Learning assisted Loop Distribution for Locality and Vectorization, Shalini Jain, S. VenkataKeerthy, Rohit Aggarwal, Tharun Kumar Dangeti, Dibyendu Das, Ramakrishna Upadrasta
+> Reinforcement Learning assisted Loop Distribution for Locality and Vectorization, Shalini Jain, S. VenkataKeerthy, Rohit Aggarwal, Tharun Kumar Dangeti, Dibyendu Das, Ramakrishna Upadrasta. LLVM-HPC 2022
 
 
 ## Environment Setup
 
 
-Setup the environment using the `ml-llvm-project/model/LoopDistribution/src/LOF_original_env.yml` using the following commands
+Setup the environment using the following command:
 
 ```bash
-conda env create -f <path-to-the-yml-file>
+conda env create -f LOF_orignal_env.yml
 ```
 ## Setup Environment Variables
 
-Create a `.env` file in the path `ml-llvm-project/model/LoopDistribution/src/`.The `.env` file contains the necessary environment variables. Refer `.env.example` present in `ml-llvm-project/model/LoopDistribution/src/` for setting the required variables.
+Create a `.env` file in the path `ml-llvm-project/model/LoopDistribution/src/`. The `.env` file contains the necessary environment variables. Refer `.env.example` present in `ml-llvm-project/model/LoopDistribution/src/` for setting the required variables.
 
 - `MODEL_DIR`= <path/to/model/dir>
 - `BUILD_DIR`= <path/to/build/dir>
@@ -55,7 +55,7 @@ Pre-existing Datasets from open source repositories can be utilized for model tr
 Training logs are written in `~/ray_results` directory by default.
 - Customize the path using the following syntax in `experiment.py`
     ```py
-    ray.init(_temp_dir="<path_to_raylog>")  
+    ray.init(_temp_dir="<path_to_ray_log>")  
     ```
 
 ### Inference Flows: [Refer to Inference flow](../../llvm/lib/Transforms/Scalar/IR2Vec-LOF/custom_loop_distribution/Readme.md)

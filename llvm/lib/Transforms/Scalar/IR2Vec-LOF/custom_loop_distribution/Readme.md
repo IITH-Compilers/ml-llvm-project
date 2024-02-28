@@ -8,16 +8,17 @@ This directory contains the Python model related files for training and inferenc
 This repo contains the source code and relevant information described in the [paper](https://ieeexplore.ieee.org/abstract/document/10026979)
 Please see [here](https://compilers.cse.iith.ac.in/publications/rl_loop_distribution/) for more details.
 
-> Reinforcement Learning assisted Loop Distribution for Locality and Vectorization, Shalini Jain, S. VenkataKeerthy, Rohit Aggarwal, Tharun Kumar Dangeti, Dibyendu Das, Ramakrishna Upadrasta
+
+> Reinforcement Learning assisted Loop Distribution for Locality and Vectorization, Shalini Jain, S. VenkataKeerthy, Rohit Aggarwal, Tharun Kumar Dangeti, Dibyendu Das, Ramakrishna Upadrasta. LLVM-HPC 2022
 
 
 ## Environment Setup
 
 
-Setup the environment using the `ml-llvm-project/model/LoopDistribution/src/LOF_original_env.yml` file with the following command
+Setup the environment using the following command:
 
 ```bash
-conda env create -f <path-to-the-yml-file>
+conda env create -f LOF_orignal_env.yml
 ```
 
 
@@ -32,7 +33,7 @@ Currently three kinds of model runners are supported by us, via the `MLCompilerB
 
 ## Inference flow using gRPC Model Runner
 ### Starting the gRPC Server:
-File `inference.py` under the path `ml-llvm-project\model\LoopDistribution\src\` contains script to start the servers.
+File `inference.py` under the path `ml-llvm-project/model/LoopDistribution/src/` contains script to start the servers.
 
 ```py
 python inference.py --use_grpc --server_port=<server_port>
@@ -63,7 +64,7 @@ This process starts the  communication between the compiler and the RL model.
 Loop Distribution uses the Pipe to communicate with the model and uses `json` and `bytes` as data format.
 
 ### Starting Pipe Server in `Json/Bytes` mode:
-File `inference.py` under the path `ml-llvm-project\model\LoopDistribution\src\` contains script to start the servers.
+File `inference.py` under the path `ml-llvm-project/model/LoopDistribution/src/` contains script to start the servers.
 
 ```bash
 python inference.py --use_pipe  --data_format=<data-format> --pipe_name=<any-pipe-name>
@@ -92,7 +93,7 @@ python inference.py --use_pipe  --data_format=<data-format> --pipe_name=<any-pip
 ## Inference flow using ONNX Model Runner
 ONNX being an in-process model runner is an effective means of compiler deployment. It is light and fast and runs pre-trained model files differing from a communication based model runner.
 
-### Invoke the RegAlloc pass in ONNX mode:
+### Invoke the custom-loop-distribution pass in ONNX mode:
 
 ```bash
 {BUILD_DIR}/bin/opt -S -custom_loop_distribution -cld-use-onnx   <input_data_file> -ml-config-path=<config_path>
