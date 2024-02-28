@@ -213,9 +213,9 @@ struct LoopDistributionServerPass
       final_status.push_back((char)status_out[i]);
     }
     if (final_status == "Exit") {
-      MLBRIDGE_DEBUG(errs() << "Costs sent and acknowledged\n");
+      LLVM_DEBUG(errs() << "Costs sent and acknowledged\n");
     } else {
-      MLBRIDGE_DEBUG(errs() << "Costs sent NOT acknowledged!\n");
+      LLVM_DEBUG(errs() << "Costs sent NOT acknowledged!\n");
     }
   }
 
