@@ -71,7 +71,7 @@ As a part of the [ML-Compiler-Bridge](https://arxiv.org/pdf/2311.10800.pdf), it 
 ```
 * TensorFlow - for TF Model Runner (AOT flow)
     * Tested with TensorFlow 2.13.0
-* Other python requirements are available in [mlbridge.yml]()
+* Other python requirements are available in [mlbridge.yml](./mlopt.yml)
     * Conda/Anaconda based virtual environment is assumed
 
 > [!NOTE]
@@ -111,7 +111,7 @@ As the name suggests this is the Path to the ONNX Runtime that we downloaded in 
 The following commands will help you install the and set up the nessesary conda environments.
 ```bash
 # install the env using the following commands
-conda env create -f ./mlgo-new.yml
+conda env create -f ./mlopt.yml
 
 # switch to mlgo-new env which would be required for the build process
 conda activate mlgo-new.yml 
@@ -186,7 +186,6 @@ Implimentaion here : [Model Training](./model/LoopDistribution/src/Readme.md) , 
 	-ml-config-path= # path to your ml config  \
 	<file name> 
 ```
-to learn more head to the Pass specific readme [here].
 
 ### RL4Real
 
@@ -199,8 +198,7 @@ Please see [here](https://compilers.cse.iith.ac.in/publications/rl4real/) for mo
 
 Implimentaion here : [Model Training](./model/RL4ReAl/README.md) , [Inference](./llvm/lib/CodeGen/MLRegAlloc/README.md)
 
-
-#### Try it out
+#### Try it out !!!
 ```bash
 ./build/bin/clang  -O3 -mllvm \ #use clang or clang++ depending on your file type
   -regalloc=greedy -mllvm -mlra-inference -mllvm \
@@ -216,12 +214,11 @@ POSET-RL uses a reinforcement learning approach as the search space of optimizat
 This is described in the paper ([arXiv](https://arxiv.org/abs/2204.02013)).
 Please see [slides](https://llvm.org/devmtg/2022-04-03/slides/POSET-RL.Phase.ordering.for.Optimizing.Size.and.Execution.Time.using.Reinforcement.Learning.pdf) for more details.
 
-Implimentaion here : [Model Training](./model/POSET-RL/README.md) , [Inference](./llvm/lib/Transforms/IPO/PosetRL/README.md)
-
-
 > POSET-RL: Phase ordering for Optimizing Size and Execution Time using Reinforcement Learning: Shalini Jain, Yashas Andaluri, S. VenkataKeerthy and Ramakrishna Upadrasta, ISSPASS, 2022
 
-#### Try it out
+Implimentaion here : [Model Training](./model/POSET-RL/README.md) , [Inference](./llvm/lib/Transforms/IPO/PosetRL/README.md)
+
+#### Try it out !!!
 ```bash
 ./build/bin/opt \
   -poset-rl \
