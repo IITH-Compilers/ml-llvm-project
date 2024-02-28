@@ -96,10 +96,14 @@ As a part of the [ML-Compiler-Bridge](https://arxiv.org/pdf/2311.10800.pdf), it 
 >>>>>>> e15d6372eff5... ReadMe Updated
     * Tested with TensorFlow 2.13.0
 <<<<<<< HEAD
+<<<<<<< HEAD
 * Other python requirements are available in [mlbridge.yml] # needs to be updated with sangamesh's.yml
 =======
 * Other python requirements are available in [mlbridge.yml]()
 >>>>>>> 1912ecab9aeb... Read Me update
+=======
+* Other python requirements are available in [mlbridge.yml](./mlopt.yml)
+>>>>>>> 2a48b0c91d4e... Updated Readme
     * Conda/Anaconda based virtual environment is assumed
 
 (Experiments are done on an Ubuntu 20.04 machine)
@@ -148,6 +152,7 @@ The following commands will help you install the and set up the nessesary conda 
 ```bash
 >>>>>>> e15d6372eff5... ReadMe Updated
 # install the env using the following commands
+<<<<<<< HEAD
 conda env create -f ~/env/LOF_original_env.yml
 conda env create -f ~/env/mlgo-new
 
@@ -157,6 +162,9 @@ tar -xvf onnxruntime-linux-x64-1.16.3.tgz
 # get GRPC working 
 # check GRPC version
 # check again it should be exactly 1.34.0 not 1.34.x
+=======
+conda env create -f ./mlopt.yml
+>>>>>>> 2a48b0c91d4e... Updated Readme
 
 ```
 
@@ -279,7 +287,6 @@ Implimentaion here : [Model Training](./model/LoopDistribution/src/Readme.md) , 
 	-ml-config-path=/home/intern24007/ml-llvm-project/config \
 	<file name> 
 ```
-to learn more head to the Pass specific readme [here].
 
 ### RL4Real
 
@@ -296,8 +303,7 @@ Please see [here](https://compilers.cse.iith.ac.in/publications/rl4real/) for mo
 
 Implimentaion here : [Model Training](./model/RL4ReAl/README.md) , [Inference](./llvm/lib/CodeGen/MLRegAlloc/README.md)
 
-
-#### Try it out
+#### Try it out !!!
 ```bash
 # write your bash commands here
 ```
@@ -312,13 +318,12 @@ POSET-RL uses a reinforcement learning approach as the search space of optimizat
 This is described in the paper ([arXiv](https://arxiv.org/abs/2204.02013)).
 Please see [slides](https://llvm.org/devmtg/2022-04-03/slides/POSET-RL.Phase.ordering.for.Optimizing.Size.and.Execution.Time.using.Reinforcement.Learning.pdf) for more details.
 
-Implimentaion here : [Model Training](./model/POSET-RL/README.md) , [Inference](./llvm/lib/Transforms/IPO/PosetRL/README.md)
-
-
 > POSET-RL: Phase ordering for Optimizing Size and Execution Time using Reinforcement Learning: Shalini Jain, Yashas Andaluri, S. VenkataKeerthy and Ramakrishna Upadrasta, ISSPASS, 2022
 >>>>>>> 1912ecab9aeb... Read Me update
 
-#### Try it out
+Implimentaion here : [Model Training](./model/POSET-RL/README.md) , [Inference](./llvm/lib/Transforms/IPO/PosetRL/README.md)
+
+#### Try it out !!!
 ```bash
 <<<<<<< HEAD
 # write your bash commands here
