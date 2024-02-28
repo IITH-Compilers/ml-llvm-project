@@ -1,4 +1,4 @@
-name: mlgo-new
+name: mlopt
 channels:
   - defaults
 dependencies:

@@ -114,7 +114,7 @@ The following commands will help you install the and set up the nessesary conda 
 conda env create -f ./mlopt.yml
 
 # switch to mlgo-new env which would be required for the build process
-conda activate mlgo-new.yml 
+conda activate mlopt
 ```
 
 #### A small hack to prevent the conda environtments from clashing (To Be removed)
