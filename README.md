@@ -19,7 +19,7 @@
 
 
 ## About
-This GitHub repository encompasses the complete Compiler Infrastructure for ML-Driven Optimizations developed by researchers at IIT H. The repository serves as a valuable reference, illustrating the integration of ML-driven optimization techniques into the LLVM project through the ML Compiler Bridge infrastructure.
+This GitHub repository encompasses the complete Compiler Infrastructure for ML-Driven Optimizations developed by the Compilers group at IITH. The repository integrates ML-driven optimization techniques into the LLVM project through the ML Compiler Bridge infrastructure and IR2Vec embeddings.
 
 We strongly encourage you to delve into this repository, explore its contents, and consider building additional tools leveraging the existing infrastructure. We presume you are fimiliar with LLVM and build upon that, but if you are not fimiliar with llvm them, here are a few resources that might help :
 
@@ -29,7 +29,8 @@ page for detailed information on configuring and compiling LLVM. You can visit
 to learn about the layout of the source code tree.
 
 ### ML Compiler Bridge
-As a part of the ML-Compiler-Bridge [research](https://arxiv.org/pdf/2311.10800.pdf), it is possible to have multiple ways of integrating compiler and the Machine learning model. These methods primarily use server client communication techniques like gRPC, and pipes. The ONNX flow which is capable of representation of ML models into DAG-based IRs with callable APIs in multiple langugages (C/C++/Python),doesnt require a server-client model or inter process communication.
+As a part of the [ML-Compiler-Bridge](https://arxiv.org/pdf/2311.10800.pdf), it is possible to have multiple ways of integrating compiler and the Machine learning model. These methods primarily use server client communication techniques like gRPC, and pipes. The ONNX flow which is capable of representation of ML models into DAG-based IRs with callable APIs in multiple langugages (C/C++/Python),does not require a server-client model or inter process communication. Additionally, TensorFlow's AOT compiled models are also supported for inference.
+
 > The Next 700 ML-Enabled Compiler Optimizations: S.VenkataKeerthy, Siddharth Jain, Umesh Kalvakuntla, Pranav Sai Gorantla, Rajiv Sailesh Chitale, Eugene Brevdo, Albert Cohen, Mircea Troffin, Ramakrishna Upadrasta
 
 ## Setup
@@ -98,7 +99,7 @@ As the name suggests this is the Path to the ONNX Runtime that we downloaded in 
  export PATH=${ONNX_DIR}/include:$PATH 
 ```
 > [!TIP] 
-> It is adviced to add these commands to your **~/.bashrc** as the'll be needed when you switch shells.
+> It is adviced to add these commands to your **~/.bashrc** as they'll be needed when you switch shells.
 
 #### Conda environment set-up
 The following commands will help you install the and set up the nessesary conda environments.
@@ -170,7 +171,7 @@ Please see [here](https://compilers.cse.iith.ac.in/publications/rl_loop_distribu
 
 #### Try it out !!!
 
-> We assueme you have already done the setup and built the project.
+> We assume you have already done the setup and built the project.
 
 ```bash
 # ONNX command for inference:
