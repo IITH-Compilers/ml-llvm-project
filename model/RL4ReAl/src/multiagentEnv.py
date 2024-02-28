@@ -49,7 +49,6 @@ import re
 from config import BUILD_DIR
 
 sys.path.append(f"{BUILD_DIR}/tools/MLCompilerBridge/Python-Utilities/")
-from client import *
 import RegisterAllocationInference_pb2, RegisterAllocation_pb2
 
 config_path=None

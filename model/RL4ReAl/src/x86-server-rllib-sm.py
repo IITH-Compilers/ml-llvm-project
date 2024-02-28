@@ -404,5 +404,5 @@ if __name__ == "__main__":
         if args.server_port is None:
             print("Please specify server address for gRPC communication")
             exit()
-        compiler_interface = GrpcCompilerInterface(mode = 'server', add_server_method=RegisterAllocationInference_pb2_grpc.add_RegisterAllocationInferenceServicer_to_server, grpc_service_obj=service_server(), hostport= args.server_port, dump_onnx_model=args.dump_onnx_model)
+        compiler_interface = GrpcCompilerInterface(mode = 'server', add_server_method=RegisterAllocationInference_pb2_grpc.add_RegisterAllocationInferenceServicer_to_server, grpc_service_obj=service_server(), hostport= args.server_port)
         compiler_interface.start_server()
