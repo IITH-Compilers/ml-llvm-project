@@ -327,7 +327,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 print("Splitpoint and i type and value", type(splitpoints), type(i), splitpoints, i)
                 raise
         mask = [0]*2
-        if all(v == 0 for v in split_node_mask) or (self.split_steps > self.split_threshold):
+        if all(v == 0 for v in split_node_mask) or (self.split_steps >= self.split_threshold):
             mask[0] = 1
         else:
             mask = [1]*2
@@ -425,12 +425,12 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
     def _select_task_step(self, action):
         logging.debug("Enter _select_task_step")
         done = {"__all__": False}
-        # print("Select Task action", action)
+        print("Select Task action", action)
         splitpoints = self.obs.split_points[self.cur_node]
         self.task_selected = action
         if type(splitpoints) == np.ndarray:
             splitpoints = splitpoints.tolist()
-        if action == 0 or len(splitpoints) < 1 or self.split_steps > self.split_threshold: # Colour node
+        if action == 0 or len(splitpoints) < 1 or self.split_steps >= self.split_threshold: # Colour node
             #print("Selecting colouring, last action", action)
             self.last_task_done = 0
             self.colour_steps += 1
@@ -500,7 +500,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
     def _colour_node_step(self, action):
         logging.debug("Enter _colour_node_step")
-        
+        print("Selected colour is:", action)
         colour_reward, done_all, response  = self.step_colorTask(action)
         state = self.obs
         self.cur_obs = self.node_representation_mat[self.cur_node][0:self.emb_size]
@@ -654,7 +654,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         return obs, reward, done, {}
 
     def _split_node_step(self, action):
-        #print("Action selected: ",action)
+        print("Splitting at point: ",action)
         logging.debug("Enter _split_node_step")
         # self.cur_obs = self.flat_env.reset()
         #logging.debug("{} {} {}".format(self.virtRegId, self.obs.idx_nid[self.cur_node], self.cur_node))
@@ -896,12 +896,14 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             if self.mode != 'inference': 
                 response = self.color_assignment_map
                 self.colormap = response
-                # logging.info("Colour map for {} file : {}".format(self.fun_id, response['Predictions'][0]['mapping']))
+                #logging.info("Colour map for {} file : {}".format(self.fun_id, response['Predictions'][0]['mapping']))
                 logging.debug("Number of split steps are {}, colour steps are {}".format(self.split_steps, self.colour_steps))
+                #print("Setting color map", self.colormap)
             else:
                 response = self.color_assignment_map
                 self.colormap = response
-                print("Setting color map", self.colormap)
+                # print("Setting color map", self.colormap)
+            print("Printing map for function:", self.functionName)
             print("Colour map ", self.colormap)
             done = True
             self.obs.next_stage = 'end'

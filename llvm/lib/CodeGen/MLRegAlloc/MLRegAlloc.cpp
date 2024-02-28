@@ -423,7 +423,7 @@ void MLRA::processMLInputsProtobuf(SmallSetVector<unsigned, 8> *updatedRegIdxs,
     }
   }
   MLRunner->populateFeatures(result, newBool);
-  errs() << "INPUT STR: " << ServerModeResponse.DebugString() << "\n";
+  //errs() << "INPUT STR: " << ServerModeResponse.DebugString() << "\n";
   // exit(0);
 
   // printFeatures();
@@ -2670,7 +2670,7 @@ void MLRA::inference() {
       }
 
       LLVM_DEBUG(errs() << "edge_count = " << edge_count << "\n");
-      if (count >= 500 || count <= 0) {
+      if (count >= 500 || count <= 120) {
         LLVM_DEBUG(errs() << "Error msg: Node count is more then max value\n");
         return;
       }
@@ -2690,9 +2690,12 @@ void MLRA::inference() {
       }
       // inference_driver->getInfo(regProfMap, colorMap);
       LLVM_DEBUG(errs() << "Processing funtion: " << MF->getName() << "\n");
-      LLVM_DEBUG(errs() << "Colour Map: \n");
+      errs() << "Processing funtion: " << MF->getName() << "\n";
+      errs() << "Colour Map: \n";
       unsigned numSpills = 0;
       for (auto pair : colorMap) {
+        
+        errs() << pair.first << " : " << pair.second << "\n";
         LLVM_DEBUG(errs() << pair.first << " : " << pair.second << "\n");
         if (pair.second == 0)
           numSpills++;
