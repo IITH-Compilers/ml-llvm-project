@@ -1,10 +1,10 @@
 # POSET-RL
 POSET-RL uses a reinforcement learning approach to find pass sequence (for optimal code size + execution time), as the search space of optimization sequences is too big to enumerate. For a compiler with `m` optimization passes, if the sequence length is fixed as `n`, then there can be potentially `mxn` combinations, allowing repetitions. 
 
-This repo contains the source code and relevant information described in the [paper](https://ieeexplore.ieee.org/abstract/document/9804673) ([arXiv](https://arxiv.org/abs/2208.04238), [slides](https://llvm.org/devmtg/2022-04-03/slides/POSET-RL.Phase.ordering.for.Optimizing.Size.and.Execution.Time.using.Reinforcement.Learning.pdf)).
+This repo contains the source code and relevant information described in the [paper](https://ieeexplore.ieee.org/abstract/document/9804673) ([arXiv](https://arxiv.org/abs/2208.04238), [slides](https://llvm.org/devmtg/2022-04-03/slides/POSET-RL.Phase.ordering.for.Optimizing.Size.and.Execution.Time.using.Reinforcement.Learning.pdf))
 Please see [here](https://compilers.cse.iith.ac.in/projects/posetrl) for more details.
 
-> POSET-RL: Phase ordering for Optimizing Size and Execution Time using Reinforcement Learning: Shalini Jain, Yashas Andaluri, S. VenkataKeerthy and Ramakrishna Upadrasta
+> POSET-RL: Phase ordering for Optimizing Size and Execution Time using Reinforcement Learning: Shalini Jain, Yashas Andaluri, S. VenkataKeerthy and Ramakrishna Upadrasta ,ISPASS 2022
 
 # Environment setup
 Execute the following command for environment setup
