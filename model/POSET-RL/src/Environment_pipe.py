@@ -16,12 +16,12 @@ from google.protobuf.json_format import MessageToJson
 import json
 from po_config import BUILD_DIR, CONFIG_DIR
 import grpc
-sys.path.append(f"{BUILD_DIR}/MLCompilerBridge/MLModelRunner/gRPCModelRunner/Python-Utilities/")
+sys.path.append(f"{BUILD_DIR}/tools/MLCompilerBridge/Python-Utilities")
 import posetRL_pb2_grpc, posetRL_pb2
 from google.protobuf.empty_pb2 import Empty
 from typing import Union
-
-sys.path.append(f"{BUILD_DIR}/MLCompilerBridge/CompilerInterface/")
+import signal
+sys.path.append(f"{BUILD_DIR}/tools/MLCompilerBridge/CompilerInterface/")
 from PipeCompilerInterface import PipeCompilerInterface
 from GrpcCompilerInterface import GrpcCompilerInterface
 
@@ -45,7 +45,7 @@ class PhaseOrder(gym.Env):
         self.embedding = None
         self.iteration_counter = 0
         self.rename_Dir = False
-        self.FileSys_Obj = fsystem(config["llvm_dir"], config["ir2vec_dir"])
+        self.FileSys_Obj = fsystem(config["llvm_dir"], f"{CONFIG_DIR}/ir2vec")
         self.FileSys_Obj.createFolder("env")
         self.temporaryDirectory = tempfile.gettempdir()
 
@@ -87,7 +87,7 @@ class PhaseOrder(gym.Env):
             self.FileSys_Obj.TrainingDataPath = os.path.join(
                 self.FileSys_Obj.PhaseOrderDir, "inference")
             self.test_Benchmark = os.path.join(
-                self.FileSys_Obj.PhaseOrderDir, config["test_dir"])
+                self.FileSys_Obj.PhaseOrderDir, "")
 
         self.assembly_file_path = f"{self.temporaryDirectory}/assemblyfile_{self.worker_index}.s"
 
@@ -106,8 +106,8 @@ class PhaseOrder(gym.Env):
 
         self.temp_rootname = "/tmp/" + config["pipe_name"]
         if self.use_pipe:
+           # self.temp_rootname = "/tmp/" + config["pipe_name"]
             self.compiler_interface = PipeCompilerInterface(self.data_format, self.temp_rootname)            
-            
         self.use_grpc = config["use_grpc"]  
         if self.use_grpc:
            self.compiler_interface = None
@@ -119,17 +119,17 @@ class PhaseOrder(gym.Env):
         self.FileSys_Obj.generateTrainingData(TrainingPath)
         self.Obs = self.FileSys_Obj.LLFileList
 
-    def getEmbedding(self, fileName) :
-        EmbFile = self.Curr_Dir + "/" + str(self.StateIndex)
-        # Get IR2Vec FlowAware embeddings
-        command = self.FileSys_Obj.IR2VecBin + " -fa -vocab " + \
-            self.FileSys_Obj.SeedEmbeddingPath + " -o " + EmbFile + " -level p " + fileName
-        os.system(command)
-        emb = np.loadtxt(EmbFile)
-        # Threshold for embedding values
-        emb[emb > 100000.0] = 100000.0
-        emb[emb < -100000.0] = -100000.0
-        return emb
+    # def getEmbedding(self, fileName) :
+    #     EmbFile = self.Curr_Dir + "/" + str(self.StateIndex)
+    #     # Get IR2Vec FlowAware embeddings
+    #     command = self.FileSys_Obj.IR2VecBin + " -fa -vocab " + \
+    #         self.FileSys_Obj.SeedEmbeddingPath + " -o " + EmbFile + " -level p " + fileName
+    #     os.system(command)
+    #     emb = np.loadtxt(EmbFile)
+    #     # Threshold for embedding values
+    #     emb[emb > 100000.0] = 100000.0
+    #     emb[emb < -100000.0] = -100000.0
+    #     return emb
 
     def createEnv(self, fileName):
         # env folder will contain folders for separate files with ll and executables
@@ -225,8 +225,8 @@ class PhaseOrder(gym.Env):
                 self.embedding = np.array(embedding)
             else:
                 self.embedding = self.stable_grpc("Action", 0) # LLVMgRPC way
-        else:
-            self.embedding = self.getEmbedding(self.BaseIR)
+        # else:
+        #     self.embedding = self.getEmbedding(self.BaseIR)
 
         action_mask = [1] * self.action_space_size
         next_observation = {'action_mask': np.array(
@@ -262,8 +262,7 @@ class PhaseOrder(gym.Env):
             # Compute O0 Binary size
             command = self.FileSys_Obj.ClangPath + " " + self.clang_arch_flag + " -c " + \
                 self.Curr_Dir + "/" + fileName + ".ll -o " + \
-                self.Curr_Dir + "/" + "base_binary.o" + f" -mllvm -ml-config-path={CONFIG_DIR}"
-            # print("O0 binary object compile command: "+command)
+                self.Curr_Dir + "/" + "base_binary.o"
             os.system(command)
             baseBinarySize = os.path.getsize(self.Curr_Dir + "/base_binary.o")
             logging.info("base {}".format(baseBinarySize))
@@ -271,14 +270,14 @@ class PhaseOrder(gym.Env):
             # Compute Oz Binary size
             command = self.FileSys_Obj.OptPath + " " + self.opt_arch_flag + " -S  -add-size-attr --enableMinSizeAttr --removeNoInlineAttr " + \
                 self.Curr_Dir + "/" + fileName + ".ll -o " + \
-                self.Curr_Dir + "/" + fileName + ".ll" + f"-ml-config-path={CONFIG_DIR} "
+                self.Curr_Dir + "/" + fileName + ".ll"
             command = self.FileSys_Obj.OptPath + " " + self.opt_arch_flag + " -S -Oz " + \
                 self.Curr_Dir + "/" + fileName + ".ll -o " + \
-                self.Curr_Dir + "/" + fileName + "_Oz.ll" + f" -ml-config-path={CONFIG_DIR} "
+                self.Curr_Dir + "/" + fileName + "_Oz.ll" 
             os.system(command)
             command = self.FileSys_Obj.ClangPath + " " + self.clang_arch_flag + " -c " + \
                 self.Curr_Dir + "/" + fileName + "_Oz.ll -o " + \
-                self.Curr_Dir + "/" + "Oz_binary.o" + f" -mllvm -ml-config-path={CONFIG_DIR} "
+                self.Curr_Dir + "/" + "Oz_binary.o" 
             os.system(command)
             minBinarySize = os.path.getsize(self.Curr_Dir + "/Oz_binary.o")
 
@@ -310,10 +309,10 @@ class PhaseOrder(gym.Env):
                 result = self.readObservation()
             elif self.use_grpc:
                 result = self.stable_grpc("Action", action_index) # LLVMgRPC way                
-            else:
-                Reward, NextStateIR = self.getLocalReward(action_index)
-                result = self.getEmbedding(NextStateIR)
-                self.CurrIR = NextStateIR
+            # else:
+            #     Reward, NextStateIR = self.getLocalReward(action_index)
+            #     result = self.getEmbedding(NextStateIR)
+            #     self.CurrIR = NextStateIR
             if result is None:
                 raise Exception("result is None")
             else:
@@ -327,7 +326,7 @@ class PhaseOrder(gym.Env):
         self.cur_obs = next_observation
 
         # Max number of actions (optimaztions sub-sequences) to be applied
-        if self.action_count >= 15:
+        if self.action_count >= 34:
             done = True
             logging.info(self.cur_action_seq)
             if self.mode == 'inference':
@@ -347,7 +346,8 @@ class PhaseOrder(gym.Env):
                 if not self.use_pipe:
                     self.stable_grpc("Exit", None)
                     try:
-                        outs, errs = self.server_pid.communicate(timeout=5)
+                        # outs, errs = self.server_pid.communicate(timeout=5)
+                        self.stable_grpc("Exit", None)
                     except:
                         self.serverId.kill()
                         print("Clang failing")
@@ -373,7 +373,7 @@ class PhaseOrder(gym.Env):
     # Get llvm-mca Block RThroughput for the IR
     def getMCACost(self, new_file):
         cmd1 = self.FileSys_Obj.LlcPath + " " + self.opt_arch_flag + \
-            " " + new_file + ".ll" + " -o " + new_file + ".s" + f" -ml-config-path={CONFIG_DIR}"
+            " " + new_file + ".ll" + " -o " + new_file + ".s" 
         os.system(cmd1)
         cmd2 = self.FileSys_Obj.MCAPath + " " + \
             self.opt_arch_flag + " " + new_file + ".s" 
@@ -397,83 +397,83 @@ class PhaseOrder(gym.Env):
         return currMcaThroughtput
 
     # Get reward for an action
-    def getLocalReward(self, action):
-        self.StateIndex += 1
-        fileName = os.path.splitext(os.path.basename(self.BaseIR))[0]
+    # def getLocalReward(self, action):
+    #     self.StateIndex += 1
+    #     fileName = os.path.splitext(os.path.basename(self.BaseIR))[0]
 
-        logging.info("fileName {}".format(fileName))
-        logging.info("StateIndex {}".format(self.StateIndex))
-        logging.info("BaseIR {}".format(self.CurrIR))
+    #     logging.info("fileName {}".format(fileName))
+    #     logging.info("StateIndex {}".format(self.StateIndex))
+    #     logging.info("BaseIR {}".format(self.CurrIR))
 
-        # Modified IR path
-        new_IR = self.Curr_Dir + "/" + fileName + \
-            "_" + str(self.StateIndex) + ".ll"
-        new_file = self.Curr_Dir + "/" + fileName + "_" + str(self.StateIndex)
+    #     # Modified IR path
+    #     new_IR = self.Curr_Dir + "/" + fileName + \
+    #         "_" + str(self.StateIndex) + ".ll"
+    #     new_file = self.Curr_Dir + "/" + fileName + "_" + str(self.StateIndex)
 
-        # Applying the action and saving the IR file as <filename>_<StateIndex>
-        # Here we can use gRPC server to apply the action
-        command = self.FileSys_Obj.OptPath + " " + self.opt_arch_flag + \
-            " -S -O34 -SubNum=" + str(action) + " " + \
-            self.CurrIR + " -o " + new_IR + f" -ml-config-path={CONFIG_DIR}"
-        os.system(command)
-        command = self.FileSys_Obj.ClangPath + " " + \
-            self.clang_arch_flag + " -c " + new_IR + " -o " + new_file + ".o" + f" -mllvm -ml-config-path={CONFIG_DIR}"
-        os.system(command)
-        # Size reward
-        currBinarySize = os.path.getsize(new_file + ".o")
+    #     # Applying the action and saving the IR file as <filename>_<StateIndex>
+    #     # Here we can use gRPC server to apply the action
+    #     command = self.FileSys_Obj.OptPath + " " + self.opt_arch_flag + \
+    #         " -S -O34 -SubNum=" + str(action) + " " + \
+    #         self.CurrIR + " -o " + new_IR 
+    #     os.system(command)
+    #     command = self.FileSys_Obj.ClangPath + " " + \
+    #         self.clang_arch_flag + " -c " + new_IR + " -o " + new_file + ".o" 
+    #     os.system(command)
+    #     # Size reward
+    #     currBinarySize = os.path.getsize(new_file + ".o")
 
-        logging.info("lastBinarySize {}".format(self.lastBinarySize))
-        logging.info("currBinarySize {}".format(currBinarySize))
+    #     logging.info("lastBinarySize {}".format(self.lastBinarySize))
+    #     logging.info("currBinarySize {}".format(currBinarySize))
 
-        if ((self.baseBinarySize - self.minBinarySize) > 0):
-            reward_binarySize = (self.lastBinarySize - currBinarySize) / \
-                (self.baseBinarySize - self.minBinarySize)
-        else:
-            reward_binarySize = (self.lastBinarySize -
-                                 currBinarySize) / self.baseBinarySize
+    #     if ((self.baseBinarySize - self.minBinarySize) > 0):
+    #         reward_binarySize = (self.lastBinarySize - currBinarySize) / \
+    #             (self.baseBinarySize - self.minBinarySize)
+    #     else:
+    #         reward_binarySize = (self.lastBinarySize -
+    #                              currBinarySize) / self.baseBinarySize
 
-        self.lastBinarySize = currBinarySize
+    #     self.lastBinarySize = currBinarySize
 
-        # Throughput reward
-        currMcaThroughtput = self.getMCACost(new_file)
-        logging.info("currMcaThroughtput: {}".format(currMcaThroughtput))
-        logging.info("OzMcaThroughtput: {}".format(self.OzMcaThroughtput))
-        logging.info("lastMcaThroughtput: {}".format(self.lastMcaThroughtput))
+    #     # Throughput reward
+    #     currMcaThroughtput = self.getMCACost(new_file)
+    #     logging.info("currMcaThroughtput: {}".format(currMcaThroughtput))
+    #     logging.info("OzMcaThroughtput: {}".format(self.OzMcaThroughtput))
+    #     logging.info("lastMcaThroughtput: {}".format(self.lastMcaThroughtput))
 
-        if self.lastMcaThroughtput is None:
-            mca_cost = (self.OzMcaThroughtput -
-                        currMcaThroughtput) / self.OzMcaThroughtput
-        else:
-            mca_cost = (self.lastMcaThroughtput -
-                        currMcaThroughtput) / self.OzMcaThroughtput
+    #     if self.lastMcaThroughtput is None:
+    #         mca_cost = (self.OzMcaThroughtput -
+    #                     currMcaThroughtput) / self.OzMcaThroughtput
+    #     else:
+    #         mca_cost = (self.lastMcaThroughtput -
+    #                     currMcaThroughtput) / self.OzMcaThroughtput
 
-        self.lastMcaThroughtput = currMcaThroughtput
+    #     self.lastMcaThroughtput = currMcaThroughtput
 
-        logging.info("Thr-debug:{}".format(mca_cost))
-        logging.info("Size-debug:{}".format(reward_binarySize))
+    #     logging.info("Thr-debug:{}".format(mca_cost))
+    #     logging.info("Size-debug:{}".format(reward_binarySize))
 
-        # Reward thresholds
-        if mca_cost > self.mca_reward_thresh:
-            mca_cost = self.mca_reward_thresh
-        elif mca_cost < -self.mca_reward_thresh:
-            mca_cost = -self.mca_reward_thresh
+    #     # Reward thresholds
+    #     if mca_cost > self.mca_reward_thresh:
+    #         mca_cost = self.mca_reward_thresh
+    #     elif mca_cost < -self.mca_reward_thresh:
+    #         mca_cost = -self.mca_reward_thresh
 
-        if reward_binarySize > self.size_reward_thresh:
-            reward_binarySize = self.size_reward_thresh
-        elif reward_binarySize < -self.size_reward_thresh:
-            reward_binarySize = -self.size_reward_thresh
+    #     if reward_binarySize > self.size_reward_thresh:
+    #         reward_binarySize = self.size_reward_thresh
+    #     elif reward_binarySize < -self.size_reward_thresh:
+    #         reward_binarySize = -self.size_reward_thresh
 
-        # Cumulative reward with alpha and beta hyperparameters
-        reward = self.alpha*reward_binarySize + self.beta*mca_cost
+    #     # Cumulative reward with alpha and beta hyperparameters
+    #     reward = self.alpha*reward_binarySize + self.beta*mca_cost
 
-        return reward, new_IR
+    #     return reward, new_IR
 
     def getReward(self, AssemblyFilePath):
         # object size reward
         objectFilePath = f"{self.temporaryDirectory}/objectfile_{self.worker_index}.o"
         objectFileGenerationCommand = self.FileSys_Obj.ClangPath + " -c " + \
-            self.clang_arch_flag + " " + AssemblyFilePath + " -o " + objectFilePath + f" -mllvm -ml-config-path={CONFIG_DIR}"
-
+            self.clang_arch_flag + " " + AssemblyFilePath + " -o " + objectFilePath 
+        
         os.system(objectFileGenerationCommand)
 
         currentBinarySize = os.path.getsize(objectFilePath)
@@ -487,7 +487,7 @@ class PhaseOrder(gym.Env):
 
         self.lastBinarySize = currentBinarySize
 
-        llvmMcaCommand = f"{self.FileSys_Obj.MCAPath} {self.opt_arch_flag} {AssemblyFilePath}" #+ " -ml-config-path={CONFIG_DIR}"
+        llvmMcaCommand = f"{self.FileSys_Obj.MCAPath} {self.opt_arch_flag} {AssemblyFilePath}" 
         pro = subprocess.Popen(llvmMcaCommand, executable='/bin/bash', shell=True,
                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding='utf8')
 
@@ -568,12 +568,11 @@ class PhaseOrder(gym.Env):
         # response = self.stub.applyActionGetEmbeddings(request)
         return self.repeatedgRPCFieldToNumpyArray(response)
 
-    def stopServer(self):
-        request = posetRL_pb2.ActionRequest(action=-1)
-        self.compiler_interface.populate_buffer(request)
-        self.compiler_interface.evaluate()
-        # self.stub.applyActionGetEmbeddings(request)
-
+    def stopServer(self, sig):
+        self.serverId.send_signal(sig)
+        return_code = self.serverId.wait()
+        print("Return code:", return_code)
+    
     def stable_grpc(self, op, action):
         attempt = 0
         max_retries = 5
@@ -587,7 +586,7 @@ class PhaseOrder(gym.Env):
                 if op != "Exit":
                     result = self.applyActionGetEmbeddings(action=action)
                 else:
-                    result = self.stopServer()
+                    result = self.stopServer(signal.SIGTERM)
                 t2 = time.time()
                 self.grpc_rtt += t2-t1
                 break
@@ -612,3 +611,4 @@ class PhaseOrder(gym.Env):
                     else:
                         raise
         return result
+

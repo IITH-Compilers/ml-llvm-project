@@ -48,7 +48,7 @@ import re
 
 from config import BUILD_DIR
 
-sys.path.append(f"{BUILD_DIR}/MLCompilerBridge/MLModelRunner/gRPCModelRunner/Python-Utilities/")
+sys.path.append(f"{BUILD_DIR}/tools/MLCompilerBridge/Python-Utilities/")
 from client import *
 import RegisterAllocationInference_pb2, RegisterAllocation_pb2
 
@@ -806,9 +806,10 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             }
             self.obs.next_stage = 'end'
             self.stable_grpc('Exit', 0, 0)   
-            os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
-            if self.server_pid.poll() is not None:
-                print('Force stop')
+            # os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
+            # if self.server_pid.poll() is not None:
+            #   print('Force stop')
+            self.server_pid.send_signal(signal.SIGTERM)
             self.server_pid = None
             print('Stop server')
             #time.sleep(5)
@@ -1046,7 +1047,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                         f.close()
                 else:
                     # print("Killing Server pid", self.server_pid.pid)         
-                    os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
+                    # os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
+                    self.server_pid.send_signal(signal.SIGTERM)
 
                 if self.server_pid.poll() is not None:
                     print('Force stop')

@@ -18,7 +18,10 @@ add_llvm_library(LLVMHelloGRPC MODULE BUILDTREE_ONLY
   
   DEPENDS
   intrinsics_gen
+  LLVMMLBridge
+
   PLUGIN_TOOL
   opt
   )
 
+target_link_libraries(LLVMHelloGRPC PUBLIC LLVMMLBridge)

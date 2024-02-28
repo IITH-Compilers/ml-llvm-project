@@ -29,7 +29,7 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ManagedStatic.h"
-#include "llvm/Transforms/AddSizeAttr/AddSizeAttr.h"
+#include "llvm/Transforms/IPO/AddSizeAttr/AddSizeAttr.h"
 #include "llvm/Transforms/AggressiveInstCombine/AggressiveInstCombine.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/Attributor.h"
@@ -39,7 +39,6 @@
 #include "llvm/Transforms/InstCombine/InstCombine.h"
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/IPO/PosetRL/PosetRL.h"
-#include "llvm/Transforms/CodeSizeOpt/CodeSizeOpt.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/GVN.h"
 #include "llvm/Transforms/Scalar/InstSimplifyPass.h"
@@ -54,14 +53,11 @@
 
 using namespace llvm;
 
-
+bool PassManagerBuilder::check_flag = false;
 static cl::opt<bool>
     OPosetRL("OPosetRL", cl::init(false), cl::Hidden,
                        cl::desc("poset rl pass sequence"));
 
-static cl::opt<bool>
-    OCodeSizeOpt("OCodeSizeOpt", cl::init(false), cl::Hidden,
-                       cl::desc("codesize opt pass sequence"));
 static cl::opt<bool>
     RunPartialInlining("enable-partial-inlining", cl::init(false), cl::Hidden,
                        cl::ZeroOrMore, cl::desc("Run Partial inlinining pass"));
@@ -1443,17 +1439,14 @@ void PassManagerBuilder::populateModulePassManager(
   bool DefaultOrPreLinkPipeline = !PerformThinLTO;
 
   if (OPosetRL){
-      errs() << "opt level "<< OptLevel << " SizeLevel " << SizeLevel << "\n";
-      MPM.add(createPosetRLPass());
+      if (check_flag == false){
+        errs() << "opt level "<< OptLevel << " SizeLevel " << SizeLevel << "\n";
+        MPM.add(createPosetRLPass());
+      }
+      check_flag = true;      
       return;
   }
 
-  if(OCodeSizeOpt) {
-      errs() << "opt level "<< OptLevel << " SizeLevel " << SizeLevel << "\n";
-      MPM.add(createCodeSizeOptPass());
-      return;
-  }
-  
   if(!RunNoPreDistributionPasses){
   if (!PGOSampleUse.empty()) {
     MPM.add(createPruneEHPass());

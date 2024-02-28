@@ -5,7 +5,7 @@ if(WIN32 OR CYGWIN)
   set(LLVM_LINK_COMPONENTS Core Support)
 endif()
 
-add_llvm_component_library(LLVMHelloMLBridge
+add_llvm_library(LLVMHelloMLBridge MODULE BUILDTREE_ONLY
   Hello.cpp
 
   DEPENDS
@@ -16,7 +16,7 @@ add_llvm_component_library(LLVMHelloMLBridge
   opt
   )
 
-target_link_libraries(LLVMHelloMLBridge PRIVATE LLVMMLBridge)
+target_link_libraries(LLVMHelloMLBridge PUBLIC LLVMMLBridge)
 
 file(GLOB MODEL_OBJECTS ${CMAKE_CURRENT_SOURCE_DIR}/tf_models/*.o)
 

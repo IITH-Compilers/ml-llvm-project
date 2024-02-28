@@ -20,7 +20,6 @@ set(LLVM_LINK_COMPONENTS
   TransformUtils
   Vectorize
   IPO
-  CodeSizeOpt
   IR2Vec
   CollectMachineIR
   )

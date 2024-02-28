@@ -23,9 +23,6 @@ set(LLVM_LINK_COMPONENTS
   TransformUtils
   Vectorize
   Passes
-  HelloMLBridge
- CodeSizeOpt
-  AddSizeAttr
   IR2Vec
   CollectMachineIR
   )

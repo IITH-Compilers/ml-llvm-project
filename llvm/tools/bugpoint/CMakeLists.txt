@@ -20,7 +20,6 @@ set(LLVM_LINK_COMPONENTS
   Target
   TransformUtils
   Vectorize
-  CodeSizeOpt
   IR2Vec
   )
 
