@@ -3,12 +3,11 @@ import argparse
 from importlib.resources import path
 from posixpath import normpath
 from tabnanny import check
-import os
+import os, sys
 import time
 import numpy as np
 from typing import Dict as type_dict
 import torch
-import numpy as np
 import ray
 from ray import tune
 from ray.tune import function
@@ -49,11 +48,9 @@ def experiment(config):
     train_results = {}
     checkpoint = MODEL_PATH
     train_agent = SimpleQTrainer(config=config, env=DistributeLoopEnv)
-    print('------------------------ aegent --------------------------------- ', train_agent)
     
     if checkpoint is not None:
         train_agent.restore(checkpoint)
-        print("Checkpoint restored") 
 
     # # export model using torch.onnx
     SELECT_NODE_MODEL_PATH = "/home/cs20btech11024/onnx/select_node.onnx"
@@ -62,7 +59,6 @@ def experiment(config):
 
     last_checkpoint = 0
     for i in range(iterations):
-        print("Training iteration: ", i)
         train_results = train_agent.train()
         # auto_garbage_collect()
         if i == iterations - 1 or (train_results['episodes_total'] - last_checkpoint) > 99:
@@ -82,8 +78,12 @@ def experiment(config):
 
     # torch.onnx.export(train_agent.get_policy("distribution_policy").model, ({"obs": torch.randn(1, 603)}, {}), f=DISTRIBUTION_MODEL_PATH, verbose=True, input_names=["obs"], output_names=["output"])
 
+def blockPrint():
+    sys.stdout = open(os.devnull, 'w')
+
 
 if __name__ == "__main__":
+
     args = parser.parse_args()
     logger = logging.getLogger(__file__)
     log_level=logging.DEBUG
@@ -104,22 +104,18 @@ if __name__ == "__main__":
     config["env_config"]["data_format"] = args.data_format
     config["env_config"]["use_grpc"] = args.use_grpc
 
-    # utils.get_parse_args()
 
     config["env"] = DistributeLoopEnv
     config["env_config"]["mode"] = "train"
     config["env_config"]["loop_cost"] = "LC"
     config["env_config"]["EPOCHS"] = 100
     config["env_config"]["dataset"] = DATA_DIR
-
     Curr_Dir = os.path.basename(normpath(config["env_config"]["dataset"]))
     
     POST_DIS_PASSES_ARG = 1
     config["env_config"]["distributed_data"] = config["env_config"]["trained_model"] + Curr_Dir + "/PDP_" + str(POST_DIS_PASSES_ARG) + "_EP" + str(config["env_config"]["EPOCHS"]) + "/" + config["env_config"]["mode"]
-
     ModelCatalog.register_custom_model("select_node_model", SelectNodeNetwork)
     ModelCatalog.register_custom_model("distribution_model", DistributionTask)
-    # ModelCatalog.register_custom_model("vectorization_model", VectorizationTask)
 
     box_obs = Box(
             FLOAT_MIN, FLOAT_MAX, shape=(config["env_config"]["state_size"], ), dtype=np.float32)
@@ -136,22 +132,17 @@ if __name__ == "__main__":
         "curr_Node": box_obs,
         "dist_flag": Box(0, 1, shape=(1,)),
         "action_mask": Box(0, 1, shape=(2,)),
-        # "state": box_obs
+    
     })
 
-    # obs_vectorization_node = Dict({
-    #     "action_mask": Box()
-    #     "state": box_obs
-    # })
+ 
 
     def policy_mapping_fn(agent_id, episode=None, **kwargs):
         if agent_id.startswith("select_node_agent"):
             return "select_node_policy"
         elif agent_id.startswith("distribution_agent"):
             return "distribution_policy"
-        # else:
-        #     return "vectorization_policy"
-
+     
     policies = {
         "select_node_policy": (None, obs_select_node,
                                 Discrete(config["env_config"]["max_number_nodes"]), {
@@ -177,13 +168,13 @@ if __name__ == "__main__":
                                         },
                                     },
                                 }),
-        # "vectorization_policy": (None, obs_vectorization_node,
-        #                         )
+       
     }
 
     config["multiagent"] = {
         "policies" : policies,
-        "policy_mapping_fn": function(policy_mapping_fn)
+      
+        "policy_mapping_fn": policy_mapping_fn
     }
 
     start_time = time.time()

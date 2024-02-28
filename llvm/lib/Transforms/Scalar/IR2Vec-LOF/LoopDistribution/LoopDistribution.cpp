@@ -6,9 +6,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
-// #include <llvm/IR/LegacyPassManager.h>
-// #include "llvm/IR/PassManager.h"
-// #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/InitializePasses.h"
@@ -239,12 +236,9 @@ Loop *LoopDistribution::cloneLoop(Loop *L, LoopInfo *LI, DominatorTree *DT,
   // it was empty.
   assert(&*oldPreheader->begin() == oldPreheader->getTerminator() &&
          "preheader not empty");
-  // errs() << "here1- before cloning\n";
   Loop *newLoop =
       cloneLoopWithPreheader(L->getLoopPreheader(), L->getLoopPreheader(), L,
                              VMap, Twine("new-"), LI, DT, newLoopBlocks);
-  // errs() << "here2- after cloning\n";
-
 
   // VMap can contain mappings at instruction level or BB level
   // The code below obtains VMap at instruction level from BB level

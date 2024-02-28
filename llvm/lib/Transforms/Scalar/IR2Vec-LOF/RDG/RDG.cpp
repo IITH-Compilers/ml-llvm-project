@@ -101,10 +101,7 @@ void RDG::createMemoryEdgeMergedNode(DataDependenceGraph &G, DependenceInfo &DI,
   using EdgeKind = typename EdgeType::EdgeKind;
 
   // Merging Node Outgoing edges => Final Node Outgoing edges
-  // Connect target of Merging Node as a target of Final Node
-
-  // errs() << FinalNode << "\n" << MergingNode << "\n\n";
-  
+  // Connect target of Merging Node as a target of Final Node  
   for (EdgeType *oldEdge : MergingNode) {
     NodeType *tgt = &oldEdge->getTargetNode();
     DDGEdge &EdgeDel = MergingNode.back();
@@ -135,11 +132,9 @@ void RDG::createMemoryEdgeMergedNode(DataDependenceGraph &G, DependenceInfo &DI,
       }
     } else if (EdgeDel.getKind() == EdgeKind::MemoryDependence) {
       int i = EdgeDel.getEdgeWeight();
-      // errs() << "outgoing edge: " << i << "\n";
       bool MSL_flag = 0;
       for (NodeType *MSL : NodeDeletionList) {
         if (MSL == tgt) {
-          // errs() << "Same Node:";
           MSL_flag = 1;
           break;
         }
@@ -166,13 +161,11 @@ void RDG::createMemoryEdgeMergedNode(DataDependenceGraph &G, DependenceInfo &DI,
   for (NodeType *N : G) {
     int MSL_flag = 0;
     if (*N != FinalNode) {
-      // errs() << "Not a FinalNode: " << *N << "\n";
       for (EdgeType *e : *N) {
         NodeType *tgt = &e->getTargetNode();
         if (*tgt == MergingNode) {
           for (NodeType *MSL : NodeDeletionList) {
             if (MSL == N) {
-              // errs() << "Same Node:";
               MSL_flag = 1;
               break;
             }
@@ -204,7 +197,6 @@ void RDG::createMemoryEdgeMergedNode(DataDependenceGraph &G, DependenceInfo &DI,
       if (*tgt == MergingNode) {
         if (e->getKind() == EdgeKind::MemoryDependence) {
           int i = e->getEdgeWeight();
-          // errs() << "incoming edge: " << "\n";
           bool nt_flag = 0;
           for (EdgeType *eF : *N) {
             NodeType *Ftgt = &eF->getTargetNode();
@@ -237,19 +229,11 @@ void RDG::CreateSCC(DataDependenceGraph &G, DependenceInfo &DI) {
       ListOfSCCs.emplace_back(SCC.begin(), SCC.end());
   }
 
-  // for (NodeListType &NL : ListOfSCCs) {
-  //   for (NodeType *n : NL){
-  //     errs() << *n << "\n";
-  //   }
-  // }
 
   for (NodeListType &NL : ListOfSCCs) {
     LLVM_DEBUG(dbgs() << "Creating pi-block node with " << NL.size()
                       << " nodes in it.\n");
 
-    // for (NodeType *n : NL){
-    //   errs() << *n << "\n";
-    // }
     for (NodeType *Source : NL) {
       for (NodeType *Target : NL) {
         // No Merging Possible: if Source and Target are same node
@@ -268,9 +252,7 @@ void RDG::CreateSCC(DataDependenceGraph &G, DependenceInfo &DI) {
                                     InstList);
 
         
-        createMemoryEdgeMergedNode(G, DI, *Source, *Target, NodeDeletionList);
-        // errs() << "bbbbbbbbbbbbb Source: " << *Source << "\n";
-        
+        createMemoryEdgeMergedNode(G, DI, *Source, *Target, NodeDeletionList);        
 
         // Apepnd the node (merged into Store node) into NodeDeletionList
         bool ni = 0;
@@ -282,7 +264,6 @@ void RDG::CreateSCC(DataDependenceGraph &G, DependenceInfo &DI) {
         }
         if (ni == 0) {
           NodeDeletionList.push_back(Target);
-          // errs() << "nodeList: " << *Target << "\n";
         }
       }
       break;
@@ -301,7 +282,6 @@ void RDG::SelectOnlyStoreNode(DataDependenceGraph &G) {
   int label = 0;
 
   for (auto *N : G) {
-    // errs() << *N << "\n";
     InstructionListType InstList;
     N->collectInstructions([](const Instruction *I) { return true; }, InstList);
 
@@ -387,23 +367,19 @@ void RDG::Merge_NonLabel_Nodes(DataDependenceGraph &G, DependenceInfo &DI) {
 
 bool RDG::BuildRDG_DA(raw_ostream &OS, DataDependenceGraph &G, DependenceInfo *DI, Loop &IL) {
   for (auto b : IL.blocks()) {
-    // b->dump();
     for (BasicBlock::iterator SrcI = b->begin(), SrcE = b->end(); SrcI != SrcE; ++SrcI) {
-      // errs() << "instruction: " << *SrcI << "\n";
       if (SrcI->mayReadOrWriteMemory()) {
         for (BasicBlock::iterator DstI = SrcI, DstE = b->end(); DstI != DstE; ++DstI) {
           if (DstI->mayReadOrWriteMemory()) {
             if (SrcI != DstI) {
               if (auto D = DI->depends(&*SrcI, &*DstI, true)) {
                 if (!D->isInput()) {
-                  // OS << "Src:" << *SrcI << " --> Dst:" << *DstI << "\n";
                   Instruction &si = *SrcI;
                   Instruction &di = *DstI;
 
                   NodeType *SrcNode, *DstNode;
 
                   for (NodeType *N : G) {
-                    // errs() << "Node: " << *N << "\n";
                     InstructionListType InstList;
                     N->collectInstructions([](const Instruction *I) { return true; },
                              InstList);
@@ -417,30 +393,18 @@ bool RDG::BuildRDG_DA(raw_ostream &OS, DataDependenceGraph &G, DependenceInfo *D
                     }
                   }
 
-                  // OS << "  da analyze - ";
-                  // D->dump(OS);
-                  // errs() << D->getLevels() << "\n";
                   unsigned Level = D->getLevels();
                   const SCEV *Distance = D->getDistance(Level);
                   if (Distance != nullptr)
                     if (auto x = dyn_cast<SCEVConstant>(D->getDistance(Level))) {
                       int DepDist = x->getValue()->getSExtValue();
-                      // OS << "Src:" << *SrcI << " --> Dst:" << *DstI << "\n";
-                      // errs() << *SrcNode << "\n" << *DstNode << "\n";
-                      // errs() << "Distance: " << DepDist << "\n";
                       if (DepDist < 0){
                         DDGBuilder(G, *DI, BBList, ReductionPHIList).createMemoryWeightedEdge(*DstNode, *SrcNode, -DepDist);
                       } else {
                         DDGBuilder(G, *DI, BBList, ReductionPHIList).createMemoryWeightedEdge(*SrcNode, *DstNode, DepDist);
                       }
-                                        
-                      // errs() << "aaaaaaaaaaa: " << DepDist << "\n";
-                      // errs() << *SrcNode << "\n";
-                      // errs() << *DstNode << "\n";
+                      
                     }
-                  // if (Distance) {
-                  //   OS << *Distance << "\n";
-                  // }
                 }
               }   
             }

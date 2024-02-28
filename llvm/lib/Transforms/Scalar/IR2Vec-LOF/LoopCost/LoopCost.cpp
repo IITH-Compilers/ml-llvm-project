@@ -93,7 +93,6 @@ bool LoopCost::runOnFunction(Function &F) {
   if (F.getName() != funcName)
     return false;
 
-  errs() << "Function Name: " << F.getName() << "\n";
   // auto *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
   auto *LI = &getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo();
   auto *LAA = &getAnalysis<LoopAccessLegacyAnalysis>(F);
@@ -183,12 +182,8 @@ bool LoopCost::runOnFunction(Function &F) {
       }
     }
 
-    errs() << "loop ID: " << L->getLoopID() << "\n";
     L->dump();
-    dbgs() << "VF: " << VF << "\n";
-    dbgs() << "IF: " << IF << "\n";
-    dbgs() << "TC: " << TripCount << "\n";
-
+    
     Loop *InstCostLoop = nullptr;
     if (VecLoop)
       InstCostLoop = VecLoop;
@@ -206,7 +201,6 @@ bool LoopCost::runOnFunction(Function &F) {
     }
 
     LoopCost = LoopCost * (TripCount / (VF * IF));
-    dbgs() << "Loop cost with only instructions: " << LoopCost << "\n";
 
     for (auto BB : L->getBlocks()) {
       for (auto &I : *BB) {
@@ -219,21 +213,15 @@ bool LoopCost::runOnFunction(Function &F) {
     // const LoopAccessInfo &LAI_WR = LAA->getInfo(L);
     // const LoopAccessInfo &LAI_RAR = LAA->getInfo(L, 1);
 
-    errs() << "aaaaaaaaaaaaaaaaaaaaa\n";
     Locality CL(TTI);
     int64_t CacheMisses = CL.computeLocalityCost(L, TripCount, SE, DI);
     LoopCost = LoopCost * (TripCount / (VF * IF));
-    dbgs() << "Loop cost with only instructions: " << LoopCost << "\n";
     uint64_t TotalMemAccess =
         NumMemInsts * ((TripCount == 1000) ? TripCount : TripCount * (VF * IF));
-    dbgs() << "Total memory accesses : " << NumMemInsts << " * " << TripCount
-           << " = " << TotalMemAccess << "\n";
     uint64_t CacheCost =
         CacheMisses * (0.7 * MemoryInstCost) +
         (TotalMemAccess - CacheMisses) * (0.3 * MemoryInstCost);
-    dbgs() << "Cache cost: " << CacheCost << "\n";
     uint64_t TotalLoopCost = LoopCost + CacheCost;
-    dbgs() << "TotalLoopCost for Loop: " << TotalLoopCost << "\n";
 
     this->loop_cost= TotalLoopCost;
   }
@@ -297,7 +285,6 @@ void LoopCost::GetInnerLoops(Loop *L, SmallVectorImpl<Loop *> &InnerLoops) {
 }
 
 uint64_t LoopCost::getLoopCost() {
-  errs() << "function Name: " << funcName << " loop ID: " << loopID << " loop Cost: " << this->loop_cost << "\n";
   return this->loop_cost;
 }
 // Registering the pass
@@ -381,7 +368,6 @@ int64_t Locality::computeLocalityCost(Loop *L, unsigned TripCount,
                       }
                     }
 
-                // errs() << "Src:" << *SrcI << " --> Dst:" << *DstI << "\n";
               }
             }
           }
@@ -451,7 +437,6 @@ int64_t Locality::computeLocalityCost(Loop *L, unsigned TripCount,
       }
     }
   }
-  errs() << "Total cache misses : " << Locality_Cost << "\n";
   return Locality_Cost;
 }
 
