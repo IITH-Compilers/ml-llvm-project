@@ -345,7 +345,7 @@ class PhaseOrder(gym.Env):
 
             if self.mode != 'inference':
                 if not self.use_pipe:
-                    self.stable_grpc("Exit", None)
+                    # self.stable_grpc("Exit", None)
                     try:
                         outs, errs = self.server_pid.communicate(timeout=5)
                     except:
@@ -624,7 +624,8 @@ class PhaseOrder(gym.Env):
         if self.use_pipe:
             cmd = cmd + " -mllvm -use-pipe"
         pid = subprocess.Popen(cmd, executable='/bin/bash',
-                               shell=True, preexec_fn=os.setsid)
+                               shell=True, preexec_fn=os.setsid, stdin=subprocess.PIPE, text=True)
+        
         return pid
 
     def repeatedgRPCFieldToNumpyArray(self, gRPCObj):
@@ -642,11 +643,23 @@ class PhaseOrder(gym.Env):
         return self.repeatedgRPCFieldToNumpyArray(response)
 
     def stopServer(self):
+<<<<<<< HEAD
         request = posetRL_pb2.ActionRequest(action=-1)
         self.compiler_interface.populate_buffer(request)
         self.compiler_interface.evaluate()
         # self.stub.applyActionGetEmbeddings(request)
 
+=======
+        self.serverId.stdin.write("Terminate\n")
+        self.serverId.stdin.flush()
+        try:
+            out, errs = self.serverId.communicate(timeout=15)
+        except:
+            self.serverId.kill()
+            out, errs = self.serverId.communicate()
+            print("Force Stop")
+    
+>>>>>>> 146ca72982db... Changed the StopServer logic to the new logic of sending the text to stdin
     def stable_grpc(self, op, action):
         attempt = 0
         max_retries = 5
