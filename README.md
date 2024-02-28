@@ -166,6 +166,11 @@ tar -xvf onnxruntime-linux-x64-1.16.3.tgz
 conda env create -f ./mlopt.yml
 >>>>>>> 2a48b0c91d4e... Updated Readme
 
+<<<<<<< HEAD
+=======
+# switch to mlgo-new env which would be required for the build process
+conda activate mlopt
+>>>>>>> 9cb366a5644d... Changed Env Names
 ```
 
 <<<<<<< HEAD
