@@ -16,13 +16,14 @@ import glob
 from ld_config import MODEL_PATH, TEST_DIR, BUILD_DIR, MODEL_DIR
 import traceback
 import sys
-
 import time
 
 sys.path.extend(
     [
         f"{BUILD_DIR}/tools/MLCompilerBridge/Python-Utilities/",
+        # f"{MODEL_DIR}",
         f"{BUILD_DIR}/../MLCompilerBridge/CompilerInterface/",
+        # f"{REPO_DIR}/llvm/lib/Transforms/models"
     ]
 )
 import LoopDistribution_pb2, LoopDistribution_pb2_grpc
@@ -34,6 +35,7 @@ from GrpcCompilerInterface import GrpcCompilerInterface
 
 from simple_q import SimpleQTrainer, DEFAULT_CONFIG
 from multiagentEnv import DistributeLoopEnv
+# from register_action_space import RegisterActionSpace
 from ray.rllib.models import ModelCatalog
 from model import SelectNodeNetwork, DistributionTask
 import logging
@@ -159,6 +161,7 @@ class DistributionInference:
                 "curr_Node": box_obs,
                 "dist_flag": Box(0, 1, shape=(1,)),
                 "action_mask": Box(0, 1, shape=(2,)),
+                # "state": box_obs
             }
         )
 
@@ -201,6 +204,8 @@ class DistributionInference:
                     },
                 },
             ),
+            # "vectorization_policy": (None, obs_vectorization_node,
+            #                         )
         }
 
         config["multiagent"] = {
@@ -208,15 +213,22 @@ class DistributionInference:
             "policy_mapping_fn": function(policy_mapping_fn),
         }
 
+        # def env_creator(env_config):
+        #     return DistributeLoopEnv(env_config)
+        # register_env("Environment", env_creator)
+        
         self.trained_agent = SimpleQTrainer(env=DistributeLoopEnv, config=config)
         # self.train_agent = DistributionInference(model_path, test_dir)
         # logging.info("{} {}".format(self.trained_agent, type(self.trained_agent)))
         checkpoint = model_path
+        print(checkpoint)
         self.trained_agent.restore(checkpoint)
 
         self.config = config
 
         self.temp_rootname = "/tmp/loopdistppipe"
+        self.tc = None
+        self.fc = None
         self.tensor_specs = None
         self.advice_spec = None
 
@@ -233,28 +245,41 @@ class DistributionInference:
         env = DistributeLoopEnv(self.config["env_config"])
 
         # Use for running with custom_loop_distribution
+        print("before the dot to json conversion")
         graph = self.dot_to_json(test_file)
+        print("After dot to json conversion\n")
         obs = env.reset(graph)
+        print("After the reset method\n")
 
         env.advice_spec = self.advice_spec
         env.temp_rootname = self.temp_rootname
         # Use for running directly inference.py
+        # obs = env.reset(test_file)
 
         score = 0
         while True:
             logging.debug("-^_^-^_^-^_^-^_^-^_^-^_^-^_^-^_^-^_^-^_^-^_^-^_^-^_^-")
 
+            # return the color index for a node
+            # print("state {}".format(obs))
             action = {}
             for agent_id, agent_obs in obs.items():
+                # print("agent_id: {}".format(agent_id))
+                # print("agent_obs: {}".format(agent_obs))
                 policy_id = self.config["multiagent"]["policy_mapping_fn"](agent_id)
                 action[agent_id] = self.trained_agent.compute_action(
                     agent_obs, policy_id=policy_id
                 )
+                # print("action: {}".format(action[agent_id]))
 
             obs, reward, done, response = env.step(action)
             done = done["__all__"]
             # sum up reward for all agents
+            # episode_reward += sum(reward.values())
 
+            # action = self.trained_agent.compute_action(state)
+
+            # next_state, reward, done, response  = env.step(action)
             logging.debug("reward : {}".format(reward))
 
             # state = next_state
@@ -264,7 +289,8 @@ class DistributionInference:
                 assert response is not None, "Allocation is not preset."
                 break
         response = env.partition_seq
-        print("response: {}".format(response))
+        # print("response: {}".format(response))
+        print("returning from the run predict\n")
         return reward, response
 
     def run_predict_multiple_loops(self, rdgs):
@@ -274,6 +300,7 @@ class DistributionInference:
         dist_seq = []
         # vf_seq = []
         for rdg in rdgs:
+            # reward, seqs = self.run_predict(rdg)
             reward, seqs = self.run_predict(rdg)
             print("seqs: {}".format(seqs))
             dist_seq.append(seqs)
@@ -318,33 +345,46 @@ def run_pipe_communication(data_format, pipe_name):
             pass
 
     ray.init()
+    
+    print(MODEL_PATH)
     inference_obj = DistributionInference(MODEL_PATH, data_format=data_format)
     inference_obj.use_pipe = True
     compiler_interface = PipeCompilerInterface(data_format, '/tmp/' + pipe_name)
     print("PipeCompilerInterface init...")
     compiler_interface.reset_pipes()
     mode = None
-    
-    
     with open(f'{data_format}_seq_output.log', 'w') as f:
         while True:
             try:
+                print("Entered while loop...")
+                print("mode: ", mode)
                 msg = compiler_interface.evaluate(mode)
+                
+                print("After evaluate")
+                print(msg)
+                print(type(msg))
                 if msg is None:
                     mode = None
-                    ## FIXME_: This needs to be fixed. Currently a small hack to run this.
-                    time.sleep(5)
+                    print("Before sleep")
+                    # time.sleep(5)
+                    print("After sleep")
                     compiler_interface.reset_pipes()
                     continue
                 msg = parseObservation(msg)
+                print("Error after parse Observation")
                 if msg == "Exit":
                     mode = "exit"
-                    out = 1
+                    out = 2
                     compiler_interface.populate_buffer(out)
                     continue
                 _, seq = inference_obj.run_predict(msg)
+                print("Error after Predict")
                 f.write(str(seq) + "\n")
                 compiler_interface.populate_buffer(seq) 
+                # mode = "exit"               
+                #   compiler_interface.evaluate(mode="exit")
+                #   time.sleep(1)
+                # compiler_interface.reset_pipes()
             except Exception as e:
                 print("*****Exception occured*******: ", e)
                 compiler_interface.reset_pipes()
@@ -394,6 +434,7 @@ if __name__ == "__main__":
         rdgs = []
         for path in glob.glob(os.path.join(test_dir, "*.json")):
             with open(path) as f:
+                # print(json.dumps(json.load(f)))
                 rdgs.append(json.load(f))
                 # rdgs.append(json.dumps(json.load(f)))
 
@@ -407,6 +448,7 @@ if __name__ == "__main__":
         distribution_agent = "distribution_agent_{}".format(count)
 
     if use_pipe:
+        print("Use pipe")
         run_pipe_communication(args.data_format, args.pipe_name)
     elif use_grpc:
         ray.init()
