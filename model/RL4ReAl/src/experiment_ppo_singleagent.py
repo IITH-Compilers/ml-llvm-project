@@ -25,10 +25,10 @@ from gym.spaces import Discrete, Box, Dict, Tuple
 # from simple_q import SimpleQTrainer, DEFAULT_CONFIG
 from ppo_new import PPO, DEFAULT_CONFIG
 # from env import GraphColorEnv, set_config
-from multiagentEnv import HierarchicalGraphColorEnv
+from singleagentEnv import HierarchicalGraphColorEnv
 from register_action_space import RegisterActionSpace
 from ray.rllib.models import ModelCatalog
-from model import SelectTaskNetwork, SelectNodeNetwork, ColorNetwork, SplitNodeNetwork
+from model_singleagent import SANetwork
 import logging
 from ray.rllib.utils.torch_utils import FLOAT_MIN, FLOAT_MAX
 from ray.rllib.utils.spaces.repeated import Repeated
@@ -51,6 +51,7 @@ def experiment(config):
     print('Training agent used:', train_agent)
     # Train
     checkpoint = config["env_config"]["check_point"]
+    print("checkpoint : ", checkpoint)
     if checkpoint is not None:
         train_agent.restore(checkpoint)
         print("Checkpoint restored")            
@@ -68,10 +69,7 @@ def experiment(config):
             break
 
     if config['dump_onnx_model']:   
-        train_agent.export_policy_model(export_dir=MODEL_DIR + "/select_node", policy_id="select_node_policy", onnx=11)
-        train_agent.export_policy_model(export_dir=MODEL_DIR + "/select_task", policy_id="select_task_policy", onnx=11)
-        train_agent.export_policy_model(export_dir=MODEL_DIR + "/color_node", policy_id="colour_node_policy", onnx=11)
-        train_agent.export_policy_model(export_dir=MODEL_DIR + "/split_node", policy_id="split_node_policy", onnx=11)
+        train_agent.export_policy_model(export_dir=MODEL_DIR + "/single_agent", policy_id="select_agent_model", onnx=11)
     
     
     train_agent.stop()
@@ -167,123 +165,33 @@ if __name__ == "__main__":
     config["callbacks"] = MyCallbacks
     config["dump_onnx_model"] = args.dump_onnx_model
 
-    ModelCatalog.register_custom_model("select_node_model", SelectNodeNetwork)
-    ModelCatalog.register_custom_model("select_task_model", SelectTaskNetwork)
-    ModelCatalog.register_custom_model("colour_node_model", ColorNetwork)
-    ModelCatalog.register_custom_model("split_node_model", SplitNodeNetwork)
+    ModelCatalog.register_custom_model("single_agent_model", SANetwork)
 
-    box_obs = Box(
-            FLOAT_MIN, FLOAT_MAX, shape=(config["env_config"]["state_size"], ), dtype=np.float32)
-    box_obs_select_node = Box(
-            FLOAT_MIN, FLOAT_MAX, shape=(config["env_config"]["max_number_nodes"], config["env_config"]["state_size"]), dtype=np.float32)
-    
     max_edge_count = config["env_config"]["max_edge_count"]
-    adjacency_lists = Dict({
-        "node_num": Discrete(config["env_config"]["max_number_nodes"]),
-        "edge_num": Discrete(max_edge_count),
-        "data": Repeated(Box(0.0, config["env_config"]["max_number_nodes"], shape=(2,)), max_len = max_edge_count)
-    })
-    obs_colour_node = Dict({
-        "action_mask": Box(0, 1, shape=(config["env_config"]["action_space_size"],)),
-        "node_properties": Box(FLOAT_MIN, FLOAT_MAX, shape=(3,)), 
-        "state": box_obs
-        })
-    obs_select_node = Dict({
-        "spill_weights": Box(FLOAT_MIN, FLOAT_MAX, shape=(config["env_config"]["max_number_nodes"],), dtype=np.float32), 
-        "action_mask": Box(0, 1, shape=(config["env_config"]["max_number_nodes"],)),
-        "state": box_obs_select_node,
-        "annotations": Box(FLOAT_MIN, FLOAT_MAX, shape=(config["env_config"]["max_number_nodes"], config["env_config"]["annotations"]), dtype=np.float32),
-        "adjacency_lists": adjacency_lists,
-        }) 
-    obs_select_task = Dict({
-        "node_properties": Box(FLOAT_MIN, FLOAT_MAX, shape=(4,), dtype=np.float32),
-        "action_mask": Box(0, 1, shape=(2,)),
-        "state": box_obs
-        })
-    
-    obs_node_spliting = Dict({
-        "usepoint_properties": Box(FLOAT_MIN, FLOAT_MAX, shape=(config["env_config"]["max_usepoint_count"], 2), dtype=np.float32), 
-        "action_mask": Box(0, 1, shape=(config["env_config"]["max_usepoint_count"],)),
-        "state": box_obs
-        }) 
-    
-    def policy_mapping_fn(agent_id, episode=None, **kwargs):
-        if agent_id.startswith("select_node_agent"):
-            return "select_node_policy"
-        elif agent_id.startswith("select_task_agent"):
-            return "select_task_policy"
-        elif agent_id.startswith("colour_node_agent"):
-            return "colour_node_policy"
-        else:
-            return "split_node_policy"
 
-
-    policies = {
-        "select_node_policy": (None, obs_select_node,
-                                Discrete(config["env_config"]["max_number_nodes"]), {
-                                    "gamma": 0.9,
-                                    "model": {
-                                        "custom_model": "select_node_model",
-                                        "custom_model_config": {
-                                            "state_size": config["env_config"]["state_size"],
-                                            "fc1_units": 256,
-                                            "fc2_units": 128,
-                                            "fc3_units": 64,
-                                            "max_number_nodes": config["env_config"]["max_number_nodes"],
-                                            "annotations_size": config["env_config"]["annotations"],
-                                            "max_edge_count": max_edge_count,
-                                            "enable_GGNN": config["env_config"]["enable_GGNN"]
-                                        },
-                                    },
-                                }),
-        "select_task_policy": (None, obs_select_task,
-                                Discrete(2), {
-                                    "gamma": 0.9,
-                                    "model": {
-                                        "custom_model": "select_task_model",
-                                        "custom_model_config": {
-                                            "state_size": config["env_config"]["state_size"],
-                                            "fc1_units": 64,
-                                            "fc2_units": 64
-                                        },
-                                    },
-                                }),
-        "colour_node_policy": (None, obs_colour_node,
-                                Discrete(config["env_config"]["action_space_size"]), {
-                                    "gamma": 0.9,
-                                    "model": {
-                                        "custom_model": "colour_node_model",
-                                        "custom_model_config": {
-                                            "state_size": config["env_config"]["state_size"],
-                                            "fc1_units": 64,
-                                            "fc2_units": 64
-                                        },
-                                    },
-                                }),
-        "split_node_policy": (None, obs_node_spliting,
-                                Discrete(config["env_config"]["max_usepoint_count"]), {
-                                    "gamma": 0.9,
-                                    "model": {
-                                        "custom_model": "split_node_model",
-                                        "custom_model_config": {
-                                            "state_size": config["env_config"]["state_size"],
-                                            "fc1_units": 64,
-                                            "fc2_units": 64,
-                                            "max_usepoint_count": config["env_config"]["max_usepoint_count"]
-                                        },
-                                    },
-                                }),
-    }
-
-    config["multiagent"] = {
-        "policies" : policies,
-        "policy_mapping_fn": policy_mapping_fn
-    }
+    config["action_space"] = Discrete(config["env_config"]["max_number_nodes"])
+    config["gamma"] = 0.9
+    config["model"] = {
+                        "custom_model": "single_agent_model",
+                        "custom_model_config": {
+                            "state_size": config["env_config"]["state_size"],
+                            "fc1_units": 128,
+                            "fc2_units": 256,
+                            "fc3_units": 128,
+                            "action_size": config["env_config"]["action_space_size"],
+                            "max_number_nodes": config["env_config"]["max_number_nodes"],
+                            "annotations_size": config["env_config"]["annotations"],
+                            "max_edge_count": max_edge_count,
+                            "enable_GGNN": config["env_config"]["enable_GGNN"]
+                        },
+                    }
     print("Training Config", config)
     start_time = time.time()
     
     
     config["num_rollout_workers"] = (int)(args.workers)
+    
+    config["disable_env_checking"] = True
 
     if args.mode == "GPU":
         config["num_gpus_per_worker"] = 0.05

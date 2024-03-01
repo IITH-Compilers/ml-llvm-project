@@ -20,7 +20,8 @@ import json
 import math
 import torch
 import signal
-from gym.spaces import Discrete, Box
+from gym.spaces import Discrete, Box, Dict
+from ray.rllib.utils.spaces.repeated import Repeated
 # from memory_profiler import profile
 
 # from ggnn import constructGraph
@@ -30,7 +31,7 @@ from register_action_space import RegisterActionSpace
 import ray
 from ray import tune
 from ray.tune import grid_search
-from ray.rllib.env import MultiAgentEnv
+from ray.rllib.env import MultiAgentEnv, BaseEnv 
 from ray.rllib.env.env_context import EnvContext
 from ray.rllib.models import ModelCatalog
 from ray.rllib.models.tf.tf_modelv2 import TFModelV2
@@ -44,7 +45,9 @@ from tqdm import tqdm
 import traceback
 import random
 import sys
+from ray.rllib.utils.torch_utils import FLOAT_MIN, FLOAT_MAX
 import re
+
 
 from config import BUILD_DIR
 
@@ -75,14 +78,36 @@ def enablePrint():
 
 
 
-class HierarchicalGraphColorEnv(MultiAgentEnv):
+class HierarchicalGraphColorEnv(gym.Env):
     def __init__(self, env_config):
         self.env_config = env_config
         self.colormap = None
         self.split_point = None
         self.new_obs = None
         self.spill_color_idx = 0
-        self.action_space = None
+        
+        adjacency_lists = Dict({
+            "node_num": Discrete(env_config["max_number_nodes"]),
+            "edge_num": Discrete(env_config["max_edge_count"]),
+            "data": Repeated(Box(0.0, env_config["max_number_nodes"], shape=(2,), dtype=np.float32), max_len = env_config["max_edge_count"])
+        })
+        
+        # obs_colour_node = Dict({
+        #     "action_mask": Box(0, 1, shape=(env_config["action_space_size"],)),
+        #     "node_properties": Box(FLOAT_MIN, FLOAT_MAX, shape=(3,)), 
+        #     "state": Box(FLOAT_MIN, FLOAT_MAX, shape=(env_config["state_size"], ), dtype=np.float32)
+        # })
+        
+        self.observation_space = Dict({
+            "spill_weights": Box(FLOAT_MIN, FLOAT_MAX, shape=(env_config["max_number_nodes"],), dtype=np.float32), 
+            "action_mask": Box(0, 1, shape=(env_config["max_number_nodes"],)),
+            "state": Box(FLOAT_MIN, FLOAT_MAX, shape=(env_config["max_number_nodes"], env_config["state_size"]), dtype=np.float32),
+            "annotations": Box(FLOAT_MIN, FLOAT_MAX, shape=(env_config["max_number_nodes"], env_config["annotations"]), dtype=np.float32),
+            "adjacency_lists": adjacency_lists,
+            "colour_mask": Box(0, 1, shape=(env_config["max_number_nodes"],env_config["action_space_size"])),
+        })
+        
+        self.action_space = Discrete(env_config["max_number_nodes"]*env_config["action_space_size"])
         self.graph = None
         self.topology = None # Have the graph formed from adjency list using dependence edges only.
         self.cur_node = None
@@ -208,11 +233,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
     def reset(self, graph=None):
             
         self.reset_env(graph)
-        self.agent_count = 0
-        self.select_node_agent_id = "select_node_agent_{}".format(self.agent_count)
-        self.select_task_agent_id = "select_task_agent_{}".format(self.agent_count)
-        self.split_node_agent_id = "split_node_agent_{}".format(self.agent_count)
-        self.colour_node_agent_id = "colour_node_agent_{}".format(self.agent_count)
 
         select_node_mask = self.createNodeSelectMask()
         # select_node_mask = self.createNodeSelectMaskSpillWeightBased()
@@ -227,7 +247,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         annotations = np.zeros((self.max_number_nodes, self.annotation_size))
         annotations[0:state.annotations.shape[0], :] = state.annotations
         spill_weight_list = annotations[:, 0]  # Annotations first element is spill weights 
-        adjacency_lists = (state.adjacency_lists[0].getNodeNum(), np.array(state.adjacency_lists[0].getData()))
         result = None
         for inx, i in enumerate(state.adjacency_lists[0].getData()):
             flag = True
@@ -249,20 +268,29 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         adjacency_lists = {
             "node_num": state.adjacency_lists[0].getNodeNum(),
             "edge_num": state.adjacency_lists[0].getData().shape[0],
-            "data": state.adjacency_lists[0].getData().tolist()
+            "data": [np.array(x) for x in state.adjacency_lists[0].getData().tolist()]
         }
+        
+        colour_mask = self.createColourMask()
         
         obs = {
             # self.select_node_agent_id: { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(select_node_mask), 'state' : cur_obs}
-            self.select_node_agent_id: { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(select_node_mask), 'state' : cur_obs, 'annotations': np.array(annotations) ,'adjacency_lists': adjacency_lists}
+            'spill_weights': np.array(spill_weight_list), 
+            'action_mask': np.array(select_node_mask),
+            'state' : cur_obs,
+            'annotations': np.array(annotations),
+            'adjacency_lists': adjacency_lists,
+            "colour_mask": np.array(colour_mask),
         }
+        
         self.spill_successful = 0
         self.split_successful = 0
         self.colour_successful = 0
 
+
         return obs
 
-    def step(self, action_dict, extra_info=None):
+    def step(self, action, extra_info=None):
         if self.mode != 'inference':
             if extra_info and 'select_node_policy' in extra_info.keys():
                 self.node_representation_mat = extra_info['select_node_policy'][0, :, :]                
@@ -270,14 +298,178 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             if extra_info is not None:
                 if len(extra_info.shape) == 3:
                     self.node_representation_mat = extra_info[0, :, :]                
-        if self.select_node_agent_id in action_dict:
-            return self._select_node_step(action_dict[self.select_node_agent_id])
-        if self.select_task_agent_id in action_dict:
-            return self._select_task_step(action_dict[self.select_task_agent_id])
-        if self.colour_node_agent_id in action_dict:
-            return self._colour_node_step(action_dict[self.colour_node_agent_id])
-        if self.split_node_agent_id in action_dict:
-            return self._split_node_step(action_dict[self.split_node_agent_id])
+        
+        self.cur_node = action//self.env_config["action_space_size"]
+        colour_action = action%self.env_config["action_space_size"]
+        
+        update_status = self.obs.graph_topology.UpdateVisitList(self.cur_node)
+        if not update_status:
+            print("UpdateVisitList failed for {} graph at {} node".format(self.path, self.cur_node))
+            assert False, 'discovered node visited.'
+        self.virtRegId = self.obs.idx_nid[self.cur_node]
+        # logging.info("Node selected = {}, corresponding register id = {}".format(action, self.virtRegId))
+        state = self.obs
+        self.cur_obs = self.node_representation_mat[self.cur_node][0:self.emb_size]
+        if self.cur_obs is not None and not isinstance(self.cur_obs, np.ndarray):
+            self.cur_obs = self.cur_obs.detach().numpy()
+        prop = self.getNodeProperties()
+        prop_value_list = list(prop.values())
+        
+        state = self.obs
+        self.cur_obs = self.node_representation_mat[self.cur_node][0:self.emb_size]
+        if self.cur_obs is not None and not isinstance(self.cur_obs, np.ndarray):
+            self.cur_obs = self.cur_obs.detach().numpy()
+        
+        # Coloring the node
+        colour_reward, done_all, response  = self.step_colorTask(colour_action)
+        state = self.obs
+        self.cur_obs = self.node_representation_mat[self.cur_node][0:self.emb_size]
+        if self.cur_obs is not None and not isinstance(self.cur_obs, np.ndarray):
+            self.cur_obs = self.cur_obs.detach().numpy()
+            
+        regclass = self.obs.reg_class_list[self.cur_node]
+        adj_colors = self.obs.graph_topology.getColorOfVisitedAdjNodes(self.cur_node)
+
+        masked_action_space = self.registerAS.maskActionSpace(regclass, adj_colors)
+
+        colour_mask = self.createColourMask()
+        # Handling mask all zero issue
+        select_node_mask = self.createNodeSelectMask()
+        # select_node_mask = self.createNodeSelectMaskSpillWeightBased()
+        if all(v == 0 for v in select_node_mask) and not done_all:
+            done_all = True
+
+        select_task_mask = self.creatTaskSelectMask()
+
+        state = self.obs
+        cur_obs = self.node_representation_mat
+        annotations = np.zeros((self.max_number_nodes, self.annotation_size))
+        annotations[0:state.annotations.shape[0], :] = state.annotations
+        spill_weight_list = annotations[:, 0]  # Annotations first element is spill weights 
+        result = None
+        for inx, i in enumerate(state.adjacency_lists[0].getData()):
+            
+            if inx ==0:
+                result = i
+            else:
+                result = torch.cat([result, i], dim=0)
+        max_edge_count = self.max_edge_count
+        edges_unroll = np.zeros((2*max_edge_count,))
+        if result is not None:
+            edges_unroll[0:result.shape[0]] = result
+        
+        adjacency_lists = {
+            "node_num": state.adjacency_lists[0].getNodeNum(),
+            "edge_num": state.adjacency_lists[0].getData().shape[0],
+            "data": [np.array(x) for x in state.adjacency_lists[0].getData().tolist()]
+        }
+        discount_factor = 0
+        prop = self.getNodeProperties()
+        prop_value_list = list(prop.values())
+
+        usepoint_prop = self.getUsepointProperties()
+        usepoint_prop_value = np.array(list(usepoint_prop.values())).transpose()
+        
+        usepoint_prop_mat = self.getUsepointPropertiesMatrix(usepoint_prop_value)
+        if usepoint_prop_mat is None:
+            usepoint_prop_mat = np.zeros((self.max_usepoint_count, 2), dtype=float)
+        splitpoints = self.obs.split_points[self.cur_node]
+        split_node_mask = []
+        use_distance_list = self.obs.use_distances[self.cur_node]
+        for i in range(usepoint_prop_mat.shape[0]):
+            if i in splitpoints and i != len(use_distance_list) - 1:
+                split_node_mask.append(1)
+            else:
+                split_node_mask.append(0)
+
+        node_properties = self.getNodePropertiesforColoring()
+        prop_value_list_colouring = list(node_properties.values())
+
+        # colour_node_obs = { 'action_mask': np.array(colour_node_mask),'node_properties': np.array(prop_value_list_colouring), 'state' : self.cur_obs}
+        # select_node_obs = { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(select_node_mask), 'state' : cur_obs, 'annotations': np.array(annotations) ,'adjacency_lists': adjacency_lists}
+        # select_task_obs = { 'action_mask': np.array(select_task_mask), 'node_properties': np.array(prop_value_list, dtype=np.float), 'state' : self.cur_obs}
+        # split_node_obs = { 'action_mask': np.array(split_node_mask), 'state' : self.cur_obs, "usepoint_properties": usepoint_prop_mat}
+        
+        self.total_reward += colour_reward
+        if self.mode != 'inference':
+            if self.use_local_reward:
+                reward = colour_reward
+            else:
+                reward = 0
+            obs = {
+                'spill_weights': np.array(spill_weight_list),
+                'action_mask': np.array(select_node_mask),
+                'state' : cur_obs,
+                'annotations': np.array(annotations),
+                'adjacency_lists': adjacency_lists,
+                'colour_mask': colour_mask
+            }
+            done = False
+        else:
+            reward = {}
+            obs = {}
+            done = False
+
+        if done_all:
+            if self.mode != 'inference':
+                reward = colour_reward
+            done = True
+            from csv import writer
+            with open('traning_stats_'+str(self.worker_index)+'.csv', 'a') as f_object:
+  
+                # Pass this file object to csv.writer()
+                # and get a writer object
+                writer_object = writer(f_object)
+            
+                # Pass the list as an argument into
+                # the writerow()
+                episode_stat = [self.path, self.colour_successful, self.spill_successful, self.split_successful]
+                writer_object.writerow(episode_stat)
+            
+                #Close the file object
+                f_object.close()
+
+        else:          
+            obs = {
+                    'spill_weights': np.array(spill_weight_list),
+                    'action_mask': np.array(select_node_mask),
+                    'state' : cur_obs,
+                    'annotations': np.array(annotations),
+                    'adjacency_lists': adjacency_lists,
+                    'colour_mask': colour_mask
+            }   
+            
+            reward = 0
+            done = done_all
+        logging.debug("Exit _colour_node_step")
+        return obs, reward, done, {}
+    
+    def createColourMask(self):
+        colour_mask = np.zeros((self.env_config["max_number_nodes"],self.env_config["action_space_size"]))
+        eligiblenodes = self.obs.graph_topology.get_eligibleNodes()
+        for cur_node in eligiblenodes:
+            regclass = self.obs.reg_class_list[cur_node]
+            adj_colors = self.obs.graph_topology.getColorOfVisitedAdjNodes(cur_node)
+            masked_action_space = self.registerAS.maskActionSpace(regclass, adj_colors)            
+            is_mask_empty = True
+            colour_node_mask = []
+            count = 0
+            for i in range(self.action_space_size):
+                if i in masked_action_space:
+                    colour_node_mask.append(1)
+                    is_mask_empty = False
+                    count += 1
+                else:
+                    colour_node_mask.append(0)
+            
+            if count == 1: # If only sigle register avialable then avoid coloring for 'ran out of register' error
+                colour_node_mask = [0]*self.action_space_size
+                colour_node_mask[0] = 1
+            
+            if is_mask_empty:
+                colour_node_mask[0] = 1
+            colour_mask[cur_node] = np.array(colour_node_mask)
+        return colour_mask 
     
     def createNodeSelectMask(self):
         mask = [0]*self.max_number_nodes
@@ -285,10 +477,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         assert len(eligibleNodes) < self.max_number_nodes, "Graph has more then maximum nodes allowed"
         for inx, x in enumerate(eligibleNodes):            
             if x in eligibleNodes:
-                mask[x] = 1
-        if all(v == 0 for v in mask):
-            return None
-            
+                mask[x] = 1   
         return mask
     
     def createNodeSelectMaskSpillWeightBased(self):
@@ -394,6 +583,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         }
         return prop
 
+    
     def _select_node_step(self, action):        
         logging.debug("Enter _select_node_step")                
 
@@ -528,7 +718,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         annotations = np.zeros((self.max_number_nodes, self.annotation_size))
         annotations[0:state.annotations.shape[0], :] = state.annotations
         spill_weight_list = annotations[:, 0]  # Annotations first element is spill weights 
-        adjacency_lists = (state.adjacency_lists[0].getNodeNum(), np.array(state.adjacency_lists[0].getData()))
         result = None
         for inx, i in enumerate(state.adjacency_lists[0].getData()):
             
@@ -544,7 +733,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         adjacency_lists = {
             "node_num": state.adjacency_lists[0].getNodeNum(),
             "edge_num": state.adjacency_lists[0].getData().shape[0],
-            "data": state.adjacency_lists[0].getData().tolist()
+            "data": [np.array(x) for x in state.adjacency_lists[0].getData().tolist()]
         }
         discount_factor = 0
         prop = self.getNodeProperties()
@@ -701,7 +890,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         annotations[0:state.annotations.shape[0], :] = state.annotations
         spill_weight_list = annotations[:, 0]  # Annotations first element is spill weights 
         # annotations = state.annotations
-        adjacency_lists = (state.adjacency_lists[0].getNodeNum(), np.array(state.adjacency_lists[0].getData()))
         result = None
         for inx, i in enumerate(state.adjacency_lists[0].getData()):
             
@@ -716,7 +904,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         adjacency_lists = {
             "node_num": state.adjacency_lists[0].getNodeNum(),
             "edge_num": state.adjacency_lists[0].getData().shape[0],
-            "data": state.adjacency_lists[0].getData().tolist()
+            "data": [np.array(x) for x in state.adjacency_lists[0].getData().tolist()]
         }
 
         prop = self.getNodeProperties()
@@ -898,6 +1086,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             self.obs.next_stage = 'end'
             if self.mode != 'inference':
                 exit_response = self.stable_grpc('Exit', 0, 0)
+                os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
                 current_cost = SPILL_COST_THRESHOLD
                 if exit_response:
                     # print("Cost of spilling and moves:", exit_response.cost)
@@ -998,7 +1187,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                                     print("Following key not in Greedy map:", key)
                             
                         else:
-                            print("MCA timeout happned")                    
+                            print("MCA timeout happned", errs)                    
                     else:
                         print("Excided timer for asembly generation")
                         reward = 0
@@ -1140,9 +1329,9 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
     def stable_grpc(self, op, register_id, split_point):
         attempt = 0
-        max_retries=5
-        retry_wait_seconds=0.1
-        retry_wait_backoff_exponent=1.5
+        max_retries=8
+        retry_wait_seconds=0.0625
+        retry_wait_backoff_exponent=2
         while True:
             try:
                 logging.debug("Observation {}, register id {} and split point {}".format(op, register_id,  split_point))
@@ -1150,6 +1339,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 if op != "Exit":
                     updated_graphs = self.queryllvm.codeGen(op, register_id,  split_point)
                 else:
+                    
                     updated_graphs = self.queryllvm.codeGen(op, register_id,  split_point, color=self.colormap)
                 t2 = time.time()
                 self.grpc_rtt += t2-t1
@@ -1159,7 +1349,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 if e.code() == grpc.StatusCode.UNAVAILABLE:
                     attempt += 1
                     if attempt > max_retries:
-                        print("Maximum attempts completed")
                         return None
                         # exit(0)
                     remaining = max_retries - attempt

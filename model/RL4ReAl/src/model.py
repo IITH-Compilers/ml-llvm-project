@@ -9,8 +9,9 @@ from ray.rllib.models.torch.misc import SlimFC, normc_initializer
 import numpy as np
 from ggnn_1 import get_observations, get_observationsInf, GatedGraphNeuralNetwork, constructVectorFromMatrix, AdjacencyList
 import random
-from torch_geometric.nn import GCN
+from torch_geometric.nn import GCN, GCNConv, SAGEConv, GATConv
 from torch_geometric.data import Data, Batch
+import copy
 logger = logging.getLogger(__file__) 
 random.seed(123)
 np.random.seed(123)
@@ -117,93 +118,164 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
         self.emb_size = custom_config["state_size"]
         # self.ggnn = GatedGraphNeuralNetwork(hidden_size=state_size, annotation_size=annotations_size, num_edge_types=1, layer_timesteps=[5], residual_connections={}, nodelevel=True, batch_norm_param=self.max_number_nodes, max_edge_count=custom_config["max_edge_count"])
 
-        self.ggnn = GCN(in_channels=103, hidden_channels=100, out_channels=100, num_layers=2, norm='BatchNorm', dropout=0.2)
-        
+        # self.ggnn = SAGEConv(in_channels=103, out_channels=100, normalize=True)
+        # self.ggnn = GATConv(in_channels=103, out_channels=100)
+        self.ggnn = GCNConv(in_channels=103, out_channels=100, improved=True, normalize=True)
+        self.recent_models = []
     def forward(self, input_dict, state, seq_lens):
         """Build a network that maps state -> action values."""
         # print("Obs keys are:", input_dict['obs'].keys())
         # print("State shape:", input_dict["obs"]["state"].shape)
         input_state_list = torch.zeros(input_dict["obs"]["state"].shape[0], self.max_number_nodes, self.emb_size)
-        # if self.enable_ggnn:
-        #     # print("*************************** SHAPES PRINTING *****************************")
-        #     # print("-----------------BEFORE GGNN-------------")
+        if self.enable_ggnn:
+            # print("*************************** SHAPES PRINTING *****************************")
+            # print("-----------------BEFORE GGNN-------------")
 
-        #     # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        #     # print("from select node forward func : ", device)
-        #     # print("adjacency list device = ", input_dict["obs"]["adjacency_lists"][0].data.device)
-        #     # print("annotations device = ", input_dict["obs"]["annotations"].device)
-        #     # assert not torch.isnan(input_dict["obs"]["state"]).any(), "Nan in select node model obs:state"
-        #     # assert not torch.isnan(input_dict['obs']['adjacency_lists']['data'].values).any(), "Nan in select node model adjlist"
-
-
-        #     ggnn_input_x = torch.dstack((input_dict["obs"]["state"], input_dict["obs"]["annotations"]))
-        #     edge_index = input_dict['obs']['adjacency_lists']['data'].values.mT
+            # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+            # print("from select node forward func : ", device)
+            # print("adjacency list device = ", input_dict["obs"]["adjacency_lists"][0].data.device)
+            # print("annotations device = ", input_dict["obs"]["annotations"].device)
+            assert not torch.isnan(input_dict["obs"]["state"]).any(), "Nan in select node model obs:state"
+            assert not torch.isnan(input_dict['obs']['adjacency_lists']['data'].values).any(), "Nan in select node model adjlist"
 
 
-
-
-        #     # print("ggnn_input_x.device = ", ggnn_input_x.device)
-        #     # print("edge_index.device = ", edge_index.device)
-        #     batch_size = ggnn_input_x.shape[0]
-        #     # #################### batch method #######################
-        #     data_list = []
-
-        #     data_list = [Data(x=ggnn_input_x[i], edge_index=edge_index[i].long()) for i in range(batch_size)]
-        #     batch_data = Batch.from_data_list(data_list=data_list)
-
-        #     node_mat = self.ggnn(batch_data.x, batch_data.edge_index).reshape(batch_size, -1, 100)
-        #     # assert not torch.isnan(node_mat).any(), "Nan in select node model input after ggnn"
-
-
-        #     # print(batch_data)
-        #     # # print('num_graphs = ', batch_data.num_graphs)
+            ggnn_input_x = torch.dstack((input_dict["obs"]["state"], input_dict["obs"]["annotations"]))
+            edge_index = input_dict['obs']['adjacency_lists']['data'].values
 
 
 
-        #     # outs = [self.ggnn(ggnn_input_x[i], edge_index[i].long()) for i in range(batch_size)]
-        #     # node_mat = torch.stack(outs)
-        #     # print("GOT NODE_MAT!!!!!!!!!!!!", node_mat.shape)
-        #     # return
-        #     # node_mat = self.ggnn(initial_node_representation=input_dict["obs"]["state"], annotations=input_dict["obs"]["annotations"], adjacency_lists=input_dict["obs"]["adjacency_lists"])
 
-        #     # print("node_mat device = ", node_mat.device)
-        #     # print("-----------------AFTER GGNN-------------")
-        #     # print("node mat shape - ", node_mat.shape)
-        #     # return
+            # print("ggnn_input_x.device = ", ggnn_input_x.device)
+            # print("edge_index.device = ", edge_index.device)
+            batch_size = ggnn_input_x.shape[0]
+            # #################### batch method #######################
+            data_list = []
+
+            data_list = [Data(x=ggnn_input_x[i], edge_index=edge_index[i].long().T) for i in range(batch_size)]
             
-        #     input_state_list = node_mat
-        # else:
-        #     input_state_list = initial_node_representation=input_dict["obs"]["state"]
-        
-        input_state_list = input_dict["obs"]["state"]
-        
+            batch_data = Batch.from_data_list(data_list=data_list)
+
+
+            node_mat = torch.tanh(self.ggnn(batch_data.x, batch_data.edge_index).reshape(batch_size, -1, 100))
+            
+            #For GATConv
+            if isinstance(self.ggnn, GATConv):
+                node_mat = self.ggnn(batch_data.x, batch_data.edge_index).reshape(batch_size, -1, 100)
+                node_mat = F.normalize(node_mat, p=2, dim=-1)
+                node_mat = torch.tanh(node_mat)
+            else:
+                node_mat = torch.tanh(self.ggnn(batch_data.x, batch_data.edge_index).reshape(batch_size, -1, 100))
+            
+            if len(self.recent_models) == 3:
+                self.recent_models.pop(0)
+            
+            self.recent_models.append(copy.deepcopy(self.ggnn))
+
+            try:
+                assert not torch.isnan(node_mat).any(), "Nan in select node model input"
+            except:
+                print("Few stats about ggnn layer weights and bias:\n")
+                print("Weights:")
+                print(self.ggnn.lin.weight.grad)
+                print("Any Nan: ",torch.isnan(self.ggnn.state_dict()['lin.weight']).any())
+                print("Max: ", torch.max(self.ggnn.state_dict()['lin.weight']))
+                print("Gradient Norm: ", torch.norm(self.ggnn.lin.weight.grad, p=2))
+                
+                print("Bias:")
+                print(self.ggnn.bias.grad)
+                print("Any Nan: ",torch.isnan(self.ggnn.state_dict()['bias']).any())
+                print("Max: ", torch.max(self.ggnn.state_dict()['bias']))
+                print("Gradient Norm: ", torch.norm(self.ggnn.bias.grad, p=2))
+                
+                print("Saving the last 3 recent models:")
+                for idx, model in enumerate(self.recent_models):
+                    torch.save(model, f"/home/ai20btech11004/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src/ggnn_failed_models/ggnn_{idx}")
+                    
+                exit(1)
+            
+            # print(batch_data)
+            # # print('num_graphs = ', batch_data.num_graphs)
+
+
+
+            # outs = [self.ggnn(ggnn_input_x[i], edge_index[i].long()) for i in range(batch_size)]
+            # node_mat = torch.stack(outs)
+            # print("GOT NODE_MAT!!!!!!!!!!!!", node_mat.shape)
+            # return
+            # node_mat = self.ggnn(initial_node_representation=input_dict["obs"]["state"], annotations=input_dict["obs"]["annotations"], adjacency_lists=input_dict["obs"]["adjacency_lists"])
+
+            # print("node_mat device = ", node_mat.device)
+            # print("-----------------AFTER GGNN-------------")
+            # print("node mat shape - ", node_mat.shape)
+            # return
+            
+            input_state_list = node_mat
+        else:
+            input_state_list = initial_node_representation=input_dict["obs"]["state"]
         input_state_list = input_state_list.to(input_dict["obs"]["state"].device)
-        # assert not torch.isnan(input_state_list).any(), "Nan in select node model input"
+        try:
+            assert not torch.isnan(input_state_list).any(), "Nan in select node model input"
+        except:
+            print("Saving the last 3 recent models:")
+            for idx, model in enumerate(self.recent_models):
+                torch.save(model, f"/home/ai20btech11004/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src/ggnn_failed_models/ggnn_{idx}")
+                
+            exit(1)
         x = F.relu(self.fc1(input_state_list))
-        # if torch.isnan(x).any():
-        #     print("Task select model input max value: ", torch.max(input_state_list))
-        #     print("FC1 layers weights", torch.isnan(self.fc1.state_dict()['weight']).any())
-        #     print("FC1 layers bias", torch.isnan(self.fc1.state_dict()['bias']).any())
-        # assert not torch.isnan(x).any(), "Nan in select node model after fc1"
+        if torch.isnan(x).any():
+            print("Task select model input max value: ", torch.max(input_state_list))
+            print("FC1 layers weights", torch.isnan(self.fc1.state_dict()['weight']).any())
+            print("FC1 layers bias", torch.isnan(self.fc1.state_dict()['bias']).any())
+            print("Weights Gradient Norm: ", torch.norm(self.fc1.weight.grad, p=2))
+            print("Bias Gradeint Norm: ", torch.norm(self.fc1.bias.grad), p=2)
+        try:
+            assert not torch.isnan(x).any(), "Nan in select node model after fc1"
+        except:
+            print("Saving the last 3 recent models:")
+            for idx, model in enumerate(self.recent_models):
+                torch.save(model, f"/home/ai20btech11004/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src/ggnn_failed_models/ggnn_{idx}")
+                
+            exit(1)
         spill_weights = input_dict["obs"]["spill_weights"]
-        # assert not torch.isnan(spill_weights).any(), "Spill weight is nan for select node model"
+        try:
+            assert not torch.isnan(spill_weights).any(), "Spill weight is nan for select node model"
+        except:
+            print("Saving the last 3 recent models:")
+            for idx, model in enumerate(self.recent_models):
+                torch.save(model, f"/home/ai20btech11004/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src/ggnn_failed_models/ggnn_{idx}")
+                
+            exit(1)
         spill_weights = (spill_weights).reshape(spill_weights.shape[0], spill_weights.shape[1], 1)
         x = torch.cat((spill_weights, x), 2)
         x = F.relu(self.fc2(x))
-        # if torch.isnan(x).any():
-        #     print("Task select model input max value: ", torch.max(input_state_list))
-        #     print("FC2 layers weights", torch.isnan(self.fc1.state_dict()['weight']).any())
-        #     print("FC2 layers bias", torch.isnan(self.fc1.state_dict()['bias']).any())
+        if torch.isnan(x).any():
+            print("Task select model input max value: ", torch.max(input_state_list))
+            print("FC2 layers weights", torch.isnan(self.fc1.state_dict()['weight']).any())
+            print("FC2 layers bias", torch.isnan(self.fc1.state_dict()['bias']).any())
         #print("FC2 layer weights max and min value", torch.max(self.fc2.state_dict()['weight']), torch.min(self.fc2.state_dict()['weight']))
         #print("FC2 layer bias max and min value", torch.max(self.fc2.state_dict()['bias']), torch.min(self.fc2.state_dict()['bias']))
-        # # assert not torch.isnan(x).any(), "Nan in select node model after fc2"
+        # assert not torch.isnan(x).any(), "Nan in select node model after fc2"
         # x = torch.transpose(x, 1, 2)
-        # x = self.attention(x)        
-        # assert not torch.isnan(x).any(), "Nan in select node model after attension layer"
+        # x = self.attention(x)    
+        try:    
+            assert not torch.isnan(x).any(), "Nan in select node model after attension layer"
+        except:
+            print("Saving the last 3 recent models:")
+            for idx, model in enumerate(self.recent_models):
+                torch.save(model, f"/home/ai20btech11004/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src/ggnn_failed_models/ggnn_{idx}")
+                
+            exit(1)
         x = F.relu(self.fc3(x))
         x = self.fc4(x)
         x = torch.squeeze(x, 2)
-        # assert not torch.isnan(x).any(), "Nan in select node model after fc3"
+        try:
+            assert not torch.isnan(x).any(), "Nan in select node model after fc3"
+        except:
+            print("Saving the last 3 recent models:")
+            for idx, model in enumerate(self.recent_models):
+                torch.save(model, f"/home/ai20btech11004/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src/ggnn_failed_models/ggnn_{idx}")
+                
+            exit(1)
         self._features = x.clone().detach()
         # x = self.softmax(x)
         mask = input_dict["obs"]["action_mask"]
@@ -213,8 +285,15 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
         x = x + inf_mask
         # x = torch.where(mask, x, torch.tensor(masking_value).to(x.device))
         #x = torch.where(mask, x, torch.tensor(FLOAT_MIN).to(x.device))
-        # print("Select node output and emb device", x.device, node_mat.device)        
-        # assert not torch.isnan(x).any(), "Nan in select node model output"
+        # print("Select node output and emb device", x.device, node_mat.device) 
+        try:      
+            assert not torch.isnan(x).any(), "Nan in select node model output"
+        except:
+            print("Saving the last 3 recent models:")
+            for idx, model in enumerate(self.recent_models):
+                torch.save(model, f"/home/ai20btech11004/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src/ggnn_failed_models/ggnn_{idx}")
+                
+            exit(1)
         torch.set_printoptions(threshold=10_000)
         return x, state, input_state_list
         # return x, state
