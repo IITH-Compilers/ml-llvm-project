@@ -1,3 +1,90 @@
+# ReadMe
+
+
+# Setup
+## Requirements
+* cmake (>= 3.10)
+* GNU Make (4.2.1)
+* LLVM (10.X) - [src](https://github.com/llvm/llvm-project/tree/release/10.x), [release](https://releases.llvm.org/download.html#10.0.1)
+* Python (3.10), C++17
+* gRPC v1.34 and protobuf v3.13 - for gRPC Model Runner
+    * Building GRPC from Source: Please follow [`Build GRPC with cmake`](https://grpc.io/docs/languages/cpp/quickstart/) **v1.34 (protobuf v3.13)** to build GRPC from source. 
+    * In the above tutorial setting `DCMAKE_INSTALL_PREFIX` is necessary as it would give you an easy way to uninstall GRPC later.
+    * The following dependencies will be required for Python: . # remove this
+* [ONNXRuntime](https://github.com/microsoft/onnxruntime/releases) v1.16.3
+* TensorFlow - for TF Model Runner (AOT flow) # this should be in the yml only don't need to set it up separately
+    * Tested with TensorFlow 2.13.0
+* Other python requirements are available in [mlbridge.yml] # needs to be updated with sangamesh's.yml
+    * Conda/Anaconda based virtual environment is assumed
+
+(Experiments are done on an Ubuntu 20.04 machine) (LMAO)
+
+
+## Build 
+set up env :
+```bash
+
+cp -r /Pramana/ML_LLVM_Tools/AE/envs/ ~/
+
+# install the env using the following commands
+conda env create -f ~/env/LOF_original_env.yml
+conda env create -f ~/env/mlgo-new
+
+wget https://github.com/microsoft/onnxruntime/releases/download/v1.16.3/onnxruntime-linux-x64-1.16.3.tgz
+tar -xvf onnxruntime-linux-x64-1.16.3.tgz
+
+# get GRPC working 
+
+# switch to mlgo-new env as you will need it to build the setup
+conda activate mlgo-new 
+
+# rename files in your conda enviornment
+mv ~/anaconda3/envs/mlgo-new/lib/python3.10/site-packages/tensorflow/include/google/ ~/anaconda3/envs/mlgo-new/lib/python3.10/site-packages/tensorflow/include/google_new/
+
+mv ~/anaconda3/envs/mlgo-new/include/google/ ~/anaconda3/envs/mlgo-new/include/google_new/
+
+git clone git@github.com:IITH-Compilers/ml-llvm-project.git
+cd ml-llvm-project
+git branch mlbridge-lib
+git pull
+git submodule update --init --recursive
+
+# go to mono repo dir
+
+mkdir build
+cd build
+
+# build command 
+	cmake -G "Unix Makefiles" -S ../llvm -B . \                                         
+	-DCMAKE_BUILD_TYPE="Release" \
+	-DLLVM_ENABLE_PROJECTS="clang;IR2Vec;ml-llvm-tools;mlir;MLCompilerBridge" \
+	-DLLVM_TARGETS_TO_BULID="X86" \
+	-DLLVM_ENABLE_ASSERTIONS=on \
+	-DCMAKE_EXPORT_COMPILE_COMMANDS=1 \
+	-DLLVM_CCACHE_BUILD=ON \
+	-DONNXRUNTIME_ROOTDIR=$HOME/onnxruntime-linux-x64-1.16.3 \ # change to your path where you wget the onnxruntime
+	-DLLVM_TF_AOT_RUNTIME=/home/intern24005/miniconda3/envs/mlgo-new/lib/python3.10/site-packages/tensorflow \ # change to your path 
+	-DTENSORFLOW_AOT_PATH=/home/intern24005/miniconda3/envs/mlgo-new/lib/python3.10/site-packages/tensorflow \ # change to your path
+	-DLLVM_INLINER_MODEL_PATH=download \
+	-DLLVM_INLINER_MODEL_CURRENT_URL=https://github.com/google/ml-compiler-opt/releases/download/inlining-Oz-v1.1/inlining-Oz-99f0063-v1.1.tar.gz \
+	-DLLVM_RAEVICT_MODEL_PATH=download \
+	-DLLVM_RAEVICT_MODEL_CURRENT_URL=https://github.com/google/ml-compiler-opt/releases/download/regalloc-evict-v1.0/regalloc-evict-e67430c-v1.0.tar.gz
+	       
+
+make clang opt -j50
+
+#for inference 
+
+# add the onnxruntime to your path
+export LIBRARY_PATH=$LIBRARY_PATH:/home/intern24005/onnxruntime-linux-x64-1.16.3/lib   
+
+# add the 
+
+```
+
+
+
+
 # Static training
 
 conda activate LPD
