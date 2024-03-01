@@ -22,15 +22,13 @@ import time
 sys.path.extend(
     [
         f"{BUILD_DIR}/tools/MLCompilerBridge/Python-Utilities/",
-        f"{BUILD_DIR}/../MLCompilerBridge/CompilerInterface/",
     ]
 )
 import LoopDistribution_pb2, LoopDistribution_pb2_grpc
 import ray
 from ray import tune
 from ray.rllib.agents import ppo
-from PipeCompilerInterface import PipeCompilerInterface
-from GrpcCompilerInterface import GrpcCompilerInterface
+from compilerinterface import PipeCompilerInterface, GrpcCompilerInterface
 
 from simple_q import SimpleQTrainer, DEFAULT_CONFIG
 from multiagentEnv import DistributeLoopEnv

@@ -41,9 +41,8 @@ from po_config import BUILD_DIR
 import sys
 sys.path.append(f"{BUILD_DIR}/tools/MLCompilerBridge/Python-Utilities")
 import posetRL_pb2_grpc, posetRL_pb2
+from compilerinterface import GrpcCompilerInterface
 
-sys.path.append(f"{BUILD_DIR}/tools/MLCompilerBridge/CompilerInterface/")
-from GrpcCompilerInterface import GrpcCompilerInterface
 from Filesystem import *
 
 logger = logging.getLogger(__file__)

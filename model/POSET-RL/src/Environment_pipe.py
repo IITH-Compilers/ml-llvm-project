@@ -20,10 +20,7 @@ sys.path.append(f"{BUILD_DIR}/tools/MLCompilerBridge/Python-Utilities")
 import posetRL_pb2_grpc, posetRL_pb2
 from google.protobuf.empty_pb2 import Empty
 from typing import Union
-import signal
-sys.path.append(f"{BUILD_DIR}/tools/MLCompilerBridge/CompilerInterface/")
-from PipeCompilerInterface import PipeCompilerInterface
-from GrpcCompilerInterface import GrpcCompilerInterface
+from compilerinterface import PipeCompilerInterface, GrpcCompilerInterface
 
 #import pipeCompilerInterface
 empty_message = Empty()
