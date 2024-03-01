@@ -19,7 +19,6 @@
         - [Setting up the build environment.](#setting-up-the-build-environment)
             - [Exporting ONNX Path Variables](#exporting-onnx-path-variables)
             - [Conda env set-up](#conda-environment-set-up)
-            - [A small hack to prevent the conda environtments from clashing (To Be removed)](#a-small-hack-to-prevent-the-conda-environtments-from-clashing-to-be-removed)
         - [Cmake Command](#cmake-command)
         - [Build Command](#build-command)
 -	[List of optimizations supported](#list-of-optimizations-supported)
@@ -187,6 +186,7 @@ conda activate mlopt
 ```
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 
 ### Build 
 
@@ -216,6 +216,8 @@ cd build
 # build command 
 	cmake -G "Unix Makefiles" -S ../llvm -B . \                                         
 =======
+=======
+>>>>>>> d0945024c816... ReadMe Updated
 #### Cmake Command
 Now we need to create a build directory for our build. Use the following commands to make a build dir inside the cloned reposiotry 
 
@@ -285,7 +287,7 @@ We propose a Reinforcement Learning (RL) approach for loop distribution, optimiz
 <<<<<<< HEAD
 =======
 This is described in the paper [here](https://ieeexplore.ieee.org/abstract/document/10026979) .
-Please see [here](https://compilers.cse.iith.ac.in/publications/rl_loop_distribution/) for more details. [Website link](https://compilers.cse.iith.ac.in/publications/rl_loop_distribution/)
+[Website link](https://compilers.cse.iith.ac.in/publications/rl_loop_distribution/)
 
 > Reinforcement Learning assisted Loop Distribution for Locality and Vectorization, Shalini Jain, S. VenkataKeerthy, Rohit Aggarwal, Tharun Kumar Dangeti, Dibyendu Das, Ramakrishna Upadrasta LLVM-HPC, 2022.
 
@@ -315,13 +317,17 @@ Implimentaion here : [Model Training](./model/LoopDistribution/src/README.md) , 
 
 This is described in the paper [here](https://dl.acm.org/doi/abs/10.1145/3578360.3580273).
 <<<<<<< HEAD
+<<<<<<< HEAD
 Please see [here](https://compilers.cse.iith.ac.in/publications/rl4real/) for more details.
 >>>>>>> 1912ecab9aeb... Read Me update
 =======
 Please see [here](https://compilers.cse.iith.ac.in/publications/rl4real/) for more details. [Website link](https://compilers.cse.iith.ac.in/publications/rl4real/)
 >>>>>>> fa22a6d17191... ReadMe Updated
+=======
+[Website link](https://compilers.cse.iith.ac.in/publications/rl4real/)
+>>>>>>> d0945024c816... ReadMe Updated
 
->RL4ReAl: Reinforcement Learning for Register Allocation : S. VenkataKeerthy, Siddharth Jain, Anilava Kundu, Rohit Aggarwal, Albert Cohen, Ramakrishna Upadrasta CC 2023
+>RL4ReAl: Reinforcement Learning for Register Allocation : S. VenkataKeerthy, Siddharth Jain, Anilava Kundu, Rohit Aggarwal, Albert Cohen, Ramakrishna Upadrasta CC, 2023.
 
 Implimentaion here : [Model Training](./model/RL4ReAl/README.md) , [Inference](./llvm/lib/CodeGen/MLRegAlloc/README.md)
 
@@ -338,7 +344,7 @@ Implimentaion here : [Model Training](./model/RL4ReAl/README.md) , [Inference](.
 POSET-RL uses a reinforcement learning approach as the search space of optimization sequences is too big to enumerate. For a compiler with m optimization passes, if the sequence length is fixed as n, then there can be potentially mn combinations, allowing repetitions. The reinforcement learning model is trained and evaluated on programs that are represented using IR2Vec embeddings.
 
 This is described in the arxiv link ([here](https://arxiv.org/abs/2204.02013)).
-Please see [slides](https://llvm.org/devmtg/2022-04-03/slides/POSET-RL.Phase.ordering.for.Optimizing.Size.and.Execution.Time.using.Reinforcement.Learning.pdf) for more details. [Website here](https://compilers.cse.iith.ac.in/projects/posetrl/).
+Please see [slides](https://llvm.org/devmtg/2022-04-03/slides/POSET-RL.Phase.ordering.for.Optimizing.Size.and.Execution.Time.using.Reinforcement.Learning.pdf) for more details. [Website link](https://compilers.cse.iith.ac.in/projects/posetrl/).
 
 <<<<<<< HEAD
 > POSET-RL: Phase ordering for Optimizing Size and Execution Time using Reinforcement Learning: Shalini Jain, Yashas Andaluri, S. VenkataKeerthy and Ramakrishna Upadrasta, ISSPASS, 2022
