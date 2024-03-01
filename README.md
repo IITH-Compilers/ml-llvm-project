@@ -96,7 +96,7 @@ git submodule update --init --recursive
 ### Setting up the build environment.
 
 #### Exporting ONNX Path Variables
-As the name suggests this is the Path to the ONNX Runtime that we downloaded in [Setup](#setup) . The path of ONNX Runtime is required not only for building the project but also it is required when running inference using the ONNX Model Runner. Hence it is a better idea to export these paths and also add them to the PATH and LD_LIBRARY_PATH
+As the name suggests this is the Path to the ONNX Runtime that we downloaded in [Requirements](#requirements) . The path of ONNX Runtime is required not only for building the project but also it is required when running inference using the ONNX Model Runner. Hence it is a better idea to export these paths and also add them to the PATH and LD_LIBRARY_PATH
 
 ```bash
  export ONNX_DIR= #path to your onnx runtime
