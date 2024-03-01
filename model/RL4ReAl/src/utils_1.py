@@ -143,7 +143,8 @@ def startServer(filename, fun_name, fun_id, ip, build_path, cflags, logdir, work
             cmd = "{build_path}/bin/clang++ -O3 -mllvm -ml-config-path={CONFIG_DIR} {cflags} -mllvm -mlra-training -mllvm -debug-only=mlra-regalloc -mllvm -mlra-funcID={fun_id} -mllvm -mlra-server-address={ip} {src_file} -o /dev/null &> {llvm_log}".format(build_path=build_path, cflags=cflags, src_file=filename, fun_name=fun_name, fun_id=fun_id, ip=ip, llvm_log=llvm_log, CONFIG_DIR=CONFIG_DIR)# + datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
         # print(cmd)
         #os.system(cmd)
-        pid = subprocess.Popen(cmd, executable='/bin/bash', shell=True, preexec_fn=os.setsid, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+        pid = subprocess.Popen(cmd, executable='/bin/bash', shell=True, preexec_fn=os.setsid, stdout=subprocess.PIPE,
+                               stdin=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, text=True, encoding='utf8')
         return pid
             
     pid = run(filename, fun_id, build_path, cflags, logdir, worker_index, use_mca_reward)#multiprocessing.Process(target=run, args=(filename, fun_id,))
@@ -159,7 +160,8 @@ def runMCA(fun_name, worker_index, build_path, cflags, logdir):
         cmd = "{build_path}/bin/llvm-mca {cflags} {logdir}/mca-out{worker_index}.s".format(build_path=build_path, cflags=cflags, fun_name=fun_name, worker_index=worker_index, logdir=logdir)
         # print(cmd)
         #os.system(cmd)
-        pid = subprocess.Popen(cmd, executable='/bin/bash', shell=True, preexec_fn=os.setsid, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+        pid = subprocess.Popen(cmd, executable='/bin/bash', shell=True, preexec_fn=os.setsid, stdout=subprocess.PIPE,
+                               stdin=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, text=True, encoding='utf8')
         return pid
         
     

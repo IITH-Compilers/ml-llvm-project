@@ -344,7 +344,7 @@ class PhaseOrder(gym.Env):
 
             if self.mode != 'inference':
                 if not self.use_pipe:
-                    self.stable_grpc("Exit", None)
+                    # self.stable_grpc("Exit", None)
                     try:
                         # outs, errs = self.server_pid.communicate(timeout=5)
                         self.stable_grpc("Exit", None)
@@ -551,7 +551,8 @@ class PhaseOrder(gym.Env):
         if self.use_pipe:
             cmd = cmd + " -mllvm -use-pipe"
         pid = subprocess.Popen(cmd, executable='/bin/bash',
-                               shell=True, preexec_fn=os.setsid)
+                               shell=True, preexec_fn=os.setsid, stdin=subprocess.PIPE, text=True)
+        
         return pid
 
     def repeatedgRPCFieldToNumpyArray(self, gRPCObj):
@@ -568,10 +569,15 @@ class PhaseOrder(gym.Env):
         # response = self.stub.applyActionGetEmbeddings(request)
         return self.repeatedgRPCFieldToNumpyArray(response)
 
-    def stopServer(self, sig):
-        self.serverId.send_signal(sig)
-        return_code = self.serverId.wait()
-        print("Return code:", return_code)
+    def stopServer(self):
+        self.serverId.stdin.write("Terminate\n")
+        self.serverId.stdin.flush()
+        try:
+            out, errs = self.serverId.communicate(timeout=15)
+        except:
+            self.serverId.kill()
+            out, errs = self.serverId.communicate()
+            print("Force Stop")
     
     def stable_grpc(self, op, action):
         attempt = 0
@@ -586,7 +592,7 @@ class PhaseOrder(gym.Env):
                 if op != "Exit":
                     result = self.applyActionGetEmbeddings(action=action)
                 else:
-                    result = self.stopServer(signal.SIGTERM)
+                    result = self.stopServer()
                 t2 = time.time()
                 self.grpc_rtt += t2-t1
                 break
