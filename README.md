@@ -11,7 +11,7 @@
             - [Conda env set-up](#conda-environment-set-up)
             - [A small hack to prevent the conda environtments from clashing (To Be removed)](#a-small-hack-to-prevent-the-conda-environtments-from-clashing-to-be-removed)
         - [Cmake Command](#cmake-command)
-        - [make Command](#make-command)
+        - [Build Command](#build-command)
 -	[List of optimizations supported](#list-of-optimizations-supported)
     - [Reinforcement Learning assisted Loop Distribution for Locality and Vectorization](#reinforcement-learning-assisted-loop-distribution-for-locality-and-vectorization)
     - [RL4Real](#rl4real)
@@ -71,11 +71,11 @@ As a part of the [ML-Compiler-Bridge](https://arxiv.org/pdf/2311.10800.pdf), it 
 ```
 * TensorFlow - for TF Model Runner (AOT flow)
     * Tested with TensorFlow 2.13.0
-* Other python requirements are available in [mlbridge.yml](./mlopt.yml)
+* Other python requirements are available in [mlopt.yml](./mlopt.yml)
     * Conda/Anaconda based virtual environment is assumed
 
-> [!NOTE]
->TODO: mlbridge.yml should be replaced with a unanimous env
+<!-- > [!TODO]
+>TODO: mlbridge.yml should be replaced with a unanimous env -->
 
 (Experiments are done on an Ubuntu 20.04 machine)
 
@@ -167,11 +167,11 @@ This section will contain information about all the ML driven optimizations. Her
 We propose a Reinforcement Learning (RL) approach for loop distribution, optimizing for both vectorization and locality. Using SCC Dependence Graphs (SDGs), our RL model learns loop distribution order through topological walks. The reward is based on instruction cost and cache misses. We introduce a strategy to expand the training set by generating new loops. This method aims to enhance loop parallelization and improve overall code performance.
 
 This is described in the paper [here](https://ieeexplore.ieee.org/abstract/document/10026979) .
-Please see [here](https://compilers.cse.iith.ac.in/publications/rl_loop_distribution/) for more details.
+Please see [here](https://compilers.cse.iith.ac.in/publications/rl_loop_distribution/) for more details. [Website link](https://compilers.cse.iith.ac.in/publications/rl_loop_distribution/)
 
-> Reinforcement Learning assisted Loop Distribution for Locality and Vectorization, Shalini Jain, S. VenkataKeerthy, Rohit Aggarwal, Tharun Kumar Dangeti, Dibyendu Das, Ramakrishna Upadrasta
+> Reinforcement Learning assisted Loop Distribution for Locality and Vectorization, Shalini Jain, S. VenkataKeerthy, Rohit Aggarwal, Tharun Kumar Dangeti, Dibyendu Das, Ramakrishna Upadrasta LLVM-HPC, 2022.
 
-Implimentaion here : [Model Training](./model/LoopDistribution/src/Readme.md) , [Inference](./llvm/lib/Transforms/Scalar/IR2Vec-LOF/custom_loop_distribution/Readme.md)
+Implimentaion here : [Model Training](./model/LoopDistribution/src/README.md) , [Inference](./llvm/lib/Transforms/Scalar/IR2Vec-LOF/custom_loop_distribution/Readme.md)
 
 #### Try it out !!!
 
@@ -192,9 +192,9 @@ Implimentaion here : [Model Training](./model/LoopDistribution/src/Readme.md) , 
 `RL4ReAl` is a retargetable Reinforcement Learning (RL) approach for solving the REgister ALlocation (REAL) problem on diverse architectures.
 
 This is described in the paper [here](https://dl.acm.org/doi/abs/10.1145/3578360.3580273).
-Please see [here](https://compilers.cse.iith.ac.in/publications/rl4real/) for more details.
+Please see [here](https://compilers.cse.iith.ac.in/publications/rl4real/) for more details. [Website link](https://compilers.cse.iith.ac.in/publications/rl4real/)
 
->RL4ReAl: Reinforcement Learning for Register Allocation : S. VenkataKeerthy, Siddharth Jain, Anilava Kundu, Rohit Aggarwal, Albert Cohen, Ramakrishna Upadrasta LLVM-HPC, 2022.
+>RL4ReAl: Reinforcement Learning for Register Allocation : S. VenkataKeerthy, Siddharth Jain, Anilava Kundu, Rohit Aggarwal, Albert Cohen, Ramakrishna Upadrasta CC 2023
 
 Implimentaion here : [Model Training](./model/RL4ReAl/README.md) , [Inference](./llvm/lib/CodeGen/MLRegAlloc/README.md)
 
@@ -211,10 +211,10 @@ Implimentaion here : [Model Training](./model/RL4ReAl/README.md) , [Inference](.
 
 POSET-RL uses a reinforcement learning approach as the search space of optimization sequences is too big to enumerate. For a compiler with m optimization passes, if the sequence length is fixed as n, then there can be potentially mn combinations, allowing repetitions. The reinforcement learning model is trained and evaluated on programs that are represented using IR2Vec embeddings.
 
-This is described in the paper ([arXiv](https://arxiv.org/abs/2204.02013)).
-Please see [slides](https://llvm.org/devmtg/2022-04-03/slides/POSET-RL.Phase.ordering.for.Optimizing.Size.and.Execution.Time.using.Reinforcement.Learning.pdf) for more details.
+This is described in the arxiv link ([here](https://arxiv.org/abs/2204.02013)).
+Please see [slides](https://llvm.org/devmtg/2022-04-03/slides/POSET-RL.Phase.ordering.for.Optimizing.Size.and.Execution.Time.using.Reinforcement.Learning.pdf) for more details. [Website here](https://compilers.cse.iith.ac.in/projects/posetrl/).
 
-> POSET-RL: Phase ordering for Optimizing Size and Execution Time using Reinforcement Learning: Shalini Jain, Yashas Andaluri, S. VenkataKeerthy and Ramakrishna Upadrasta, ISSPASS, 2022
+> POSET-RL: Phase ordering for Optimizing Size and Execution Time using Reinforcement Learning: Shalini Jain, Yashas Andaluri, S. VenkataKeerthy and Ramakrishna Upadrasta, ISSPASS, 2022.
 
 Implimentaion here : [Model Training](./model/POSET-RL/README.md) , [Inference](./llvm/lib/Transforms/IPO/PosetRL/README.md)
 
