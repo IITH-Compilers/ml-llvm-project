@@ -166,6 +166,7 @@ dependencies:
     - cloudpickle==2.2.1
     - colorama==0.4.6
     - colorful==0.5.5
+    - compilerinterface==0.0.2
     - dataclasses==0.6
     - dm-tree==0.1.8
     - filelock==3.12.2

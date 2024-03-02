@@ -15,7 +15,7 @@ Please see [here](https://compilers.cse.iith.ac.in/publications/rl_loop_distribu
 ## Environment Setup
 
 
-Setup the environment using the following command:
+Setup the environment from `model/LoopDistribution/src/LOF_orignal_env.yml` using the following command:
 
 ```bash
 conda env create -f LOF_orignal_env.yml

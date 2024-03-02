@@ -162,6 +162,7 @@ dependencies:
     - cached-property==1.5.2
     - cloudpickle==1.6.0
     - colorama==0.4.4
+    - compilerinterface==0.0.2
     - dataclasses==0.6
     - dm-tree==0.1.6
     - filelock==3.0.12
