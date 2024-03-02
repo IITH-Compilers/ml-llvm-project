@@ -58,6 +58,7 @@ import log_reader
 sys.path.extend([
     f"{BUILD_DIR}/tools/MLCompilerBridge/Python-Utilities/"
 ])
+import LoopDistribution_pb2_grpc, LoopDistribution_pb2
 
 config_path=None
 
