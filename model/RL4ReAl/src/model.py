@@ -217,7 +217,8 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
         # print("Select node output and emb device", x.device, node_mat.device)        
         # assert not torch.isnan(x).any(), "Nan in select node model output"
         torch.set_printoptions(profile="default")
-        print("Node selection logite", torch.flatten(x, start_dim=1))     
+        #commented
+        #print("Node selection logite", torch.flatten(x, start_dim=1))     
          
         return x, state, input_state_list
         # return x, state
@@ -276,8 +277,8 @@ class ColorNetwork(TorchModelV2, nn.Module):
         # x = torch.where(mask, x, torch.tensor(masking_value).to(x.device))
         #x = torch.where(mask, x, torch.tensor(FLOAT_MIN).to(x.device))  
         torch.set_printoptions(profile="default")
-    
-        print("splitNode selection logite", torch.flatten(x, start_dim=1) )
+        #commented
+        #print("splitNode selection logite", torch.flatten(x, start_dim=1) )
         return x, state, self._features
         # return x, state
     
