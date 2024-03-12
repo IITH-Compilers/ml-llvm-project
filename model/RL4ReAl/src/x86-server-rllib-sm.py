@@ -1,7 +1,7 @@
 import sys, os
 from config import BUILD_DIR, MODEL_PATH, MODEL_DIR
 sys.path.append(
-    f"{BUILD_DIR}/tools/MLCompilerBridge/Python-Utilities"
+    f"{BUILD_DIR}/tools/MLCompilerBridge/Python-Utilities/"
 )
 import RegisterAllocationInference_pb2_grpc, RegisterAllocationInference_pb2
 
@@ -17,10 +17,10 @@ sys.path.append(
 import rollout as inference
 from argparse import Namespace
 
-sys.path.append(f"{BUILD_DIR}/tools/MLCompilerBridge/CompilerInterface/")
-from PipeCompilerInterface import PipeCompilerInterface
-from GrpcCompilerInterface import GrpcCompilerInterface
-
+#sys.path.append(f"{BUILD_DIR}/../MLCompilerBridge/CompilerInterface/")
+#from PipeCompilerInterface import PipeCompilerInterface
+#from GrpcCompilerInterface import GrpcCompilerInterface
+from compilerinterface import PipeCompilerInterface,GrpcCompilerInterface
 
 def blockPrint():
     sys.stdout = open(os.devnull, 'w')
@@ -84,15 +84,17 @@ class service_server(
             # assert len(inter_graphs.regProf) > 0, "Graphs has no nodes"
 
             if inter_graphs.new:
+                print("inside new...")
                 inter_graph_list = []
                 if type(inter_graphs) is not list:
                     inter_graph_list.append(inter_graphs)
-                self.inference_model.setGraphInEnv(inter_graph_list)
-                status = self.inference_model.setGraphInEnv(inter_graph_list)
+                self.inference_model.setGraphInEnv(inter_graph_list)     
+                status = self.inference_model.setGraphInEnv(inter_graph_list)     #status is none if self.obs is none
                 if status is None:
+                    print("status is none")
                     print("Exiting from inference")
                     out = {"action": "Exit"}
-                    out = encode_action(out)
+                    out = encode_action(out)  #data=out
                     return RegisterAllocationInference_pb2.Data(data=out)
             elif inter_graphs.result:
                 # self.inference_model.update_obs(request, self.inference_model.env.virtRegId, self.inference_model.env.split_point)
@@ -393,7 +395,7 @@ if __name__ == "__main__":
         "--pipe_name",
         type=str,
         help="Pipe Name",
-        default='default_pipe'
+        default='rl4realpipe'
     )
     parser.add_argument("--dump_onnx_model", type=bool, default=False, help="Dump onnx model for current checkpoint")
     args = parser.parse_args()
@@ -404,5 +406,5 @@ if __name__ == "__main__":
         if args.server_port is None:
             print("Please specify server address for gRPC communication")
             exit()
-        compiler_interface = GrpcCompilerInterface(mode = 'server', add_server_method=RegisterAllocationInference_pb2_grpc.add_RegisterAllocationInferenceServicer_to_server, grpc_service_obj=service_server(), hostport= args.server_port, dump_onnx_model=args.dump_onnx_model)
+        compiler_interface = GrpcCompilerInterface(mode = 'server', add_server_method=RegisterAllocationInference_pb2_grpc.add_RegisterAllocationInferenceServicer_to_server, grpc_service_obj=service_server(args.dump_onnx_model), hostport= args.server_port)
         compiler_interface.start_server()

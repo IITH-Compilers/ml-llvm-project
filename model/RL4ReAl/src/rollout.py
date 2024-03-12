@@ -212,14 +212,20 @@ class RollOutInference:
         assert args.arch is not None, "Arch is None."
         # Load configuration from checkpoint file.
         config_path = ""
+        print("config path is: ",config_path)
         if args.checkpoint:
+            print("args.checkpoint: ",args.checkpoint)
+            print("hello")
             config_dir = os.path.dirname(args.checkpoint)
+            print("config_dir: ",config_dir)
             config_path = os.path.join(config_dir, "params.pkl")
+            print("configpath.....: ",config_path)
             # Try parent directory.
             if not os.path.exists(config_path):
                 config_path = os.path.join(config_dir, "../params.pkl")
         # Load the config from pickled.
         if os.path.exists(config_path):
+            print("hiii")
             with open(config_path, "rb") as f:
                 config = cloudpickle.load(f)
         # If no pkl file found, require command line `--config`.
@@ -306,7 +312,7 @@ class RollOutInference:
                 "max_number_nodes": 600,
                 "max_usepoint_count": 200,
                 "annotations": 3,
-                "max_edge_count": 30000,
+                "max_edge_count": 50000,
                 "mode": 'inference',
                 "dump_type": 'One',
                 "dump_color_graph": True,

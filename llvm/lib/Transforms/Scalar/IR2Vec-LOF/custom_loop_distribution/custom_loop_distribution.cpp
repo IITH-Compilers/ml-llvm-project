@@ -74,7 +74,6 @@ void custom_loop_distribution::canonicalizeLoopsWithLoads() {
   SmallVector<SmallVector<Value *, 3>, 6> loadWorkList;
   for (LoopInfo::iterator i = LI->begin(), e = LI->end(); i != e; ++i) {
     Loop *L = *i;
-    // errs() << "L->isInvalid(): " << L->isInvalid() << "\n";
     assert(!L->isInvalid());
     for (auto il = df_begin(L), el = df_end(L); il != el; ++il) {
       if (il->getSubLoops().size() > 0) {
@@ -84,30 +83,14 @@ void custom_loop_distribution::canonicalizeLoopsWithLoads() {
       for (auto BB : bbs) {
         for (auto &I : *BB) {
           if (auto st = dyn_cast<StoreInst>(&I)) {
-            // errs() << "Starting from ";
-            // st->dump();
             auto src = st->getOperand(0);
-            // errs() << "src = ";
-            // src->dump();
             if (auto src_inst = dyn_cast<Instruction>(src)) {
               auto dest = st->getOperand(1);
-              // errs() << "dest = ";
-              // dest->dump();
               for (auto use : src->users()) {
-                // errs() << "Processing use:";
-                // use->dump();
                 auto inst = dyn_cast<Instruction>(use);
                 if (inst && inst->getOpcode() != Instruction::Store &&
                     inst->getOpcode() != Instruction::PHI &&
                     DT->dominates(st, inst))
-                //               // (isPotentiallyReachable(st, inst) &&
-                //               isPotentiallyReachable(inst, st) &&
-                //               !isPotentiallyReachable(inst, src_inst)) // =>
-                //               cyclic cases to add load
-                //               // (isPotentiallyReachable(st, inst) &&
-                //               isPotentiallyReachable(inst, st))
-                // if (inst && inst->getOpcode()!=Instruction::Store &&
-                // isPotentiallyReachable(src_inst, inst))
                 {
                   SmallVector<Value *, 3> tuples;
                   tuples.push_back(src);
@@ -134,10 +117,6 @@ void custom_loop_distribution::canonicalizeLoopsWithLoads() {
     for (unsigned i = 0; i < inst->getNumOperands(); i++) {
       if (inst->getOperand(i) == src) {
         inst->setOperand(i, ldInst);
-        // errs() << "Operand set successfully - ";
-        // inst->dump();
-        // errs() << "===\n";
-        // inst->getParent()->dump();
         break;
       }
     }
@@ -195,6 +174,7 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
   this->FName = F.getName();
   canonicalizeLoopsWithLoads();
 
+  
   SmallVector<DataDependenceGraph *, 5> SCCGraphs;
   SmallVector<Loop *, 5> loops;
 
@@ -282,8 +262,6 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
       distributed_seqs.push_back(this->DistributionSeq);
     }
     outfile.close();
-    // errs() << "Code is Commented\n";
-    // exit(0);
   } else {
     loopdistribution::RDGData request;
     loopdistribution::Advice response;
@@ -299,7 +277,7 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
     std::vector<std::string> RDG_List;
     RDG_List.insert(RDG_List.end(), data.input_rdgs_str.begin(),
                     data.input_rdgs_str.end());
-
+                    
     assert(RDG_List.size() == SCCGraphs.size() &&
            RDG_List.size() == loops.size() &&
            "RDG_List, SCCgraphs and loops list should of same size.");

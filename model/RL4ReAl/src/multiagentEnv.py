@@ -48,7 +48,7 @@ import re
 
 from config import BUILD_DIR
 
-sys.path.append(f"{BUILD_DIR}/tools/MLCompilerBridge/Python-Utilities/")
+sys.path.append(f"{BUILD_DIR}/tools/MLCompilerBridge/Python-Utilities")
 from client import *
 import RegisterAllocationInference_pb2, RegisterAllocation_pb2
 
@@ -218,6 +218,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         # select_node_mask = self.createNodeSelectMaskSpillWeightBased()
         # spill_weight_list = self.getSpillWeightListExpanded()
         state = self.obs
+        #print("state: ",state)
         node_mat = state.initial_node_representation
         cur_obs = np.zeros((self.max_number_nodes, self.emb_size))
         cur_obs[0:node_mat.shape[0], :] = node_mat
@@ -228,22 +229,38 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         annotations[0:state.annotations.shape[0], :] = state.annotations
         spill_weight_list = annotations[:, 0]  # Annotations first element is spill weights 
         adjacency_lists = (state.adjacency_lists[0].getNodeNum(), np.array(state.adjacency_lists[0].getData()))
+
+        print("hello I am the beginning")
+        print("state.adjacency_lists[0].getNodeNum(): ",state.adjacency_lists[0].getNodeNum())    
+        print("state.adjacency_lists[0].getData(): ",state.adjacency_lists[0].getData())
+
+
         result = None
+
+        #print("enumerate(state.adjacency_lists[0].getData()): ",enumerate(state.adjacency_lists[0].getData()))
         for inx, i in enumerate(state.adjacency_lists[0].getData()):
             flag = True
+            #print("i: ",i)
             if inx ==0:
                 result = i
             else:
+                #print("res for observing: ",result)
                 result = torch.cat([result, i], dim=0)
-      
+        
         max_edge_count = self.max_edge_count
         edges_unroll = np.zeros((2*max_edge_count,))
+      
         if self.mode == 'inference':
+            print("2*max_edge_count: ",2*max_edge_count)
+            print("result.shape[0]: ",result.shape[0])  #this returns the size of tensor. if the size of this is more than max_edge_count that means 
+            #check where result tensor is getting populated. check line 234
+            #print("result inside inferece is: ",result)
             if result is None or result.shape[0] > 2*max_edge_count:
                 print("Exiting inference due to no edge or more then max edge:", result)
                 return None
 
         if result is not None:
+            print("result is not None")
             edges_unroll[0:result.shape[0]] = result
         
         adjacency_lists = {
@@ -256,10 +273,11 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             # self.select_node_agent_id: { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(select_node_mask), 'state' : cur_obs}
             self.select_node_agent_id: { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(select_node_mask), 'state' : cur_obs, 'annotations': np.array(annotations) ,'adjacency_lists': adjacency_lists}
         }
+        #print("obs in multiAgentEnv is: ",obs)
         self.spill_successful = 0
         self.split_successful = 0
         self.colour_successful = 0
-
+        #here obs is returning to be none because the control is not populating obs becuase it is raising an excemption at the earlier stage where result.shape[0] > 2*max_edge_count
         return obs
 
     def step(self, action_dict, extra_info=None):
@@ -807,9 +825,10 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             }
             self.obs.next_stage = 'end'
             self.stable_grpc('Exit', 0, 0)   
-            os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
-            if self.server_pid.poll() is not None:
-                print('Force stop')
+            # os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
+            # if self.server_pid.poll() is not None:
+            #   print('Force stop')
+            self.server_pid.send_signal(signal.SIGTERM)
             self.server_pid = None
             print('Stop server')
             #time.sleep(5)
@@ -1052,7 +1071,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                         f.close()
                 else:
                     # print("Killing Server pid", self.server_pid.pid)         
-                    os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
+                    # os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
+                    self.server_pid.send_signal(signal.SIGTERM)
 
                 if self.server_pid.poll() is not None:
                     print('Force stop')
@@ -1124,7 +1144,9 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             self.functionName = graph.funcName
             self.fun_id = graph.funid    
             self.num_nodes = len(graph.regProf)
+            print("entered reset_env obs init")
             self.obs = get_observationsInf(self.graph)
+            print("self.obs in reset_env:")
             self.color_assignment_map = []
 
         edge_count = 0
