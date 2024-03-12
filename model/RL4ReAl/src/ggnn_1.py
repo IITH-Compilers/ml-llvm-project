@@ -304,7 +304,9 @@ def parseProp(val):
     return val[1: len(val) - 1]
 
 def get_observationsInf(graph):
+    print("In get_observationInf")
     nodes = graph.regProf
+    print("reg_prof: ",nodes)
     # adjlist = graph['adjacency']
 
     num_nodes = len(nodes)

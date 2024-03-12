@@ -435,6 +435,7 @@ void MLRA::printFeatures() {
               << ServerModeResponse.ShortDebugString() << ")\n";
   }
 }
+//func one
 
 void MLRA::processMLInputs(SmallSetVector<unsigned, 8> *updatedRegIdxs,
                            bool IsStart, bool IsJson) {
@@ -2435,9 +2436,7 @@ void MLRA::initPipeCommunication() {
         errs() << "regProf size is not between 120 and 500\n";
         return;
       }
-      processMLInputs(nullptr, true, IsJson);
-
-      errs() << "Call model first time\n";
+     
 
       for (auto it = MF->begin(); it != MF->end(); it++) {
         if (it->isEHFuncletEntry() || it->isEHPad() || it->isEHScopeEntry() ||
@@ -2450,6 +2449,11 @@ void MLRA::initPipeCommunication() {
           }
         }
       }
+
+      processMLInputs(nullptr, true, IsJson);
+
+      errs() << "Call model first time\n";
+
       isGraphSet = true;
       // errs() << "Processing funtion: " << MF->getName() << "\n";
     } else {

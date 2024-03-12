@@ -58,10 +58,10 @@ def experiment(config):
     last_checkpoint = 0
     for i in range(iterations):
         train_results = train_agent.train()
-        if i == iterations - 1 or (train_results['episodes_total'] - last_checkpoint) > 499:
+        if i == iterations - 1 or (train_results['episodes_total'] - last_checkpoint) > 100:
             last_checkpoint = train_results['episodes_total']
             checkpoint = train_agent.save(tune.get_trial_dir())
-        tune.report(**train_results)
+            tune.report(**train_results)
         if train_results['episodes_total'] > config["env_config"]["episode_number"]:
             print("Traning Ended")
             checkpoint = train_agent.save(tune.get_trial_dir())
@@ -97,15 +97,22 @@ class MyCallbacks(DefaultCallbacks):
         else:
             episode.hist_data["server_pid"] = [0]
 
-        if base_env.get_sub_environments()[0].curr_file_name is not None:
-            episode.hist_data["file_name"] = [base_env.get_sub_environments()[0].curr_file_name]
-        else:
-            episode.hist_data["file_name"] = [0]
     
     def  on_episode_end(self, *, worker: RolloutWorker, base_env: BaseEnv,
                        policies: type_dict[str, Policy], episode: MultiAgentEpisode,
                        env_index: int, **kwargs):
         print("Episode Ended with worker", worker.worker_index)
+        if base_env.get_sub_environments()[0].curr_file_name is not None:
+            episode.hist_data["file_name"] = [base_env.get_sub_environments()[0].curr_file_name]
+        else:
+            episode.hist_data["file_name"] = [0]
+        
+        if base_env.get_sub_environments()[0].curr_file_cost is not None:
+            episode.hist_data["cost"] = [base_env.get_sub_environments()[0].curr_file_cost]
+        else:
+            episode.hist_data["cost"] = [0]
+            
+        episode.hist_data["worker_id"] = [base_env.get_sub_environments()[0].worker_index]
     
     
     def on_sample_end(self, *, worker: "RolloutWorker", samples: SampleBatch,
@@ -282,7 +289,7 @@ if __name__ == "__main__":
         config["num_gpus_per_worker"] = 0.05
         config["self.num_gpus"] = 0.5
 
-    config["env_config"]["current_batch"] = (int)(100/args.workers)
+    # config["env_config"]["current_batch"] = (int)(100/args.workers)
     experiment_name = f"w{args.workers}_{args.mode}"
         
     def trail_name_fun(self):
