@@ -302,6 +302,8 @@ class HierarchicalGraphColorEnv(gym.Env):
         self.cur_node = action//self.env_config["action_space_size"]
         colour_action = action%self.env_config["action_space_size"]
         
+        # print("Current Node: ", self.cur_node)
+        # print("Color: ", colour_action)
         update_status = self.obs.graph_topology.UpdateVisitList(self.cur_node)
         if not update_status:
             print("UpdateVisitList failed for {} graph at {} node".format(self.path, self.cur_node))
@@ -406,8 +408,15 @@ class HierarchicalGraphColorEnv(gym.Env):
             }
             done = False
         else:
-            reward = {}
-            obs = {}
+            reward = 0
+            obs = {
+                'spill_weights': np.array(spill_weight_list),
+                'action_mask': np.array(select_node_mask),
+                'state' : cur_obs,
+                'annotations': np.array(annotations),
+                'adjacency_lists': adjacency_lists,
+                'colour_mask': colour_mask
+            }
             done = False
 
         if done_all:
@@ -441,6 +450,7 @@ class HierarchicalGraphColorEnv(gym.Env):
             
             reward = 0
             done = done_all
+        self.last_task_done = 0
         logging.debug("Exit _colour_node_step")
         return obs, reward, done, {}
     
