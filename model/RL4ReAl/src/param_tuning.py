@@ -18,7 +18,7 @@ import re
 import ray
 from ray import train, tune
 from ray.tune.schedulers import ASHAScheduler
-from hyperopt import hp
+#from hyperopt import hp
 from ray.tune.search.hyperopt import HyperOptSearch
 from ray.rllib.algorithms.callbacks import DefaultCallbacks
 from ray.rllib.env import BaseEnv
@@ -437,8 +437,8 @@ if __name__ == "__main__":
     # time_attr="episodes_total",
     metric="episode_reward_mean",
     mode="max",
-    #max_t=3,
-    #grace_period=1,
+    max_t=config["env_config"]['episode_number'],
+    grace_period=50,
     #reduction_factor=2
     )
     search_space = {
@@ -463,9 +463,9 @@ if __name__ == "__main__":
     config=config,
     search_alg=optuna_search,
     scheduler=asha_scheduler,
-    num_samples=20,
+    num_samples=500,
     resources_per_trial=PPO.default_resource_request(config),
-    #max_concurrent_trials=10,
+    max_concurrent_trials=15,
     #trial_name_creator=Trainable().trial_name,
     #max_concurrent_trials=1
     )

@@ -93,16 +93,16 @@ class PPOConfig(PGConfig):
         self.use_gae = True
         self.lambda_ = 1.0
         self.kl_coeff = 0.6
-        self.sgd_minibatch_size = 64
-        self.num_sgd_iter = 10
+        self.sgd_minibatch_size = 128
+        self.num_sgd_iter = 1
         self.shuffle_sequences = True
         self.vf_loss_coeff = 1.0
         self.entropy_coeff = 0.01
         self.entropy_coeff_schedule = None
-        self.clip_param = 0.3
+        self.clip_param = 0.2
         self.vf_clip_param = 10.0
         self.grad_clip = 40
-        self.kl_target = 0.03
+        self.kl_target = 0.003
 
         # Override some of PG/AlgorithmConfig's default values with PPO-specific values.
         self.num_rollout_workers = 1
@@ -141,9 +141,9 @@ class PPOConfig(PGConfig):
             "dataset": f"{DATA_DIR}",
             "graphs_num": 10000,
             "action_space_size": RegisterActionSpace("X86", CONFIG_DIR).ac_sp_normlize_size,
-            "check_point": "/home/intern24002/ml-llvm-project/model/RL4ReAl/src/checkpoint_dir/w10_CPU/trial_name_w10_CPU_0_2024-02-21_13-23-37/checkpoint_011896",
-            #"check_point":None,
-            "episode_number": 500000,
+            #"check_point": "/home/intern24002/ml-llvm-project/model/RL4ReAl/src/checkpoint_dir/w10_CPU/trial_name_w10_CPU_0_2024-02-21_13-23-37/checkpoint_011896",
+            "check_point":None,
+            "episode_number": 100000,
             "GPU_ID": '0',
             "X86_CFLAGS": "-mllvm -regalloc=greedy  -march=core2",
             "AArch64_CFLAGS": "-mllvm -regalloc=greedy  -mcpu=cortex-a72",

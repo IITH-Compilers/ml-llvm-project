@@ -92,22 +92,22 @@ class PPOConfig(PGConfig):
         self.use_critic = True
         self.use_gae = True
         self.lambda_ = 1.0
-        self.kl_coeff = 1.0   #tuning
+        self.kl_coeff = 0.6   #tuning
         self.sgd_minibatch_size = 128  #tuned
-        self.num_sgd_iter = 10  #tuned
+        self.num_sgd_iter = 1  #tuned
         self.shuffle_sequences = True
         self.vf_loss_coeff = 1.0   #usually tuned whenvf_loss_layer is True
         self.entropy_coeff = 0.01
         self.entropy_coeff_schedule = None
-        self.clip_param = 0.3   #tuning
+        self.clip_param = 0.2   #tuning
         self.vf_clip_param = 10.0
         self.grad_clip = 40
-        self.kl_target = 0.01   #tuning
+        self.kl_target = 0.003   #tuning
 
         # Override some of PG/AlgorithmConfig's default values with PPO-specific values.
         self.num_rollout_workers = 1
         self.train_batch_size = 256
-        self.lr = 0.001  #tuned
+        self.lr = 0.00001  #tuned
         self.model["vf_share_layers"] = False   #can be tuned if vf_shared_layers is true in model config
         self._disable_preprocessor_api = False
 
@@ -142,7 +142,7 @@ class PPOConfig(PGConfig):
             "graphs_num": 10000,
             "action_space_size": RegisterActionSpace("X86", CONFIG_DIR).ac_sp_normlize_size,
             "check_point": None,
-            "episode_number":500,        #change
+            "episode_number":1000,        #change
             "GPU_ID": '0',
             "X86_CFLAGS": "-mllvm -regalloc=greedy  -march=core2",
             "AArch64_CFLAGS": "-mllvm -regalloc=greedy  -mcpu=cortex-a72",

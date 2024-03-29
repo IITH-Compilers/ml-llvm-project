@@ -48,8 +48,11 @@ class SelectTaskNetwork(TorchModelV2, nn.Module):
         
     def forward(self, input_dict, state, seq_lens):
         """Build a network that maps state -> action values."""
-        # print("Select task GPU", next(self.parameters()).is_cuda)
-        # print("Task select model output", input_dict["obs"]["state"])
+        #print("Select task GPU", next(self.parameters()).is_cuda)
+        # print("Obs keys are:", input_dict['obs'].keys())
+        # print("State shape:", input_dict["obs"]["state"].shape)
+        # torch.set_printoptions(profile="default")
+        # print("Task select model input", input_dict["obs_flat"]) 
         # assert not torch.isnan(input_dict["obs"]["state"]).any(), "Nan in select task model input"
         x = F.relu(self.fc1(input_dict["obs"]["state"]))
         # assert not torch.isnan(x).any(), "Nan in select task model after fc1"
@@ -69,6 +72,7 @@ class SelectTaskNetwork(TorchModelV2, nn.Module):
         inf_mask = torch.clamp(torch.log(mask), min=FLOAT_MIN)
         x = x + inf_mask        
         # assert not torch.isnan(x).any(), "Nan in select task model output"
+        #print("Task selection logite", torch.flatten(x, start_dim=1)) 
         return x, state, self._features
         # return x, state
 
@@ -121,8 +125,19 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
         
     def forward(self, input_dict, state, seq_lens):
         """Build a network that maps state -> action values."""
-        # print("Obs keys are:", input_dict['obs'].keys())
-        # print("State shape:", input_dict["obs"]["state"].shape)
+        #print("Obs keys are:", input_dict.keys())
+        # print("State shape:", input_dict["obs_flat"].shape)
+        torch.set_printoptions(threshold=10000)    
+        #print("Node select model input", input_dict["obs_flat"]) 
+        #print("Node select model input", input_dict["obs_flat"].cpu().numpy())
+        torch.set_printoptions(profile="full")
+        #print("Node select model input", input_dict["obs_flat"])
+        #print("Node select model input", input_dict["obs_flat"])
+        #print("Node select model input", input_dict["obs_flat"].size())
+        element = input_dict["obs_flat"][0][91210:91220]
+        #print("Index is: ",element)
+        torch.set_printoptions(profile="default")
+
         input_state_list = torch.zeros(input_dict["obs"]["state"].shape[0], self.max_number_nodes, self.emb_size)
         if self.enable_ggnn:
             # print("*************************** SHAPES PRINTING *****************************")
@@ -176,11 +191,16 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
             input_state_list = initial_node_representation=input_dict["obs"]["state"]
         
         input_state_list = input_dict["obs"]["state"]
+        #print("input_state_list: ",input_state_list.size())
         
         input_state_list = input_state_list.to(input_dict["obs"]["state"].device)
         
         # assert not torch.isnan(input_state_list).any(), "Nan in select node model input"
         x = F.relu(self.fc1(input_state_list))
+        torch.set_printoptions(profile="full")
+        # print("x after fc1:  ",x.size())
+        torch.set_printoptions(profile="default")
+
         # if torch.isnan(x).any():
         #     print("Task select model input max value: ", torch.max(input_state_list))
         #     print("FC1 layers weights", torch.isnan(self.fc1.state_dict()['weight']).any())
@@ -191,6 +211,10 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
         spill_weights = (spill_weights).reshape(spill_weights.shape[0], spill_weights.shape[1], 1)
         x = torch.cat((spill_weights, x), 2)
         x = F.relu(self.fc2(x))
+        torch.set_printoptions(profile="full")
+        # print("x after fc2: ",x.size())
+        torch.set_printoptions(profile="default")
+
         # if torch.isnan(x).any():
         #     print("Task select model input max value: ", torch.max(input_state_list))
         #     print("FC2 layers weights", torch.isnan(self.fc1.state_dict()['weight']).any())
@@ -202,24 +226,38 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
         # x = self.attention(x)        
         # assert not torch.isnan(x).any(), "Nan in select node model after attension layer"
         x = F.relu(self.fc3(x))
+        torch.set_printoptions(profile="full")
+        # print("x after fc3: ",x.size())
+        torch.set_printoptions(profile="default")
         x = self.fc4(x)
+        torch.set_printoptions(profile="full")
+        # print("x after fc4: ",x.size())
+        torch.set_printoptions(profile="default")
         x = torch.squeeze(x, 2)
         # assert not torch.isnan(x).any(), "Nan in select node model after fc3"
         self._features = x.clone().detach()
         # x = self.softmax(x)
+        # print("input_dict['obs']['action_mask']: ")
+        # print(input_dict["obs"]["action_mask"])
         mask = input_dict["obs"]["action_mask"]
         # masking_value = -1e6
         # masking_value = FLOAT_MIN
         inf_mask = torch.clamp(torch.log(mask), min=FLOAT_MIN)
+        torch.set_printoptions(profile="full")
+        # print("inf_mask: ",inf_mask.size())
+        torch.set_printoptions(profile="default")
         x = x + inf_mask
+        #print("x: ",x)
         # x = torch.where(mask, x, torch.tensor(masking_value).to(x.device))
         #x = torch.where(mask, x, torch.tensor(FLOAT_MIN).to(x.device))
         # print("Select node output and emb device", x.device, node_mat.device)        
         # assert not torch.isnan(x).any(), "Nan in select node model output"
         torch.set_printoptions(profile="default")
         #commented
-        #print("Node selection logite", torch.flatten(x, start_dim=1))     
-         
+        # print("Node selection logite", torch.flatten(x, start_dim=1))
+        torch.set_printoptions(profile="full") 
+        # print("x at last: ",x.size())
+        torch.set_printoptions(profile="default")
         return x, state, input_state_list
         # return x, state
 
@@ -278,7 +316,7 @@ class ColorNetwork(TorchModelV2, nn.Module):
         #x = torch.where(mask, x, torch.tensor(FLOAT_MIN).to(x.device))  
         torch.set_printoptions(profile="default")
         #commented
-        #print("splitNode selection logite", torch.flatten(x, start_dim=1) )
+        #print("ColorNode selection logite", torch.flatten(x, start_dim=1) )
         return x, state, self._features
         # return x, state
     
@@ -341,7 +379,7 @@ class SplitNodeNetwork(TorchModelV2, nn.Module):
         x = x + inf_mask
         # assert not torch.isnan(x).any(), "Nan in split node model output"
         # torch.set_printoptions(profile="default")
-        # print("splitNode selection logite", x)
+        #print("splitNode selection logite", x) 
         return x, state, self._features
         # return x, state
     

@@ -145,7 +145,7 @@ class service_server(
             print("Error")
             traceback.print_exc()
             reply = RegisterAllocationInference_pb2.Data(
-                message="Split", regidx=0, payload=0
+                message="Split", regidx=0, payload=0 
             )
             exit(0)
             return reply
