@@ -217,7 +217,7 @@ static cl::opt<std::string> funcName("lc-function", cl::Hidden, cl::Optional,
 
 static cl::opt<unsigned int>
     loopID("lc-lID", cl::Hidden, cl::Optional,
-           cl::desc("ID of the loop set by RDG/loop distribution pass"));
+           cl::desc("ID of the loop set by RDG/loop distribution pass"), cl::init(0));
 
 namespace {
 
@@ -463,7 +463,7 @@ int main(int argc, char **argv) {
       std::string DescToMatch = funcName + "-" + std::to_string(loopID);
       // errs () << "funcName : " << funcName << " loop id : " << loopID << "\n"; 
       // errs () << Desc << " " << DescToMatch << "\n";
-      if (!Desc.equals(DescToMatch))
+      if (loopID && !Desc.equals(DescToMatch))
         continue;
       TOF->os() << "\n[" << RegionIdx++ << "] Code Region";
       if (!Desc.empty())

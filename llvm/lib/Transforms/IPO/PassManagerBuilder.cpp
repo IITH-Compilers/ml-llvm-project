@@ -29,7 +29,7 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ManagedStatic.h"
-#include "llvm/Transforms/AddSizeAttr/AddSizeAttr.h"
+#include "llvm/Transforms/IPO/AddSizeAttr/AddSizeAttr.h"
 #include "llvm/Transforms/AggressiveInstCombine/AggressiveInstCombine.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/Attributor.h"
@@ -53,7 +53,7 @@
 
 using namespace llvm;
 
-
+bool PassManagerBuilder::check_flag = false;
 static cl::opt<bool>
     OPosetRL("OPosetRL", cl::init(false), cl::Hidden,
                        cl::desc("poset rl pass sequence"));
@@ -1439,8 +1439,11 @@ void PassManagerBuilder::populateModulePassManager(
   bool DefaultOrPreLinkPipeline = !PerformThinLTO;
 
   if (OPosetRL){
-      errs() << "opt level "<< OptLevel << " SizeLevel " << SizeLevel << "\n";
-      MPM.add(createPosetRLPass());
+      if (check_flag == false){
+        errs() << "opt level "<< OptLevel << " SizeLevel " << SizeLevel << "\n";
+        MPM.add(createPosetRLPass());
+      }
+      check_flag = true;      
       return;
   }
 

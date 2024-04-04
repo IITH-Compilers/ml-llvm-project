@@ -1,4 +1,5 @@
 add_subdirectory(PosetRL)
+add_subdirectory(AddSizeAttr)
 
 add_llvm_component_library(LLVMipo
   AlwaysInliner.cpp
@@ -47,5 +48,4 @@ add_llvm_component_library(LLVMipo
   intrinsics_gen
   )
 
-target_link_libraries(LLVMipo PUBLIC LLVMPosetRL)
-target_link_libraries(LLVMipo PRIVATE LLVMMLBridge)
+target_link_libraries(LLVMipo PUBLIC LLVMPosetRL LLVMAddSizeAttr)

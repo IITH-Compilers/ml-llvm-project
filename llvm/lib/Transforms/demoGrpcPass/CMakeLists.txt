@@ -24,4 +24,4 @@ add_llvm_library(LLVMHelloGRPC MODULE BUILDTREE_ONLY
   opt
   )
 
-target_link_libraries(LLVMHelloGRPC PRIVATE LLVMMLBridge)
+target_link_libraries(LLVMHelloGRPC PUBLIC LLVMMLBridge)
