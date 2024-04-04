@@ -4,7 +4,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <fstream>
-#include <iostream>
+
 
 using namespace llvm;
 
@@ -75,7 +75,7 @@ Observation& MultiAgentEnv::reset() {
   this->edge_count = this->computeEdgesFromRP();
   LLVM_DEBUG(errs() << "0. noderep size = " << this->nodeRepresentation.size()
                     << "\n");
-  //errs()<<"Inside reset"<<"\n";
+  
   this->computeAnnotations();
   LLVM_DEBUG(errs() << "1. noderep size = " << this->nodeRepresentation.size()
                     << "\n");
@@ -458,9 +458,7 @@ void MultiAgentEnv::selectNodeObsConstructor(Observation &obs) {
   };
 
   std::vector<int> action_mask(max_node_number);
-  //  for (int i = 0; i < action_mask.size(); i++) {
-  //       errs() << "action_mask: "<<action_mask[i];
-  //   }
+  
   this->createNodeSelectMask(action_mask);
 
   for (int i = 0; i < max_node_number; i++) {
@@ -468,23 +466,20 @@ void MultiAgentEnv::selectNodeObsConstructor(Observation &obs) {
     obs[current_index++] = action_mask[i];
     // LLVM_DEBUG(errs() << action_mask[i] << " ");
   }
-  //errs()<<"current index at 1: "<<current_index<<"\n";//600
   assert(current_index == 600 && "current_index is not 600\n");
   // LLVM_DEBUG(errs() << "\n");
   // Set edge count in graph
   assertObsSize(143);
-  obs[current_index++] = this->edge_count; //inserting edge count 600 insert and increment to 601
-  //errs()<<"current index at 2: "<<current_index<<"\n";
+  obs[current_index++] = this->edge_count; 
   Observation edgesFlattened(MAX_EDGE_COUNT * 2);
   this->computeEdgesFlatened(edgesFlattened);
-  //errs()<<"Src and Des are same"<<"\n";
+  
   
   for (int i = 0; i < MAX_EDGE_COUNT * 2; i++) {
-    //errs()<<"obs[current_index++]: "<<current_index<<" "<<edgesFlattened[i]<<"\n";
+   
     obs[current_index++] = edgesFlattened[i];
   }
-  //errs()<<"current index at 3: "<<current_index<<"\n";
-  //till here 60,600.
+  
   assert(current_index == 60601 && "current_index is not 60601\n");
   obs[current_index + this->edge_count] = 1;
   current_index += MAX_EDGE_COUNT;
@@ -528,20 +523,14 @@ void MultiAgentEnv::createNodeSelectMask(std::vector<int> &mask) {
   this->graph_topology->get_eligibleNodes(eligibleNodes);
   for (auto elg_node : eligibleNodes) {
     if (elg_node >= max_node_number) {
-      //std::cerr << "elg_node : " << elg_node << "\n";
+      
       LLVM_DEBUG(errs() << "elg_node : " << elg_node << "\n");
     }
     assert(elg_node < max_node_number &&
            "elg_node_id is greater than max_node_number\n");
     mask[elg_node] = 1;
     // LLVM_DEBUG(dbgs() << elg_node << " ");
-    //errs() << "elg_node: "<<elg_node<<"\n";  
   }
-  // errs() << "Mask vector: ";
-  // for (int i = 0; i < mask.size(); ++i) {
-  //   errs()<<"i: "<<i<<"\n";
-  //   errs() << mask[i] << " "<<"\n";
-  // }
   
   //errs() << "\n";
   // LLVM_DEBUG(dbgs() << "\n");
@@ -552,13 +541,9 @@ void MultiAgentEnv::createAnnotations(Observation &temp_annotations) {
   for (int i = 0; i < max_node_number; i++) {
     
     temp_annotations.push_back(this->annotations[i][0]);
-    //errs()<<" "<<i<<"->0"<<" "<<this->annotations[i][0]<<"\n";
     temp_annotations.push_back(this->annotations[i][1]);
-    //errs()<<" "<<i<<"->1"<<" "<<this->annotations[i][1]<<"\n";
     temp_annotations.push_back(this->annotations[i][2]);
-    //errs()<<" "<<i<<"->2"<<" "<<this->annotations[i][2]<<"\n";
   }
-  //errs()<<"temp_annotations: "<<temp_annotations<<"\n";
 }
 
 void MultiAgentEnv::computeAnnotations() {
@@ -567,29 +552,22 @@ void MultiAgentEnv::computeAnnotations() {
   int current_idx = 0;
   for (auto rpi : (this->regProfMapHelper)) {
     RegisterProfile rp = rpi.second;
-    //errs()<<"Value of rp.spillWeight: "<<rp.spillWeight<<"\n"; 
-    //errs()<<"Current Index: "<<current_idx<<"\n";
     assert((current_idx < 600) && "exceeded annotations array size!!!!!!!\n");
     if (rp.cls == "Phy") {
-      //errs()<<"Physical Regsiter....................."<<"\n";
+      
       this->annotations[current_idx][0] = 0;
       this->annotations[current_idx][1] = rp.color;
     } else {
       if (std::isinf(rp.spillWeight)) {
-        //errs()<<"Spillweight is infinite..........................."<<"\n";
+        
         this->annotations[current_idx][0] = -1;
       } else {
-        //errs()<<"Value of rp.spillWeight: "<<rp.spillWeight<<"\n"; 
+        
         this->annotations[current_idx][0] = rp.spillWeight;
       }
       this->annotations[current_idx][1] = 0;
     }
     this->annotations[current_idx][2] = 0;
-
-    // errs()<<" "<<current_idx<<"->0"<<" "<<this->annotations[current_idx][0]<<"\n";
-    // errs()<<" "<<current_idx<<"->1"<<" "<<this->annotations[current_idx][1]<<"\n";
-    // errs()<<" "<<current_idx<<"->2"<<" "<<this->annotations[current_idx][2]<<"\n";
-
     current_idx++;
   }
 }
@@ -631,18 +609,14 @@ unsigned MultiAgentEnv::computeEdgesFromRP() {
     RegisterProfile rp = rpi.second;
     int src = node_idx;
     for (auto des_id : rp.interferences) {
-      //  errs()<<"In computeEdgesFromRP: "<<"\n";
-      //  errs()<<"edge_count: "<<edge_count<<"\n";
       int des = this->nid_idx[des_id];
       if (src != des) {
         this->edges[edge_count][0] = src;
         this->edges[edge_count][1] = des;
         edge_count += 1;
-        //errs()<<"Src: "<<src<<","<<"Des: "<<des<<"\n";
+        
       }
-      // else{
-      //   errs()<<"Src and Des are same"<<"\n";
-      // }
+    
     }
     node_idx++;
   }
@@ -651,7 +625,6 @@ unsigned MultiAgentEnv::computeEdgesFromRP() {
 
 unsigned MultiAgentEnv::updateEdgesFromRP() {
   unsigned edge_count = 0;
-  // int node_idx = 0;
   LLVM_DEBUG(errs() << "Edges are:");
   for (auto rpi : (this->regProfMapHelper)) {
     RegisterProfile rp = rpi.second;
@@ -659,18 +632,14 @@ unsigned MultiAgentEnv::updateEdgesFromRP() {
     auto tempInterferences = this->graph_topology->getAdjNodes(src);
     for (auto des_id : tempInterferences) {
       // int des = this->nid_idx[des_id];
-      //errs()<<"In updateEdgesFromRP: "<<"\n";
       int des = des_id;
       if (src != des) {
         this->edges[edge_count][0] = src;
         this->edges[edge_count][1] = des;
         edge_count += 1;
         //LLVM_DEBUG(errs() << "(" << src << ", " << des << "), ");
-        //errs()<<"Src: "<<src<<","<<"Des: "<<des<<"\n";
       }
-      // else{
-      //   errs()<<"Src and Des are same"<<"\n";
-      // }
+      
     }
     // node_idx++;
   }
@@ -701,7 +670,6 @@ void MultiAgentEnv::constructNodeVector(
   }
 }
 
-//april 1,2024.
 void MultiAgentEnv::taskSelectionObsConstructor(Observation &obs) {
   // LLVM_DEBUG(errs() << "Inside taskSelectionObsConstructor function\n");
   // Observation temp_obs = new float[selectTaskObsSize]();
@@ -726,9 +694,7 @@ void MultiAgentEnv::taskSelectionObsConstructor(Observation &obs) {
   }
 
   obs[current_index++] = action_mask[0];
-  //errs()<<"obs[current_index++]: which is action_mask[0] "<<action_mask[0]<<"\n";
   obs[current_index++] = action_mask[1];
-  //errs()<<"obs[current_index++]: which is action_mask[1]"<<action_mask[1]<<"\n";
   // Setting node properties
 
   unsigned current_node_idx = this->nid_idx[this->current_node_id];
@@ -742,24 +708,19 @@ void MultiAgentEnv::taskSelectionObsConstructor(Observation &obs) {
   float spillcost = this->current_node.spillWeight;
   llvm::SmallVector<int, 8> use_distances = this->current_node.useDistances;
   obs[current_index++] = adj_nodes.size();
-  //errs()<<"obs[current_index++]: adj_nodes.size"<<adj_nodes.size()<<"\n";
   obs[current_index++] = masked_action_space.size();
-  //errs()<<"obs[current_index++]: masked_action_space.size();"<<masked_action_space.size()<<"\n";
   if (std::isinf(spillcost)) {
-    //errs()<<"Inside spillcost is infinite"<<"\n";
     obs[current_index]=10000;
     this->annotations[current_index++][0] = 10000;
     
   } else {
-    //errs()<<"spillcost: "<<spillcost<<"\n";
     obs[current_index]=spillcost;
     this->annotations[current_index++][0] = spillcost;
     
   }
   // obs[current_index++] = spillcost;
 
-  obs[current_index++] = use_distances.size();      //till here 6 are done
-  //errs()<<"obs[current_index++]: use_distances.size();"<<use_distances.size()<<"\n";
+  obs[current_index++] = use_distances.size();      
   // Set node state
   // int current_node_idx = this->nid_idx[this->current_node_id];
   auto nodeVec = this->nodeRepresentation[current_node_idx];

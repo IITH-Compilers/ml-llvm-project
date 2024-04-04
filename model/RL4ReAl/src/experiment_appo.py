@@ -44,9 +44,7 @@ torch.autograd.set_detect_anomaly(True)
 
 checkpoint = None
 def experiment(config):
-    print("Hello..................")
     iterations = config.pop("train-iterations")
-    print("Iterations: ",iterations)
     global checkpoint
     train_results = {}
     # config["env_config"]["path"] = path
@@ -166,12 +164,11 @@ if __name__ == "__main__":
     python_log = os.path.join(logdir, 'running.log')
     #if os.path.exists(python_log):
      #   os.remove(python_log)
-    print("python_log: ",python_log)
     logging.basicConfig(filename='running.log', format='%(thread)d - %(threadName)s - %(levelname)s - %(filename)s - %(message)s', level=log_level, force=True)
     logging.info('Starting training')
     logging.info(args)
 
-    ray.init(object_store_memory=10000000000)
+    ray.init(object_store_memory=10000000000, local_mode=False)
     
     # c = Counter.remote()
 

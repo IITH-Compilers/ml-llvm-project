@@ -369,8 +369,7 @@ void MLRA::processMLInputsProtobuf(SmallSetVector<unsigned, 8> *updatedRegIdxs,
         std::vector<float>(rp.spillWeights.begin(), rp.spillWeights.end()));
     std::pair<std::string, float> spillWeight("spillWeight", rp.spillWeight);
     if (rp.spillWeight == INFINITY)
-      spillWeight.second = -1.0f;
-      //spillWeight.second = 10000;
+      spillWeight.second = 10000;
 
     std::pair<std::string, std::vector<int>> interferences(
         "interferences",
@@ -442,7 +441,6 @@ void MLRA::processMLInputs(SmallSetVector<unsigned, 8> *updatedRegIdxs,
                            bool IsStart, bool IsJson) {
   // errs() << "Inside processMLInputs\n";
   if (data_format == "protobuf") {
-    errs()<<"Inside processMLInputsProtobuf"<<"\n";
     processMLInputsProtobuf(updatedRegIdxs, IsStart);
     return;
   }
@@ -2389,8 +2387,6 @@ void MLRA::allocatePhysRegsViaRandom(int seed, int maxTries) {
   juggleAllocation(seed, maxTries, regsToAllocate);
 }
 
-//training flow
-
 void MLRA::training_flow() {
   if (this->FunctionVirtRegToColorMap.find(MF->getName()) !=
       this->FunctionVirtRegToColorMap.end()) {
@@ -2403,7 +2399,7 @@ void MLRA::training_flow() {
   LLVM_DEBUG(errs() << "Done MLRA allocation for : " << MF->getName() << '\n');
 }
 
-//pipes
+
 void MLRA::initPipeCommunication() {
   auto processOutput = [&](std::vector<int> &reply) {
     if (reply[0] == 0) {
@@ -2465,7 +2461,6 @@ void MLRA::initPipeCommunication() {
     } else {
       JO["new"] = false;
       this->IsNew = false;
-      // errs() << "Call model again\n";
     }
     size_t size;
     int *out;
@@ -2547,7 +2542,6 @@ void MLRA::initPipeCommunication() {
   }
 }
 
-//inference (GRPC , ONNX)
 void MLRA::inference() {
   assert(enable_mlra_inference && "mlra-inference should be true.");
   assert(regProfMap.size() > 0 && "No profile information present.");
@@ -2674,11 +2668,7 @@ void MLRA::inference() {
       }
 
       LLVM_DEBUG(errs() << "edge_count = " << edge_count << "\n");
-      //num function to process -> ONNX
-      // if (count >= 500 || count <= 0) {
-      //   LLVM_DEBUG(errs() << "Error msg: Node count is more then max value\n");
-      //   return;
-      // }
+
       if (count > MAX_VARS || count < MIN_VARS) {
         LLVM_DEBUG(errs() << "Error msg: Node count is more then max value\n");
         return;
@@ -2698,20 +2688,16 @@ void MLRA::inference() {
         colorMap[std::to_string(pair.first)] = pair.second;
       }
       // inference_driver->getInfo(regProfMap, colorMap);
-      errs() << "Processing funtion: " << MF->getName() << "\n";
-      errs() << "Colour Map: \n";
+      LLVM_DEBUG(errs() << "Processing funtion: " << MF->getName() << "\n");
+      LLVM_DEBUG(errs() << "Colour Map: \n");
       unsigned numSpills = 0;
 
-      for (const auto& pair : colorMap) {
-          std::cout << "Key: " << pair.first << ", Value: " << pair.second << std::endl;
+      for (auto pair : colorMap) {
+        std::cout<<colorMap;
+        LLVM_DEBUG(errs() << pair.first << " : " << pair.second << "\n");
+        if (pair.second == 0)
+          numSpills++;
       }
-
-      // for (auto pair : colorMap) {
-      //   //std::cout<<colorMap;
-      //   LLVM_DEBUG(errs() << pair.first << " : " << pair.second << "\n");
-      //   if (pair.second == 0)
-      //     numSpills++;
-      // }
 
       this->FunctionVirtRegToColorMap[MF->getName()] = colorMap;
       // assert(reply->funcname() == MF->getName());
@@ -2982,7 +2968,6 @@ void MLRA::MLRegAlloc(MachineFunction &MF, SlotIndexes &Indexes,
     else if (funcID == 0)
       ;
   }
-  errs()<<"MAchine Function name: "<<MF.getName()<<"\n";
   this->MF = &MF;
   this->Indexes = &Indexes;
   this->MBFI = &MBFI;

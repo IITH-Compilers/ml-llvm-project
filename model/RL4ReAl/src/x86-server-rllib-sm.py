@@ -82,7 +82,6 @@ class service_server(
                 print("Starting New Episode")
             inter_graphs = request  # graph.decode("utf-8")
             # assert len(inter_graphs.regProf) > 0, "Graphs has no nodes"
-            
             if inter_graphs.new:
                 inter_graph_list = []
                 if type(inter_graphs) is not list:

@@ -326,16 +326,11 @@ def get_observationsInf(graph):
     use_distance_list = []
     raw_graph_mat = []
     positionalSpillWeights_list = []
-    print("Start processing**********")
-    print("len(nodes):", num_nodes)
-    for idx, node in enumerate(nodes):
-        
+
+    for idx, node in enumerate(nodes):    
         nodeId = node.regID
-        #print("nodeId in ggn1 ",nodeId)
         regClass = node.cls #parseProp(properties[0]) 
         spill_cost = node.spillWeight #parseProp(properties[1])
-        #print("spill weigth: ",node.spillWeight)
-        #print("spill cost: ",spill_cost)
         color = node.color # parseProp(properties[2])
         split_points = node.splitSlots
         use_distances = node.useDistances
@@ -345,9 +340,7 @@ def get_observationsInf(graph):
         positionalSpillWeights_list.append(np.array(positionalSpillWeights))
 
         if spill_cost in [float('inf'), "inf", "INF"] or spill_cost > SPILL_COST_THRESHOLD:
-            #print("Inside spill_cost in spill_cost > SPILL_COST_THRESHOLD:")
             spill_cost = float(SPILL_COST_THRESHOLD)
-            #print("spill_cost: ",spill_cost)
         
         if len(node.vectors) > 0:
             node_mat = [ vector.vec for vector in node.vectors]
@@ -364,10 +357,9 @@ def get_observationsInf(graph):
         nid_idx[nodeId] = idx
         idx_nid[idx] = nodeId
         
-        #print("idx and nid", idx, nodeId)
 
         assert not torch.isnan(nodeVec).any(), "Nan is present"
-    #print("spill_Cost_list inside get_observationsInf: ",spill_cost_list)
+    
     for i, node in enumerate(nodes):
         for nlink in node.interferences:
             neighId = nid_idx[nlink]
