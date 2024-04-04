@@ -292,8 +292,8 @@ class HierarchicalGraphColorEnv(gym.Env):
 
     def step(self, action, extra_info=None):
         if self.mode != 'inference':
-            if extra_info and 'select_node_policy' in extra_info.keys():
-                self.node_representation_mat = extra_info['select_node_policy'][0, :, :]                
+            if extra_info and 'default_policy' in extra_info.keys():
+                self.node_representation_mat = extra_info['default_policy'][0, :, :]       
         else:
             if extra_info is not None:
                 if len(extra_info.shape) == 3:
