@@ -22,6 +22,7 @@
 #include <bits/stdint-intn.h>
 #include <cstdint>
 
+#define DEBUG_TYPE "ld-server"
 using namespace llvm;
 using namespace MLBridge;
 
