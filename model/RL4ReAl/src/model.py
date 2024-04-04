@@ -49,10 +49,10 @@ class SelectTaskNetwork(TorchModelV2, nn.Module):
     def forward(self, input_dict, state, seq_lens):
         """Build a network that maps state -> action values."""
         #print("Select task GPU", next(self.parameters()).is_cuda)
-        # print("Obs keys are:", input_dict['obs'].keys())
+        #print("Obs keys are:", input_dict['obs'].keys())
         # print("State shape:", input_dict["obs"]["state"].shape)
-        # torch.set_printoptions(profile="default")
-        # print("Task select model input", input_dict["obs_flat"]) 
+        torch.set_printoptions(profile="default")
+        #print("Task select model input", input_dict["obs_flat"]) 
         # assert not torch.isnan(input_dict["obs"]["state"]).any(), "Nan in select task model input"
         x = F.relu(self.fc1(input_dict["obs"]["state"]))
         # assert not torch.isnan(x).any(), "Nan in select task model after fc1"
@@ -127,14 +127,11 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
         """Build a network that maps state -> action values."""
         #print("Obs keys are:", input_dict.keys())
         # print("State shape:", input_dict["obs_flat"].shape)
-        torch.set_printoptions(threshold=10000)    
-        #print("Node select model input", input_dict["obs_flat"]) 
-        #print("Node select model input", input_dict["obs_flat"].cpu().numpy())
+        torch.set_printoptions(threshold=1000000)    
+        print("Node select model input", input_dict["obs_flat"]) 
         torch.set_printoptions(profile="full")
-        #print("Node select model input", input_dict["obs_flat"])
-        #print("Node select model input", input_dict["obs_flat"])
         #print("Node select model input", input_dict["obs_flat"].size())
-        element = input_dict["obs_flat"][0][91210:91220]
+        #element = input_dict["obs_flat"][0][91210:91220]
         #print("Index is: ",element)
         torch.set_printoptions(profile="default")
 
@@ -254,7 +251,7 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
         # assert not torch.isnan(x).any(), "Nan in select node model output"
         torch.set_printoptions(profile="default")
         #commented
-        # print("Node selection logite", torch.flatten(x, start_dim=1))
+        #print("Node selection logite", torch.flatten(x, start_dim=1))
         torch.set_printoptions(profile="full") 
         # print("x at last: ",x.size())
         torch.set_printoptions(profile="default")
@@ -475,3 +472,6 @@ class SplitNodeNetwork(TorchModelV2, nn.Module):
 
 #         return select_out, node_index, color_out, action_space
 
+
+
+	

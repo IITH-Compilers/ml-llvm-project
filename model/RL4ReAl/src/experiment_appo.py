@@ -14,7 +14,7 @@ import torch
 
 import ray
 from ray import tune
-from ray.rllib.agents import ppo
+#from ray.rllib.agents import ppo
 
 from ray.rllib.algorithms.callbacks import DefaultCallbacks
 from ray.rllib.env import BaseEnv
@@ -33,15 +33,20 @@ from model import SelectTaskNetwork, SelectNodeNetwork, ColorNetwork, SplitNodeN
 import logging
 from ray.rllib.utils.torch_utils import FLOAT_MIN, FLOAT_MAX
 from ray.rllib.utils.spaces.repeated import Repeated
+from config import MODEL_DIR
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--train-iterations", type=int, default=100000)
-
+parser.add_argument("--workers", type=int, default=1)
+parser.add_argument("--mode", type=str, default="CPU")
+parser.add_argument("--dump_onnx_model", type=bool, default=False, help="Dump onnx model files or not")
 torch.autograd.set_detect_anomaly(True) 
 
 checkpoint = None
 def experiment(config):
+    print("Hello..................")
     iterations = config.pop("train-iterations")
+    print("Iterations: ",iterations)
     global checkpoint
     train_results = {}
     # config["env_config"]["path"] = path
@@ -161,12 +166,12 @@ if __name__ == "__main__":
     python_log = os.path.join(logdir, 'running.log')
     #if os.path.exists(python_log):
      #   os.remove(python_log)
-    print(python_log)
+    print("python_log: ",python_log)
     logging.basicConfig(filename='running.log', format='%(thread)d - %(threadName)s - %(levelname)s - %(filename)s - %(message)s', level=log_level, force=True)
     logging.info('Starting training')
     logging.info(args)
 
-    ray.init(object_store_memory=10000000000, local_mode=False)
+    ray.init(object_store_memory=10000000000)
     
     # c = Counter.remote()
 
@@ -293,17 +298,28 @@ if __name__ == "__main__":
     print("Training Config", config)
     # file_count = 0
     start_time = time.time()
+    config["num_rollout_workers"] = (int)(args.workers)
+    if args.mode == "GPU":
+        config["num_gpus_per_worker"] = 0.05
+        config["self.num_gpus"] = 0.5
+
+    config["env_config"]["current_batch"] = (int)(100/args.workers)
+    experiment_name = f"w{args.workers}_{args.mode}"
+        
+    def trail_name_fun(self):
+        return "trial_name_" + f"w{args.workers}_{args.mode}"
     # for path in tqdm (training_graphs, desc="Running..."): # Number of the iterations        
         # set_config(path)
         # config["env_config"]["path"] = path
+    print("tune run")
     tune.run(
         experiment,
         config=config,
         # resources_per_trial=SimpleQTrainer.default_resource_request(config),
         resources_per_trial=APPO.default_resource_request(config),
         # fail_fast=True,
-        # max_failures=10
+        # max_failures=10,
+        local_dir=(MODEL_DIR + "/checkpoint_dir")
         )
-        # resources_per_trial={"cpu": 16, "gpu": 2})
-        # file_count += 1
+        
     print("Total time in seconds is: ", (time.time() - start_time))

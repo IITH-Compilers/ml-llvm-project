@@ -45,6 +45,7 @@ torch.autograd.set_detect_anomaly(True)
 checkpoint = None
 def experiment(config):
     iterations = config.pop("train-iterations")
+    print("Iterations: ",iterations)
     global checkpoint
     train_results = {}
     train_agent = PPO(config=config, env=HierarchicalGraphColorEnv)

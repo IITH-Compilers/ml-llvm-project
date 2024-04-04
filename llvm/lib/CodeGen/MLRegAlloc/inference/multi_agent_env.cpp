@@ -75,7 +75,7 @@ Observation& MultiAgentEnv::reset() {
   this->edge_count = this->computeEdgesFromRP();
   LLVM_DEBUG(errs() << "0. noderep size = " << this->nodeRepresentation.size()
                     << "\n");
-  errs()<<"Inside reset"<<"\n";
+  //errs()<<"Inside reset"<<"\n";
   this->computeAnnotations();
   LLVM_DEBUG(errs() << "1. noderep size = " << this->nodeRepresentation.size()
                     << "\n");
@@ -468,17 +468,23 @@ void MultiAgentEnv::selectNodeObsConstructor(Observation &obs) {
     obs[current_index++] = action_mask[i];
     // LLVM_DEBUG(errs() << action_mask[i] << " ");
   }
+  //errs()<<"current index at 1: "<<current_index<<"\n";//600
   assert(current_index == 600 && "current_index is not 600\n");
   // LLVM_DEBUG(errs() << "\n");
   // Set edge count in graph
   assertObsSize(143);
-  obs[current_index++] = this->edge_count;
-
+  obs[current_index++] = this->edge_count; //inserting edge count 600 insert and increment to 601
+  //errs()<<"current index at 2: "<<current_index<<"\n";
   Observation edgesFlattened(MAX_EDGE_COUNT * 2);
   this->computeEdgesFlatened(edgesFlattened);
+  //errs()<<"Src and Des are same"<<"\n";
+  
   for (int i = 0; i < MAX_EDGE_COUNT * 2; i++) {
+    //errs()<<"obs[current_index++]: "<<current_index<<" "<<edgesFlattened[i]<<"\n";
     obs[current_index++] = edgesFlattened[i];
   }
+  //errs()<<"current index at 3: "<<current_index<<"\n";
+  //till here 60,600.
   assert(current_index == 60601 && "current_index is not 60601\n");
   obs[current_index + this->edge_count] = 1;
   current_index += MAX_EDGE_COUNT;
@@ -537,7 +543,7 @@ void MultiAgentEnv::createNodeSelectMask(std::vector<int> &mask) {
   //   errs() << mask[i] << " "<<"\n";
   // }
   
-  errs() << "\n";
+  //errs() << "\n";
   // LLVM_DEBUG(dbgs() << "\n");
 }
 
@@ -625,12 +631,18 @@ unsigned MultiAgentEnv::computeEdgesFromRP() {
     RegisterProfile rp = rpi.second;
     int src = node_idx;
     for (auto des_id : rp.interferences) {
+      //  errs()<<"In computeEdgesFromRP: "<<"\n";
+      //  errs()<<"edge_count: "<<edge_count<<"\n";
       int des = this->nid_idx[des_id];
       if (src != des) {
         this->edges[edge_count][0] = src;
         this->edges[edge_count][1] = des;
         edge_count += 1;
+        //errs()<<"Src: "<<src<<","<<"Des: "<<des<<"\n";
       }
+      // else{
+      //   errs()<<"Src and Des are same"<<"\n";
+      // }
     }
     node_idx++;
   }
@@ -647,13 +659,18 @@ unsigned MultiAgentEnv::updateEdgesFromRP() {
     auto tempInterferences = this->graph_topology->getAdjNodes(src);
     for (auto des_id : tempInterferences) {
       // int des = this->nid_idx[des_id];
+      //errs()<<"In updateEdgesFromRP: "<<"\n";
       int des = des_id;
       if (src != des) {
         this->edges[edge_count][0] = src;
         this->edges[edge_count][1] = des;
         edge_count += 1;
-        LLVM_DEBUG(errs() << "(" << src << ", " << des << "), ");
+        //LLVM_DEBUG(errs() << "(" << src << ", " << des << "), ");
+        //errs()<<"Src: "<<src<<","<<"Des: "<<des<<"\n";
       }
+      // else{
+      //   errs()<<"Src and Des are same"<<"\n";
+      // }
     }
     // node_idx++;
   }
@@ -684,6 +701,7 @@ void MultiAgentEnv::constructNodeVector(
   }
 }
 
+//april 1,2024.
 void MultiAgentEnv::taskSelectionObsConstructor(Observation &obs) {
   // LLVM_DEBUG(errs() << "Inside taskSelectionObsConstructor function\n");
   // Observation temp_obs = new float[selectTaskObsSize]();
@@ -708,7 +726,9 @@ void MultiAgentEnv::taskSelectionObsConstructor(Observation &obs) {
   }
 
   obs[current_index++] = action_mask[0];
+  //errs()<<"obs[current_index++]: which is action_mask[0] "<<action_mask[0]<<"\n";
   obs[current_index++] = action_mask[1];
+  //errs()<<"obs[current_index++]: which is action_mask[1]"<<action_mask[1]<<"\n";
   // Setting node properties
 
   unsigned current_node_idx = this->nid_idx[this->current_node_id];
@@ -722,14 +742,24 @@ void MultiAgentEnv::taskSelectionObsConstructor(Observation &obs) {
   float spillcost = this->current_node.spillWeight;
   llvm::SmallVector<int, 8> use_distances = this->current_node.useDistances;
   obs[current_index++] = adj_nodes.size();
+  //errs()<<"obs[current_index++]: adj_nodes.size"<<adj_nodes.size()<<"\n";
   obs[current_index++] = masked_action_space.size();
+  //errs()<<"obs[current_index++]: masked_action_space.size();"<<masked_action_space.size()<<"\n";
   if (std::isinf(spillcost)) {
+    //errs()<<"Inside spillcost is infinite"<<"\n";
+    obs[current_index]=10000;
     this->annotations[current_index++][0] = 10000;
+    
   } else {
+    //errs()<<"spillcost: "<<spillcost<<"\n";
+    obs[current_index]=spillcost;
     this->annotations[current_index++][0] = spillcost;
+    
   }
   // obs[current_index++] = spillcost;
-  obs[current_index++] = use_distances.size();
+
+  obs[current_index++] = use_distances.size();      //till here 6 are done
+  //errs()<<"obs[current_index++]: use_distances.size();"<<use_distances.size()<<"\n";
   // Set node state
   // int current_node_idx = this->nid_idx[this->current_node_id];
   auto nodeVec = this->nodeRepresentation[current_node_idx];

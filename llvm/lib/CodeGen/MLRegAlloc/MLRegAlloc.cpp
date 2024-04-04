@@ -107,6 +107,8 @@
 // #include "Service/RegisterAllocationInference/RegisterAllocationInference.h"
 
 #define DIS_SANITY_CHECK 1
+#define MIN_VARS 120
+#define MAX_VARS 500
 using namespace llvm;
 using grpc::ServerContext;
 using grpc::Status;
@@ -359,17 +361,16 @@ void MLRA::processMLInputsProtobuf(SmallSetVector<unsigned, 8> *updatedRegIdxs,
     }
     Message *regProfMsg =
         new registerallocationinference::RegisterProfileList::RegisterProfile();
-
     std::pair<std::string, int32_t> regID("regID", reg);
     std::pair<std::string, std::string> cls("cls", rp.cls);
     std::pair<std::string, int32_t> color("color", rp.color);
     std::pair<std::string, std::vector<float>> spillWeights(
         "positionalSpillWeights",
         std::vector<float>(rp.spillWeights.begin(), rp.spillWeights.end()));
-
     std::pair<std::string, float> spillWeight("spillWeight", rp.spillWeight);
     if (rp.spillWeight == INFINITY)
       spillWeight.second = -1.0f;
+      //spillWeight.second = 10000;
 
     std::pair<std::string, std::vector<int>> interferences(
         "interferences",
@@ -441,6 +442,7 @@ void MLRA::processMLInputs(SmallSetVector<unsigned, 8> *updatedRegIdxs,
                            bool IsStart, bool IsJson) {
   // errs() << "Inside processMLInputs\n";
   if (data_format == "protobuf") {
+    errs()<<"Inside processMLInputsProtobuf"<<"\n";
     processMLInputsProtobuf(updatedRegIdxs, IsStart);
     return;
   }
@@ -2387,6 +2389,8 @@ void MLRA::allocatePhysRegsViaRandom(int seed, int maxTries) {
   juggleAllocation(seed, maxTries, regsToAllocate);
 }
 
+//training flow
+
 void MLRA::training_flow() {
   if (this->FunctionVirtRegToColorMap.find(MF->getName()) !=
       this->FunctionVirtRegToColorMap.end()) {
@@ -2399,6 +2403,7 @@ void MLRA::training_flow() {
   LLVM_DEBUG(errs() << "Done MLRA allocation for : " << MF->getName() << '\n');
 }
 
+//pipes
 void MLRA::initPipeCommunication() {
   auto processOutput = [&](std::vector<int> &reply) {
     if (reply[0] == 0) {
@@ -2432,7 +2437,8 @@ void MLRA::initPipeCommunication() {
         }
         count++;
       }
-      if (count < 120 || count > 500) {
+      //num function to process - > GRPC
+      if (count < MIN_VARS || count > MAX_VARS) {
         errs() << "regProf size is not between 120 and 500\n";
         return;
       }
@@ -2541,6 +2547,7 @@ void MLRA::initPipeCommunication() {
   }
 }
 
+//inference (GRPC , ONNX)
 void MLRA::inference() {
   assert(enable_mlra_inference && "mlra-inference should be true.");
   assert(regProfMap.size() > 0 && "No profile information present.");
@@ -2617,14 +2624,14 @@ void MLRA::inference() {
       // registerallocationinference::Data>>(mlra_server_address, this);
     } else if (enable_rl_inference_engine) {
       errs() << "In RL inference engine\n";
-      #define nodeSelectionModelPath                                                 \
-        MLConfig::mlconfig + "/regalloc/onnx-checkpoint/SELECT_NODE_MODEL_PATH.onnx"
-      #define taskSelectionModelPath                                                 \
-        MLConfig::mlconfig + "/regalloc/onnx-checkpoint/SELECT_TASK_MODEL_PATH.onnx"
-      #define nodeColouringModelPath                                                 \
-        MLConfig::mlconfig + "/regalloc/onnx-checkpoint/COLOR_NODE_MODEL_PATH.onnx"
-      #define nodeSplitingModelPath                                                  \
-        MLConfig::mlconfig + "/regalloc/onnx-checkpoint/SPLIT_NODE_MODEL_PATH.onnx"
+     #define nodeSelectionModelPath                                                 \
+  MLConfig::mlconfig + "/regalloc/onnx-checkpoint/SELECT_NODE_MODEL_PATH.onnx"
+#define taskSelectionModelPath                                                 \
+  MLConfig::mlconfig + "/regalloc/onnx-checkpoint/SELECT_TASK_MODEL_PATH.onnx"
+#define nodeColouringModelPath                                                 \
+  MLConfig::mlconfig + "/regalloc/onnx-checkpoint/COLOR_NODE_MODEL_PATH.onnx"
+#define nodeSplitingModelPath                                                  \
+  MLConfig::mlconfig + "/regalloc/onnx-checkpoint/SPLIT_NODE_MODEL_PATH.onnx"
 
       std::map<std::string, Agent *> agentMap;
       agentMap[NODE_SELECTION_AGENT] = new Agent(nodeSelectionModelPath);
@@ -2667,7 +2674,12 @@ void MLRA::inference() {
       }
 
       LLVM_DEBUG(errs() << "edge_count = " << edge_count << "\n");
-      if (count >= 500 || count <= 0) {
+      //num function to process -> ONNX
+      // if (count >= 500 || count <= 0) {
+      //   LLVM_DEBUG(errs() << "Error msg: Node count is more then max value\n");
+      //   return;
+      // }
+      if (count > MAX_VARS || count < MIN_VARS) {
         LLVM_DEBUG(errs() << "Error msg: Node count is more then max value\n");
         return;
       }
@@ -2970,6 +2982,7 @@ void MLRA::MLRegAlloc(MachineFunction &MF, SlotIndexes &Indexes,
     else if (funcID == 0)
       ;
   }
+  errs()<<"MAchine Function name: "<<MF.getName()<<"\n";
   this->MF = &MF;
   this->Indexes = &Indexes;
   this->MBFI = &MBFI;
