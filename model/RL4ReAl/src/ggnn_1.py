@@ -1,6 +1,3 @@
-#get the node type and identify the edge type. only keep the edges between similar type of nodes and remove edges between different node types.
-#i.e the edges must be present between GR and GR or Non-GR and Non-GR, there should be no edge between GR and Non-GR.
-
 import numpy as np
 import torch
 
@@ -326,7 +323,6 @@ def get_observationsInf(graph):
     use_distance_list = []
     raw_graph_mat = []
     positionalSpillWeights_list = []
-
     for idx, node in enumerate(nodes):    
         nodeId = node.regID
         regClass = node.cls #parseProp(properties[0]) 
@@ -359,7 +355,6 @@ def get_observationsInf(graph):
         
 
         assert not torch.isnan(nodeVec).any(), "Nan is present"
-    
     for i, node in enumerate(nodes):
         for nlink in node.interferences:
             neighId = nid_idx[nlink]

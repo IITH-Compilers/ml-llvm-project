@@ -1,7 +1,7 @@
 import sys
 from config import BUILD_DIR, MODEL_PATH,MODEL_DIR
 sys.path.append(
-    f"{BUILD_DIR}/../Python-Utilities"
+    f"{BUILD_DIR}/tools/MLCompilerBridge/Python-Utilities"
 )
 import RegisterAllocationInference_pb2_grpc, RegisterAllocationInference_pb2
 
@@ -17,7 +17,7 @@ sys.path.append(
 import rollout as inference
 from argparse import Namespace
 
-sys.path.append(f"{BUILD_DIR}/../MLCompilerBridge/CompilerInterface/")
+sys.path.append(f"{BUILD_DIR}/tools/MLCompilerBridge/CompilerInterface/")
 from PipeCompilerInterface import PipeCompilerInterface
 from GrpcCompilerInterface import GrpcCompilerInterface
 
@@ -68,7 +68,7 @@ class service_server(
             "steps": 0,
             "episodes": 0,
             "arch": "X86",
-            "dump_onnx_model": False 
+            "dump_onnx_model": dump_onnx_model 
         }
         args = Namespace(**args)
         self.inference_model = inference.RollOutInference(args)
@@ -98,15 +98,11 @@ class service_server(
                 if not self.inference_model.update_obs(request):
                     print("Current split failed")
                     self.inference_model.setCurrentNodeAsNotVisited()
-               
                 self.inference_model.updateSelectNodeObs()                
             else:
-                
                 self.inference_model.setCurrentNodeAsNotVisited()
-                self.inference_model.updateSelectNodeObs()
-            
-            action, count = self.inference_model.compute_action()
-            
+                self.inference_model.updateSelectNodeObs()      
+            action, count = self.inference_model.compute_action()   
             # action, count = self.inference_model.evaluate()
             select_node_agent = "select_node_agent_{}".format(count)
             select_task_agent = "select_task_agent_{}".format(count)
@@ -146,7 +142,6 @@ class service_server(
             reply = RegisterAllocationInference_pb2.Data(
                 message="Split", regidx=0, payload=0 
             )
-            exit(0)
             return reply
 
 
@@ -305,11 +300,6 @@ def run_pipe_communication(data_format, pipe_name, dump_onnx_model=False):
         
         inter_graphs = NestedDict(inter_graphs)
         return inter_graphs
-
-
-
-    # #########################################
-
     inference_model = inference.RollOutInference(args)
     inference_model.env.use_pipe = True
     # serdes = SerDes.SerDes(data_format, "/tmp/" + pipe_name)
@@ -382,9 +372,6 @@ def run_pipe_communication(data_format, pipe_name, dump_onnx_model=False):
 if __name__ == "__main__":
     # Server.run()
     # blockPrint()
-    
-    
-    ray.init(_temp_dir="/home/intern24002/ray_log1")
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--server_port", type=str, help="Server port")

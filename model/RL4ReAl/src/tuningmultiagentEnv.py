@@ -21,9 +21,6 @@ import math
 import torch
 import signal
 from gym.spaces import Discrete, Box
-# from memory_profiler import profile
-
-# from ggnn import constructGraph
 from ggnn_1 import get_observations, get_observationsInf, GatedGraphNeuralNetwork, constructVectorFromMatrix, AdjacencyList, SPILL_COST_THRESHOLD
 from register_action_space import RegisterActionSpace
 
@@ -156,7 +153,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.path = None
         self.annotation_size = env_config["annotations"]
         random.seed(123)
-        np.random.seed(123);
+        np.random.seed(123)
 
     def reward_formula(self, value, action):
         if value in [float("inf"), 'inf', "INF"]:
@@ -252,7 +249,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         }
         
         obs = {
-            # self.select_node_agent_id: { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(select_node_mask), 'state' : cur_obs}
             self.select_node_agent_id: { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(select_node_mask), 'state' : cur_obs, 'annotations': np.array(annotations) ,'adjacency_lists': adjacency_lists}
         }
         self.spill_successful = 0
@@ -891,7 +887,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             else:
                 response = self.color_assignment_map
                 self.colormap = response
-            # print("Colour map ", self.colormap)
             done = True
             self.obs.next_stage = 'end'
             if self.mode != 'inference':

@@ -556,7 +556,6 @@ class RollOutInference:
         
         assert len(inter_graph_list) == 1, "Only one graph at a time supported."
         inter_graph = inter_graph_list[0]
-        # print("inter_graph: ",inter_graph)
         graph = inter_graph 
         self.obs = self.env.reset(graph)
         if self.obs is None:
@@ -644,9 +643,7 @@ class RollOutInference:
         if self.env.split_point is not None:
             actions_response[self.env.split_node_agent_id] = self.env.split_point
         if self.env.colormap is not None:
-            #print("entered self.env.colormap")
             actions_response["colour_node_agent_id"] = self.env.colormap
-        else:
         actions_response[self.env.select_node_agent_id] = int(self.env.virtRegId)
          
         return actions_response, self.env.agent_count

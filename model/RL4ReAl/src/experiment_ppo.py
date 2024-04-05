@@ -48,6 +48,7 @@ def experiment(config):
     global checkpoint
     train_results = {}
     train_agent = PPO(config=config, env=HierarchicalGraphColorEnv)
+    print('Training agent used:', train_agent)
     # Train
     checkpoint = config["env_config"]["check_point"]
     if checkpoint is not None:
@@ -150,7 +151,7 @@ if __name__ == "__main__":
     logging.info('Starting training')
     logging.info(args)
 
-    ray.init(object_store_memory=10000000000, local_mode=False,_temp_dir="/home/intern24002/ray_log")
+    ray.init(object_store_memory=10000000000, local_mode=False)
     
 
     config["train-iterations"] = args.train_iterations

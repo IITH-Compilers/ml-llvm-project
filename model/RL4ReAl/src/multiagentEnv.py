@@ -45,8 +45,7 @@ import sys
 import re
 
 from config import BUILD_DIR
-#/home/intern24002/ml-llvm-project/Python-Utilities/client.py
-sys.path.append(f"{BUILD_DIR}/../Python-Utilities/")
+sys.path.append(f"{BUILD_DIR}/tools/MLCompilerBridge/Python-Utilities/")
 from client import *
 from client import RegisterAllocationClient
 import RegisterAllocationInference_pb2, RegisterAllocation_pb2
@@ -611,8 +610,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                     self.split_node_agent_id: colour_reward
                 }
             done['__all__'] = True
-            print("Setting done all true for colouring")
-
             from csv import writer
             with open('traning_stats_'+str(self.worker_index)+'.csv', 'a') as f_object:
   
@@ -645,7 +642,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         return obs, reward, done, {}
 
     def _split_node_step(self, action):
-        print("Splitting at point: ",action)
         logging.debug("Enter _split_node_step")
         # self.cur_obs = self.flat_env.reset()
         #logging.debug("{} {} {}".format(self.virtRegId, self.obs.idx_nid[self.cur_node], self.cur_node))
@@ -852,7 +848,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         return reward, done
 
     def step_colorTask(self, action):
-        # this method allocated the cur_node to chooosen register
         reg_allocated = action
         # add the node to the visited list
         nodeChoosen = self.cur_node
@@ -1062,6 +1057,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             inx = (((self.worker_index-1) * self.env_config['current_batch']) + self.graph_counter)
             path=self.training_graphs[inx]
             logging.debug('Graphs selected : {}'.format(path))
+            print('Graphs selected : {}'.format(path))
             self.reset_count+=1
             if self.reset_count % self.repeat_freq == 0:
                 self.graph_counter+=1
@@ -1251,7 +1247,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                             # raise
 
                     self.obs.spill_cost_list.append(node_prof.spillWeight)
-                    print("spill_cost_list.append(node_prof.spillWeight): ",node_prof.spillWeight)
                     self.obs.reg_class_list.append(self.obs.reg_class_list[splited_node_idx])
                     self.obs.use_distances.append(sorted(node_prof.useDistances))
                     self.obs.positionalSpillWeights.append(node_prof.positionalSpillWeights)

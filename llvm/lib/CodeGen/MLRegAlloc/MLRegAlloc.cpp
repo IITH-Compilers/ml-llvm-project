@@ -369,7 +369,7 @@ void MLRA::processMLInputsProtobuf(SmallSetVector<unsigned, 8> *updatedRegIdxs,
         std::vector<float>(rp.spillWeights.begin(), rp.spillWeights.end()));
     std::pair<std::string, float> spillWeight("spillWeight", rp.spillWeight);
     if (rp.spillWeight == INFINITY)
-      spillWeight.second = 10000;
+      spillWeight.second = -1.0f;
 
     std::pair<std::string, std::vector<int>> interferences(
         "interferences",
@@ -435,7 +435,6 @@ void MLRA::printFeatures() {
               << ServerModeResponse.ShortDebugString() << ")\n";
   }
 }
-//func one
 
 void MLRA::processMLInputs(SmallSetVector<unsigned, 8> *updatedRegIdxs,
                            bool IsStart, bool IsJson) {
@@ -2399,7 +2398,6 @@ void MLRA::training_flow() {
   LLVM_DEBUG(errs() << "Done MLRA allocation for : " << MF->getName() << '\n');
 }
 
-
 void MLRA::initPipeCommunication() {
   auto processOutput = [&](std::vector<int> &reply) {
     if (reply[0] == 0) {
@@ -2433,7 +2431,6 @@ void MLRA::initPipeCommunication() {
         }
         count++;
       }
-      //num function to process - > GRPC
       if (count < MIN_VARS || count > MAX_VARS) {
         errs() << "regProf size is not between 120 and 500\n";
         return;
@@ -2451,13 +2448,9 @@ void MLRA::initPipeCommunication() {
           }
         }
       }
-
       processMLInputs(nullptr, true, IsJson);
-
       errs() << "Call model first time\n";
-
       isGraphSet = true;
-      errs() << "Processing funtion: " << MF->getName() << "\n";
     } else {
       JO["new"] = false;
       this->IsNew = false;
@@ -2592,8 +2585,7 @@ void MLRA::inference() {
   // }
   if (usePipe) {
     std::string basename = "/tmp/" + mlra_pipe_name;
-
-    // errs() << "Initializing pipe communication...\n";
+    
     BaseSerDes::Kind SerDesType;
     if (data_format == "json") {
       SerDesType = BaseSerDes::Kind::Json;
@@ -2618,7 +2610,7 @@ void MLRA::inference() {
       // registerallocationinference::Data>>(mlra_server_address, this);
     } else if (enable_rl_inference_engine) {
       errs() << "In RL inference engine\n";
-     #define nodeSelectionModelPath                                                 \
+#define nodeSelectionModelPath                                                 \
   MLConfig::mlconfig + "/regalloc/onnx-checkpoint/SELECT_NODE_MODEL_PATH.onnx"
 #define taskSelectionModelPath                                                 \
   MLConfig::mlconfig + "/regalloc/onnx-checkpoint/SELECT_TASK_MODEL_PATH.onnx"
@@ -2693,7 +2685,6 @@ void MLRA::inference() {
       unsigned numSpills = 0;
 
       for (auto pair : colorMap) {
-        std::cout<<colorMap;
         LLVM_DEBUG(errs() << pair.first << " : " << pair.second << "\n");
         if (pair.second == 0)
           numSpills++;
