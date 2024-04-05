@@ -615,7 +615,6 @@ unsigned MultiAgentEnv::updateEdgesFromRP() {
         this->edges[edge_count][0] = src;
         this->edges[edge_count][1] = des;
         edge_count += 1;
-        //LLVM_DEBUG(errs() << "(" << src << ", " << des << "), ");
       }
     }
     // node_idx++;
