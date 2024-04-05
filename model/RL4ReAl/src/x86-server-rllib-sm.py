@@ -98,10 +98,10 @@ class service_server(
                 if not self.inference_model.update_obs(request):
                     print("Current split failed")
                     self.inference_model.setCurrentNodeAsNotVisited()
-                self.inference_model.updateSelectNodeObs()                
+                self.inference_model.updateSelectNodeObs()             
             else:
                 self.inference_model.setCurrentNodeAsNotVisited()
-                self.inference_model.updateSelectNodeObs()      
+                self.inference_model.updateSelectNodeObs()   
             action, count = self.inference_model.compute_action()   
             # action, count = self.inference_model.evaluate()
             select_node_agent = "select_node_agent_{}".format(count)

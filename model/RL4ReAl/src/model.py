@@ -120,9 +120,6 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
 
         input_state_list = torch.zeros(input_dict["obs"]["state"].shape[0], self.max_number_nodes, self.emb_size)
         if self.enable_ggnn:
-            # print("*************************** SHAPES PRINTING *****************************")
-            # print("-----------------BEFORE GGNN-------------")
-
             # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
             # print("from select node forward func : ", device)
             # print("adjacency list device = ", input_dict["obs"]["adjacency_lists"][0].data.device)
@@ -167,10 +164,8 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
         else:
             input_state_list = initial_node_representation=input_dict["obs"]["state"]
         
-        input_state_list = input_dict["obs"]["state"]
-           
-        input_state_list = input_state_list.to(input_dict["obs"]["state"].device)
-        
+        input_state_list = input_dict["obs"]["state"] 
+        input_state_list = input_state_list.to(input_dict["obs"]["state"].device)  
         # assert not torch.isnan(input_state_list).any(), "Nan in select node model input"
         x = F.relu(self.fc1(input_state_list))
         # if torch.isnan(x).any():
@@ -249,7 +244,6 @@ class ColorNetwork(TorchModelV2, nn.Module):
         # print("Colour  node input device", input_dict["obs"]["state"].device)
         x = F.relu(self.fc1(input_dict["obs"]["state"]))
         x = F.relu(self.fc2(x))
-        
         x = torch.cat((x, input_dict["obs"]["node_properties"]), 1)
         # print("Colouring forward", x.shape, input_dict["obs"]["node_properties"])
         # # assert False, "Hoho"
@@ -415,7 +409,4 @@ class SplitNodeNetwork(TorchModelV2, nn.Module):
 #             split_out = self.splitNodeNet(hidden_state[node_index])
 
 #         return select_out, node_index, color_out, action_space
-
-
-
 	

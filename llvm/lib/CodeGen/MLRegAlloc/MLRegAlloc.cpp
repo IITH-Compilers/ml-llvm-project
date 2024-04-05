@@ -2434,8 +2434,7 @@ void MLRA::initPipeCommunication() {
       if (count < MIN_VARS || count > MAX_VARS) {
         errs() << "regProf size is not between 120 and 500\n";
         return;
-      }
-     
+      }  
 
       for (auto it = MF->begin(); it != MF->end(); it++) {
         if (it->isEHFuncletEntry() || it->isEHPad() || it->isEHScopeEntry() ||
@@ -2584,8 +2583,7 @@ void MLRA::inference() {
   //   return;
   // }
   if (usePipe) {
-    std::string basename = "/tmp/" + mlra_pipe_name;
-    
+    std::string basename = "/tmp/" + mlra_pipe_name;  
     BaseSerDes::Kind SerDesType;
     if (data_format == "json") {
       SerDesType = BaseSerDes::Kind::Json;
@@ -2660,7 +2658,6 @@ void MLRA::inference() {
       }
 
       LLVM_DEBUG(errs() << "edge_count = " << edge_count << "\n");
-
       if (count > MAX_VARS || count < MIN_VARS) {
         LLVM_DEBUG(errs() << "Error msg: Node count is more then max value\n");
         return;
@@ -2683,7 +2680,6 @@ void MLRA::inference() {
       LLVM_DEBUG(errs() << "Processing funtion: " << MF->getName() << "\n");
       LLVM_DEBUG(errs() << "Colour Map: \n");
       unsigned numSpills = 0;
-
       for (auto pair : colorMap) {
         LLVM_DEBUG(errs() << pair.first << " : " << pair.second << "\n");
         if (pair.second == 0)

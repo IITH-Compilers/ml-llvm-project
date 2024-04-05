@@ -351,8 +351,7 @@ def get_observationsInf(graph):
         color_list.append(color)    
         initial_node_representation.append(nodeVec)
         nid_idx[nodeId] = idx
-        idx_nid[idx] = nodeId
-        
+        idx_nid[idx] = nodeId  
 
         assert not torch.isnan(nodeVec).any(), "Nan is present"
     for i, node in enumerate(nodes):

@@ -456,7 +456,6 @@ void MultiAgentEnv::selectNodeObsConstructor(Observation &obs) {
   };
 
   std::vector<int> action_mask(max_node_number);
-  
   this->createNodeSelectMask(action_mask);
   for (int i = 0; i < max_node_number; i++) {
     assertObsSize(137);
@@ -473,7 +472,6 @@ void MultiAgentEnv::selectNodeObsConstructor(Observation &obs) {
   for (int i = 0; i < MAX_EDGE_COUNT * 2; i++) {
     obs[current_index++] = edgesFlattened[i];
   }
-  
   assert(current_index == 60601 && "current_index is not 60601\n");
   obs[current_index + this->edge_count] = 1;
   current_index += MAX_EDGE_COUNT;
@@ -499,8 +497,6 @@ void MultiAgentEnv::selectNodeObsConstructor(Observation &obs) {
   }
 
   // Set node embeddings
-
-  //LLVM_DEBUG(errs() << "current_index = " << current_index << "\n");
   for (int node_idx = 0; node_idx < this->nodeRepresentation.size();
        node_idx++) {
     auto nodeVec = this->nodeRepresentation[node_idx];
@@ -621,7 +617,6 @@ unsigned MultiAgentEnv::updateEdgesFromRP() {
         edge_count += 1;
         //LLVM_DEBUG(errs() << "(" << src << ", " << des << "), ");
       }
-      
     }
     // node_idx++;
   }
