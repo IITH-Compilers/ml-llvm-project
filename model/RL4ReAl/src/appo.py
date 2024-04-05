@@ -92,7 +92,7 @@ class APPOConfig(ImpalaConfig):
         self.rollout_fragment_length = 8
         self.train_batch_size = 32
         self.sample_async = False
-        self.num_gpus = 2
+        self.num_gpus = 1
         # self.num_multi_gpu_tower_stacks = 2
         self.minibatch_buffer_size = 1
         self.num_sgd_iter = 1
@@ -114,7 +114,7 @@ class APPOConfig(ImpalaConfig):
         self.entropy_coeff_schedule = None
 
         self.num_envs_per_worker = 1
-        self.num_cpus_per_worker = 2
+        self.num_cpus_per_worker = 1
         self.num_gpus_per_worker = 0
 
 
