@@ -152,14 +152,15 @@ class PPOConfig(PGConfig):
             "current_batch": 500,
             "Workers_starting_port": "50040",
             "disable_spliting": False,
-            "use_costbased_reward": True,
-            "use_local_reward": False,
+            "use_costbased_reward": False,
+            "use_local_reward": True,
             "use_mca_reward": False,
             "use_mca_self_play_reward": False,
             "mca_reward_clip": 10,
             "mca_timeout": 30,
             "greedy_mca_throughput_file_path": f"{MODEL_DIR}/greedy-throughput_set_120-500.json",
-            "mca_cycles_file_path": f"{MODEL_DIR}/greedy-cycles_set_120-500.json"
+            "mca_cycles_file_path": f"{MODEL_DIR}/greedy-cycles_set_120-500.json",
+            "no_of_splits": 1
         }
 
         self.horizon = 1000
