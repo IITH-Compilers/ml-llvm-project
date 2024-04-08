@@ -36,6 +36,10 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRPrintingPasses.h"
 #include "llvm/Support/Valgrind.h"
+<<<<<<< HEAD
+=======
+#include "llvm/Transforms/IPO/AddSizeAttr/AddSizeAttr.h"
+>>>>>>> 92e0943e9769... Fixed cmake linking issues
 #include "llvm/Transforms/AggressiveInstCombine/AggressiveInstCombine.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/AlwaysInliner.h"
@@ -45,6 +49,11 @@
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Instrumentation/BoundsChecking.h"
 #include "llvm/Transforms/ObjCARC.h"
+<<<<<<< HEAD
+=======
+#include "llvm/Transforms/IPO/PosetRL/PosetRL.h"
+#include "llvm/Transforms/IPO/CodeSizeOpt/CodeSizeOpt.h"
+>>>>>>> e4011a594dc3... Added MLConfig in Support/CommandLine.cpp
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/GVN.h"
 #include "llvm/Transforms/Scalar/InstSimplifyPass.h"
@@ -141,7 +150,11 @@ namespace {
       (void) llvm::createMergeICmpsLegacyPass();
       (void) llvm::createExpandLargeDivRemPass();
       (void) llvm::createExpandMemCmpPass();
+<<<<<<< HEAD
       (void) llvm::createExpandVectorPredicationPass();
+=======
+      (void)llvm::createPosetRLPass();
+>>>>>>> e4011a594dc3... Added MLConfig in Support/CommandLine.cpp
       std::string buf;
       llvm::raw_string_ostream os(buf);
       (void) llvm::createPrintModulePass(os);

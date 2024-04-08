@@ -424,6 +424,11 @@ int main(int argc, char **argv) {
   initializeTransformUtils(Registry);
   initializeInstCombine(Registry);
   initializeTarget(Registry);
+<<<<<<< HEAD
+=======
+  initializePosetRLPass(Registry);
+  initializeAddSizeAttrPassPass(Registry);
+>>>>>>> e4011a594dc3... Added MLConfig in Support/CommandLine.cpp
   // For codegen passes, only passes that do IR to IR transformation are
   // supported.
   initializeExpandLargeDivRemLegacyPassPass(Registry);

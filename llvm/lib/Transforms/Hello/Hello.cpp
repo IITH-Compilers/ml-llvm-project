@@ -20,6 +20,7 @@ using namespace llvm;
 #define DEBUG_TYPE "hello"
 
 STATISTIC(HelloCounter, "Counts number of functions greeted");
+<<<<<<< HEAD
 
 namespace {
 // Hello - The first implementation, without getAnalysisUsage.
@@ -39,6 +40,8 @@ struct Hello : public FunctionPass {
 char Hello::ID = 0;
 static RegisterPass<Hello> X("hello", "Hello World Pass");
 
+=======
+>>>>>>> e4011a594dc3... Added MLConfig in Support/CommandLine.cpp
 namespace {
 // Hello2 - The second implementation with getAnalysisUsage implemented.
 struct Hello2 : public FunctionPass {

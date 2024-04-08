@@ -1,3 +1,9 @@
+<<<<<<< HEAD
+=======
+add_subdirectory(PosetRL)
+add_subdirectory(AddSizeAttr)
+
+>>>>>>> fb9f173c59b7... Moved CodeSizeOpt to IPO
 add_llvm_component_library(LLVMipo
   AlwaysInliner.cpp
   Annotation2Metadata.cpp
@@ -50,9 +56,12 @@ add_llvm_component_library(LLVMipo
   intrinsics_gen
   omp_gen
 
+<<<<<<< HEAD
   COMPONENT_NAME
   IPO
 
+<<<<<<< HEAD
+<<<<<<< HEAD
   LINK_COMPONENTS
   AggressiveInstCombine
   Analysis
@@ -72,3 +81,14 @@ add_llvm_component_library(LLVMipo
   Vectorize
   Instrumentation
   )
+=======
+target_link_libraries(LLVMipo PUBLIC LLVMPosetRL LLVMCodeSizeOpt)
+target_link_libraries(LLVMipo PRIVATE LLVMMLBridge)
+>>>>>>> fb9f173c59b7... Moved CodeSizeOpt to IPO
+=======
+target_link_libraries(LLVMipo PUBLIC LLVMPosetRL)
+target_link_libraries(LLVMipo PRIVATE LLVMMLBridge)
+>>>>>>> e4011a594dc3... Added MLConfig in Support/CommandLine.cpp
+=======
+target_link_libraries(LLVMipo PUBLIC LLVMPosetRL LLVMAddSizeAttr)
+>>>>>>> 92e0943e9769... Fixed cmake linking issues

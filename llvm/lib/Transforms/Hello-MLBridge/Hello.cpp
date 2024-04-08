@@ -231,6 +231,25 @@
   M(49500)                                                                     \
   M(50000)
 
+<<<<<<< HEAD
+=======
+#define DEBUG_TYPE "hello_mlbridge"
+
+using namespace llvm;
+using namespace grpc;
+using namespace helloMLBridgegRPC;
+
+STATISTIC(hellomodule, "Counts number of functions greeted");
+
+static cl::opt<bool> training("hello-training", cl::Hidden,
+                              cl::desc("whether it is training or inference"),
+                              cl::init(false));
+
+static cl::opt<std::string> server_address(
+    "hello-server-address", cl::Hidden,
+    cl::desc("Starts the server in the given address, format <ip>:<port>"),
+    cl::init("localhost:5050"));
+>>>>>>> 2d00f46f0790... DEBUG_TYPE fix in Hello-MLBridge pass
 
 using namespace llvm;
 using namespace MLBridge;
@@ -262,7 +281,42 @@ void HelloMLBridge::setModelRunner(int n) {
           "output", M->getContext());                                        \
       break;
       MODELS(M)
+<<<<<<< HEAD
   #undef M
+=======
+#undef M
+    }
+    // MLRunner = std::make_unique<TFModelRunner<LinearModel1000>>("output");
+  }
+
+  void TFinitCommunication() {
+    auto StartTime = std::chrono::high_resolution_clock::now();
+
+    std::pair<std::string, std::vector<float>> p1("x", FeatureVector);
+
+    setTFModelRunner(n);
+    MLRunner->populateFeatures(p1);
+    double Out = MLRunner->evaluate<float>();
+
+    auto EndTime = std::chrono::high_resolution_clock::now();
+
+    auto Duration = std::chrono::duration_cast<std::chrono::microseconds>(
+        EndTime - StartTime);
+    std::ofstream outputFile;
+    outputFile.open("tf-inference.csv", std::ios_base::app);
+    outputFile << n << "," << Duration.count() << "\n";
+    outputFile.close();
+  }
+
+  bool runOnModule(Module &M) override {
+    // unregister MLConfig::mlconfig
+    MLConfig::mlconfig.removeArgument();
+    this->M = &M;
+    if (useTF) {
+      populateFeatureVector();
+      TFinitCommunication();
+      return false;
+>>>>>>> e4011a594dc3... Added MLConfig in Support/CommandLine.cpp
     }
 }
 
@@ -287,6 +341,7 @@ void HelloMLBridge::initFeatureVector() {
   for (int i = 0; i < n; i++) {
     FeatureVector[i] = dis(gen);
   }
+<<<<<<< HEAD
 }
 
 // New PM Registration
@@ -311,3 +366,19 @@ extern "C" LLVM_ATTRIBUTE_WEAK ::llvm::PassPluginLibraryInfo
 llvmGetPassPluginInfo() {
   return getHelloMLBridgePluginInfo();
 }
+=======
+
+private:
+  std::unique_ptr<MLModelRunner> MLRunner;
+  std::string basename;
+  BaseSerDes::Kind SerDesType;
+  Module *M;
+};
+
+} // namespace
+
+char HelloMLBridge::ID = 0;
+static RegisterPass<HelloMLBridge> Z("hello-MLBridge",
+                                     "Hello World Pass (with MLBridge)");
+                                     
+>>>>>>> e4011a594dc3... Added MLConfig in Support/CommandLine.cpp

@@ -18,8 +18,18 @@ add_llvm_library(HelloWorld MODULE BUILDTREE_ONLY
   
   DEPENDS
   intrinsics_gen
+  LLVMMLBridge
+
   PLUGIN_TOOL
   opt
   )
 
+<<<<<<< HEAD
+<<<<<<< HEAD
 # add_llvm_library(HelloWorld MODULE Hello.cpp)
+=======
+target_link_libraries(LLVMHelloGRPC PRIVATE LLVMMLBridge)
+>>>>>>> e4011a594dc3... Added MLConfig in Support/CommandLine.cpp
+=======
+target_link_libraries(LLVMHelloGRPC PUBLIC LLVMMLBridge)
+>>>>>>> 92e0943e9769... Fixed cmake linking issues

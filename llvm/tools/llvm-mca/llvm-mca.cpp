@@ -225,6 +225,7 @@ static cl::opt<bool> ShowBarriers(
     cl::desc("Print memory barrier information in the instruction info view"),
     cl::cat(ViewOptions), cl::init(false));
 
+<<<<<<< HEAD
 static cl::opt<bool> DisableCustomBehaviour(
     "disable-cb",
     cl::desc(
@@ -236,6 +237,11 @@ static cl::opt<bool> DisableInstrumentManager(
     cl::desc("Disable instrumentation manager (use the default class which "
              "ignores instruments.)."),
     cl::cat(ViewOptions), cl::init(false));
+=======
+static cl::opt<unsigned int>
+    loopID("lc-lID", cl::Hidden, cl::Optional,
+           cl::desc("ID of the loop set by RDG/loop distribution pass"), cl::init(0));
+>>>>>>> d83580ac9157... Changed the llvm-mca.cpp to get the MCA throughput changed lines 220 and 466
 
 namespace {
 
@@ -563,7 +569,24 @@ int main(int argc, char **argv) {
     if (Region->empty())
       continue;
 
+<<<<<<< HEAD
     IB.clear();
+=======
+    // Don't print the header of this region if it is the default region, and
+    // it doesn't have an end location.
+    if (Region->startLoc().isValid() || Region->endLoc().isValid()) {
+      StringRef Desc = Region->getDescription();
+      std::string DescToMatch = funcName + "-" + std::to_string(loopID);
+      // errs () << "funcName : " << funcName << " loop id : " << loopID << "\n"; 
+      // errs () << Desc << " " << DescToMatch << "\n";
+      if (loopID && !Desc.equals(DescToMatch))
+        continue;
+      TOF->os() << "\n[" << RegionIdx++ << "] Code Region";
+      if (!Desc.empty())
+        TOF->os() << " - " << Desc;
+      TOF->os() << "\n\n";
+    }
+>>>>>>> d83580ac9157... Changed the llvm-mca.cpp to get the MCA throughput changed lines 220 and 466
 
     // Lower the MCInst sequence into an mca::Instruction sequence.
     ArrayRef<MCInst> Insts = Region->getInstructions();

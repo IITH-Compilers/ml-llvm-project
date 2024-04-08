@@ -19,6 +19,12 @@ set(LLVM_LINK_COMPONENTS
   TargetParser
   TransformUtils
   Vectorize
+<<<<<<< HEAD
+=======
+  IPO
+  IR2Vec
+  CollectMachineIR
+>>>>>>> fb9f173c59b7... Moved CodeSizeOpt to IPO
   )
 
 add_llvm_tool(llc

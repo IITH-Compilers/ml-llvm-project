@@ -55,7 +55,10 @@ add_llvm_external_project(bolt)
 add_llvm_implicit_projects()
 
 add_llvm_external_project(polly)
+<<<<<<< HEAD
 add_llvm_external_project(MLCompilerBridge)
+=======
+>>>>>>> 92e0943e9769... Fixed cmake linking issues
 
 # Add subprojects specified using LLVM_EXTERNAL_PROJECTS
 foreach(p ${LLVM_EXTERNAL_PROJECTS})
