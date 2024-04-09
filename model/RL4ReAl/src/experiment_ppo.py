@@ -37,7 +37,7 @@ from config import MODEL_DIR
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--train-iterations", type=int, default=100000)
-parser.add_argument("--workers", type=int, default=1)
+parser.add_argument("--workers", type=int, default=1,required=True)
 parser.add_argument("--mode", type=str, default="CPU")
 parser.add_argument("--dump_onnx_model", type=bool, default=False, help="Dump onnx model files or not")
 torch.autograd.set_detect_anomaly(True) 

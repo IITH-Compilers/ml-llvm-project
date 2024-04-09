@@ -2448,7 +2448,6 @@ void MLRA::initPipeCommunication() {
         }
       }
       processMLInputs(nullptr, true, IsJson);
-      errs() << "Call model first time\n";
       isGraphSet = true;
     } else {
       JO["new"] = false;

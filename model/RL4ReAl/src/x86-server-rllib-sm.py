@@ -300,6 +300,8 @@ def run_pipe_communication(data_format, pipe_name, dump_onnx_model=False):
         
         inter_graphs = NestedDict(inter_graphs)
         return inter_graphs
+
+    ray.init()
     inference_model = inference.RollOutInference(args)
     inference_model.env.use_pipe = True
     # serdes = SerDes.SerDes(data_format, "/tmp/" + pipe_name)
