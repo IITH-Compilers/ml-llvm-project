@@ -30,7 +30,7 @@ from ray.rllib.utils.typing import (
     PartialAlgorithmConfigDict,
     ResultDict,
 )
-from config import REPO_DIR, BUILD_DIR
+from config import MODEL_DIR, BUILD_DIR, CONFIG_DIR, DATA_DIR
 from register_action_space import RegisterActionSpace
 
 logger = logging.getLogger(__name__)
@@ -82,7 +82,7 @@ class APPOConfig(ImpalaConfig):
         self.use_critic = True
         self.use_gae = True
         self.lambda_ = 1.0
-        self.clip_param = 0.4
+        self.clip_param = 10.0
         self.use_kl_loss = False
         self.kl_coeff = 1.0
         self.kl_target = 0.01
@@ -104,24 +104,24 @@ class APPOConfig(ImpalaConfig):
         self.broadcast_interval = 1
         self.grad_clip = 40.0
         self.opt_type = "adam"
-        self.lr = 0.0005
+        self.lr = 5e-4
         self.lr_schedule = None
         self.decay = 0.99
         self.momentum = 0.0
         self.epsilon = 0.1
-        self.vf_loss_coeff = 0.5
+        self.vf_loss_coeff = 1.0
         self.entropy_coeff = 0.01
         self.entropy_coeff_schedule = None
 
         self.num_envs_per_worker = 1
-        # self.num_cpus_per_worker = 1
-        self.num_gpus_per_worker = .1
+        self.num_cpus_per_worker = 1
+        self.num_gpus_per_worker = 0
 
 
         # __sphinx_doc_end__
         # fmt: on
 
-        self.batch_mode = "complete_episodes";
+        self.batch_mode = "complete_episodes"
 
         self.env_config = {
             "target": "X86",
@@ -135,28 +135,30 @@ class APPOConfig(ImpalaConfig):
             "dump_color_graph": True,
             "intermediate_data": './temp',
             "build_path": BUILD_DIR,
-            "Register_config": f"{REPO_DIR}/llvm/lib/CodeGen/MLRegAlloc/config_json",
-            "log_path": f"{REPO_DIR}/model/RegAlloc/ggnn_drl/rllib_split_model/src/log",
-            "dataset": f"{REPO_DIR}/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/LTS-ll-files_train_mlra_x86_split_data",
+            "Register_config": CONFIG_DIR,
+            "log_path": f"{MODEL_DIR}/log",
+            "dataset": f"{DATA_DIR}",
             "graphs_num": 10000,
-            "action_space_size": RegisterActionSpace("X86", f"{REPO_DIR}/llvm/lib/CodeGen/MLRegAlloc/config_json").ac_sp_normlize_size,
+            "action_space_size": RegisterActionSpace("X86", CONFIG_DIR).ac_sp_normlize_size,
             "check_point": None,
-            "episode_number": 10000,
-            "GPU_ID": '0',
+            "episode_number": 5,
+            "GPU_ID": 0,
             "X86_CFLAGS": "-mllvm -regalloc=greedy  -march=core2",
             "AArch64_CFLAGS": "-mllvm -regalloc=greedy  -mcpu=cortex-a72",
-            "dataset_bucket": "set_120-500",
-            "enable_GGNN": False,
+            "dataset_bucket": "set_5000",
+            "enable_GGNN": True,
             "file_repeat_frequency": 1,
-            "current_batch": 5,
+            "current_batch": 500,
             "Workers_starting_port": "50045",
-            "use_local_reward": True,
-            "use_mca_reward": True,
+            "disable_spliting": False,
+            "use_costbased_reward":True,
+            "use_local_reward": False,
+            "use_mca_reward": False,
             "use_mca_self_play_reward": False,
             "mca_reward_clip": 10,
             "mca_timeout": 30,
-            "greedy_mca_throughput_file_path": f"{REPO_DIR}/model/RegAlloc/ggnn_drl/rllib_split_model/src/LTS_x86_greedy-throughput_set_120-500.json",
-            "mca_cycles_file_path": f"{REPO_DIR}/model/RegAlloc/ggnn_drl/rllib_split_model/src/LTS_x86_greedy-cycles_set_120-500.json"
+            "greedy_mca_throughput_file_path": f"{MODEL_DIR}/greedy-throughput_set_120-500.json",
+            "mca_cycles_file_path": f"{MODEL_DIR}/greedy-cycles_set_120-500.json"
         }
         self.horizon = 1000
 

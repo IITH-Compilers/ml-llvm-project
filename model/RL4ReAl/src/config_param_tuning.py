@@ -92,24 +92,24 @@ class PPOConfig(PGConfig):
         self.use_critic = True
         self.use_gae = True
         self.lambda_ = 1.0
-        self.kl_coeff = 0.6
-        self.sgd_minibatch_size = 128
-        self.num_sgd_iter = 1
+        self.kl_coeff = 0.6 
+        self.sgd_minibatch_size = 128 
+        self.num_sgd_iter = 1  
         self.shuffle_sequences = True
-        self.vf_loss_coeff = 1.0
+        self.vf_loss_coeff = 1.0 
         self.entropy_coeff = 0.01
         self.entropy_coeff_schedule = None
-        self.clip_param = 10.0
+        self.clip_param = 0.2 
         self.vf_clip_param = 10.0
         self.grad_clip = 40
-        self.kl_target = 0.003
+        self.kl_target = 0.003  
         self.num_rollout_workers = 1
         self.train_batch_size = 256
-        self.lr = 0.00001
-        self.model["vf_share_layers"] = False
+        self.lr = 0.00001  
+        self.model["vf_share_layers"] = False 
         self._disable_preprocessor_api = False
 
-        self.num_gpus = 1
+        self.num_gpus = 0
         self.num_cpus_per_worker = 1
         self.num_gpus_per_worker = 0
         self.num_envs_per_worker = 1
@@ -119,7 +119,6 @@ class PPOConfig(PGConfig):
 
         # Deprecated keys.
 
-
         self.batch_mode = "complete_episodes"
 
         self.env_config = {
@@ -128,7 +127,7 @@ class PPOConfig(PGConfig):
             "max_number_nodes": 600,
             "max_usepoint_count": 200,
             "annotations": 3,
-            "max_edge_count": 70000,
+            "max_edge_count": 30000,
             "mode": 'training',
             "dump_type": 'One',
             "dump_color_graph": True,
@@ -139,19 +138,20 @@ class PPOConfig(PGConfig):
             "dataset": f"{DATA_DIR}",
             "graphs_num": 10000,
             "action_space_size": RegisterActionSpace("X86", CONFIG_DIR).ac_sp_normlize_size,
-            "check_point":None,
-            "episode_number": 100000,
+            "check_point": None,
+            "episode_number":1000,      
             "GPU_ID": '0',
             "X86_CFLAGS": "-mllvm -regalloc=greedy  -march=core2",
             "AArch64_CFLAGS": "-mllvm -regalloc=greedy  -mcpu=cortex-a72",
-            "dataset_bucket": "set_5000",
+            "dataset_bucket": "set_120-500",
             "enable_GGNN": True,
             "file_repeat_frequency": 1,
-            "current_batch": 500, 
-            "Workers_starting_port": "52147",
+            "current_batch": 10, 
+            "Workers_starting_port_placeholder": "54812", 
+            "trial_ports":None,
             "disable_spliting": False,
-            "use_costbased_reward": True,
-            "use_local_reward": False,
+            "use_costbased_reward": False,
+            "use_local_reward": True,
             "use_mca_reward": False,
             "use_mca_self_play_reward": False,
             "mca_reward_clip": 10,
@@ -161,7 +161,9 @@ class PPOConfig(PGConfig):
         }
 
         self.horizon = 1000
-
+        #self.Workers_starting_port_placeholder = "50016"
+    
+    
     @override(AlgorithmConfig)
     def training(
         self,
@@ -275,14 +277,15 @@ class PPOConfig(PGConfig):
         # each `num_sgd_iter`).
         # Note: Only check this if `train_batch_size` > 0 (DDPPO sets this
         # to -1 to auto-calculate the actual batch size later).
-        if self.sgd_minibatch_size > self.train_batch_size:
-            raise ValueError(
-                f"`sgd_minibatch_size` ({self.sgd_minibatch_size}) must be <= "
-                f"`train_batch_size` ({self.train_batch_size}). In PPO, the train batch"
-                f" is be split into {self.sgd_minibatch_size} chunks, each of which is "
-                f"iterated over (used for updating the policy) {self.num_sgd_iter} "
-                "times."
-            )
+        print("self.sgd_minibatch_size:", self.sgd_minibatch_size)
+        # if self.sgd_minibatch_size > self.train_batch_size:
+        #     raise ValueError(
+        #         f"`sgd_minibatch_size` ({self.sgd_minibatch_size}) must be <= "
+        #         f"`train_batch_size` ({self.train_batch_size}). In PPO, the train batch"
+        #         f" is be split into {self.sgd_minibatch_size} chunks, each of which is "
+        #         f"iterated over (used for updating the policy) {self.num_sgd_iter} "
+        #         "times."
+        #     )
 
         # Episodes may only be truncated (and passed into PPO's
         # `postprocessing_fn`), iff generalized advantage estimation is used

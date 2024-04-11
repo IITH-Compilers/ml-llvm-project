@@ -48,15 +48,11 @@ class SelectTaskNetwork(TorchModelV2, nn.Module):
         
     def forward(self, input_dict, state, seq_lens):
         """Build a network that maps state -> action values."""
-        # print("Select task GPU", next(self.parameters()).is_cuda)
-        # print("Task select model output", input_dict["obs"]["state"])
         # assert not torch.isnan(input_dict["obs"]["state"]).any(), "Nan in select task model input"
         x = F.relu(self.fc1(input_dict["obs"]["state"]))
         # assert not torch.isnan(x).any(), "Nan in select task model after fc1"
-        # print("Task select model output 1", x)
         x = F.relu(self.fc2(x))
         # assert not torch.isnan(x).any(), "Nan in select task model after fc2"
-        # print("Task select model output 2", x)
         x = torch.cat((x, input_dict["obs"]["node_properties"]), 1)
         
         x = self.fc3(x)
@@ -121,63 +117,55 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
         
     def forward(self, input_dict, state, seq_lens):
         """Build a network that maps state -> action values."""
-        # print("Obs keys are:", input_dict['obs'].keys())
-        # print("State shape:", input_dict["obs"]["state"].shape)
+
         input_state_list = torch.zeros(input_dict["obs"]["state"].shape[0], self.max_number_nodes, self.emb_size)
-        # if self.enable_ggnn:
-        #     # print("*************************** SHAPES PRINTING *****************************")
-        #     # print("-----------------BEFORE GGNN-------------")
-
-        #     # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        #     # print("from select node forward func : ", device)
-        #     # print("adjacency list device = ", input_dict["obs"]["adjacency_lists"][0].data.device)
-        #     # print("annotations device = ", input_dict["obs"]["annotations"].device)
-        #     # assert not torch.isnan(input_dict["obs"]["state"]).any(), "Nan in select node model obs:state"
-        #     # assert not torch.isnan(input_dict['obs']['adjacency_lists']['data'].values).any(), "Nan in select node model adjlist"
+        if self.enable_ggnn:
+            # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+            # print("from select node forward func : ", device)
+            # print("adjacency list device = ", input_dict["obs"]["adjacency_lists"][0].data.device)
+            # print("annotations device = ", input_dict["obs"]["annotations"].device)
+            # assert not torch.isnan(input_dict["obs"]["state"]).any(), "Nan in select node model obs:state"
+            # assert not torch.isnan(input_dict['obs']['adjacency_lists']['data'].values).any(), "Nan in select node model adjlist"
 
 
-        #     ggnn_input_x = torch.dstack((input_dict["obs"]["state"], input_dict["obs"]["annotations"]))
-        #     edge_index = input_dict['obs']['adjacency_lists']['data'].values.mT
+            ggnn_input_x = torch.dstack((input_dict["obs"]["state"], input_dict["obs"]["annotations"]))
+            edge_index = input_dict['obs']['adjacency_lists']['data'].values.mT
+
+            # print("ggnn_input_x.device = ", ggnn_input_x.device)
+            # print("edge_index.device = ", edge_index.device)
+            batch_size = ggnn_input_x.shape[0]
+            # #################### batch method #######################
+            data_list = []
+
+            data_list = [Data(x=ggnn_input_x[i], edge_index=edge_index[i].long()) for i in range(batch_size)]
+            batch_data = Batch.from_data_list(data_list=data_list)
+
+            node_mat = self.ggnn(batch_data.x, batch_data.edge_index).reshape(batch_size, -1, 100)
+            # assert not torch.isnan(node_mat).any(), "Nan in select node model input after ggnn"
 
 
-
-
-        #     # print("ggnn_input_x.device = ", ggnn_input_x.device)
-        #     # print("edge_index.device = ", edge_index.device)
-        #     batch_size = ggnn_input_x.shape[0]
-        #     # #################### batch method #######################
-        #     data_list = []
-
-        #     data_list = [Data(x=ggnn_input_x[i], edge_index=edge_index[i].long()) for i in range(batch_size)]
-        #     batch_data = Batch.from_data_list(data_list=data_list)
-
-        #     node_mat = self.ggnn(batch_data.x, batch_data.edge_index).reshape(batch_size, -1, 100)
-        #     # assert not torch.isnan(node_mat).any(), "Nan in select node model input after ggnn"
-
-
-        #     # print(batch_data)
-        #     # # print('num_graphs = ', batch_data.num_graphs)
+            # print(batch_data)
+            # # print('num_graphs = ', batch_data.num_graphs)
 
 
 
-        #     # outs = [self.ggnn(ggnn_input_x[i], edge_index[i].long()) for i in range(batch_size)]
-        #     # node_mat = torch.stack(outs)
-        #     # print("GOT NODE_MAT!!!!!!!!!!!!", node_mat.shape)
-        #     # return
-        #     # node_mat = self.ggnn(initial_node_representation=input_dict["obs"]["state"], annotations=input_dict["obs"]["annotations"], adjacency_lists=input_dict["obs"]["adjacency_lists"])
+            # outs = [self.ggnn(ggnn_input_x[i], edge_index[i].long()) for i in range(batch_size)]
+            # node_mat = torch.stack(outs)
+            # print("GOT NODE_MAT!!!!!!!!!!!!", node_mat.shape)
+            # return
+            # node_mat = self.ggnn(initial_node_representation=input_dict["obs"]["state"], annotations=input_dict["obs"]["annotations"], adjacency_lists=input_dict["obs"]["adjacency_lists"])
 
-        #     # print("node_mat device = ", node_mat.device)
-        #     # print("-----------------AFTER GGNN-------------")
-        #     # print("node mat shape - ", node_mat.shape)
-        #     # return
+            # print("node_mat device = ", node_mat.device)
+            # print("-----------------AFTER GGNN-------------")
+            # print("node mat shape - ", node_mat.shape)
+            # return
             
-        #     input_state_list = node_mat
-        # else:
-        #     input_state_list = initial_node_representation=input_dict["obs"]["state"]
+            input_state_list = node_mat
+        else:
+            input_state_list = initial_node_representation=input_dict["obs"]["state"]
         
-        input_state_list = input_dict["obs"]["state"]
-        
-        input_state_list = input_state_list.to(input_dict["obs"]["state"].device)
+        input_state_list = input_dict["obs"]["state"] 
+        input_state_list = input_state_list.to(input_dict["obs"]["state"].device)  
         # assert not torch.isnan(input_state_list).any(), "Nan in select node model input"
         x = F.relu(self.fc1(input_state_list))
         # if torch.isnan(x).any():
@@ -205,7 +193,6 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
         x = torch.squeeze(x, 2)
         # assert not torch.isnan(x).any(), "Nan in select node model after fc3"
         self._features = x.clone().detach()
-        # x = self.softmax(x)
         mask = input_dict["obs"]["action_mask"]
         # masking_value = -1e6
         # masking_value = FLOAT_MIN
@@ -215,7 +202,6 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
         #x = torch.where(mask, x, torch.tensor(FLOAT_MIN).to(x.device))
         # print("Select node output and emb device", x.device, node_mat.device)        
         # assert not torch.isnan(x).any(), "Nan in select node model output"
-        torch.set_printoptions(threshold=10_000)
         return x, state, input_state_list
         # return x, state
 
@@ -270,7 +256,7 @@ class ColorNetwork(TorchModelV2, nn.Module):
         inf_mask = torch.clamp(torch.log(mask), min=FLOAT_MIN)
         x = x + inf_mask
         # x = torch.where(mask, x, torch.tensor(masking_value).to(x.device))
-        #x = torch.where(mask, x, torch.tensor(FLOAT_MIN).to(x.device))        
+        #x = torch.where(mask, x, torch.tensor(FLOAT_MIN).to(x.device))  
         return x, state, self._features
         # return x, state
     
@@ -423,4 +409,4 @@ class SplitNodeNetwork(TorchModelV2, nn.Module):
 #             split_out = self.splitNodeNet(hidden_state[node_index])
 
 #         return select_out, node_index, color_out, action_space
-
+	
