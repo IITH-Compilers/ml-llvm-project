@@ -306,10 +306,13 @@ def parseProp(val):
     val = val.strip()
     return val[1: len(val) - 1]
 
+#here
 def get_observationsInf(graph):
     nodes = graph.regProf
-    # adjlist = graph['adjacency']
-
+    list_of_phy_registers_ofGRtype=[2,3,5,9,11,13,16,18,19,21,49,51,52,53,54,57,59,61,127,128,129,130,131,132,133,134,239,240,
+                       241,242,243,244,245,246,263,264,265,266,267,268,269,270]
+    #adjlist = graph['adjacency']
+    #print("adjList: ",adjlist)
     num_nodes = len(nodes)
     
     initial_node_representation = []
@@ -328,14 +331,30 @@ def get_observationsInf(graph):
     positionalSpillWeights_list = []
     print("Start processing**********")
     print("len(nodes):", num_nodes)
+    
     for idx, node in enumerate(nodes):
         
         nodeId = node.regID
-        #print("nodeId in ggn1 ",nodeId)
+        print("idx in ggn1: ",idx)
+    
         regClass = node.cls #parseProp(properties[0]) 
+      
+        # if regClass=="Phy":
+        #     if nodeId in list_of_phy_registers_ofGRtype:
+        #         nodeType="GR"
+        #         #print("nodeType in Phy: ",nodeType)
+        #     else:
+        #         nodeType="Non-GR"
+        #         #print("nodeType in Phy: ",nodeType)
+        # elif "GR" in regClass:
+        #     nodeType="GR"
+        #     #print("nodeType not in Phy ",nodeType)
+        # elif "GR" not in regClass:
+        #     nodeType="Non-GR"
+        #     #print("nodeType not in Phy ",nodeType)
+
+        #print("regClass: ",regClass)
         spill_cost = node.spillWeight #parseProp(properties[1])
-        #print("spill weigth: ",node.spillWeight)
-        #print("spill cost: ",spill_cost)
         color = node.color # parseProp(properties[2])
         split_points = node.splitSlots
         use_distances = node.useDistances
@@ -343,11 +362,11 @@ def get_observationsInf(graph):
         split_points_list.append(np.array(split_points))
         use_distance_list.append(np.array(use_distances))
         positionalSpillWeights_list.append(np.array(positionalSpillWeights))
-
+        #print("spill_cost: ",spill_cost)
         if spill_cost in [float('inf'), "inf", "INF"] or spill_cost > SPILL_COST_THRESHOLD:
             #print("Inside spill_cost in spill_cost > SPILL_COST_THRESHOLD:")
-            spill_cost = float(SPILL_COST_THRESHOLD)
-            #print("spill_cost: ",spill_cost)
+            spill_cost = float(SPILL_COST_THRESHOLD)  
+            print("spill_cost: ",spill_cost)
         
         if len(node.vectors) > 0:
             node_mat = [ vector.vec for vector in node.vectors]
@@ -363,11 +382,12 @@ def get_observationsInf(graph):
         initial_node_representation.append(nodeVec)
         nid_idx[nodeId] = idx
         idx_nid[idx] = nodeId
-        
-        #print("idx and nid", idx, nodeId)
-
         assert not torch.isnan(nodeVec).any(), "Nan is present"
-    #print("spill_Cost_list inside get_observationsInf: ",spill_cost_list)
+        print("nid and idx are: ",nodeId, idx)
+        print("spill_Cost: ", spill_cost)
+    # print("idx_nid dict is: ",idx_nid)
+    # print("nid_idx dict is: ",nid_idx)
+   
     for i, node in enumerate(nodes):
         for nlink in node.interferences:
             neighId = nid_idx[nlink]
@@ -391,7 +411,7 @@ def get_observationsInf(graph):
     annotation_zero = np.zeros((num_nodes, 3))
     annotation_zero[:, 0] = spill_cost_list
     annotations = torch.FloatTensor(annotation_zero)# .to(device)
-    
+    print("Annotations:", annotations[130][0])
     '''
     Support for already allocated registers.
     Mark the nodes as visted in the graph and 
@@ -404,13 +424,27 @@ def get_observationsInf(graph):
             color = color_list[node_idx]
             logging.debug('creating graph; Marking node_idx={} with color={}'.format(node_idx, color))
             
-            graph_topology.UpdateVisitList(node_idx)
+            graph_topology.UpdateVisitList(node_idx) #updaing elg_node list
             graph_topology.UpdateColorVisitedNode(node_idx, color) 
             annotations[node_idx][0] =  torch.tensor(0)# .to(device)
             # set the color assigned to the node
             annotations[node_idx][1] = torch.tensor(color)# .to(device)
+            #print("node_Idx: ",node_idx)
+            # print("annotations[node_idx][0]: ",node_idx, annotations[node_idx][0])
+            # print("annotations[node_idx][1]: ",node_idx, annotations[node_idx][1])
     
     adjacency_lists = [ AdjacencyList(node_num=num_nodes, adj_list=all_edges, device=device)]
+    # torch.set_printoptions(threshold=1000000)  
+    # #print("adjacency_lists:", adjacency_lists[0].data)
+    # torch.set_printoptions(profile="full")
+    # #print("List is: ")
+    # #print(adjacency_lists[0].data.tolist())
+    # adjList=adjacency_lists[0].data.tolist()
+    # for i in range(0,len(adjList)):
+    #     
+    #     if(adjList[i][0]==):
+    #         sec_val=adjList[i][1]
+              
     assert not torch.isnan(adjacency_lists[0].data).any(), "AdjacencyList is NAN"
     assert not torch.isnan(annotations).any(), "Annotation is NAN"
      
@@ -424,6 +458,8 @@ def get_observationsInf(graph):
 def get_observations(graph):
     nodes = graph['nodes']
     adjlist = graph['adjacency']
+
+    #print("adjList: ",adjlist)
 
     num_nodes = len(nodes)
     

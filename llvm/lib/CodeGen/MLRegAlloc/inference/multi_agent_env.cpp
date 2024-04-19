@@ -24,7 +24,7 @@ Observation& MultiAgentEnv::reset() {
     // errs() << "Adding node: " << rpi.first << "\n";
     this->regProfMapHelper.insert({rpi.first, rpi.second});
   }
-
+  errs() << "noderep size = " << this->nodeRepresentation.size()<< "\n";
   LLVM_DEBUG(errs() << "rp size = " << this->regProfMapHelper.size() << "\n");
   LLVM_DEBUG(errs() << "noderep size = " << this->nodeRepresentation.size()
                     << "\n");
@@ -90,6 +90,19 @@ Observation& MultiAgentEnv::reset() {
   this->setNextAgent(NODE_SELECTION_AGENT);
 
   // this->setCurrentObservation(CurrObs, NODE_SELECTION_AGENT);
+  //Print input vector
+  
+  // if(CurrObs.size() == 153601) {
+    
+  //   std::cout << "Input vector inside ONNX Reset:" << "\n";
+  //   for (int i = 0; i < CurrObs.size(); ++i) {
+     
+  //     std::cout<<CurrObs[i]<<" ";
+     
+  //   }
+
+  //   std::cout<<" "<<std::endl;
+  // }
   return CurrObs;
 }
 
@@ -140,11 +153,37 @@ Observation& MultiAgentEnv::step(Action action) {
   } else if (this->getNextAgent() == COLOR_NODE_AGENT) {
     CurrObs = this->colour_node_step(action);
     // errs() << "Node coloured is: " << action << "\n";
+    // Node selection obs printing
+  //   if(CurrObs.size() == 153601) {
+    
+  //   std::cout << "Input vector inside COLOR_NODE_AGENT:" << "\n";
+  //   for (int i = 0; i < CurrObs.size(); ++i) {
+     
+  //     std::cout<<CurrObs[i]<<" ";
+     
+  //   }
+
+  //   std::cout<<" "<<std::endl;
+  // }
+    
     
   } else if (this->getNextAgent() == SPLIT_NODE_AGENT) {
     splitStepCount++;
     CurrObs = this->split_node_step(action);
     // errs() << "Node spliting is: " << action << "\n";
+    // Node selection obs printing
+    //   if(CurrObs.size() == 153601) {
+      
+    //   std::cout << "Input vector inside SPLIT_NODE_AGENT:" << "\n";
+    //   for (int i = 0; i < CurrObs.size(); ++i) {
+      
+    //     std::cout<<CurrObs[i]<<" ";
+      
+    //   }
+
+    //   std::cout<<" "<<std::endl;
+    // }
+    
   } else {
     llvm_unreachable("Unexpected agent found");
   }
@@ -362,20 +401,42 @@ Observation MultiAgentEnv::colour_node_step(unsigned action) {
   LLVM_DEBUG(errs() << "Selected colour for node is: " << action << "\n");
   LLVM_DEBUG(errs() << this->current_node_id << " idx is: " << current_node_idx
                     << "\n");
+  
   this->annotations[current_node_idx][0] = 0;
+  //errs()<<"this->annotations[current_node_idx][0] before: "<<this->annotations[current_node_idx][0]<<"\n";
   this->annotations[current_node_idx][1] = action;
+  //errs()<<"current_node_id in color_node_step: "<<current_node_id<<"\n";
+  //errs()<<"current_node_idx in color_node_step: "<<current_node_idx<<"\n";
+  //errs()<<"action in color_node_step: "<<action<<"\n";
   this->graph_topology->UpdateColorVisitedNode(current_node_idx, action);
   this->nid_colour[this->current_node_id] = action;
   // this->current_node.color = action;
   this->setNextAgent(NODE_SELECTION_AGENT);
   Observation nodeSelectionObs(selectNodeObsSize);
+  //errs()<<"this->annotations[current_node_idx][0] middle1: "<<this->annotations[current_node_idx][0]<<"\n";
   this->selectNodeObsConstructor(nodeSelectionObs);
+  //errs()<<"this->annotations[current_node_idx][0] middle2: "<<this->annotations[current_node_idx][0]<<"\n";
   // std::ofstream outfile;
   // outfile.open("/home/es20btech11021/ML-Register-Allocation/llvm/lib/CodeGen/MLRegAlloc/inference/nodeSelectionObs.log",
   // std::ios::app); for (int i = 0; i < nodeSelectionObs.size();i++)
   //   outfile << nodeSelectionObs[i] << ", ";
   // outfile.close();
   // this->setCurrentObservation(nodeSelectionObs, NODE_SELECTION_AGENT);
+
+ 
+  //errs()<<"this->annotations[current_node_idx][0] after: "<<this->annotations[current_node_idx][0]<<"\n";
+  // errs()<<"nodeSelectionObs in color_node_step: "<<"\n";
+  if(nodeSelectionObs.size() == 153601) {
+    //errs()<< "nodeSelectionObs Input vector:" << "\n";
+
+    for (int i = 0; i < nodeSelectionObs.size(); ++i) {
+    
+      errs()<<nodeSelectionObs[i]<<" ";
+      
+    }
+    errs()<<" "<<"\n";
+  }
+  
   return nodeSelectionObs;
 }
 
@@ -465,6 +526,7 @@ void MultiAgentEnv::selectNodeObsConstructor(Observation &obs) {
 
   for (int i = 0; i < max_node_number; i++) {
     assertObsSize(137);
+    //errs() <<"i:"<<i<<" action_mask: "<<action_mask[i] << " "<<"\n";
     obs[current_index++] = action_mask[i];
     // LLVM_DEBUG(errs() << action_mask[i] << " ");
   }
@@ -476,7 +538,10 @@ void MultiAgentEnv::selectNodeObsConstructor(Observation &obs) {
   obs[current_index++] = this->edge_count; //inserting edge count 600 insert and increment to 601
   //errs()<<"current index at 2: "<<current_index<<"\n";
   Observation edgesFlattened(MAX_EDGE_COUNT * 2);
+
   this->computeEdgesFlatened(edgesFlattened);
+
+
   //errs()<<"Src and Des are same"<<"\n";
   
   for (int i = 0; i < MAX_EDGE_COUNT * 2; i++) {
@@ -493,25 +558,41 @@ void MultiAgentEnv::selectNodeObsConstructor(Observation &obs) {
   assertObsSize(157);
   obs[current_index + node_count] = 1;
   current_index += max_node_number;
+  //91478
   assert(current_index == 91201 && "current_index is not 91201\n");
   // Setting anotations
   Observation annotations;
+  //errs() << "current_index at ......................= " << current_index << "\n";
   LLVM_DEBUG(errs() << "current_index = " << current_index << "\n");
   this->createAnnotations(annotations);
+  int count=0,flag=0;
   for (int i = 0; i < max_node_number * 3; i++) {
     assertObsSize(166);
-     //errs()<<"current_index: "<<current_index<<"obs[current_index++]: "<<annotations[i]<<"\n";
+    // if(count>3){
+    //   count=0;
+    //   flag++;
+    // }
+    // else{
+    //   count++;
+    // }
+    errs()<<"annotations[i] in selectNodeObsConstructor: "<<annotations[i]<<"\n";
     obs[current_index++] = annotations[i];  //get the node number and populate
-   
+    //errs()<<"obs[current_index]: "<<obs[current_index]<<"\n";
+    //current_index++;
   }
+  errs()<<"obs[current_index] at index 91213"<<obs[91213]<<"\n";
+  //till here 93000
   // Set Spill weights
+  // here index starts from 93001
   for (int i = 0; i < max_node_number; i++) {
     assertObsSize(171);
+    //errs()<<"this->annotations[i][0]: "<<this->annotations[i][0]<<"\n";
     obs[current_index++] = this->annotations[i][0];
+    
   }
 
   // Set node embeddings
-
+  //here
   //LLVM_DEBUG(errs() << "current_index = " << current_index << "\n");
   for (int node_idx = 0; node_idx < this->nodeRepresentation.size();
        node_idx++) {
@@ -528,7 +609,7 @@ void MultiAgentEnv::createNodeSelectMask(std::vector<int> &mask) {
   this->graph_topology->get_eligibleNodes(eligibleNodes);
   for (auto elg_node : eligibleNodes) {
     if (elg_node >= max_node_number) {
-      //std::cerr << "elg_node : " << elg_node << "\n";
+      //errs() << "elg_node : " << elg_node << "\n";
       LLVM_DEBUG(errs() << "elg_node : " << elg_node << "\n");
     }
     assert(elg_node < max_node_number &&
@@ -552,11 +633,11 @@ void MultiAgentEnv::createAnnotations(Observation &temp_annotations) {
   for (int i = 0; i < max_node_number; i++) {
     
     temp_annotations.push_back(this->annotations[i][0]);
-    //errs()<<" "<<i<<"->0"<<" "<<this->annotations[i][0]<<"\n";
+    //errs()<<"temp annotations: "<<i<<"->0"<<" "<<this->annotations[i][0]<<"\n";  //0 printing 
     temp_annotations.push_back(this->annotations[i][1]);
-    //errs()<<" "<<i<<"->1"<<" "<<this->annotations[i][1]<<"\n";
+    //errs()<<"temp annotations: "<<i<<"->1"<<" "<<this->annotations[i][1]<<"\n";
     temp_annotations.push_back(this->annotations[i][2]);
-    //errs()<<" "<<i<<"->2"<<" "<<this->annotations[i][2]<<"\n";
+    //errs()<<"temp annotations: "<<i<<"->2"<<" "<<this->annotations[i][2]<<"\n";
   }
   //errs()<<"temp_annotations: "<<temp_annotations<<"\n";
 }
@@ -572,15 +653,16 @@ void MultiAgentEnv::computeAnnotations() {
     assert((current_idx < 600) && "exceeded annotations array size!!!!!!!\n");
     if (rp.cls == "Phy") {
       //errs()<<"Physical Regsiter....................."<<"\n";
-      this->annotations[current_idx][0] = 0;
+      this->annotations[current_idx][0] = 0; 
       this->annotations[current_idx][1] = rp.color;
     } else {
       if (std::isinf(rp.spillWeight)) {
         //errs()<<"Spillweight is infinite..........................."<<"\n";
-        this->annotations[current_idx][0] = -1;
+        this->annotations[current_idx][0] = 10000;
       } else {
+        //errs()<<"this->annotations[current_idx][0] inside computeAnnotations: "<<this->annotations[current_idx][0]<<"\n";
         //errs()<<"Value of rp.spillWeight: "<<rp.spillWeight<<"\n"; 
-        this->annotations[current_idx][0] = rp.spillWeight;
+        this->annotations[current_idx][0] = rp.spillWeight;             //here the this->annotations[current_idx][0] is set 1.844379e-04 
       }
       this->annotations[current_idx][1] = 0;
     }
@@ -627,13 +709,16 @@ void MultiAgentEnv::printRegisterProfile() const {
 unsigned MultiAgentEnv::computeEdgesFromRP() {
   unsigned edge_count = 0;
   int node_idx = 0;
+  errs()<<"In computeEdgesFromRP"<<"\n";
   for (auto rpi : (this->regProfMapHelper)) {
     RegisterProfile rp = rpi.second;
     int src = node_idx;
+    //errs()<<"src: "<<src<<"\n";
     for (auto des_id : rp.interferences) {
-      //  errs()<<"In computeEdgesFromRP: "<<"\n";
+      //errs()<<"In computeEdgesFromRP: "<<"\n";
       //  errs()<<"edge_count: "<<edge_count<<"\n";
       int des = this->nid_idx[des_id];
+      //errs()<<"des: "<<des<<"\n";
       if (src != des) {
         this->edges[edge_count][0] = src;
         this->edges[edge_count][1] = des;
@@ -652,15 +737,17 @@ unsigned MultiAgentEnv::computeEdgesFromRP() {
 unsigned MultiAgentEnv::updateEdgesFromRP() {
   unsigned edge_count = 0;
   // int node_idx = 0;
+  errs()<<"In updatedEdgesFromRP"<<"\n";
   LLVM_DEBUG(errs() << "Edges are:");
   for (auto rpi : (this->regProfMapHelper)) {
     RegisterProfile rp = rpi.second;
     int src = nid_idx[rpi.first];
+    //errs()<<"src: "<<src<<"\n";
     auto tempInterferences = this->graph_topology->getAdjNodes(src);
     for (auto des_id : tempInterferences) {
       // int des = this->nid_idx[des_id];
-      //errs()<<"In updateEdgesFromRP: "<<"\n";
       int des = des_id;
+      //errs()<<"des: "<<des<<"\n";
       if (src != des) {
         this->edges[edge_count][0] = src;
         this->edges[edge_count][1] = des;
@@ -751,7 +838,7 @@ void MultiAgentEnv::taskSelectionObsConstructor(Observation &obs) {
     this->annotations[current_index++][0] = 10000;
     
   } else {
-    //errs()<<"spillcost: "<<spillcost<<"\n";
+    // errs()<<"spillcost: "<<spillcost<<"\n";
     obs[current_index]=spillcost;
     this->annotations[current_index++][0] = spillcost;
     

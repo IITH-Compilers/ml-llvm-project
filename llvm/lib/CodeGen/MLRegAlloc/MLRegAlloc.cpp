@@ -368,9 +368,13 @@ void MLRA::processMLInputsProtobuf(SmallSetVector<unsigned, 8> *updatedRegIdxs,
         "positionalSpillWeights",
         std::vector<float>(rp.spillWeights.begin(), rp.spillWeights.end()));
     std::pair<std::string, float> spillWeight("spillWeight", rp.spillWeight);
-    if (rp.spillWeight == INFINITY)
-      spillWeight.second = -1.0f;
-      //spillWeight.second = 10000;
+    if (rp.spillWeight == INFINITY){
+      spillWeight.second = 10000;
+    }
+        
+      //spillWeight.second = -1.0f;
+      //errs()<<"Inside processMLInputs_protobuf infinity: "<<"\n";
+      
 
     std::pair<std::string, std::vector<int>> interferences(
         "interferences",
@@ -440,7 +444,7 @@ void MLRA::printFeatures() {
 
 void MLRA::processMLInputs(SmallSetVector<unsigned, 8> *updatedRegIdxs,
                            bool IsStart, bool IsJson) {
-  // errs() << "Inside processMLInputs\n";
+  errs() << "Inside processMLInputs\n";
   if (data_format == "protobuf") {
     errs()<<"Inside processMLInputsProtobuf"<<"\n";
     processMLInputsProtobuf(updatedRegIdxs, IsStart);
@@ -493,7 +497,9 @@ void MLRA::processMLInputs(SmallSetVector<unsigned, 8> *updatedRegIdxs,
     std::pair<std::string, float> spillWeight("spillWeight" + app,
                                               rp.spillWeight);
     if (rp.spillWeight == INFINITY)
-      spillWeight.second = -1.0f;
+        errs()<<"entered into processMlInputs Infinity"<<"\n";
+      //spillWeight.second = -1.0f;
+        spillWeight.second = 10000;
 
     std::pair<std::string, std::vector<int>> interferences(
         "interferences" + app,
@@ -1906,15 +1912,17 @@ void MLRA::updateRegisterProfileAfterSplit(
     unsigned NewVRegIdx = Register::virtReg2Index(NewVRegs[i]);
     LLVM_DEBUG(errs() << "Updating RP for " << printReg(NewVRegs[i], TRI)
                       << "--" << NewVRegIdx + step << "\n");
-
+    errs() << "Updating RP for " << printReg(NewVRegs[i], TRI)
+                      << "--" << NewVRegIdx + step << "\n";
     // unsigned Reg = Register::index2VirtReg(NewVRegs[i]);
-    LiveInterval *NewVirtReg = &LIS->getInterval(NewVRegs[i]);
+    LiveInterval *NewVirtReg = &LIS->getInterval(NewVRegs[i]); //harika
     if (NewVirtReg->empty()) {
       LLVM_DEBUG(errs() << "empty newvirtreg detected.. continue\n");
       continue;
     }
     // rp.cls = oldRP.cls;
     rp.cls = TRI->getRegClassName(MRI->getRegClass(NewVirtReg->reg));
+    //apr6
     rp.spillWeight = NewVirtReg->weight;
 
     SmallVector<int, 8> useDistances;

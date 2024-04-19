@@ -83,13 +83,13 @@ class APPOConfig(ImpalaConfig):
         self.use_gae = True
         self.lambda_ = 1.0
         self.clip_param = 10.0
-        #self.use_kl_loss = False
+        self.use_kl_loss = False
         self.kl_coeff = 1.0
         self.kl_target = 0.01
 
         # Override some of ImpalaConfig's default values with APPO-specific values.
         self.num_rollout_workers = 10
-        self.rollout_fragment_length = "auto"
+        self.rollout_fragment_length = 8
         self.train_batch_size = 256
         self.sample_async = False
         self.num_gpus = 1
@@ -115,7 +115,7 @@ class APPOConfig(ImpalaConfig):
 
         self.num_envs_per_worker = 1
         self.num_cpus_per_worker = 1
-        self.num_gpus_per_worker = .1
+        self.num_gpus_per_worker = 0
 
 
         # __sphinx_doc_end__
@@ -141,7 +141,7 @@ class APPOConfig(ImpalaConfig):
             "graphs_num": 10000,
             "action_space_size": RegisterActionSpace("X86", CONFIG_DIR).ac_sp_normlize_size,
             "check_point": None,
-            "episode_number": 5,
+            "episode_number": 100000,
             "GPU_ID": '0',
             "X86_CFLAGS": "-mllvm -regalloc=greedy  -march=core2",
             "AArch64_CFLAGS": "-mllvm -regalloc=greedy  -mcpu=cortex-a72",
@@ -149,10 +149,11 @@ class APPOConfig(ImpalaConfig):
             "enable_GGNN": True,
             "file_repeat_frequency": 1,
             "current_batch": 500,
-            "Workers_starting_port": "50045",
+            "Workers_starting_port": "50056",
             "use_costbased_reward":True,
             "use_local_reward": False,
             "use_mca_reward": False,
+            "disable_spliting":False,
             "use_mca_self_play_reward": False,
             "mca_reward_clip": 10,
             "mca_timeout": 30,

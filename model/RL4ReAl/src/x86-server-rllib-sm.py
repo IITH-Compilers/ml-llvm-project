@@ -68,7 +68,7 @@ class service_server(
             "steps": 0,
             "episodes": 0,
             "arch": "X86",
-            "dump_onnx_model": False 
+            "dump_onnx_model": dump_onnx_model,
         }
         args = Namespace(**args)
         self.inference_model = inference.RollOutInference(args)
