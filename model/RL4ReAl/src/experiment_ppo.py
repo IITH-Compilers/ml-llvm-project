@@ -37,7 +37,7 @@ from config import MODEL_DIR
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--train-iterations", type=int, default=100000)
-parser.add_argument("--workers", type=int, default=1)
+parser.add_argument("--workers", type=int, default=1,required=True)
 parser.add_argument("--mode", type=str, default="CPU")
 parser.add_argument("--dump_onnx_model", type=bool, default=False, help="Dump onnx model files or not")
 torch.autograd.set_detect_anomaly(True) 
@@ -45,11 +45,10 @@ torch.autograd.set_detect_anomaly(True)
 checkpoint = None
 def experiment(config):
     iterations = config.pop("train-iterations")
-    print("Iterations: ",iterations)
     global checkpoint
     train_results = {}
     train_agent = PPO(config=config, env=HierarchicalGraphColorEnv)
-    #print('Training agent used:', train_agent)
+    print('Training agent used:', train_agent)
     # Train
     checkpoint = config["env_config"]["check_point"]
     if checkpoint is not None:
@@ -152,7 +151,7 @@ if __name__ == "__main__":
     logging.info('Starting training')
     logging.info(args)
 
-    ray.init(object_store_memory=10000000000, local_mode=False,_temp_dir="/home/intern24002/ray_log")
+    ray.init(object_store_memory=10000000000, local_mode=False)
     
 
     config["train-iterations"] = args.train_iterations

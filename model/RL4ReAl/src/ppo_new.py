@@ -103,8 +103,6 @@ class PPOConfig(PGConfig):
         self.vf_clip_param = 10.0
         self.grad_clip = 40
         self.kl_target = 0.003
-
-        # Override some of PG/AlgorithmConfig's default values with PPO-specific values.
         self.num_rollout_workers = 1
         self.train_batch_size = 256
         self.lr = 0.00001
@@ -141,8 +139,7 @@ class PPOConfig(PGConfig):
             "dataset": f"{DATA_DIR}",
             "graphs_num": 10000,
             "action_space_size": RegisterActionSpace("X86", CONFIG_DIR).ac_sp_normlize_size,
-            #"check_point": "/home/intern24002/ml-llvm-project/model/RL4ReAl/src/checkpoint_dir/w10_CPU/trial_name_w10_CPU_0_2024-02-21_13-23-37/checkpoint_011896",
-            "check_point":"/Pramana/RL4Real/checkpoints/feb24/MultiAgent-NoSplit-100F-100Keps-local/checkpoint_010000",
+            "check_point":None,
             "episode_number": 100000,
             "GPU_ID": '0',
             "X86_CFLAGS": "-mllvm -regalloc=greedy  -march=core2",
@@ -150,7 +147,7 @@ class PPOConfig(PGConfig):
             "dataset_bucket": "set_5000",
             "enable_GGNN": True,
             "file_repeat_frequency": 1,
-            "current_batch": 500, #batch_size is nothing but current_batch  (10*100 = 1000) where 10 is current_rollout_workers * current_batch so we are using 1000 files in total
+            "current_batch": 500, 
             "Workers_starting_port": "52147",
             "disable_spliting": False,
             "use_costbased_reward": True,

@@ -45,11 +45,17 @@ import sys
 import re
 
 from config import BUILD_DIR
+<<<<<<< HEAD
 
 sys.path.append(f"{BUILD_DIR}/tools/MLCompilerBridge/Python-Utilities")
 
 #from client import *
 #from client import RegisterAllocationClient
+=======
+sys.path.append(f"{BUILD_DIR}/tools/MLCompilerBridge/Python-Utilities/")
+from client import *
+from client import RegisterAllocationClient
+>>>>>>> 7a2345f28bdf70fc2a2cca42a4810381267448bd
 import RegisterAllocationInference_pb2, RegisterAllocation_pb2
 
 config_path=None
@@ -92,8 +98,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.action_space_size = self.registerAS.ac_sp_normlize_size
         self.max_usepoint_count = env_config["max_usepoint_count"]
         self.worker_index = env_config.worker_index
-        print("Worker index: ", env_config.worker_index)
-
         self.max_number_nodes = env_config["max_number_nodes"]
         self.emb_size = env_config["state_size"]
         self.last_task_done = 0
@@ -160,44 +164,32 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         np.random.seed(123)
 
     def reward_formula(self, value, action):
-        print("action: ",action)
         if value in [float("inf"), 'inf', "INF"]:
-            #print("Inside one: ",self.reward_max_value)
             reward = self.reward_max_value
         elif value > self.reward_max_value:
-            #print("Inside two: ","value: ",value,"self.reward_max_value: ",self.reward_max_value)
             reward = self.reward_max_value
         elif value < -1*self.reward_max_value:
-            #print("Inside three: ","value: ",value,"self.reward_max_value: ",-1*self.reward_max_value)
             reward = -1*self.reward_max_value
         else:
-            #print("Inside four")
             reward = value
         
         if action == self.spill_color_idx:
-            #print("Inside 5")
             reward = -reward
             self.spill_successful += 1
         else:
-            #print("Inside six")
             self.colour_successful += 1
         # self.total_reward = self.total_reward + reward
         # Cliping reward to [-1, 1] range
         reward = reward/self.reward_max_value
-        #print("reward after clipping is: ",reward)
         return reward
     
     def formatRewardValue(self, value):
         if value in [float("inf"), 'inf', "INF"]:
-            #print("Inside formatRewardValue inside one")
             reward = self.reward_max_value
         elif value > self.reward_max_value:
-            #print("Inside format reward value inside two")
             reward = self.reward_max_value
         else:
-            #print("Inside formatRewardValue inside three")
             reward = value
-        #print("reward inside formatRewardValue: ",reward)
         return reward
 
 
@@ -359,7 +351,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         masked_action_space = self.registerAS.maskActionSpace(regclass, adj_colors)
         adj_nodes = self.obs.graph_topology.getAdjNodes(self.cur_node)
         spillcost = self.obs.spill_cost_list[self.cur_node]
-        #print("spill_cost_list of self.cur_node: ",self.cur_node,"spillcost: ",spillcost)
         use_distances = self.obs.use_distances[self.cur_node]
         prop = {
             "adj_nodes": len(adj_nodes),
@@ -415,7 +406,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             assert False, 'discovered node visited.'
         self.virtRegId = self.obs.idx_nid[self.cur_node]
         # logging.info("Node selected = {}, corresponding register id = {}".format(action, self.virtRegId))
-        print("Node selected = {}, corresponding register id = {}".format(action, self.virtRegId))
         state = self.obs
         self.cur_obs = self.node_representation_mat[self.cur_node][0:self.emb_size]
         if self.cur_obs is not None and not isinstance(self.cur_obs, np.ndarray):
@@ -432,20 +422,17 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         obs = {
             self.select_task_agent_id: { 'action_mask': np.array(select_task_mask), 'node_properties': np.array(prop_value_list, dtype=np.float), 'state' : self.cur_obs},
         }
-        #print("obs inside _select_node_step: ",obs)
         logging.debug("Exit _select_node_step")        
         return obs, reward, done, {}
 
     def _select_task_step(self, action):
         logging.debug("Enter _select_task_step")
         done = {"__all__": False}
-        print("Select Task action", action)
         splitpoints = self.obs.split_points[self.cur_node]
         self.task_selected = action
         if type(splitpoints) == np.ndarray:
             splitpoints = splitpoints.tolist()
         if action == 0 or len(splitpoints) < 1 or self.split_steps >= self.split_threshold: # Colour node
-            #print("Selecting colouring, last action", action)
             self.last_task_done = 0
             self.colour_steps += 1
             if self.task_selected == 1:
@@ -480,8 +467,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 self.colour_node_agent_id : { 'action_mask': np.array(colour_node_mask),'node_properties': np.array(prop_value_list_colouring), 'state' : self.cur_obs},
             }
         else:
-            print("Selecting spliting, last action", action)
-
             self.last_task_done = 1
             self.split_steps += 1
             usepoint_prop = self.getUsepointProperties()
@@ -514,7 +499,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
     def _colour_node_step(self, action):
         logging.debug("Enter _colour_node_step")
-        print("Selected colour is:", action)
         colour_reward, done_all, response  = self.step_colorTask(action)
         state = self.obs
         self.cur_obs = self.node_representation_mat[self.cur_node][0:self.emb_size]
@@ -634,8 +618,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                     self.split_node_agent_id: colour_reward
                 }
             done['__all__'] = True
-            print("Setting done all true for colouring")
-
             from csv import writer
             with open('traning_stats_'+str(self.worker_index)+'.csv', 'a') as f_object:
   
@@ -668,7 +650,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         return obs, reward, done, {}
 
     def _split_node_step(self, action):
-        print("Splitting at point: ",action)
         logging.debug("Enter _split_node_step")
         # self.cur_obs = self.flat_env.reset()
         #logging.debug("{} {} {}".format(self.virtRegId, self.obs.idx_nid[self.cur_node], self.cur_node))
@@ -824,13 +805,12 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 self.split_node_agent_id: True,
                 "__all__": True 
             }
-            print("Setting done all true for splitting")
             self.obs.next_stage = 'end'
             self.stable_grpc('Exit', 0, 0)   
             # os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
             # if self.server_pid.poll() is not None:
             #   print('Force stop')
-            self.server_pid.send_signal(signal.SIGTERM)
+            self.stopServer()
             self.server_pid = None
             print('Stop server')
             #time.sleep(5)
@@ -876,7 +856,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         return reward, done
 
     def step_colorTask(self, action):
-        # this method allocated the cur_node to chooosen register
         reg_allocated = action
         # add the node to the visited list
         nodeChoosen = self.cur_node
@@ -912,17 +891,14 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 self.colormap = response
                 #logging.info("Colour map for {} file : {}".format(self.fun_id, response['Predictions'][0]['mapping']))
                 logging.debug("Number of split steps are {}, colour steps are {}".format(self.split_steps, self.colour_steps))
-                #print("Setting color map", self.colormap)
             else:
                 response = self.color_assignment_map
                 self.colormap = response
-                # print("Setting color map", self.colormap)
-            print("Printing map for function:", self.functionName)
-            print("Colour map ", self.colormap)
             done = True
             self.obs.next_stage = 'end'
             if self.mode != 'inference':
                 exit_response = self.stable_grpc('Exit', 0, 0)
+                self.stopServer()
                 current_cost = SPILL_COST_THRESHOLD
                 if exit_response:
                     # print("Cost of spilling and moves:", exit_response.cost)
@@ -946,10 +922,10 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                         outs, errs = self.server_pid.communicate(timeout=self.mca_timeout)
                     except:
                         # self.server_pid.kill()
+                        outs, errs = self.server_pid.communicate()
                         process_completed = False
                         os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
                         print("Clang failing")
-                    outs, errs = self.server_pid.communicate()
                     mlra_throughput = 0
                     mlra_cycles = 0
                     if process_completed:                    
@@ -1073,9 +1049,11 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                         f.close()
                 else:
                     # print("Killing Server pid", self.server_pid.pid)         
+                    # os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
+                    self.stopServer()
+
+                if self.server_pid.poll() is None:
                     os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
-                    
-                if self.server_pid.poll() is not None:
                     print('Force stop')
                 self.server_pid = None                
             
@@ -1087,8 +1065,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
     
     def reset_env(self, graph=None):
         if graph is None:
-
-            print("graph is None: ",graph)
             inx = (((self.worker_index-1) * self.env_config['current_batch']) + self.graph_counter)
             path=self.training_graphs[inx]
             logging.debug('Graphs selected : {}'.format(path))
@@ -1101,7 +1077,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                     self.iteration_number += 1
             try:
                 with open(path) as f:
-                   print("JSON loading.............")
                    graph = json.load(f)
             except Exception as ex:
                 print(traceback.format_exc())
@@ -1120,7 +1095,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         
         self.colormap = None
         self.graph = graph
-        #print("Graph is: ",self.graph)
         if self.mode != 'inference':
             self.fileName = graph['graph'][1][1]['FileName'].strip('\"')
             self.functionName = graph['graph'][1][1]['Function'].strip('\"')
@@ -1129,7 +1103,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             self.obs = get_observations(self.graph)
             if self.server_pid is not None:
                 print('terminate the pid if alive : {}'.format(self.server_pid.pid))
-                os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
+                self.stopServer()
+                # os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
             hostip = "0.0.0.0"
             hostport = str(int(self.env_config['Workers_starting_port']) + self.worker_index)
             ipadd = "{}:{}".format(hostip, hostport)
@@ -1184,7 +1159,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                     attempt += 1
                     if attempt > max_retries:
                         print("Maximum attempts completed")
-                        print("Error details:", e.details())  #added by harika
                         return None
                         # exit(0)
                     remaining = max_retries - attempt
@@ -1259,13 +1233,11 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 if nodeId not in self.obs.nid_idx.keys():
                     new_nodes+=1
                     new_nodes_list.append(nodeId)
-                    print("nodeId: ",nodeId)
                     # logging.info('{}th New node {} '.format(new_nodes, nodeId))
                     # assert new_nodes < 3, "Splitting having more than 2 intervals"
                     self.obs.nid_idx[nodeId] = self.obs.graph_topology.num_nodes
                     # print("NodeId and index", nodeId, self.obs.graph_topology.num_nodes, register_id)
                     self.obs.idx_nid[self.obs.graph_topology.num_nodes] = nodeId
-                    print("self.obs.graph_topology.num_nodes: ",self.obs.graph_topology.num_nodes)
                     self.obs.graph_topology.num_nodes = self.obs.graph_topology.num_nodes + 1
                     self.obs.graph_topology.discovered.append(False)
                     self.obs.graph_topology.adjList.append([])
@@ -1287,7 +1259,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                             # raise
 
                     self.obs.spill_cost_list.append(node_prof.spillWeight)
-                    print("spill_cost_list.append(node_prof.spillWeight): ",node_prof.spillWeight)
                     self.obs.reg_class_list.append(self.obs.reg_class_list[splited_node_idx])
                     self.obs.use_distances.append(sorted(node_prof.useDistances))
                     self.obs.positionalSpillWeights.append(node_prof.positionalSpillWeights)
@@ -1397,3 +1368,13 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             logging.debug("updated_graphs= type:{} result:{}".format(type(updated_graphs), updated_graphs.result))
         logging.debug("Exit update_obs")
         return updated_graphs.result
+
+    def stopServer(self):
+        self.server_pid.stdin.write("Terminate\n")
+        self.server_pid.stdin.flush()
+        try:
+            out, errs = self.server_pid.communicate(timeout=15)
+        except:
+            self.server_pid.kill()
+            out, errs = self.server_pid.communicate()
+            print("Force Stop")

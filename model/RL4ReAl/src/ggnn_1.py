@@ -1,6 +1,3 @@
-#get the node type and identify the edge type. only keep the edges between similar type of nodes and remove edges between different node types.
-#i.e the edges must be present between GR and GR or Non-GR and Non-GR, there should be no edge between GR and Non-GR.
-
 import numpy as np
 import torch
 

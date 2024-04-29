@@ -68,7 +68,6 @@ struct LoopDistributionServerPass
       return false;
 
     this->F = &F;
-    errs() << F.getName() << "\n";
     this->M = F.getParent();
 
     dist_helper.setLid(loopID);
@@ -81,7 +80,6 @@ struct LoopDistributionServerPass
     ORE = &getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
     LAA = &getAnalysis<LoopAccessLegacyAnalysis>();
     OriginalLoopCost = getAnalysis<LoopCost>().getLoopCost();
-    errs() << "OriginalLoopCost: " << OriginalLoopCost << "\n";
     GetLAA = [&](Loop &L) -> const LoopAccessInfo & {
       return LAA->getInfo(&L);
     };
@@ -91,14 +89,13 @@ struct LoopDistributionServerPass
     auto DI = DependenceInfo(&F, AA, SE, LI);
     this->DI = &DI;
     FileModified = false;
-    errs() << "Before Communicate \n";
-    if (use_pipe)
+    if (use_pipe) {
       initPipeCommunication();
-    else if (use_grpc) {
-      errs() << "came here\n";
+    } else if (use_grpc) {
+    
 
       /******
-      ISSUE: Advice during training and inference  is different
+      // ISSUE: Advice during training and inference  is different
       FIX:
       1. use `Message Advice` present in LoopDistribution.proto for training
       same as inference instead of `Message LoopDistributionResponse`
@@ -118,15 +115,12 @@ struct LoopDistributionServerPass
       const ::loopdistribution::LoopDistributionRequest *request,
       ::loopdistribution::LoopDistributionResponse *response) override {
 
-    errs() << "came here\n";
     std::string partition = request->partitionpattern();
 
     if (partition == "Exit") {
-      errs() << "server exit requested\n";
-      AOTRunner->requestExit();
+      // AOTRunner->requestExit();  HAVE TO UNCOMMENT LATER
       return grpc::Status::OK;
     }
-    errs() << "distribution request received for pattern " << partition << "\n";
 
     DistributedLoopCost = this->distributeLoopAndGetLoopCostHelper(partition);
 
@@ -137,7 +131,6 @@ struct LoopDistributionServerPass
   }
 
   uint64_t distributeLoopAndGetLoopCostHelper(std::string partition) {
-    errs() << "Entered Distribute Func\n";
 
     dist_helper.setPartition(partition);
 
@@ -177,32 +170,19 @@ struct LoopDistributionServerPass
     } else if (data_format == "protobuf") {
       SerDesType = BaseSerDes::Kind::Protobuf;
     } else {
-      errs() << "Invalid data format\n";
       return;
     }
-
-    std::unique_ptr<MLModelRunner> MLRunner = std::make_unique<PipeModelRunner>(
+    MLRunner = std::make_unique<PipeModelRunner>(
         basename + ".out", basename + ".in", SerDesType, &M->getContext());
-
     std::pair<std::string, long> p1("loopcost", (long)OriginalLoopCost);
     MLRunner->populateFeatures(p1);
-    errs() << "Value populated (original cost):" << (long)OriginalLoopCost
-           << "\n";
 
     int cnt = 1;
-    // for (auto rdg : RDG_List) {
-    // std::pair<std::string, std::string> p1("RDG", rdg);
-    // MLRunner->populateFeatures(p1);
-
-    // Obtain partition sequence
+   
     int *out;
     size_t size;
     MLRunner->evaluate<int *>(out, size);
-    errs() << "Func name: " << this->F << " : " << cnt++ << "\n";
-    std::vector<int> distSequence;
-    for (int i = 0; i < size; i++) {
-      distSequence.push_back(out[i]);
-    }
+    std::vector<int> distSequence(out, out + size);
     std::string partition;
     for (int i = 0; i < 100; i++) {
       int element = distSequence[i];
@@ -217,21 +197,15 @@ struct LoopDistributionServerPass
     }
 
     // Calculate and return costs
-    errs() << "Received partition:" << partition << "\n";
 
     if (partition == "Exit") {
-      errs() << "server exit requested\n";
-      AOTRunner->requestExit();
       return;
-      // return grpc::Status::OK;
+     
     }
 
     DistributedLoopCost = this->distributeLoopAndGetLoopCostHelper(partition);
     std::pair<std::string, long> p2("loopcost", (long)DistributedLoopCost);
     MLRunner->populateFeatures(p2);
-    errs() << "Features populated (distributed cost): "
-           << (long)DistributedLoopCost << "\n";
-
     int *status_out;
     MLRunner->evaluate<int *>(status_out, size);
     std::string final_status;
@@ -239,9 +213,9 @@ struct LoopDistributionServerPass
       final_status.push_back((char)status_out[i]);
     }
     if (final_status == "Exit") {
-      errs() << "Costs sent and acknowledged\n";
+      LLVM_DEBUG(errs() << "Costs sent and acknowledged\n");
     } else {
-      errs() << "Costs sent NOT acknowledged!\n";
+      LLVM_DEBUG(errs() << "Costs sent NOT acknowledged!\n");
     }
   }
 
@@ -270,7 +244,7 @@ private:
   Module *M;
   uint64_t OriginalLoopCost;
   uint64_t DistributedLoopCost;
-  std::unique_ptr<MLModelRunner> AOTRunner;
+  std::unique_ptr<MLModelRunner> MLRunner;
 };
 } // namespace
 char LoopDistributionServerPass::ID = 0;
