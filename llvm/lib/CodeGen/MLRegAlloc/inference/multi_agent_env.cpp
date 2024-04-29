@@ -5,6 +5,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <fstream>
 #include <iostream>
+#include <iomanip>
 
 using namespace llvm;
 
@@ -24,7 +25,7 @@ Observation& MultiAgentEnv::reset() {
     // errs() << "Adding node: " << rpi.first << "\n";
     this->regProfMapHelper.insert({rpi.first, rpi.second});
   }
-  errs() << "noderep size = " << this->nodeRepresentation.size()<< "\n";
+  //errs() << "noderep size = " << this->nodeRepresentation.size()<< "\n";
   LLVM_DEBUG(errs() << "rp size = " << this->regProfMapHelper.size() << "\n");
   LLVM_DEBUG(errs() << "noderep size = " << this->nodeRepresentation.size()
                     << "\n");
@@ -357,7 +358,7 @@ Observation MultiAgentEnv::select_node_step(unsigned action) {
   this->current_node = this->regProfMapHelper[this->current_node_id];
   // errs( << "Current node cls: " << this->current_node.cls <<
   // "\n");
-  this->setNextAgent(TASK_SELECTION_AGENT);
+  this->setNextAgent(TASK_SELECTION_AGENT);   //next agent is set and constructor of next agent is called
   this->graph_topology->UpdateVisitList(action);
   Observation selectTaskObs(selectTaskObsSize);
   this->taskSelectionObsConstructor(selectTaskObs);
@@ -426,16 +427,16 @@ Observation MultiAgentEnv::colour_node_step(unsigned action) {
  
   //errs()<<"this->annotations[current_node_idx][0] after: "<<this->annotations[current_node_idx][0]<<"\n";
   // errs()<<"nodeSelectionObs in color_node_step: "<<"\n";
-  if(nodeSelectionObs.size() == 153601) {
-    //errs()<< "nodeSelectionObs Input vector:" << "\n";
+  // if(nodeSelectionObs.size() == 153601 && current_node_idx == 130) {
+  //   //errs()<< "nodeSelectionObs Input vector:" << "\n";
 
-    for (int i = 0; i < nodeSelectionObs.size(); ++i) {
+  //   for (int i = 0; i < nodeSelectionObs.size(); ++i) {
     
-      errs()<<nodeSelectionObs[i]<<" ";
+  //     errs()<<nodeSelectionObs[i]<<", ";
       
-    }
-    errs()<<" "<<"\n";
-  }
+  //   }
+  //   errs()<<" "<<"\n";
+  // }
   
   return nodeSelectionObs;
 }
@@ -561,29 +562,21 @@ void MultiAgentEnv::selectNodeObsConstructor(Observation &obs) {
   //91478
   assert(current_index == 91201 && "current_index is not 91201\n");
   // Setting anotations
-  Observation annotations;
+  // Observation annotations;
   //errs() << "current_index at ......................= " << current_index << "\n";
   LLVM_DEBUG(errs() << "current_index = " << current_index << "\n");
-  this->createAnnotations(annotations);
+  // this->createAnnotations(annotations);
   int count=0,flag=0;
-  for (int i = 0; i < max_node_number * 3; i++) {
+  for (int i = 0; i < max_node_number; i++) {
     assertObsSize(166);
-    // if(count>3){
-    //   count=0;
-    //   flag++;
-    // }
-    // else{
-    //   count++;
-    // }
-    errs()<<"annotations[i] in selectNodeObsConstructor: "<<annotations[i]<<"\n";
-    obs[current_index++] = annotations[i];  //get the node number and populate
-    //errs()<<"obs[current_index]: "<<obs[current_index]<<"\n";
-    //current_index++;
+    obs[current_index++] = this->annotations[i][0];  //get the node number and populate
+    obs[current_index++] = this->annotations[i][1];  //get the node number and populate
+    obs[current_index++] = this->annotations[i][2];  //get the node number and populate
+    // current_index++;
   }
-  errs()<<"obs[current_index] at index 91213"<<obs[91213]<<"\n";
   //till here 93000
   // Set Spill weights
-  // here index starts from 93001
+
   for (int i = 0; i < max_node_number; i++) {
     assertObsSize(171);
     //errs()<<"this->annotations[i][0]: "<<this->annotations[i][0]<<"\n";
@@ -634,6 +627,7 @@ void MultiAgentEnv::createAnnotations(Observation &temp_annotations) {
     
     temp_annotations.push_back(this->annotations[i][0]);
     //errs()<<"temp annotations: "<<i<<"->0"<<" "<<this->annotations[i][0]<<"\n";  //0 printing 
+
     temp_annotations.push_back(this->annotations[i][1]);
     //errs()<<"temp annotations: "<<i<<"->1"<<" "<<this->annotations[i][1]<<"\n";
     temp_annotations.push_back(this->annotations[i][2]);
@@ -660,9 +654,19 @@ void MultiAgentEnv::computeAnnotations() {
         //errs()<<"Spillweight is infinite..........................."<<"\n";
         this->annotations[current_idx][0] = 10000;
       } else {
-        //errs()<<"this->annotations[current_idx][0] inside computeAnnotations: "<<this->annotations[current_idx][0]<<"\n";
-        //errs()<<"Value of rp.spillWeight: "<<rp.spillWeight<<"\n"; 
-        this->annotations[current_idx][0] = rp.spillWeight;             //here the this->annotations[current_idx][0] is set 1.844379e-04 
+          
+      //this->annotations[current_idx][0] = rp.spillWeight;    
+      char buffer[50];
+      memset(buffer, 0, sizeof(buffer));
+      sprintf(buffer, "%.13f", rp.spillWeight);
+      float store = atof(buffer); 
+      //printf("The value of regProf is %.13f\n", rp.spillWeight);
+      //printf("The value stored in 'store' is %.13f\n", store);  
+
+      this->annotations[current_idx][0] = store;
+
+      //printf("The value stored in this->annotations[current_idx][0] is %.13f\n", this->annotations[current_idx][0]);  
+
       }
       this->annotations[current_idx][1] = 0;
     }
@@ -826,7 +830,18 @@ void MultiAgentEnv::taskSelectionObsConstructor(Observation &obs) {
   this->graph_topology->getColorOfVisitedAdjNodes(current_node_idx, adj_colors);
   llvm::SmallVector<unsigned, 8> masked_action_space;
   this->registerAS->maskActionSpace(regclass, adj_colors, masked_action_space);
-  float spillcost = this->current_node.spillWeight;
+
+  //float spillcost = this->current_node.spillWeight;
+
+  char buffer[50];
+  memset(buffer, 0, sizeof(buffer));
+  sprintf(buffer, "%.13f",this->current_node.spillWeight);
+  float store = atof(buffer); 
+  //printf("The value of regProf is %.13f\n", this->current_node.spillWeight);
+  //printf("The value stored in 'store' is %.13f\n", store);  
+
+  float spillcost = store;
+  
   llvm::SmallVector<int, 8> use_distances = this->current_node.useDistances;
   obs[current_index++] = adj_nodes.size();
   //errs()<<"obs[current_index++]: adj_nodes.size"<<adj_nodes.size()<<"\n";
@@ -834,13 +849,13 @@ void MultiAgentEnv::taskSelectionObsConstructor(Observation &obs) {
   //errs()<<"obs[current_index++]: masked_action_space.size();"<<masked_action_space.size()<<"\n";
   if (std::isinf(spillcost)) {
     //errs()<<"Inside spillcost is infinite"<<"\n";
-    obs[current_index]=10000;
-    this->annotations[current_index++][0] = 10000;
+    obs[current_index++]=10000;
+    // this->annotations[current_index++][0] = 10000;
     
   } else {
     // errs()<<"spillcost: "<<spillcost<<"\n";
-    obs[current_index]=spillcost;
-    this->annotations[current_index++][0] = spillcost;
+    obs[current_index++]=spillcost;
+    // this->annotations[current_index++][0] = spillcost;
     
   }
   // obs[current_index++] = spillcost;

@@ -240,7 +240,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         annotations[0:state.annotations.shape[0], :] = state.annotations
         #print("Shape of annotations:", annotations.shape)
         spill_weight_list = annotations[:, 0]  # Annotations first element is spill weights 
-        print("spill weight list in reset: ",spill_weight_list)
+        #print("spill weight list in reset: ",spill_weight_list)
         #print("Shape of spill_weight_list:", spill_weight_list.shape)
         adjacency_lists = (state.adjacency_lists[0].getNodeNum(), np.array(state.adjacency_lists[0].getData()))
         #print("state.adjacency_lists[0].getNodeNum(): ",state.adjacency_lists[0].getNodeNum())
@@ -249,6 +249,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         torch.set_printoptions(profile="full")
         
         result = None
+
         for inx, i in enumerate(state.adjacency_lists[0].getData()):
             flag = True
             if inx ==0:
@@ -264,8 +265,10 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 print("Exiting inference due to no edge or more then max edge:", result)
                 return None
 
+        #print("result.shape[0]: ",result.shape[0])
         if result is not None:
             edges_unroll[0:result.shape[0]] = result
+        
         
         adjacency_lists = {
             "node_num": state.adjacency_lists[0].getNodeNum() - self.split_successful,
@@ -315,7 +318,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
     def createNodeSelectMask(self):
         mask = [0]*self.max_number_nodes
         eligibleNodes = self.obs.graph_topology.get_eligibleNodes()
-        print("eligibleNodes in createNodeSelectMask: ",eligibleNodes)
+        #print("eligibleNodes in createNodeSelectMask: ",eligibleNodes)
         assert len(eligibleNodes) < self.max_number_nodes, "Graph has more then maximum nodes allowed"
         for inx, x in enumerate(eligibleNodes):            
             if x in eligibleNodes:
@@ -328,7 +331,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
     def createNodeSelectMaskSpillWeightBased(self):
         mask = [0]*self.max_number_nodes
         eligibleNodes = self.obs.graph_topology.get_eligibleNodes()
-        print("eligibleNodes in createNodeSelectMaskSpillWeightBased: ",eligibleNodes)
+        #print("eligibleNodes in createNodeSelectMaskSpillWeightBased: ",eligibleNodes)
         assert len(eligibleNodes) < self.max_number_nodes, "Graph has more then maximum nodes allowed"
         if len(eligibleNodes) > 0:
             eligible_spill_wight_list = []
@@ -371,12 +374,12 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
     #apr18
     def getSpillWeightListExpanded(self):
-        print("Inside getSpillWeightListExpanded")
+        #print("Inside getSpillWeightListExpanded")
         spill_weight_list = [0]*self.max_number_nodes
         for i in range(len(self.obs.spill_cost_list)):
 
             spill_weight_list[i] = self.formatRewardValue(self.obs.spill_cost_list[i])
-        print("spill_weight_list inside getSpillWeightListExpanded: ",spill_weight_list)
+        #print("spill_weight_list inside getSpillWeightListExpanded: ",spill_weight_list)
         return spill_weight_list
 
     def getNodeProperties(self):
@@ -573,7 +576,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         annotations = np.zeros((self.max_number_nodes, self.annotation_size))
         annotations[0:state.annotations.shape[0], :] = state.annotations
         spill_weight_list = annotations[:, 0]  # Annotations first element is spill weights 
-        print("spill weight list in color node step: ", self.cur_node, spill_weight_list)
+        #print("spill weight list in color node step: ", self.cur_node, spill_weight_list)
         adjacency_lists = (state.adjacency_lists[0].getNodeNum(), np.array(state.adjacency_lists[0].getData()))
        
         result = None
@@ -755,7 +758,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         annotations = np.zeros((self.max_number_nodes, self.annotation_size))
         annotations[0:state.annotations.shape[0], :] = state.annotations
         spill_weight_list = annotations[:, 0]  # Annotations first element is spill weights 
-        print("spill weight list in _split_node_step: ",spill_weight_list)
+        #print("spill weight list in _split_node_step: ",spill_weight_list)
         # annotations = state.annotations
         adjacency_lists = (state.adjacency_lists[0].getNodeNum(), np.array(state.adjacency_lists[0].getData()))
         result = None
@@ -1337,8 +1340,16 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                             print("Node idx map and type", self.obs.nid_idx, type(neigh), neigh)
                             return "error"
                             # raise
+                        
+                    #apr27
+                    formatted_spill_cost =  "{:.13f}".format(node_prof.spillWeight)
+                    #print("node.spillWeight: ", node_prof.spillWeight)
+                    spill_cost = formatted_spill_cost
+                    #print("node.spillWeight: ", spill_cost)
+                    self.obs.spill_cost_list.append(float(spill_cost))
 
-                    self.obs.spill_cost_list.append(node_prof.spillWeight)
+                    #print("spill_cost_list: ",self.obs.spill_cost_list)
+
                     #print("spill_cost_list.append(node_prof.spillWeight): ",node_prof.spillWeight)
                     self.obs.reg_class_list.append(self.obs.reg_class_list[splited_node_idx])
                     self.obs.use_distances.append(sorted(node_prof.useDistances))
@@ -1396,8 +1407,19 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                     return "error"
                     # raise
                 self.obs.graph_topology.indegree[interfering_node_idx] = len(self.obs.graph_topology.adjList[interfering_node_idx])
+
+                #self.obs.spill_cost_list[interfering_node_idx] = node_prof.spillWeight
+
+                formatted_spill_cost =  "{:.13f}".format(node_prof.spillWeight)
+                #print("node_prof.spillWeight: ", node_prof.spillWeight)
+                spill_cost = formatted_spill_cost
+                #print("node.spillWeight: ", spill_cost)
+
+                self.obs.spill_cost_list[interfering_node_idx] = float(spill_cost)
+
+                #print("spill_cost_list: ",self.obs.spill_cost_list)
                 
-                self.obs.spill_cost_list[interfering_node_idx] = node_prof.spillWeight
+               
                 self.obs.use_distances[interfering_node_idx] = np.array(sorted(node_prof.useDistances))
                 self.obs.positionalSpillWeights[interfering_node_idx] = node_prof.positionalSpillWeights
                 self.obs.split_points[interfering_node_idx] = np.array(node_prof.splitSlots)

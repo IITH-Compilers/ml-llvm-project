@@ -104,6 +104,7 @@
 #include <tuple>
 #include <utility>
 #include <vector>
+#include <iomanip>
 // #include "Service/RegisterAllocationInference/RegisterAllocationInference.h"
 
 #define DIS_SANITY_CHECK 1
@@ -1604,8 +1605,16 @@ void MLRA::calculatePositionalSpillWeights(
     if (MIR->getParent() != LIS->getMBBFromIndex(startIdx)) {
       startIdx = LIS->getMBBStartIdx(LIS->getMBBFromIndex(use));
     }
+
     spillWeights.push_back(VRAI.futureWeight(*VirtReg, startIdx, use));
   }
+
+  // std::cout << "Contents of spillWeights:" << std::endl;
+  // for (const auto &weight : spillWeights) {
+  //   std::cout << weight << " ";
+  // }
+  // std::cout << std::endl;
+
 }
 
 void MLRA::computeVectors(LiveInterval *VirtReg,
@@ -1662,6 +1671,7 @@ void MLRA::computeSplitPoints(LiveInterval *VirtReg,
   }
 }
 
+//captureRegisterProfile
 bool MLRA::captureRegisterProfile() {
   LLVM_DEBUG(errs() << "captureRegProf Processing function ID: "
                     << FunctionCounter << "\n");
@@ -1670,6 +1680,7 @@ bool MLRA::captureRegisterProfile() {
 
   for (unsigned i = 0, e = MRI->getNumVirtRegs(); i != e; ++i) {
     unsigned Reg = Register::index2VirtReg(i);
+    //errs()<<"Reg is: "<<Reg<<"\n";
     if (!isSafeVReg(Reg))
       continue;
     LIS->getInterval(Reg);
@@ -1683,7 +1694,7 @@ bool MLRA::captureRegisterProfile() {
     RegisterProfile regProf;
     regProf.cls = "Phy";
     regProf.spillWeight = 0;
-
+    
     if (this->target_PhyReg2ColorMap[targetName].find(i) !=
         this->target_PhyReg2ColorMap[targetName].end()) {
       regProf.color = this->target_PhyReg2ColorMap[targetName][i];
@@ -1734,11 +1745,13 @@ bool MLRA::captureRegisterProfile() {
   for (unsigned i = 0, e = MRI->getNumVirtRegs(); i < e; ++i) {
     RegisterProfile regProf;
     unsigned Reg = Register::index2VirtReg(i);
+    //errs()<<"i: "<<i<<"\n";
     if (!isSafeVReg(Reg))
       continue;
     LLVM_DEBUG(errs() << "Starting to process - " << printReg(Reg, TRI)
                       << "\n");
     LiveInterval *VirtReg = &LIS->getInterval(Reg);
+    //errs()<<"VirtReg: "<<*VirtReg<<"\n";
     SA->analyze(VirtReg);
     if (SA->getUseSlots().empty() || MRI->reg_nodbg_empty(Reg)) {
       LLVM_DEBUG(errs() << "Skipping vreg due to empty slot: "
@@ -1766,8 +1779,36 @@ bool MLRA::captureRegisterProfile() {
     calculatePositionalSpillWeights(VirtReg, positionalSpillWeights);
 
     regProf.spillWeights = positionalSpillWeights;
+
+  //   errs()<<"spillweights in capture register profile"<<"\n";
+  //   for (const auto &weights : spillWeights) {
+  //     errs()<<"weights in capture regiter profile: "<<weights<<"\n";
+  //   }
+  // std::cout << std::endl;
+
     regProf.vecRep = vectors;
-    regProf.spillWeight = VirtReg->weight;
+    //regProf.spillWeight = VirtReg->weight;
+
+
+    char buffer[50];
+    memset(buffer, 0, sizeof(buffer));
+    sprintf(buffer, "%.13f", VirtReg->weight);
+    float store = atof(buffer); 
+    //printf("The value of regProf is %.13f\n", VirtReg->weight);
+    //printf("The value stored in 'store' is %.13f\n", store);
+    regProf.spillWeight = store;
+
+    printf("The value sored in regProf.spillWeight:%.13f \n",regProf.spillWeight);
+
+
+    //precision setting
+
+    // std::ostringstream ss;
+    // ss << std::fixed << std::setprecision(8) << VirtReg->weight;
+    // std::string spillWeightStr = ss.str();
+    // regProf.spillWeight = std::stof(spillWeightStr);
+
+    //errs()<<"single regProf.spillWeight: "<<regProf.spillWeight<<"\n";  //here
 
     SmallVector<int, 8> useDistances;
     SmallVector<unsigned, 8> splitPoints;
@@ -1804,6 +1845,7 @@ bool MLRA::captureRegisterProfile() {
     regProf.frwdInterferences = frwdInterference;
     LLVM_DEBUG(errs() << "Adding reg here2: " << step + i << "\n");
     regProfMap[step + i] = regProf;
+    errs()<<"regProfMap[step + i]: "<<step+i<<"\n";
   }
 
   // Adding interferences in other direction
@@ -1843,7 +1885,8 @@ bool MLRA::captureRegisterProfile() {
   // }
 
   LLVM_DEBUG(errs() << "\ncaptureRegisterProfile() call ended.\n");
-  LLVM_DEBUG(printRegisterProfile());
+  //LLVM_DEBUG(printRegisterProfile());
+  printRegisterProfile();
 
   return validProf;
 }
@@ -1922,8 +1965,16 @@ void MLRA::updateRegisterProfileAfterSplit(
     }
     // rp.cls = oldRP.cls;
     rp.cls = TRI->getRegClassName(MRI->getRegClass(NewVirtReg->reg));
-    //apr6
-    rp.spillWeight = NewVirtReg->weight;
+
+    //rp.spillWeight = NewVirtReg->weight;
+
+    char buffer[50];
+    memset(buffer, 0, sizeof(buffer));
+    sprintf(buffer, "%.13f", NewVirtReg->weight);
+    float store = atof(buffer); 
+    printf("The value of regProf in updateRegisterProfileAfterSplit is %.13f\n", NewVirtReg->weight);
+    printf("The value stored in 'store' in updateRegisterProfileAfterSplit is %.13f\n", store);
+    rp.spillWeight = store;
 
     SmallVector<int, 8> useDistances;
     SmallVector<unsigned, 8> splitPoints;

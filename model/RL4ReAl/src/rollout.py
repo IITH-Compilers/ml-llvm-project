@@ -269,7 +269,7 @@ class RollOutInference:
                 "max_number_nodes": 600,
                 "max_usepoint_count": 200,
                 "annotations": 3,
-                "max_edge_count": 30000, #nc2
+                "max_edge_count": 30000, 
                 "mode": 'inference',
                 "dump_type": 'One',
                 "dump_color_graph": True,
@@ -306,7 +306,7 @@ class RollOutInference:
                 "max_number_nodes": 600,
                 "max_usepoint_count": 200,
                 "annotations": 3,
-                "max_edge_count": 30000,
+                "max_edge_count": 70000,
                 "mode": 'inference',
                 "dump_type": 'One',
                 "dump_color_graph": True,
@@ -606,6 +606,7 @@ class RollOutInference:
                     policy_id = mapping_cache.setdefault(
                         agent_id, self.policy_agent_mapping(agent_id))
                     p_use_lstm = self.use_lstm[policy_id]
+                    #print("p_use_lstm: ",p_use_lstm)
                     if p_use_lstm:
                         a_action, p_state, _ = self.agent.compute_single_action(
                             a_obs,
@@ -613,6 +614,8 @@ class RollOutInference:
                             prev_action=prev_actions[agent_id],
                             prev_reward=prev_rewards[agent_id],
                             policy_id=policy_id, explore=False)
+
+                        #print("policy_id in p_use_lstm: ",policy_id)
                         agent_states[agent_id] = p_state
                     else:
                         a_action, extra_info = self.agent.compute_single_action(
@@ -620,6 +623,8 @@ class RollOutInference:
                             prev_action=prev_actions[agent_id],
                             prev_reward=prev_rewards[agent_id],
                             policy_id=policy_id, explore = False)
+                    
+                    #print("policy id not in p_use_lstm: ",policy_id)
                     a_action = flatten_to_single_ndarray(a_action)
                     action_dict[agent_id] = a_action
                     prev_actions[agent_id] = a_action
