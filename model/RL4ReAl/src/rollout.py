@@ -306,7 +306,7 @@ class RollOutInference:
                 "max_number_nodes": 600,
                 "max_usepoint_count": 200,
                 "annotations": 3,
-                "max_edge_count": 70000,
+                "max_edge_count": 30000,
                 "mode": 'inference',
                 "dump_type": 'One',
                 "dump_color_graph": True,
@@ -556,7 +556,6 @@ class RollOutInference:
         
         assert len(inter_graph_list) == 1, "Only one graph at a time supported."
         inter_graph = inter_graph_list[0]
-        # print("inter_graph: ",inter_graph)
         graph = inter_graph 
         self.obs = self.env.reset(graph)
         if self.obs is None:
@@ -648,13 +647,8 @@ class RollOutInference:
             actions_response.update(action)
         if self.env.split_point is not None:
             actions_response[self.env.split_node_agent_id] = self.env.split_point
-            print("Populating split data")
         if self.env.colormap is not None:
-            #print("entered self.env.colormap")
             actions_response["colour_node_agent_id"] = self.env.colormap
-            print("Populating colouring data")
-        else:
-            print("Not entering self.env.colormap is None")
         actions_response[self.env.select_node_agent_id] = int(self.env.virtRegId)
          
         return actions_response, self.env.agent_count
