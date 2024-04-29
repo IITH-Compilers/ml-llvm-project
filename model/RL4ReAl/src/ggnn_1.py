@@ -388,10 +388,10 @@ def get_observationsInf(graph):
   
     for idx,node in enumerate(nodes):
     
-        print("idx: ",idx)
+        #print("idx: ",idx)
         
         nodeId = node.regID
-        print("nodeId: ",nodeId)
+        #print("nodeId: ",nodeId)
         regClass = node.cls
         single_adj=[]
 
@@ -422,7 +422,7 @@ def get_observationsInf(graph):
         print("single_adj: ",single_adj)
         
         for i in range(0,len(single_adj)):
-           print("adj node is: ",single_adj[i])
+           #print("adj node is: ",single_adj[i])
            Cls = nid_cls[single_adj[i]]
 
            if Cls=="Phy":

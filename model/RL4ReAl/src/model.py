@@ -128,7 +128,7 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
         #print("Obs keys are:", input_dict.keys())
         # print("State shape:", input_dict["obs_flat"].shape)
         torch.set_printoptions(threshold=1000000)    
-        print("Node select model input", input_dict["obs_flat"]) 
+        #print("Node select model input", input_dict["obs_flat"]) 
         torch.set_printoptions(profile="full")
         #print("Node select model input", input_dict["obs_flat"].size())
         #element = input_dict["obs_flat"][0][91210:91220]
