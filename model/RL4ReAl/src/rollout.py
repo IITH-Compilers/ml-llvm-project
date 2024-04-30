@@ -578,8 +578,10 @@ class RollOutInference:
 
     def updateSelectNodeObs(self):
         select_node_mask = self.env.createNodeSelectMask()
-        print("Curres obs keys:", self.obs.keys())
+        print("Curres obs keys before:", self.obs.keys())
+        print("self.env.select_node_agent_id: ",self.env.select_node_agent_id) 
         curr_obs = self.obs[self.env.select_node_agent_id]
+        print("Curres obs keys after:", self.obs.keys())
         curr_obs['action_mask'] = np.array(select_node_mask)
         self.obs[self.env.select_node_agent_id] = curr_obs
 

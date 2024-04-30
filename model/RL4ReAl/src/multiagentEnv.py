@@ -45,17 +45,11 @@ import sys
 import re
 
 from config import BUILD_DIR
-<<<<<<< HEAD
 
 sys.path.append(f"{BUILD_DIR}/tools/MLCompilerBridge/Python-Utilities")
 
 #from client import *
 #from client import RegisterAllocationClient
-=======
-sys.path.append(f"{BUILD_DIR}/tools/MLCompilerBridge/Python-Utilities/")
-from client import *
-from client import RegisterAllocationClient
->>>>>>> 7a2345f28bdf70fc2a2cca42a4810381267448bd
 import RegisterAllocationInference_pb2, RegisterAllocation_pb2
 
 config_path=None

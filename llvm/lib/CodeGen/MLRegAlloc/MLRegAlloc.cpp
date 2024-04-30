@@ -2483,6 +2483,7 @@ void MLRA::initPipeCommunication() {
       // errs() << "Before filling color map\n";
       this->FunctionVirtRegToColorMap[MF->getName()] =
           PipeResponseData.ColorMap;
+      MF->dump();
       allocatePhysRegsViaRL();
 
       errs() << "ALLOCATION DONE for " << MF->getName() << "\n";

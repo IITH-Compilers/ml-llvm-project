@@ -151,8 +151,16 @@ bool LiveRegMatrix::checkRegMaskInterference(LiveInterval &VirtReg,
   if (RegMaskVirtReg != VirtReg.reg || RegMaskTag != UserTag) {
     RegMaskVirtReg = VirtReg.reg;
     RegMaskTag = UserTag;
+    errs()<<"RegMaskTag before: "<<RegMaskTag<<"\n";
+    errs()<<"RegMaskVirtReg: "<<RegMaskVirtReg<<"\n";
     RegMaskUsable.clear();
     LIS->checkRegMaskInterference(VirtReg, RegMaskUsable);
+    errs() << "RegMaskUsable: ";
+    for (unsigned i = 0, e = RegMaskUsable.size(); i != e; ++i) {
+        //errs() << (RegMaskUsable.test(i) ? "1" : "0");
+        errs()<<RegMaskUsable[i]<<" ";
+    }
+    errs() << "\n";
   }
 
   // The BitVector is indexed by PhysReg, not register unit.

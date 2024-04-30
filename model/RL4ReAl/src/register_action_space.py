@@ -85,8 +85,8 @@ class RegisterActionSpace:
                         if  str(reg) in self.overlaps.keys():
                             extend_adj += list(map(lambda x: self.org_normal_map[x], filter( lambda z : z in self.org_normal_map.keys(), self.overlaps[str(reg)])))
                 
-                # tmp_mask_sidi = [32, 57, 61, 59, 16, 53, 26, 18]
-            tmp_mask_sidi = [33, 43, 45, 44, 17, 40, 27, 19]
+            tmp_mask_sidi = [32, 57, 61, 59, 16, 53, 26, 18]
+            # tmp_mask_sidi = [33, 43, 45, 44, 17, 40, 27, 19]
             extend_adj.extend(tmp_mask_sidi)
             extend_adj = list(set(extend_adj))
             action_space = list(filter(lambda x: x not in extend_adj, action_space)) # np.delete(action_space, adj_colors)
