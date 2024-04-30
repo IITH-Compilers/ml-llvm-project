@@ -25,6 +25,8 @@
 using namespace llvm;
 using namespace MLBridge;
 
+#define DEBUG_TYPE "ir2vec-loop-distribution"
+
 static cl::opt<std::string> funcName("funcName", cl::desc("Function name"),
                                      cl::value_desc("Function name"),
                                      cl::Optional, cl::Hidden, cl::init(""));
