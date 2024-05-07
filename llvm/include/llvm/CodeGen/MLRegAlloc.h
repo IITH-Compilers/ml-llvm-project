@@ -5,10 +5,13 @@
 #include "InterferenceCache.h"
 #include "LiveDebugVariables.h"
 #include "MLModelRunner/MLModelRunner.h"
+#include "MLModelRunner/ONNXModelRunner/onnx.h"
 #include "RegAllocBase.h"
 #include "SpillPlacement.h"
 #include "Spiller.h"
 #include "SplitKit.h"
+#include "grpc/RegisterAllocationInference/RegisterAllocationInference.pb.h"
+#include "multi_agent_env.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
@@ -64,9 +67,6 @@
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
-#include "MLModelRunner/ONNXModelRunner/onnx.h"
-#include "grpc/RegisterAllocationInference/RegisterAllocationInference.pb.h"
-#include "multi_agent_env.h"
 // gRPC includes
 #include "grpc/RegisterAllocation/RegisterAllocation.grpc.pb.h"
 #include "grpc/RegisterAllocationInference/RegisterAllocationInference.grpc.pb.h"
@@ -82,11 +82,10 @@
 #include <memory>
 #include <set>
 #include <sstream>
+#include <string>
 #include <tuple>
 #include <utility>
 #include <vector>
-#include <string>
-#include <map>
 
 #define DEBUG_TYPE "mlra-regalloc"
 
@@ -187,6 +186,7 @@ public:
   registerallocationinference::Data ServerModeRequest;
   registerallocationinference::Data ClientModeResponse;
   registerallocationinference::RegisterProfileList ClientModeRequest;
+
 private:
   struct PipeResponse {
     std::string Action;
@@ -210,10 +210,10 @@ private:
   // };
   // SmallMapVector<unsigned, RegisterProfile, 16> regProfMap;
   // RegisterProfileMap regProfMap;
-  std::unique_ptr<MLModelRunner> MLRunner;
+  // std::unique_ptr<MLModelRunner> MLRunner;
   json::Object JO;
   std::vector<TensorSpec> FeatureSpecs;
-  std::vector<void*> InputBuffers;
+  std::vector<void *> InputBuffers;
   SmallSetVector<unsigned, 8> regIdxs;
   // TensorSpec AdviceSpec;
   bool CommuResult;
@@ -277,11 +277,19 @@ private:
   //
   unsigned getPhyRegForColor(LiveInterval &VirtReg, unsigned color,
                              SmallVector<unsigned, 4> &SplitVRegs);
-            
+
   Observation split_node_step(unsigned action) override;
-  void initPipeCommunication();
-  void processMLInputs(SmallSetVector<unsigned, 8> *updatedRegIdxs, bool IsStart = false, bool IsJson=false);
-  void processMLInputsProtobuf(SmallSetVector<unsigned, 8> *updatedRegIdxs, bool IsStart = false);
+
+  template <typename T> void initCommunication(T &);
+
+  template <typename T>
+  void processMLInputs(T &MLRunner, SmallSetVector<unsigned, 8> *updatedRegIdxs,
+                       bool IsStart = false, bool IsJson = false);
+
+  template <typename T>
+  void processMLInputsProtobuf(T &MLRunner,
+                               SmallSetVector<unsigned, 8> *updatedRegIdxs,
+                               bool IsStart = false);
   void printFeatures();
   // void processMLAdvice();
 

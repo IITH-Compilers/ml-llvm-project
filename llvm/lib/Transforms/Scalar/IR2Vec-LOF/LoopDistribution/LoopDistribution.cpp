@@ -12,7 +12,8 @@
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Passes/PassBuilder.h"
+// #include "llvm/Passes/PassBuilder.h"
+#include "llvm/Transforms/IPO/PassManagerBuilder.h"
 
 #define LDIST_NAME "ir2vec-loop-distribution"
 #define DEBUG_TYPE LDIST_NAME
@@ -522,110 +523,6 @@ bool LoopDistribution::computeDistributionOnLoop(DataDependenceGraph *SCCGraph,
   return distributed;
 }
 
-/**
- * To be checked, doubt regardinng the analysis function
- *
- */
-void LoopDistribution::computeDistribution(
-    SmallVector<DataDependenceGraph *, 5> &SCCGraphs,
-    SmallVector<Loop *, 5> &loops, SmallVector<std::string, 5> &dis_seqs) {
-
-  int size = loops.size();
-
-  for (int i = 0; i < size; i++) {
-    PassBuilder pb;
-    FunctionAnalysisManager fam;
-    pb.registerFunctionAnalyses(fam);
-    Function &F = *loops[i]->getHeader()->getParent();
-    AA = &fam.getResult<AAManager>(F);
-    SE = &fam.getResult<ScalarEvolutionAnalysis>(F);
-    LI = &fam.getResult<LoopAnalysis>(F);
-    DT = &fam.getResult<DominatorTreeAnalysis>(F);
-    ORE = &fam.getResult<OptimizationRemarkEmitterAnalysis>(F);
-    auto &AC = fam.getResult<AssumptionAnalysis>(F);
-    auto &TTI = fam.getResult<TargetIRAnalysis>(F);
-    auto &TLI = fam.getResult<TargetLibraryAnalysis>(F);
-
-    auto &LAM = fam.getResult<LoopAnalysisManagerFunctionProxy>(F).getManager();
-    GetLAA = [&](Loop &L) -> const LoopAccessInfo & {
-      LoopStandardAnalysisResults AR = {*AA, AC,  *DT, *LI,
-                                        *SE, TLI, TTI, nullptr};
-      return LAM.getResult<LoopAccessAnalysis>(L, AR);
-    };
-
-    computeDistributionOnLoop(SCCGraphs[i], loops[i], dis_seqs[i]);
-  }
-}
-
-// void LoopDistribution::addTimer(Loop *first, Loop *last) {
-//   Loop *outerLoop = nullptr;
-//   Loop *tmpLoop = first;
-//   while (outerLoop == nullptr) {
-//     if (tmpLoop->getLoopDepth() == 1)
-//       outerLoop = tmpLoop;
-//     else
-//       tmpLoop = tmpLoop->getParentLoop();
-//   }
-//   assert(outerLoop);
-
-//   auto PH = outerLoop->getLoopPreheader();
-//   auto module = PH->getModule();
-//   auto context = &module->getContext();
-//   IRBuilder<> builder(*context);
-
-//   // Declare clock Function
-//   std::vector<Type *> clock_func_args;
-//   FunctionType *clock_func_type =
-//       FunctionType::get(IntegerType::get(*context, 64), clock_func_args, false);
-//   Function *clock_func = Function::Create(
-//       clock_func_type, GlobalValue::ExternalLinkage, "clock", module);
-//   clock_func->setCallingConv(CallingConv::C);
-
-//   // Declare printf Function
-//   PointerType *PointerTy_6 = PointerType::get(IntegerType::get(*context, 8), 0);
-//   std::vector<Type *> printf_func_args;
-//   printf_func_args.push_back(PointerTy_6);
-//   FunctionType *printf_func_type =
-//       FunctionType::get(IntegerType::get(*context, 32), printf_func_args, true);
-//   Function *printf_func = Function::Create(
-//       printf_func_type, GlobalValue::ExternalLinkage, "printf", module);
-//   printf_func->setCallingConv(CallingConv::C);
-
-//   CallInst *call_clock_t1 = CallInst::Create(
-//       PH->getModule()->getFunction("clock"), "", PH->getTerminator());
-//   call_clock_t1->setCallingConv(CallingConv::C);
-//   call_clock_t1->setTailCall(false);
-
-//   SmallVector<BasicBlock *, 4> exitBlks;
-//   if (last->getLoopDepth() == 1) {
-//     exitBlks.push_back(last->getExitBlock());
-//   } else {
-//     outerLoop->getExitBlocks(exitBlks);
-//   }
-
-//   for (auto blk : exitBlks) {
-
-//     auto firstInst = &blk->front();
-//     CallInst *call_clock_t2 =
-//         CallInst::Create(module->getFunction("clock"), "", firstInst);
-//     call_clock_t2->setCallingConv(CallingConv::C);
-//     call_clock_t2->setTailCall(false);
-//     BinaryOperator *sub = BinaryOperator::Create(
-//         Instruction::Sub, call_clock_t2, call_clock_t1, "", firstInst);
-
-//     builder.SetInsertPoint(sub->getNextNode());
-//     std::vector<Value *> printArgs;
-//     Value *formatStr = builder.CreateGlobalStringPtr(
-//         "Function - %s, Loop - %d, Time - %lld\n");
-//     Value *fnName = builder.CreateGlobalString(funcName);
-//     printArgs.push_back(formatStr);
-//     printArgs.push_back(fnName);
-//     printArgs.push_back(ConstantInt::get(*context, APInt(32, loopID)));
-//     printArgs.push_back(sub);
-//     builder.CreateCall(module->getFunction("printf"), printArgs);
-//   }
-// }
-
 Loop *LoopDistribution::findLoop(unsigned int lid) {
 
   // Build up a worklist of inner-loops to vectorize. This is necessary as the
@@ -751,80 +648,6 @@ bool LoopDistribution::runwithAnalysis(
   }
 
   return isdis;
-}
-
-void LoopDistribution::run(Function &F, FunctionAnalysisManager &fam,
-                           SmallVector<DataDependenceGraph *, 5> &SCCGraphs,
-                           SmallVector<Loop *, 5> &loops,
-                           SmallVector<std::string, 5> &dis_seqs) {
-
-  int size = loops.size();
-  PassBuilder pb;
-  pb.registerFunctionAnalyses(fam);
-  for (int i = 0; i < size; i++) {
-    LLVM_DEBUG(errs() << i + 1 << "th iteration\n");
-    // Function &F = *loops[i]->getHeader()->getParent();
-    AA = &fam.getResult<AAManager>(F);
-    SE = &fam.getResult<ScalarEvolutionAnalysis>(F);
-    LI = &fam.getResult<LoopAnalysis>(F);
-    DT = &fam.getResult<DominatorTreeAnalysis>(F);
-    ORE = &fam.getResult<OptimizationRemarkEmitterAnalysis>(F);
-    auto &AC = fam.getResult<AssumptionAnalysis>(F);
-    auto &TTI = fam.getResult<TargetIRAnalysis>(F);
-    auto &TLI = fam.getResult<TargetLibraryAnalysis>(F);
-    LLVM_DEBUG(errs() << "Call to GETLAM...\n");
-
-    auto &LAM = fam.getResult<LoopAnalysisManagerFunctionProxy>(F).getManager();
-
-    fam.registerPass([&] { return LoopAnalysisManagerFunctionProxy(LAM); });
-
-    LLVM_DEBUG(errs() << "Call to GETLAA...\n");
-    GetLAA = [&](Loop &L) -> const LoopAccessInfo & {
-      LoopStandardAnalysisResults AR = {*AA, AC,  *DT, *LI,
-                                        *SE, TLI, TTI, nullptr};
-      return LAM.getResult<LoopAccessAnalysis>(L, AR);
-    };
-
-    computeDistributionOnLoop(SCCGraphs[i], loops[i], dis_seqs[i]);
-  }
-}
-
-void LoopDistributionWrapperPass::run(
-    SmallVector<DataDependenceGraph *, 5> &SCCGraphs,
-    SmallVector<Loop *, 5> &loops, SmallVector<std::string, 5> &dis_seqs) {
-
-  int size = loops.size();
-
-  for (int i = 0; i < size; i++) {
-    PassBuilder pb;
-    FunctionAnalysisManager fam;
-    pb.registerFunctionAnalyses(fam);
-    Function &F = *loops[i]->getHeader()->getParent();
-    dist_helper.AA = &fam.getResult<AAManager>(F);
-    dist_helper.SE = &fam.getResult<ScalarEvolutionAnalysis>(F);
-    dist_helper.LI = &fam.getResult<LoopAnalysis>(F);
-    dist_helper.DT = &fam.getResult<DominatorTreeAnalysis>(F);
-    dist_helper.ORE = &fam.getResult<OptimizationRemarkEmitterAnalysis>(F);
-    auto &AC = fam.getResult<AssumptionAnalysis>(F);
-    auto &TTI = fam.getResult<TargetIRAnalysis>(F);
-    auto &TLI = fam.getResult<TargetLibraryAnalysis>(F);
-
-    auto &LAM = fam.getResult<LoopAnalysisManagerFunctionProxy>(F).getManager();
-
-    dist_helper.GetLAA = [&](Loop &L) -> const LoopAccessInfo & {
-      LoopStandardAnalysisResults AR = {*(dist_helper.AA),
-                                        AC,
-                                        *(dist_helper.DT),
-                                        *(dist_helper.LI),
-                                        *(dist_helper.SE),
-                                        TLI,
-                                        TTI,
-                                        nullptr};
-      return LAM.getResult<LoopAccessAnalysis>(L, AR);
-    };
-
-    dist_helper.computeDistributionOnLoop(SCCGraphs[i], loops[i], dis_seqs[i]);
-  }
 }
 
 bool LoopDistributionWrapperPass::runOnFunction(Function &F) {

@@ -45,11 +45,12 @@ RDGWrapperPass::RDGWrapperPass() : FunctionPass(ID) {
 }
 
 char RDGWrapperPass::ID = 0;
-// RDGWrapperPass *llvm::createRDGWrapperPass() { return new RDGWrapperPass(); }
+RDGWrapperPass *llvm::createRDGWrapperPass() { return new RDGWrapperPass(); }
 
 // static RegisterPass<RDGWrapperPass> X("RDG", "Build ReducedDependenceGraph",
 // true, true);
 
+namespace {}
 void RDGWrapperPass::Print_IR2Vec_File(DataDependenceGraph &G,
                                        std::string Filename,
                                        std::string ll_name, int loopid) {

@@ -368,11 +368,11 @@ struct HelloMLBridge : public ModulePass,
     if (usePipe) {
       basename = "/tmp/" + pipe_name;
       if (data_format == "json")
-        SerDesType = BaseSerDes::Kind::Json;
+        SerDesType = SerDesKind::Json;
       else if (data_format == "protobuf")
-        SerDesType = BaseSerDes::Kind::Protobuf;
+        SerDesType = SerDesKind::Protobuf;
       else if (data_format == "bytes")
-        SerDesType = BaseSerDes::Kind::Bitstream;
+        SerDesType = SerDesKind::Bitstream;
       else {
         errs() << "Invalid data format\n";
         exit(1);
@@ -458,7 +458,7 @@ struct HelloMLBridge : public ModulePass,
 private:
   std::unique_ptr<MLModelRunner> MLRunner;
   std::string basename;
-  BaseSerDes::Kind SerDesType;
+  SerDesKind SerDesType;
   Module *M;
 };
 

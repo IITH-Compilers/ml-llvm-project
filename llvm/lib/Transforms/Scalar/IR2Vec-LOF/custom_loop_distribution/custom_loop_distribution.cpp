@@ -90,8 +90,7 @@ void custom_loop_distribution::canonicalizeLoopsWithLoads() {
                 auto inst = dyn_cast<Instruction>(use);
                 if (inst && inst->getOpcode() != Instruction::Store &&
                     inst->getOpcode() != Instruction::PHI &&
-                    DT->dominates(st, inst))
-                {
+                    DT->dominates(st, inst)) {
                   SmallVector<Value *, 3> tuples;
                   tuples.push_back(src);
                   tuples.push_back(dest);
@@ -123,8 +122,9 @@ void custom_loop_distribution::canonicalizeLoopsWithLoads() {
   }
 }
 
-void custom_loop_distribution::initPipeCommunication(
-    const std::vector<std::string> &RDG_List) {
+template <typename T>
+void custom_loop_distribution::initCommunication(
+    T &MLRunner, const std::vector<std::string> &RDG_List) {
   int cnt = 1;
   for (auto rdg : RDG_List) {
     std::pair<std::string, std::string> p1("RDG", rdg);
@@ -132,7 +132,7 @@ void custom_loop_distribution::initPipeCommunication(
     errs() << "Features populated END...\n";
     int *out;
     size_t size;
-    MLRunner->evaluate<int *>(out, size);
+    MLRunner->template evaluate<int *>(out, size);
     errs() << "Func name: " << this->FName << " : " << cnt++ << "\n";
     std::vector<int> distSequence;
     for (int i = 0; i < size; i++) {
@@ -160,7 +160,7 @@ void custom_loop_distribution::initPipeCommunication(
   MLRunner->populateFeatures(p1);
   int *out;
   size_t size;
-  MLRunner->evaluate<int *>(out, size);
+  MLRunner->template evaluate<int *>(out, size);
   errs() << "Exit code: " << out[0] << "\n";
 }
 
@@ -174,7 +174,6 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
   this->FName = F.getName();
   canonicalizeLoopsWithLoads();
 
-  
   SmallVector<DataDependenceGraph *, 5> SCCGraphs;
   SmallVector<Loop *, 5> loops;
 
@@ -199,19 +198,19 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
   if (usePipe) {
     std::string basename = "/tmp/" + pipe_name;
 
-    BaseSerDes::Kind SerDesType;
+    SerDesKind SerDesType;
     if (data_format == "json") {
-      SerDesType = BaseSerDes::Kind::Json;
+      SerDesType = SerDesKind::Json;
     } else if (data_format == "bytes") {
-      SerDesType = BaseSerDes::Kind::Bitstream;
+      SerDesType = SerDesKind::Bitstream;
     } else if (data_format == "protobuf") {
-      SerDesType = BaseSerDes::Kind::Protobuf;
+      SerDesType = SerDesKind::Protobuf;
     } else {
       errs() << "Invalid data format\n";
       return false;
     }
 
-    MLRunner = std::make_unique<PipeModelRunner>(
+    auto MLRunner = std::make_unique<PipeModelRunner>(
         basename + ".out", basename + ".in", SerDesType, &M->getContext());
 
     outfile.open(data_format + "out.log", std::ios_base::app);
@@ -228,7 +227,7 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
       return false;
     }
     (errs() << "Number rdg generated : " << RDG_List.size() << "\n");
-    initPipeCommunication(RDG_List);
+    initCommunication(MLRunner, RDG_List);
     outfile.close();
   } else if (useOnnx) {
 
@@ -253,7 +252,7 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
       std::map<std::string, Agent *> agents;
       agents[SELECT_NODE_AGENT] = &node_selection_agent;
       agents[DISTRIBUTION_AGENT] = &distribution_agent;
-      MLRunner =
+      auto MLRunner =
           std::make_unique<ONNXModelRunner>(this, agents, &M->getContext());
       // runInference();
       MLRunner->evaluate<int64_t>();
@@ -265,11 +264,10 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
   } else {
     loopdistribution::RDGData request;
     loopdistribution::Advice response;
-    MLRunner = std::make_unique<
+    auto MLRunner = std::make_unique<
         gRPCModelRunner<loopdistribution::LoopDistribution,
                         loopdistribution::LoopDistribution::Stub,
-                        loopdistribution::RDGData,
-                        loopdistribution::Advice>>(
+                        loopdistribution::RDGData, loopdistribution::Advice>>(
         server_address, &request, &response, &M->getContext());
     MLRunner->setRequest(&request);
     MLRunner->setResponse(&response);
@@ -277,7 +275,7 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
     std::vector<std::string> RDG_List;
     RDG_List.insert(RDG_List.end(), data.input_rdgs_str.begin(),
                     data.input_rdgs_str.end());
-                    
+
     assert(RDG_List.size() == SCCGraphs.size() &&
            RDG_List.size() == loops.size() &&
            "RDG_List, SCCgraphs and loops list should of same size.");
@@ -287,7 +285,7 @@ bool custom_loop_distribution::runOnFunction(Function &F) {
       return false;
     }
     (errs() << "Number rdg generated : " << RDG_List.size() << "\n");
-    initPipeCommunication(RDG_List);
+    initCommunication(MLRunner, RDG_List);
   }
 
   LLVM_DEBUG(errs() << "Call to runwihAnalysis...\n");
