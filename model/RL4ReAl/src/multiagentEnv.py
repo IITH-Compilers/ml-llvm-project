@@ -21,6 +21,8 @@ import math
 import torch
 import signal
 from gym.spaces import Discrete, Box
+import grpc
+import time
 
 # from ggnn import constructGraph
 from ggnn_1 import get_observations, get_observationsInf, GatedGraphNeuralNetwork, constructVectorFromMatrix, AdjacencyList, SPILL_COST_THRESHOLD
@@ -810,7 +812,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             #   print('Force stop')
             self.stopServer()
             self.server_pid = None
-            print('Stop server')
+            print('Stop server due to split')
             #time.sleep(5)
             
         logging.debug("Exit _split_node_step")
@@ -1050,9 +1052,10 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                     # os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
                     self.stopServer()
 
-                if self.server_pid.poll() is None:
-                    os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
-                    print('Force stop')
+                # if self.server_pid.poll() is None:
+                #     # os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
+                #     self.server_pid.kill()
+                #     print('Force stop')
                 self.server_pid = None                
             
             logging.debug('All visited and colored graph visisted')
@@ -1371,7 +1374,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.server_pid.stdin.write("Terminate\n")
         self.server_pid.stdin.flush()
         try:
-            out, errs = self.server_pid.communicate(timeout=15)
+            out, errs = self.server_pid.communicate(timeout=30)
         except:
             self.server_pid.kill()
             out, errs = self.server_pid.communicate()
