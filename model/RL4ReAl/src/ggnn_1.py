@@ -304,6 +304,30 @@ def parseProp(val):
     return val[1: len(val) - 1]
 
 #here
+list_of_phy_registers_ofGRtype=[2,3,5,9,11,13,16,18,19,21,49,51,52,53,54,57,59,61,127,128,129,130,131,132,133,134,239,240,
+                       241,242,243,244,245,246,263,264,265,266,267,268,269,270]
+
+def identify_node_cls(regClass,nodeId):
+    if regClass=="Phy":
+        if nodeId in list_of_phy_registers_ofGRtype:
+            nodeType="GR"
+            return nodeType
+            #print("nodeType1 in GR Phy: ",nodeType1)
+        else:
+            nodeType="Non-GR"
+            return nodeType
+            #print("nodeType1 in Non-GR Phy: ",nodeType1)
+    elif "GR" in regClass:
+        nodeType="GR"
+        return nodeType
+        #print("nodeType1 GR in Non-Phy ",nodeType1)
+    elif "GR" not in regClass:
+        nodeType="Non-GR"
+        return nodeType
+        #print("nodeType1 in Non-GR Non-Phy ",nodeType1)
+
+
+
 def get_observationsInf(graph):
     print("In get_observationsInf")
     nodes = graph.regProf
@@ -349,7 +373,7 @@ def get_observationsInf(graph):
         if spill_cost in [float('inf'), "inf", "INF"] or spill_cost > SPILL_COST_THRESHOLD:
             #print("Inside spill_cost in spill_cost > SPILL_COST_THRESHOLD:")
             spill_cost = float(SPILL_COST_THRESHOLD)  
-            print("spill_cost: ",spill_cost)
+            #print("spill_cost: ",spill_cost)
         
         if len(node.vectors) > 0:
             node_mat = [ vector.vec for vector in node.vectors]
@@ -366,88 +390,34 @@ def get_observationsInf(graph):
         nid_idx[nodeId] = idx
         idx_nid[idx] = nodeId
         assert not torch.isnan(nodeVec).any(), "Nan is present"
-        print("nid and idx are: ",nodeId, idx)
-        print("spill_Cost: ", spill_cost)
+        # print("nid and idx are: ",nodeId, idx)
+        # print("spill_Cost: ", spill_cost)
 
-   
-    # for i, node in enumerate(nodes):
-    #     print("i: ",i)
-    #     print("node: ",node)
-    #     for nlink in node.interferences:
-    #         neighId = nid_idx[nlink]
-    #         print("neighId: ",neighId)
-    #         if i != neighId:
-    #             all_edges.append((i, neighId))
-    #             #all_edges.append((neighId, i))
-    # print("all_edges: ",all_edges)
-    
     '''logic to count  number of GR_GR_edges and NGR_NGR edges'''
-  
+
     for idx,node in enumerate(nodes):
     
-        #print("idx: ",idx)
-        
         nodeId = node.regID
         #print("nodeId: ",nodeId)
         regClass = node.cls
-        single_adj=[]
-
         if regClass=="Phy":
-            if nodeId in list_of_phy_registers_ofGRtype:
-                nodeType1="GR"
-                #print("nodeType1 in GR Phy: ",nodeType1)
-            else:
-                nodeType1="Non-GR"
-                #print("nodeType1 in Non-GR Phy: ",nodeType1)
-        elif "GR" in regClass:
-            nodeType1="GR"
-            #print("nodeType1 GR in Non-Phy ",nodeType1)
-        elif "GR" not in regClass:
-            nodeType1="Non-GR"
-            
-            #print("nodeType1 in Non-GR Non-Phy ",nodeType1)
-    
-        for i, node in enumerate(nodes):
-            if i==idx:
-                for nlink in node.interferences:
-                    neighId = nid_idx[nlink]
-                    if i != neighId:
-                        single_adj.append(neighId)
-                break
-          
-            
-        print("single_adj: ",single_adj)
-        
-        for i in range(0,len(single_adj)):
-           #print("adj node is: ",single_adj[i])
-           Cls = nid_cls[single_adj[i]]
+            for nlink in node.interferences:
+                neighId = nid_idx[nlink]
+                if idx != neighId:
+                    all_edges.append((idx, neighId))
+        else:
+            nodeType1 = identify_node_cls(regClass, nodeId)
+            #print("nodeType1: ", nodeType1) 
+            for nlink in node.interferences:
+                neighId = nid_idx[nlink]
+                if idx != neighId:
+                    Cls = nid_cls[neighId]
+                    nodeType2 = identify_node_cls(Cls, neighId)
+                    #print("nodeType2: ",nodeType2)
+                    if (nodeType1 == "GR" and nodeType2 == "GR") or (nodeType1 == "Non-GR" and nodeType2 == "Non-GR"):
+                        all_edges.append((idx, neighId))
 
-           if Cls=="Phy":
-               if nodeId in list_of_phy_registers_ofGRtype:
-                    nodeType2="GR"
-                    #print("nodeType2 in GR Phy: ",nodeType2)
-               else:
-                    nodeType2="Non-GR"
-                    #print("nodeType2 in Non-GR Phy: ",nodeType2)
-           elif "GR" in Cls:
-                nodeType2="GR"
-                #print("nodeType2 GR in Non-Phy ",nodeType2)
-           elif "GR" not in Cls:
-                nodeType2="Non-GR"
-                #print("nodeType2 Non-GR in Non-Phy ",nodeType2)
-                
-           if nodeType1 == "GR" and nodeType2 == "GR":
-               all_edges.append((idx,single_adj[i]))
-               #GR_GR_edges.append((idx,single_adj[i]))
-               
-           if nodeType1 == "Non-GR" and nodeType2 == "Non-GR":
-               all_edges.append((idx,single_adj[i]))
-               #NGR_NGR_edges.append((idx,single_adj[i]))
-            
-    print("all_edges: ",all_edges)
-    #print("adj_list outside: ",adj_list)
-    #print("Final GR_GR_edges: ",GR_GR_edges)
-    #print("Final NGR_NGR_edges: ",NGR_NGR_edges)
+    #print("all_edges: ",all_edges)
         
     initial_node_representation = torch.stack(initial_node_representation, dim=0)# .to(device)
     
@@ -508,14 +478,10 @@ def get_observationsInf(graph):
     obs = {'raw_graph_mat':raw_graph_mat, 'initial_node_representation':initial_node_representation, 'annotations':annotations, 'adjacency_lists' : adjacency_lists,  'graph_topology':graph_topology, 'spill_cost_list' : spill_cost_list, 'reg_class_list' : reg_class_list, 'nid_idx':nid_idx, 'idx_nid':idx_nid, 'split_points' : split_points_list, 'use_distances': use_distance_list, "positionalSpillWeights": positionalSpillWeights_list}
     obs = Namespace(**obs) 
     return obs
-
+    
 def get_observations(graph):
     nodes = graph['nodes']
     adjlist = graph['adjacency']
-    list_of_phy_registers_ofGRtype=[2,3,5,9,11,13,16,18,19,21,49,51,52,53,54,57,59,61,127,128,129,130,131,132,133,134,239,240,
-                       241,242,243,244,245,246,263,264,265,266,267,268,269,270]
-    #print("adjList: ",adjlist)
-
     num_nodes = len(nodes)
     
     initial_node_representation = []
@@ -532,12 +498,17 @@ def get_observations(graph):
     use_distance_list = []
     raw_graph_mat = []
     positionalSpillWeights_list = []
+    node_label=[]
     for idx, node in enumerate(nodes):
         
+        #print("node: ",node)
         nodeId = node['id']
+        #print("node['label'] before: ",node['label'])
+        node_label.append(node['label'])
         properties = re.findall("{[^}]*}", node['label'])
-        # print(properties)
+        #print("node['label'] after: ",node['label'])
         # properties = properties.split()
+        #print("properties above: ",properties)
         logging.debug('Node idx={} | {}'.format(idx, properties))
         regClass = parseProp(properties[0]) 
         nid_cls[idx]=regClass
@@ -593,81 +564,42 @@ def get_observations(graph):
         initial_node_representation.append(nodeVec)
         nid_idx[nodeId] = idx
         idx_nid[idx] = nodeId
-        
-    # for i, adj in enumerate(adjlist):
-    #     for nlink in adj:
-    #         neighId = nid_idx[nlink['id']]
-    #         if i != neighId:
-    #             all_edges.append((i, neighId))
-    
-    #print("dict nid_Cls: ",nid_cls)
  
     '''logic to count number of GR_GR_edges and NGR_NGR edges'''
- 
-    for idx,node in enumerate(nodes):
-        # print("node: ",node)
+
+    nl=0
+    for idx, node in enumerate(nodes):
         nodeId = node['id']
-        regClass = parseProp(properties[0]) 
-        single_adj=[]
-        #print("single_adj: ",single_adj)
-        # print("idx in ggn1: ",idx) 
-        # print("nodeId: ",nodeId) 
-        # print("regClass: ",regClass)
-        if regClass=="Phy":
-            if nodeId in list_of_phy_registers_ofGRtype:
-                nodeType1="GR"
-                #print("nodeType1 in GR Phy: ",nodeType1)
-            else:
-                nodeType1="Non-GR"
-                #print("nodeType1 in Non-GR Phy: ",nodeType1)
-        elif "GR" in regClass:
-            nodeType1="GR"
-            #print("nodeType1 GR in Non-Phy ",nodeType1)
-        elif "GR" not in regClass:
-            nodeType1="Non-GR"
-            #print("nodeType1 in Non-GR Non-Phy ",nodeType1)
+        #print("NL: ",node_label[nl])
+        propertiess = re.findall("{[^}]*}", node_label[nl])
+        #print("propertiess: ",propertiess)
+        nl=nl+1
+        regClass = parseProp(propertiess[0]) 
+        print("regClass: ",regClass) 
 
-        for i, adj in enumerate(adjlist):
-            if i==idx:
-              for nlink in adj:
-                neighId = nid_idx[nlink['id']]
-                if i != neighId:
-                  single_adj.append((neighId))
-        
-        # print("single_adj size is: ",len(single_adj))
-        # print("single_adj: ",single_adj)
+        if regClass == "Phy":
+            for i, adj in enumerate(adjlist):
+                if i==idx:
+                    for nlink in adj:
+                        neighId = nid_idx[nlink['id']]
+                        if i != neighId:
+                            all_edges.append((i,neighId))
+        else:
+            nodeType1 = identify_node_cls(regClass, nodeId)
+            #print("nodeType1: ", nodeType1)
+            for i, adj in enumerate(adjlist):
+                if i==idx:
+                    for nlink in adj:
+                        neighId = nid_idx[nlink['id']]
+                        if neighId != i:
+                            Cls = nid_cls[neighId]
+                            nodeType2 = identify_node_cls(Cls, neighId)
+                            #print("nodeType2: ",nodeType2)
+                            if (nodeType1 == "GR" and nodeType2 == "GR") or (nodeType1 == "Non-GR" and nodeType2 == "Non-GR"):
+                                all_edges.append((idx, neighId))
 
-        for i in range(0,len(single_adj)):
-            Cls = nid_cls[single_adj[i]]
-            if Cls=="Phy":
-                if nodeId in list_of_phy_registers_ofGRtype:
-                    nodeType2="GR"
-                    #print("nodeType2 in GR Phy: ",nodeType2)
-                else:
-                    nodeType2="Non-GR"
-                    #print("nodeType2 in Non-GR Phy: ",nodeType2)
-            elif "GR" in Cls:
-                nodeType2="GR"
-                #print("nodeType2 GR in Non-Phy ",nodeType2)
-            elif "GR" not in Cls:
-                nodeType2="Non-GR"
-                #print("nodeType2 Non-GR in Non-Phy ",nodeType2)
-
-            #print("nodeType2: ",nodeType2)
-            if nodeType1 == "GR" and nodeType2 == "GR":
-                all_edges.append((idx,single_adj[i]))
-                #GR_GR_edges.append((idx,single_adj[i]))
-            
-            if nodeType1 == "Non-GR" and nodeType2 == "Non-GR":
-                all_edges.append((idx,single_adj[i]))
-                #NGR_NGR_edges.append((idx,single_adj[i]))
-        
-        # print("GR_GR_edges: ",GR_GR_edges)
-        # print("NGR_NGR_edges: ",NGR_NGR_edges)
-    
-    # print("all_edegs: ",all_edges)
-    # print("size of all_edges: ",len(all_edges))
-    
+    #print("all_edges: ",all_edges)
+   
     initial_node_representation = torch.stack(initial_node_representation, dim=0)# .to(device)
     
     logging.debug("Shape of the hidden nodes matrix N X D : {}".format(initial_node_representation.shape)) 
