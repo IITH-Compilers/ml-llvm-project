@@ -1,4 +1,4 @@
-"""Example of a custom gym environment and model. Run this for a demo.
+"""Example of a custom gym environment and model. Run this for a demo. multiagentEnv
 
 This example shows:
   - using a custom environment
@@ -21,12 +21,9 @@ import math
 import torch
 import signal
 from gym.spaces import Discrete, Box
-import grpc
-import time
-
-# from ggnn import constructGraph
 from ggnn_1 import get_observations, get_observationsInf, GatedGraphNeuralNetwork, constructVectorFromMatrix, AdjacencyList, SPILL_COST_THRESHOLD
 from register_action_space import RegisterActionSpace
+
 import ray
 from ray import tune
 from ray.tune import grid_search
@@ -47,8 +44,9 @@ import sys
 import re
 
 from config import BUILD_DIR
-from client import RegisterAllocationClient
-sys.path.append(f"{BUILD_DIR}/tools/MLCompilerBridge/Python-Utilities/")
+
+sys.path.append(f"{BUILD_DIR}/../Python-Utilities/")
+from client import *
 import RegisterAllocationInference_pb2, RegisterAllocation_pb2
 
 config_path=None
@@ -91,6 +89,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.action_space_size = self.registerAS.ac_sp_normlize_size
         self.max_usepoint_count = env_config["max_usepoint_count"]
         self.worker_index = env_config.worker_index
+
         self.max_number_nodes = env_config["max_number_nodes"]
         self.emb_size = env_config["state_size"]
         self.last_task_done = 0
@@ -110,7 +109,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.iteration_number = 1
         self.use_pipe = False
         self.curr_file_name = None
-        self.curr_file_cost = None
 
         print("env_config.worker_index", env_config.worker_index)
         
@@ -175,6 +173,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         # self.total_reward = self.total_reward + reward
         # Cliping reward to [-1, 1] range
         reward = reward/self.reward_max_value
+        
         return reward
     
     def formatRewardValue(self, value):
@@ -250,7 +249,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         }
         
         obs = {
-            # self.select_node_agent_id: { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(select_node_mask), 'state' : cur_obs}
             self.select_node_agent_id: { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(select_node_mask), 'state' : cur_obs, 'annotations': np.array(annotations) ,'adjacency_lists': adjacency_lists}
         }
         self.spill_successful = 0
@@ -325,13 +323,12 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 print("Splitpoint and i type and value", type(splitpoints), type(i), splitpoints, i)
                 raise
         mask = [0]*2
-        if all(v == 0 for v in split_node_mask) or (self.split_steps >= self.split_threshold):
+        if all(v == 0 for v in split_node_mask) or (self.split_steps > self.split_threshold):
             mask[0] = 1
         else:
             mask = [1]*2
         return mask
-
-
+    
     def getSpillWeightListExpanded(self):
         spill_weight_list = [0]*self.max_number_nodes
         for i in range(len(self.obs.spill_cost_list)):
@@ -393,6 +390,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
     def _select_node_step(self, action):        
         logging.debug("Enter _select_node_step")                
+
         self.cur_node = action
         update_status = self.obs.graph_topology.UpdateVisitList(self.cur_node)
         if not update_status:
@@ -422,11 +420,12 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
     def _select_task_step(self, action):
         logging.debug("Enter _select_task_step")
         done = {"__all__": False}
+        # print("Select Task action", action)
         splitpoints = self.obs.split_points[self.cur_node]
         self.task_selected = action
         if type(splitpoints) == np.ndarray:
             splitpoints = splitpoints.tolist()
-        if action == 0 or len(splitpoints) < 1 or self.split_steps >= self.split_threshold: # Colour node
+        if action == 0 or len(splitpoints) < 1 or self.split_steps > self.split_threshold: # Colour node
             self.last_task_done = 0
             self.colour_steps += 1
             if self.task_selected == 1:
@@ -493,6 +492,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
     def _colour_node_step(self, action):
         logging.debug("Enter _colour_node_step")
+        
         colour_reward, done_all, response  = self.step_colorTask(action)
         state = self.obs
         self.cur_obs = self.node_representation_mat[self.cur_node][0:self.emb_size]
@@ -646,9 +646,9 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
     def _split_node_step(self, action):
         logging.debug("Enter _split_node_step")
         # self.cur_obs = self.flat_env.reset()
-        #logging.debug("{} {} {}".format(self.virtRegId, self.obs.idx_nid[self.cur_node], self.cur_node))
+        logging.debug("{} {} {}".format(self.virtRegId, self.obs.idx_nid[self.cur_node], self.cur_node))
         logging.debug("{} {}".format(self.obs.idx_nid, self.obs.nid_idx))
-        #assert self.virtRegId == self.obs.idx_nid[self.cur_node], "Virtual should be same." # 
+        assert self.virtRegId == self.obs.idx_nid[self.cur_node], "Virtual should be same." # 
         use_distances = self.obs.use_distances[self.cur_node]
         done = False
         logging.debug("****Split index****** {} {}".format( len(use_distances), use_distances))
@@ -801,12 +801,11 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             }
             self.obs.next_stage = 'end'
             self.stable_grpc('Exit', 0, 0)   
-            # os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
-            # if self.server_pid.poll() is not None:
-            #   print('Force stop')
-            self.stopServer()
+            os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
+            if self.server_pid.poll() is not None:
+                print('Force stop')
             self.server_pid = None
-            print('Stop server due to split')
+            print('Stop server')
             #time.sleep(5)
             
         logging.debug("Exit _split_node_step")
@@ -883,7 +882,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             if self.mode != 'inference': 
                 response = self.color_assignment_map
                 self.colormap = response
-                #logging.info("Colour map for {} file : {}".format(self.fun_id, response['Predictions'][0]['mapping']))
+                # logging.info("Colour map for {} file : {}".format(self.fun_id, response['Predictions'][0]['mapping']))
                 logging.debug("Number of split steps are {}, colour steps are {}".format(self.split_steps, self.colour_steps))
             else:
                 response = self.color_assignment_map
@@ -892,17 +891,11 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             self.obs.next_stage = 'end'
             if self.mode != 'inference':
                 exit_response = self.stable_grpc('Exit', 0, 0)
-                self.stopServer()
                 current_cost = SPILL_COST_THRESHOLD
                 if exit_response:
                     # print("Cost of spilling and moves:", exit_response.cost)
                     current_cost = exit_response.cost
-                if current_cost == float("inf"):
-                    current_cost = SPILL_COST_THRESHOLD
-                    
                 key = os.path.basename(self.fileName) + "_" + self.functionName
-                self.curr_file_name = self.fileName+"_F"+self.fun_id
-                self.curr_file_cost = current_cost
                 if self.use_costbased_reward:
                     if key not in self.best_allocation_cost.keys():
                         self.best_allocation_cost[key] = current_cost
@@ -920,11 +913,10 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                     try:
                         outs, errs = self.server_pid.communicate(timeout=self.mca_timeout)
                     except:
-                        # self.server_pid.kill()
-                        outs, errs = self.server_pid.communicate()
+                        self.server_pid.kill()
                         process_completed = False
-                        os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
                         print("Clang failing")
+                    outs, errs = self.server_pid.communicate()
                     mlra_throughput = 0
                     mlra_cycles = 0
                     if process_completed:                    
@@ -943,8 +935,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                             outs, errs = self.mca_pid.communicate()
                         if outs != "":
                             try:
-                                # mlra_cycles = re.search('Total Cycles:      [0-9]+', outs).group()
-                                # mlra_cycles = int(re.search('[0-9]+', mlra_cycles).group())
+                                mlra_cycles = re.search('Total Cycles:      [0-9]+', outs).group()
+                                mlra_cycles = int(re.search('[0-9]+', mlra_cycles).group())
                                 mlra_throughput = re.search('Block RThroughput: [0-9]+.[0-9]+', outs).group()
                                 mlra_throughput = float(re.search('[0-9]+.[0-9]+', mlra_throughput).group())                                                                
                             except AttributeError:
@@ -1046,15 +1038,12 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                         # print("Adding function to iteration map", key, self.iteration_number)
                         json.dump(mlra_cycle_map, f)
                         f.close()
-                # else:
-                #     # print("Killing Server pid", self.server_pid.pid)         
-                #     # os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
-                #     self.stopServer()
+                else:
+                    # print("Killing Server pid", self.server_pid.pid)         
+                    os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
 
-                # if self.server_pid.poll() is None:
-                #     # os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
-                #     self.server_pid.kill()
-                #     print('Force stop')
+                if self.server_pid.poll() is not None:
+                    print('Force stop')
                 self.server_pid = None                
             
             logging.debug('All visited and colored graph visisted')
@@ -1103,10 +1092,11 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             self.obs = get_observations(self.graph)
             if self.server_pid is not None:
                 print('terminate the pid if alive : {}'.format(self.server_pid.pid))
-                self.stopServer()
-                # os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
+                os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
             hostip = "0.0.0.0"
-            hostport = str(int(self.env_config['Workers_starting_port']) + self.worker_index)
+
+            #hostport = str(int(self.env_config['Workers_starting_port_placeholder']) + self.worker_index)
+            hostport = str(self.env_config["trial_ports"])
             ipadd = "{}:{}".format(hostip, hostport)
             build_path = self.env_config["build_path"]
             if self.env_config["target"] == 'X86':
@@ -1139,9 +1129,9 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
     def stable_grpc(self, op, register_id, split_point):
         attempt = 0
-        max_retries=6
-        retry_wait_seconds=0.0625
-        retry_wait_backoff_exponent=2
+        max_retries=5
+        retry_wait_seconds=0.1
+        retry_wait_backoff_exponent=1.5
         while True:
             try:
                 logging.debug("Observation {}, register id {} and split point {}".format(op, register_id,  split_point))
@@ -1159,6 +1149,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                     attempt += 1
                     if attempt > max_retries:
                         print("Maximum attempts completed")
+                        print(e)
                         return None
                         # exit(0)
                     remaining = max_retries - attempt
@@ -1368,13 +1359,3 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             logging.debug("updated_graphs= type:{} result:{}".format(type(updated_graphs), updated_graphs.result))
         logging.debug("Exit update_obs")
         return updated_graphs.result
-
-    def stopServer(self):
-        self.server_pid.stdin.write("Terminate\n")
-        self.server_pid.stdin.flush()
-        try:
-            out, errs = self.server_pid.communicate(timeout=30)
-        except:
-            self.server_pid.kill()
-            out, errs = self.server_pid.communicate()
-            print("Force Stop")

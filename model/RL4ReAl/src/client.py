@@ -4,6 +4,10 @@ import subprocess
 import os
 import signal
 import time
+import sys
+
+from config import BUILD_DIR
+sys.path.append(f"{BUILD_DIR}/tools/MLCompilerBridge/Python-Utilities/")
 
 import RegisterAllocation_pb2_grpc, RegisterAllocation_pb2
 

@@ -1,5 +1,5 @@
-import sys, os
-from config import BUILD_DIR, MODEL_PATH, MODEL_DIR
+import sys
+from config import BUILD_DIR, MODEL_PATH,MODEL_DIR
 sys.path.append(
     f"{BUILD_DIR}/tools/MLCompilerBridge/Python-Utilities"
 )
@@ -65,7 +65,7 @@ class service_server(
             "steps": 0,
             "episodes": 0,
             "arch": "X86",
-            "dump_onnx_model": False 
+            "dump_onnx_model": dump_onnx_model 
         }
         args = Namespace(**args)
         self.inference_model = inference.RollOutInference(args)
@@ -79,7 +79,6 @@ class service_server(
                 print("Starting New Episode")
             inter_graphs = request  # graph.decode("utf-8")
             # assert len(inter_graphs.regProf) > 0, "Graphs has no nodes"
-
             if inter_graphs.new:
                 inter_graph_list = []
                 if type(inter_graphs) is not list:
@@ -96,11 +95,11 @@ class service_server(
                 if not self.inference_model.update_obs(request):
                     print("Current split failed")
                     self.inference_model.setCurrentNodeAsNotVisited()
-                self.inference_model.updateSelectNodeObs()                
+                self.inference_model.updateSelectNodeObs()             
             else:
                 self.inference_model.setCurrentNodeAsNotVisited()
-                self.inference_model.updateSelectNodeObs()
-            action, count = self.inference_model.compute_action()
+                self.inference_model.updateSelectNodeObs()   
+            action, count = self.inference_model.compute_action()   
             # action, count = self.inference_model.evaluate()
             select_node_agent = "select_node_agent_{}".format(count)
             select_task_agent = "select_task_agent_{}".format(count)
@@ -138,7 +137,7 @@ class service_server(
             print("Error")
             traceback.print_exc()
             reply = RegisterAllocationInference_pb2.Data(
-                message="Split", regidx=0, payload=0
+                message="Split", regidx=0, payload=0 
             )
             return reply
 
@@ -299,9 +298,6 @@ def run_pipe_communication(data_format, pipe_name, dump_onnx_model=False):
         inter_graphs = NestedDict(inter_graphs)
         return inter_graphs
 
-
-
-
     ray.init()
     inference_model = inference.RollOutInference(args)
     inference_model.env.use_pipe = True
@@ -375,7 +371,6 @@ def run_pipe_communication(data_format, pipe_name, dump_onnx_model=False):
 if __name__ == "__main__":
     # Server.run()
     # blockPrint()
-    
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--server_port", type=str, help="Server port")
@@ -390,7 +385,7 @@ if __name__ == "__main__":
         "--pipe_name",
         type=str,
         help="Pipe Name",
-        default='default_pipe'
+        default='rl4realpipe'
     )
     parser.add_argument("--dump_onnx_model", type=bool, default=False, help="Dump onnx model for current checkpoint")
     args = parser.parse_args()
@@ -401,5 +396,5 @@ if __name__ == "__main__":
         if args.server_port is None:
             print("Please specify server address for gRPC communication")
             exit()
-        compiler_interface = GrpcCompilerInterface(mode = 'server', add_server_method=RegisterAllocationInference_pb2_grpc.add_RegisterAllocationInferenceServicer_to_server, grpc_service_obj=service_server(), hostport= args.server_port, dump_onnx_model=args.dump_onnx_model)
+        compiler_interface = GrpcCompilerInterface(mode = 'server', add_server_method=RegisterAllocationInference_pb2_grpc.add_RegisterAllocationInferenceServicer_to_server, grpc_service_obj=service_server(args.dump_onnx_model), hostport= args.server_port)
         compiler_interface.start_server()

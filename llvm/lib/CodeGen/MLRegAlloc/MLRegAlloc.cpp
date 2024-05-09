@@ -107,6 +107,8 @@
 // #include "Service/RegisterAllocationInference/RegisterAllocationInference.h"
 
 #define DIS_SANITY_CHECK 1
+#define MIN_VARS 120
+#define MAX_VARS 500
 using namespace llvm;
 using grpc::ServerContext;
 using grpc::Status;
@@ -359,14 +361,12 @@ void MLRA::processMLInputsProtobuf(SmallSetVector<unsigned, 8> *updatedRegIdxs,
     }
     Message *regProfMsg =
         new registerallocationinference::RegisterProfileList::RegisterProfile();
-
     std::pair<std::string, int32_t> regID("regID", reg);
     std::pair<std::string, std::string> cls("cls", rp.cls);
     std::pair<std::string, int32_t> color("color", rp.color);
     std::pair<std::string, std::vector<float>> spillWeights(
         "positionalSpillWeights",
         std::vector<float>(rp.spillWeights.begin(), rp.spillWeights.end()));
-
     std::pair<std::string, float> spillWeight("spillWeight", rp.spillWeight);
     if (rp.spillWeight == INFINITY)
       spillWeight.second = -1.0f;
@@ -2431,13 +2431,10 @@ void MLRA::initPipeCommunication() {
         }
         count++;
       }
-      if (count < 120 || count > 500) {
+      if (count < MIN_VARS || count > MAX_VARS) {
         errs() << "regProf size is not between 120 and 500\n";
         return;
-      }
-      processMLInputs(nullptr, true, IsJson);
-
-      errs() << "Call model first time\n";
+      }  
 
       for (auto it = MF->begin(); it != MF->end(); it++) {
         if (it->isEHFuncletEntry() || it->isEHPad() || it->isEHScopeEntry() ||
@@ -2450,12 +2447,11 @@ void MLRA::initPipeCommunication() {
           }
         }
       }
+      processMLInputs(nullptr, true, IsJson);
       isGraphSet = true;
-      // errs() << "Processing funtion: " << MF->getName() << "\n";
     } else {
       JO["new"] = false;
       this->IsNew = false;
-      // errs() << "Call model again\n";
     }
     size_t size;
     int *out;
@@ -2586,9 +2582,7 @@ void MLRA::inference() {
   //   return;
   // }
   if (usePipe) {
-    std::string basename = "/tmp/" + mlra_pipe_name;
-
-    // errs() << "Initializing pipe communication...\n";
+    std::string basename = "/tmp/" + mlra_pipe_name;  
     BaseSerDes::Kind SerDesType;
     if (data_format == "json") {
       SerDesType = BaseSerDes::Kind::Json;
@@ -2663,7 +2657,7 @@ void MLRA::inference() {
       }
 
       LLVM_DEBUG(errs() << "edge_count = " << edge_count << "\n");
-      if (count >= 500 || count <= 0) {
+      if (count > MAX_VARS || count < MIN_VARS) {
         LLVM_DEBUG(errs() << "Error msg: Node count is more then max value\n");
         return;
       }

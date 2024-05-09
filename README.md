@@ -162,7 +162,7 @@ This is described in the paper [here](https://ieeexplore.ieee.org/abstract/docum
 
 > Reinforcement Learning assisted Loop Distribution for Locality and Vectorization, Shalini Jain, S. VenkataKeerthy, Rohit Aggarwal, Tharun Kumar Dangeti, Dibyendu Das, Ramakrishna Upadrasta LLVM-HPC, 2022.
 
-Implimentaion here : [Model Training](./model/LoopDistribution/src/README.md) , [Inference](./llvm/lib/Transforms/Scalar/IR2Vec-LOF/custom_loop_distribution/Readme.md)
+Implementaion here : [Model Training](./model/LoopDistribution/src/README.md) , [Inference](./llvm/lib/Transforms/Scalar/IR2Vec-LOF/custom_loop_distribution/Readme.md)
 
 #### Try it out !!!
 
@@ -187,7 +187,7 @@ This is described in the paper [here](https://dl.acm.org/doi/abs/10.1145/3578360
 
 >RL4ReAl: Reinforcement Learning for Register Allocation : S. VenkataKeerthy, Siddharth Jain, Anilava Kundu, Rohit Aggarwal, Albert Cohen, Ramakrishna Upadrasta CC, 2023.
 
-Implimentaion here : [Model Training](./model/RL4ReAl/README.md) , [Inference](./llvm/lib/CodeGen/MLRegAlloc/README.md)
+Implementaion here : [Model Training](./model/RL4ReAl/README.md) , [Inference](./llvm/lib/CodeGen/MLRegAlloc/README.md)
 
 #### Try it out !!!
 ```bash
@@ -207,7 +207,7 @@ Please see [slides](https://llvm.org/devmtg/2022-04-03/slides/POSET-RL.Phase.ord
 
 > POSET-RL: Phase ordering for Optimizing Size and Execution Time using Reinforcement Learning: Shalini Jain, Yashas Andaluri, S. VenkataKeerthy and Ramakrishna Upadrasta, ISSPASS, 2022.
 
-Implimentaion here : [Model Training](./model/POSET-RL/README.md) , [Inference](./llvm/lib/Transforms/IPO/PosetRL/README.md)
+Implementaion here : [Model Training](./model/POSET-RL/README.md) , [Inference](./llvm/lib/Transforms/IPO/PosetRL/README.md)
 
 #### Try it out !!!
 ```bash

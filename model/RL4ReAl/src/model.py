@@ -49,15 +49,11 @@ class SelectTaskNetwork(TorchModelV2, nn.Module):
         
     def forward(self, input_dict, state, seq_lens):
         """Build a network that maps state -> action values."""
-        # print("Select task GPU", next(self.parameters()).is_cuda)
-        # print("Task select model output", input_dict["obs"]["state"])
         # assert not torch.isnan(input_dict["obs"]["state"]).any(), "Nan in select task model input"
         x = F.relu(self.fc1(input_dict["obs"]["state"]))
         # assert not torch.isnan(x).any(), "Nan in select task model after fc1"
-        # print("Task select model output 1", x)
         x = F.relu(self.fc2(x))
         # assert not torch.isnan(x).any(), "Nan in select task model after fc2"
-        # print("Task select model output 2", x)
         x = torch.cat((x, input_dict["obs"]["node_properties"]), 1)
         
         x = self.fc3(x)
@@ -124,26 +120,19 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
         self.recent_models = []
     def forward(self, input_dict, state, seq_lens):
         """Build a network that maps state -> action values."""
-        # print("Obs keys are:", input_dict['obs'].keys())
-        # print("State shape:", input_dict["obs"]["state"].shape)
+
         input_state_list = torch.zeros(input_dict["obs"]["state"].shape[0], self.max_number_nodes, self.emb_size)
         if self.enable_ggnn:
-            # print("*************************** SHAPES PRINTING *****************************")
-            # print("-----------------BEFORE GGNN-------------")
-
             # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
             # print("from select node forward func : ", device)
             # print("adjacency list device = ", input_dict["obs"]["adjacency_lists"][0].data.device)
             # print("annotations device = ", input_dict["obs"]["annotations"].device)
-            assert not torch.isnan(input_dict["obs"]["state"]).any(), "Nan in select node model obs:state"
-            assert not torch.isnan(input_dict['obs']['adjacency_lists']['data'].values).any(), "Nan in select node model adjlist"
+            # assert not torch.isnan(input_dict["obs"]["state"]).any(), "Nan in select node model obs:state"
+            # assert not torch.isnan(input_dict['obs']['adjacency_lists']['data'].values).any(), "Nan in select node model adjlist"
 
 
             ggnn_input_x = torch.dstack((input_dict["obs"]["state"], input_dict["obs"]["annotations"]))
-            edge_index = input_dict['obs']['adjacency_lists']['data'].values
-
-
-
+            edge_index = input_dict['obs']['adjacency_lists']['data'].values.mT
 
             # print("ggnn_input_x.device = ", ggnn_input_x.device)
             # print("edge_index.device = ", edge_index.device)
@@ -151,48 +140,13 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
             # #################### batch method #######################
             data_list = []
 
-            data_list = [Data(x=ggnn_input_x[i], edge_index=edge_index[i].long().T) for i in range(batch_size)]
-            
+            data_list = [Data(x=ggnn_input_x[i], edge_index=edge_index[i].long()) for i in range(batch_size)]
             batch_data = Batch.from_data_list(data_list=data_list)
 
+            node_mat = self.ggnn(batch_data.x, batch_data.edge_index).reshape(batch_size, -1, 100)
+            # assert not torch.isnan(node_mat).any(), "Nan in select node model input after ggnn"
 
-            node_mat = torch.tanh(self.ggnn(batch_data.x, batch_data.edge_index).reshape(batch_size, -1, 100))
-            
-            #For GATConv
-            if isinstance(self.ggnn, GATConv):
-                node_mat = self.ggnn(batch_data.x, batch_data.edge_index).reshape(batch_size, -1, 100)
-                node_mat = F.normalize(node_mat, p=2, dim=-1)
-                node_mat = torch.tanh(node_mat)
-            else:
-                node_mat = torch.tanh(self.ggnn(batch_data.x, batch_data.edge_index).reshape(batch_size, -1, 100))
-            
-            if len(self.recent_models) == 3:
-                self.recent_models.pop(0)
-            
-            self.recent_models.append(copy.deepcopy(self.ggnn))
 
-            try:
-                assert not torch.isnan(node_mat).any(), "Nan in select node model input"
-            except:
-                print("Few stats about ggnn layer weights and bias:\n")
-                print("Weights:")
-                print(self.ggnn.lin.weight.grad)
-                print("Any Nan: ",torch.isnan(self.ggnn.state_dict()['lin.weight']).any())
-                print("Max: ", torch.max(self.ggnn.state_dict()['lin.weight']))
-                print("Gradient Norm: ", torch.norm(self.ggnn.lin.weight.grad, p=2))
-                
-                print("Bias:")
-                print(self.ggnn.bias.grad)
-                print("Any Nan: ",torch.isnan(self.ggnn.state_dict()['bias']).any())
-                print("Max: ", torch.max(self.ggnn.state_dict()['bias']))
-                print("Gradient Norm: ", torch.norm(self.ggnn.bias.grad, p=2))
-                
-                print("Saving the last 3 recent models:")
-                for idx, model in enumerate(self.recent_models):
-                    torch.save(model, f"/home/ai20btech11004/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src/ggnn_failed_models/ggnn_{idx}")
-                    
-                exit(1)
-            
             # print(batch_data)
             # # print('num_graphs = ', batch_data.num_graphs)
 
@@ -212,15 +166,10 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
             input_state_list = node_mat
         else:
             input_state_list = initial_node_representation=input_dict["obs"]["state"]
-        input_state_list = input_state_list.to(input_dict["obs"]["state"].device)
-        try:
-            assert not torch.isnan(input_state_list).any(), "Nan in select node model input"
-        except:
-            print("Saving the last 3 recent models:")
-            for idx, model in enumerate(self.recent_models):
-                torch.save(model, f"/home/ai20btech11004/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src/ggnn_failed_models/ggnn_{idx}")
-                
-            exit(1)
+        
+        input_state_list = input_dict["obs"]["state"] 
+        input_state_list = input_state_list.to(input_dict["obs"]["state"].device)  
+        # assert not torch.isnan(input_state_list).any(), "Nan in select node model input"
         x = F.relu(self.fc1(input_state_list))
         if torch.isnan(x).any():
             print("Task select model input max value: ", torch.max(input_state_list))
@@ -277,7 +226,6 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
                 
             exit(1)
         self._features = x.clone().detach()
-        # x = self.softmax(x)
         mask = input_dict["obs"]["action_mask"]
         # masking_value = -1e6
         # masking_value = FLOAT_MIN
@@ -285,16 +233,8 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
         x = x + inf_mask
         # x = torch.where(mask, x, torch.tensor(masking_value).to(x.device))
         #x = torch.where(mask, x, torch.tensor(FLOAT_MIN).to(x.device))
-        # print("Select node output and emb device", x.device, node_mat.device) 
-        try:      
-            assert not torch.isnan(x).any(), "Nan in select node model output"
-        except:
-            print("Saving the last 3 recent models:")
-            for idx, model in enumerate(self.recent_models):
-                torch.save(model, f"/home/ai20btech11004/ML-Register-Allocation/model/RegAlloc/ggnn_drl/rllib_split_model/src/ggnn_failed_models/ggnn_{idx}")
-                
-            exit(1)
-        torch.set_printoptions(threshold=10_000)
+        # print("Select node output and emb device", x.device, node_mat.device)        
+        # assert not torch.isnan(x).any(), "Nan in select node model output"
         return x, state, input_state_list
         # return x, state
 
@@ -349,7 +289,7 @@ class ColorNetwork(TorchModelV2, nn.Module):
         inf_mask = torch.clamp(torch.log(mask), min=FLOAT_MIN)
         x = x + inf_mask
         # x = torch.where(mask, x, torch.tensor(masking_value).to(x.device))
-        #x = torch.where(mask, x, torch.tensor(FLOAT_MIN).to(x.device))        
+        #x = torch.where(mask, x, torch.tensor(FLOAT_MIN).to(x.device))  
         return x, state, self._features
         # return x, state
     
@@ -502,4 +442,4 @@ class SplitNodeNetwork(TorchModelV2, nn.Module):
 #             split_out = self.splitNodeNet(hidden_state[node_index])
 
 #         return select_out, node_index, color_out, action_space
-
+	
