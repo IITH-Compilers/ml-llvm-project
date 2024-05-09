@@ -55,6 +55,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cmath>
 #include <map>
+#include <optional>
 
 namespace llvm {
 namespace json {
