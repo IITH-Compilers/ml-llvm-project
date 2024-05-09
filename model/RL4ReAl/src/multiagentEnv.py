@@ -48,8 +48,8 @@ from config import BUILD_DIR
 
 sys.path.append(f"{BUILD_DIR}/tools/MLCompilerBridge/Python-Utilities")
 
-#from client import *
-#from client import RegisterAllocationClient
+from client import *
+
 import RegisterAllocationInference_pb2, RegisterAllocation_pb2
 
 config_path=None
@@ -399,7 +399,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             print("UpdateVisitList failed for {} graph at {} node".format(self.path, self.cur_node))
             assert False, 'discovered node visited.'
         self.virtRegId = self.obs.idx_nid[self.cur_node]
-        # logging.info("Node selected = {}, corresponding register id = {}".format(action, self.virtRegId))
+        #logging.info("Node selected = {}, corresponding register id = {}".format(action, self.virtRegId))
+        print("Node selected = {}, corresponding register id = {}".format(action, self.virtRegId))
         state = self.obs
         self.cur_obs = self.node_representation_mat[self.cur_node][0:self.emb_size]
         if self.cur_obs is not None and not isinstance(self.cur_obs, np.ndarray):
@@ -424,6 +425,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         done = {"__all__": False}
         splitpoints = self.obs.split_points[self.cur_node]
         self.task_selected = action
+        print("Select Task action", action)
         if type(splitpoints) == np.ndarray:
             splitpoints = splitpoints.tolist()
         if action == 0 or len(splitpoints) < 1 or self.split_steps >= self.split_threshold: # Colour node
@@ -493,6 +495,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
     def _colour_node_step(self, action):
         logging.debug("Enter _colour_node_step")
+        print("Selected colour is:", action)
         colour_reward, done_all, response  = self.step_colorTask(action)
         state = self.obs
         self.cur_obs = self.node_representation_mat[self.cur_node][0:self.emb_size]
@@ -644,6 +647,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         return obs, reward, done, {}
 
     def _split_node_step(self, action):
+        print("Splitting at point: ",action)
         logging.debug("Enter _split_node_step")
         # self.cur_obs = self.flat_env.reset()
         #logging.debug("{} {} {}".format(self.virtRegId, self.obs.idx_nid[self.cur_node], self.cur_node))
