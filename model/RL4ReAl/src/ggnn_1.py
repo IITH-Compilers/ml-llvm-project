@@ -323,8 +323,7 @@ def get_observationsInf(graph):
     use_distance_list = []
     raw_graph_mat = []
     positionalSpillWeights_list = []
-    for idx, node in enumerate(nodes):
-        
+    for idx, node in enumerate(nodes):    
         nodeId = node.regID
         regClass = node.cls #parseProp(properties[0]) 
         spill_cost = node.spillWeight #parseProp(properties[1])
@@ -348,14 +347,13 @@ def get_observationsInf(graph):
         node_tansor_matrix = torch.FloatTensor(node_mat)
         nodeVec = constructVectorFromMatrix(node_tansor_matrix)
         reg_class_list.append(regClass)
-        spill_cost_list.append(spill_cost)
+        spill_cost_list.append(spill_cost)  
         color_list.append(color)    
         initial_node_representation.append(nodeVec)
         nid_idx[nodeId] = idx
-        idx_nid[idx] = nodeId
+        idx_nid[idx] = nodeId  
 
         assert not torch.isnan(nodeVec).any(), "Nan is present"
-        
     for i, node in enumerate(nodes):
         for nlink in node.interferences:
             neighId = nid_idx[nlink]

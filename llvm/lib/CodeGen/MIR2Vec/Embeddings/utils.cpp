@@ -53,12 +53,12 @@ IR2Vec::createOpcodeMap(llvm::Triple::ArchType archType) {
   std::string extFile = MLBridge::MLConfig::mlconfig;
   switch (archType) {
   case Triple::ArchType::aarch64: {
-    extFile += "/extracted_aarch64.csv";
+    extFile += "/regalloc/extracted_aarch64.csv";
     break;
   }
   case Triple::ArchType::x86:
   case Triple::ArchType::x86_64: {
-    extFile += "/extracted_x86.csv";
+    extFile += "/regalloc/extracted_x86.csv";
     break;
   }
   default:
