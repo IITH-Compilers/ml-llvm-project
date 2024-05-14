@@ -78,6 +78,7 @@
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Timer.h"
@@ -289,31 +290,44 @@ grpc::Status MLRA::codeGen(grpc::ServerContext *context,
 
   if (request->message() == "Split" ||
       request->message() == "SplitAndCapture") {
-    unsigned splitRegIdx = request->regidx();
-    int splitPoint = request->payload();
-    SmallVector<unsigned, 2> NewVRegs;
+
     LLVM_DEBUG(errs() << "==========================BEFORE "
                          "SPLITTING==================================\n");
     MF->dump();
     LLVM_DEBUG(
         errs()
         << "============================================================\n");
+    // batch split
+    SmallSetVector<unsigned, 8> NewVRegs;
+    SmallVector<unsigned, 2> OldRegIdxs;
+    for (auto &i : request->split()) {
 
-    if (splitVirtReg(splitRegIdx, splitPoint, NewVRegs)) {
-      SmallSetVector<unsigned, 8> updatedRegIdxs;
-      updateRegisterProfileAfterSplit(splitRegIdx, NewVRegs, updatedRegIdxs);
-      if (enable_dump_ig_dot)
-        dumpInterferenceGraph(std::to_string(SplitCounter));
-      if (enable_mlra_checks)
-        verifyRegisterProfile();
-      if (request->message() == "Split")
-        sendRegProfData<registerallocation::RegisterProfileList>(
-            response, &updatedRegIdxs);
-      else
-        sendRegProfData<registerallocation::RegisterProfileList>(response);
-    } else {
-      response->set_result(false);
+      SmallVector<unsigned, 2> CurrNewVRegs;
+      unsigned splitRegIdx = i.regidx();
+      int splitPoint = i.splitpt();
+      bool result = splitVirtReg(splitRegIdx, splitPoint, CurrNewVRegs);
+      // set the results list from split responses and new virtReg list
+      response->add_result(result);
+      for (auto e : CurrNewVRegs) {
+        NewVRegs.insert(e);
+      }
+      OldRegIdxs.push_back(splitRegIdx);
     }
+
+    // update the regProf after split using the new virtregs
+    SmallSetVector<unsigned, 8> updatedRegIdxs;
+    updateRegisterProfileAfterSplit(OldRegIdxs, NewVRegs, updatedRegIdxs);
+
+    // send the regprofdata
+    if (enable_dump_ig_dot)
+      dumpInterferenceGraph(std::to_string(SplitCounter));
+    if (enable_mlra_checks)
+      verifyRegisterProfile();
+    if (request->message() == "Split")
+      sendRegProfData<registerallocation::RegisterProfileList>(response,
+                                                               &updatedRegIdxs);
+    else
+      sendRegProfData<registerallocation::RegisterProfileList>(response);
   }
 
   return Status::OK;
@@ -660,10 +674,10 @@ void MLRA::sendRegProfData(T *response,
   }
   if (regIdxs.size() > 0) {
     numSplits++;
-    response->set_result(true);
+    // response->set_result(true);
   } else {
     LLVM_DEBUG(errs() << "update not happeed\n");
-    response->set_result(false);
+    // response->set_result(false);
   }
 }
 
@@ -677,9 +691,10 @@ Observation MLRA::split_node_step(unsigned action) {
   //                                   "=======================\n");
   // errs() << "Tring to split: " << splitRegIdx << " at point: " << splitPoint
   //  << "\n";
+  llvm_unreachable("To be updated accordingly for batch splitting");
   if (splitVirtReg(splitRegIdx, splitPoint, NewVRegs)) {
     SmallSetVector<unsigned, 8> updatedRegIdxs;
-    updateRegisterProfileAfterSplit(splitRegIdx, NewVRegs, updatedRegIdxs);
+    // updateRegisterProfileAfterSplit(splitRegIdx, NewVRegs, updatedRegIdxs);
     if (enable_dump_ig_dot)
       dumpInterferenceGraph(std::to_string(SplitCounter));
     if (enable_mlra_checks)
@@ -1884,7 +1899,7 @@ void MLRA::printRegisterProfile() const {
 }
 
 void MLRA::updateRegisterProfileAfterSplit(
-    unsigned OldVRegIdx, SmallVector<unsigned, 2> NewVRegs,
+    SmallVector<unsigned, 2> OldRegIdxs, SmallSetVector<unsigned, 8> NewVRegs,
     SmallSetVector<unsigned, 8> &updatedRegs) {
   LLVM_DEBUG(
       errs() << "Updating Register Profile after spliting for function ID: "
@@ -1895,7 +1910,7 @@ void MLRA::updateRegisterProfileAfterSplit(
 
   unsigned step = TRI->getNumRegs() + 1;
   // unsigned OldVRegIdx = Register::virtReg2Index(OldVReg);
-  auto oldRP = regProfMap[OldVRegIdx];
+  // auto oldRP = regProfMap[OldVRegIdx];
   // assert(NewVRegs.size() == 2);
 
   for (unsigned i = 0; i < NewVRegs.size(); i++) {
@@ -2036,54 +2051,14 @@ void MLRA::updateRegisterProfileAfterSplit(
       regProfMap[k + step].useDistances = useDistances;
     }
 
-    for (auto interference : oldRP.interferences) {
-      LLVM_DEBUG(errs() << "Processing interference --3 " << interference
-                        << "\n");
-      // if (regProfMap[interference].cls.equals("Phy")) {
-      //   // if (Matrix->checkInterference(*NewVirtReg, interference)) {
-      //   //   rp.interferences.insert(interference);
-      //   //   rp.frwdInterferences.insert(interference);
-
-      //   //   regProfMap[interference].interferences.insert(NewVRegIdx +
-      //   step);
-      //   //   regProfMap[interference].frwdInterferences.insert(NewVRegIdx +
-      //   //   step);
-
-      //   //   // regProfMap[interference].overlapsStart.erase(OldVRegIdx);
-      //   //   // regProfMap[interference].overlapsEnd.erase(OldVRegIdx);
-      //   //   updatedRegs.insert(interference);
-      //   // }
-      //   // continue;
-      // } else {
-      //   unsigned Reg = Register::index2VirtReg(interference - step);
-      //   errs() << "Interference -- " << interference << "\n";
-      //   LLVM_DEBUG(errs() << "\t In virtual register: " << printReg(Reg, TRI)
-      //                     << "--" << interference << "\n");
-      //   LiveInterval *InterVReg = &LIS->getInterval(Reg);
-      //   LLVM_DEBUG(errs() << "\tWhose Live Interval is: ";
-      //              InterVReg->print(errs());
-      //              errs() << "\n\tAnd, the Live Interval of NewVirtReg is: ";
-      //              NewVirtReg->print(errs()));
-
-      //   auto Reg1 =
-      //       NewVirtReg->begin() < InterVReg->begin() ? NewVirtReg :
-      //       InterVReg;
-      //   auto Reg2 = Reg1 == InterVReg ? NewVirtReg : InterVReg;
-
-      //   if (Reg1->overlaps(*Reg2)) {
-      //     LLVM_DEBUG(errs() << "\n\t It overlaps\n");
-      //     rp.interferences.insert(interference);
-      //     rp.frwdInterferences.insert(interference);
-
-      //     regProfMap[interference].interferences.insert(NewVRegIdx + step);
-      //     regProfMap[interference].frwdInterferences.insert(NewVRegIdx +
-      //     step);
-
-      //     updatedRegs.insert(interference);
-      //   }
-      // }
-      regProfMap[interference].interferences.remove(OldVRegIdx);
-      regProfMap[interference].frwdInterferences.remove(OldVRegIdx);
+    for (auto OldVRegIdx : OldRegIdxs) {
+      auto oldRP = regProfMap[OldVRegIdx];
+      for (auto interference : oldRP.interferences) {
+        LLVM_DEBUG(errs() << "Processing interference --3 " << interference
+                          << "\n");
+        regProfMap[interference].interferences.remove(OldVRegIdx);
+        regProfMap[interference].frwdInterferences.remove(OldVRegIdx);
+      }
     }
 
     // There is a possibility that the new regs themselves interfere
@@ -2116,7 +2091,10 @@ void MLRA::updateRegisterProfileAfterSplit(
     regProfMap[NewVRegIdx + step] = rp;
     updatedRegs.insert(NewVRegIdx + step);
   }
-  regProfMap.erase(OldVRegIdx);
+
+  for (auto OldVRegIdx : OldRegIdxs) {
+    regProfMap.erase(OldVRegIdx);
+  }
   LLVM_DEBUG(errs() << "Register Profile map after splitting -- \n");
   LLVM_DEBUG(printRegisterProfile());
 }
@@ -2402,8 +2380,11 @@ void MLRA::initPipeCommunication() {
   auto processOutput = [&](std::vector<int> &reply) {
     if (reply[0] == 0) {
       PipeResponseData.Action = "Split";
-      PipeResponseData.RedIdx = reply[1];
-      PipeResponseData.PayLoad = reply[2];
+      for (int i = 1; i < reply.size(); i = i + 2) {
+        PipeResponseData.SplitPts[reply[i]] = reply[i + 1];
+      }
+      // PipeResponseData.RedIdx = reply[1];
+      // PipeResponseData.PayLoad = reply[2];
     } else if (reply[0] == 1) {
       PipeResponseData.Action = "Color";
       PipeResponseData.ColorMap.clear();
@@ -2492,30 +2473,46 @@ void MLRA::initPipeCommunication() {
     // write if action is Split
     if (PipeResponseData.Action == "Split" ||
         PipeResponseData.Action == "SplitAndCapture") {
-      unsigned splitRegIdx = PipeResponseData.RedIdx;
-      int splitPoint = PipeResponseData.PayLoad;
-      SmallVector<unsigned, 2> NewVRegs;
+      // unsigned splitRegIdx = PipeResponseData.RedIdx;
+      // int splitPoint = PipeResponseData.PayLoad;
+      // SmallVector<unsigned, 2> NewVRegs;
 
       // errs() << "**************STARTING SPLITTING********************\n";
       // errs() << "Splitting regidx: " << splitRegIdx << " at " << splitPoint
       //        << "\n";
 
-      if (splitVirtReg(splitRegIdx, splitPoint, NewVRegs)) {
-        SmallSetVector<unsigned, 8> updatedRegIdxs;
-        updateRegisterProfileAfterSplit(splitRegIdx, NewVRegs, updatedRegIdxs);
-        if (enable_dump_ig_dot)
-          dumpInterferenceGraph(std::to_string(SplitCounter));
-        if (enable_mlra_checks)
-          verifyRegisterProfile();
-        // errs() << "Splitting done\n";
-        // errs() << "**********************************\n";
-        if (PipeResponseData.Action == "Split") {
-          errs() << "calling processMLInputs upon splitting...\n";
-          processMLInputs(&updatedRegIdxs, false, IsJson);
-        } else
-          processMLInputs(nullptr, false, IsJson);
-      } else {
-        // errs() << "ENTERED ELSE CASE!!!!!!!!!\n";
+      SmallSetVector<unsigned, 8> NewVRegs;
+      SmallVector<unsigned, 2> OldRegIdxs;
+      for (auto [splitRegIdx, splitPoint] : PipeResponseData.SplitPts) {
+
+        SmallVector<unsigned, 2> CurrNewVRegs;
+        bool result = splitVirtReg(splitRegIdx, splitPoint, CurrNewVRegs);
+        // set the results list from split responses and new virtReg list
+        // response->add_result(result);
+        for (auto e : CurrNewVRegs) {
+          NewVRegs.insert(e);
+        }
+        OldRegIdxs.push_back(splitRegIdx);
+      }
+
+      // update the regProf after split using the new virtregs
+      SmallSetVector<unsigned, 8> updatedRegIdxs;
+      updateRegisterProfileAfterSplit(OldRegIdxs, NewVRegs, updatedRegIdxs);
+
+      if (enable_dump_ig_dot)
+        dumpInterferenceGraph(std::to_string(SplitCounter));
+      if (enable_mlra_checks)
+        verifyRegisterProfile();
+      // errs() << "Splitting done\n";
+      // errs() << "**********************************\n";
+      if (PipeResponseData.Action == "Split") {
+        errs() << "calling processMLInputs upon splitting...\n";
+        processMLInputs(&updatedRegIdxs, false, IsJson);
+      } else
+        processMLInputs(nullptr, false, IsJson);
+
+      // TODO: what if no splitting in batch splitting?? :inference
+      {
         this->CommuResult = false;
         // errs() << "Splitting failed\n";
         std::pair<std::string, bool> result("result", 0);

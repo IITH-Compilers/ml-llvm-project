@@ -190,8 +190,7 @@ public:
 private:
   struct PipeResponse {
     std::string Action;
-    int RedIdx;
-    int PayLoad;
+    std::map<unsigned, unsigned> SplitPts;
     std::map<std::string, int64_t> ColorMap;
   };
   PipeResponse PipeResponseData;
@@ -256,8 +255,8 @@ private:
   void printRegisterProfile() const;
 
   void
-  updateRegisterProfileAfterSplit(unsigned OldVReg,
-                                  SmallVector<unsigned, 2> NewVRegs,
+  updateRegisterProfileAfterSplit(SmallVector<unsigned, 2> OldRegIdxs,
+                                  SmallSetVector<unsigned, 8> NewVRegs,
                                   SmallSetVector<unsigned, 8> &updatedRegs);
   void serializeRegProfData(
       registerallocationinference::RegisterProfileList *response);
