@@ -33,7 +33,7 @@ message RegisterProfileList {
     repeated float positionalSpillWeights = 6;
   }
   repeated RegisterProfile regProf = 1;
-  bool result = 2;
+  repeated bool result = 2;
   float cost = 3;
 }
 
@@ -42,10 +42,14 @@ message Data {
     string key = 1;
     uint32 value = 2;
   }
+  message splitData {
+    uint32 regidx = 1;
+    uint32 splitpt = 2;
+  }
   string message = 1;
-  uint32 regidx = 2;
-  int64 payload = 3;
-  repeated colorData color = 4;
+  repeated splitData split = 2;
+  repeated colorData color = 3;
 }
+
 
 message Empty {}
