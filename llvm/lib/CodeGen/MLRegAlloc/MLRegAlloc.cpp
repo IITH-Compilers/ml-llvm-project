@@ -2217,6 +2217,7 @@ void MLRA::allocatePhysRegsViaRL() {
                  //      << O;
                  // }
       );
+      LLVM_DEBUG(errs() << "Assiging color to regID: " << node_id << "\n");
       // LastEvicted.clearEvicteeInfo(VirtReg->reg);
 
       // Get the physical register mapped  to color

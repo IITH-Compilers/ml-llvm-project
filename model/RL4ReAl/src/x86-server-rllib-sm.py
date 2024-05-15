@@ -19,9 +19,7 @@ sys.path.append(
 import rollout as inference
 from argparse import Namespace
 
-sys.path.append(f"{BUILD_DIR}/../MLCompilerBridge/CompilerInterface/")
-from PipeCompilerInterface import PipeCompilerInterface
-from GrpcCompilerInterface import GrpcCompilerInterface
+from compilerinterface import PipeCompilerInterface, GrpcCompilerInterface
 
 def blockPrint():
     sys.stdout = open(os.devnull, 'w')
@@ -302,7 +300,7 @@ def run_pipe_communication(data_format, pipe_name, dump_onnx_model=False):
         inter_graphs = NestedDict(inter_graphs)
         return inter_graphs
 
-    ray.init(_temp_dir="/home/intern24007/ray_log")
+    ray.init()
     inference_model = inference.RollOutInference(args)
     inference_model.env.use_pipe = True
     # serdes = SerDes.SerDes(data_format, "/tmp/" + pipe_name)

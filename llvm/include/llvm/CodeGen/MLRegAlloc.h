@@ -336,7 +336,7 @@ private:
 
   void loadTargetRegisterConfig(std::string config_colorMap) {
     assert(config_colorMap != "" && "Path is empty");
-    LLVM_DEBUG(errs() << config_colorMap << "\n");
+    LLVM_DEBUG(errs() << "config map path: " << config_colorMap << "\n");
     std::ifstream targert_color2reg_file(config_colorMap);
     assert(!targert_color2reg_file.fail() && "Config file is not present.");
     std::string config;

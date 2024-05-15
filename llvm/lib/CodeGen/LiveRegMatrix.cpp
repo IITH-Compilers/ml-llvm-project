@@ -151,16 +151,8 @@ bool LiveRegMatrix::checkRegMaskInterference(LiveInterval &VirtReg,
   if (RegMaskVirtReg != VirtReg.reg || RegMaskTag != UserTag) {
     RegMaskVirtReg = VirtReg.reg;
     RegMaskTag = UserTag;
-    errs()<<"RegMaskTag before: "<<RegMaskTag<<"\n";
-    errs()<<"RegMaskVirtReg: "<<RegMaskVirtReg<<"\n";
     RegMaskUsable.clear();
     LIS->checkRegMaskInterference(VirtReg, RegMaskUsable);
-    errs() << "RegMaskUsable: ";
-    for (unsigned i = 0, e = RegMaskUsable.size(); i != e; ++i) {
-        //errs() << (RegMaskUsable.test(i) ? "1" : "0");
-        errs()<<RegMaskUsable[i]<<" ";
-    }
-    errs() << "\n";
   }
 
   // The BitVector is indexed by PhysReg, not register unit.
@@ -194,22 +186,17 @@ LiveIntervalUnion::Query &LiveRegMatrix::query(const LiveRange &LR,
 LiveRegMatrix::InterferenceKind
 LiveRegMatrix::checkInterference(LiveInterval &VirtReg, unsigned PhysReg) {
   if (VirtReg.empty()){
-    errs()<<"Entered VirtReg.empty(): "<<VirtReg.empty()<<"IK_Free: "<<IK_Free<<"\n";
     return IK_Free;
   }
     
   // Regmask interference is the fastest check.
   if (checkRegMaskInterference(VirtReg, PhysReg)) {
-
-    errs()<<"Enered checkRegMaskInterference(VirtReg, PhysReg): "<<checkRegMaskInterference(VirtReg, PhysReg)<<"IK_RegMask: "<<IK_RegMask<<"\n";
     return IK_RegMask;
 
   }
 
   // Check for fixed interference.
   if (checkRegUnitInterference(VirtReg, PhysReg)) {
-
-    errs()<<"Entered checkRegUnitInterference(VirtReg, PhysReg): "<<checkRegUnitInterference(VirtReg, PhysReg)<<"IK_RegUnit: "<<IK_RegUnit<<"\n";
     return IK_RegUnit;
   }
 
@@ -219,16 +206,11 @@ LiveRegMatrix::checkInterference(LiveInterval &VirtReg, unsigned PhysReg) {
                                   [&](unsigned Unit, const LiveRange &LR) {
                                     return query(LR, Unit).checkInterference();
                                   });
-  errs()<<"Interference: "<<Interference<<"\n";
   if (Interference){
-
-    errs()<<"IK_VirtReg: "<<IK_VirtReg<<"\n";
     return IK_VirtReg;
   
   }
     
-  errs()<<"IK_Free outside: "<<IK_Free<<"\n";
-
   return IK_Free;
 }
 

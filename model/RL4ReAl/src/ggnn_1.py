@@ -303,29 +303,23 @@ def parseProp(val):
     val = val.strip()
     return val[1: len(val) - 1]
 
-#here
-list_of_phy_registers_ofGRtype=[2,3,5,9,11,13,16,18,19,21,49,51,52,53,54,57,59,61,127,128,129,130,131,132,133,134,239,240,
-                       241,242,243,244,245,246,263,264,265,266,267,268,269,270]
-
 def identify_node_cls(regClass,nodeId):
+    #here
+    list_of_phy_registers_ofGRtype=[2,3,5,9,11,13,16,18,19,21,49,51,52,53,54,57,59,61,127,128,129,130,131,132,133,134,239,240,
+                       241,242,243,244,245,246,263,264,265,266,267,268,269,270]
     if regClass=="Phy":
         if nodeId in list_of_phy_registers_ofGRtype:
             nodeType="GR"
             return nodeType
-            #print("nodeType1 in GR Phy: ",nodeType1)
         else:
             nodeType="Non-GR"
             return nodeType
-            #print("nodeType1 in Non-GR Phy: ",nodeType1)
     elif "GR" in regClass:
         nodeType="GR"
         return nodeType
-        #print("nodeType1 GR in Non-Phy ",nodeType1)
     elif "GR" not in regClass:
         nodeType="Non-GR"
         return nodeType
-        #print("nodeType1 in Non-GR Non-Phy ",nodeType1)
-
 
 
 def get_observationsInf(graph):
@@ -341,7 +335,7 @@ def get_observationsInf(graph):
     
     idx_nid = {}
     nid_idx = {}
-    nid_cls={}
+    idx_cls={}
       #additional
     # self.unique_type_map = {'pair' : []}
     all_edges = []
@@ -360,7 +354,7 @@ def get_observationsInf(graph):
         
         nodeId = node.regID
         regClass = node.cls #parseProp(properties[0])
-        nid_cls[idx]=regClass
+        idx_cls[idx]=regClass
         spill_cost = node.spillWeight #parseProp(properties[1])
         color = node.color # parseProp(properties[2])
         split_points = node.splitSlots
@@ -398,27 +392,16 @@ def get_observationsInf(graph):
     for idx,node in enumerate(nodes):
     
         nodeId = node.regID
-        #print("nodeId: ",nodeId)
         regClass = node.cls
-        if regClass=="Phy":
-            for nlink in node.interferences:
-                neighId = nid_idx[nlink]
-                if idx != neighId:
-                    all_edges.append((idx, neighId))
-        else:
-            nodeType1 = identify_node_cls(regClass, nodeId)
-            #print("nodeType1: ", nodeType1) 
-            for nlink in node.interferences:
-                neighId = nid_idx[nlink]
-                if idx != neighId:
-                    Cls = nid_cls[neighId]
-                    nodeType2 = identify_node_cls(Cls, neighId)
-                    #print("nodeType2: ",nodeType2)
-                    if (nodeType1 == "GR" and nodeType2 == "GR") or (nodeType1 == "Non-GR" and nodeType2 == "Non-GR"):
-                        all_edges.append((idx, neighId))
-
-    #print("all_edges: ",all_edges)
         
+        nodeType1 = identify_node_cls(regClass, nodeId)
+        for nlink in node.interferences:
+            neighIdx = nid_idx[nlink]
+            Cls = idx_cls[neighIdx]
+            nodeType2 = identify_node_cls(Cls, nlink)
+            if (nodeType1 == "GR" and nodeType2 == "GR") or (nodeType1 == "Non-GR" and nodeType2 == "Non-GR"):
+                all_edges.append((idx, neighIdx))
+                    
     initial_node_representation = torch.stack(initial_node_representation, dim=0)# .to(device)
     
     logging.debug("Shape of the hidden nodes matrix N X D : {}".format(initial_node_representation.shape)) 
@@ -435,7 +418,6 @@ def get_observationsInf(graph):
     annotation_zero = np.zeros((num_nodes, 3))
     annotation_zero[:, 0] = spill_cost_list
     annotations = torch.FloatTensor(annotation_zero)# .to(device)
-    #print("Annotations:", annotations[130][0])
     '''
     Support for already allocated registers.
     Mark the nodes as visted in the graph and 
@@ -475,7 +457,7 @@ def get_observationsInf(graph):
     '''
     Main call to the compute representation
     '''
-    obs = {'raw_graph_mat':raw_graph_mat, 'initial_node_representation':initial_node_representation, 'annotations':annotations, 'adjacency_lists' : adjacency_lists,  'graph_topology':graph_topology, 'spill_cost_list' : spill_cost_list, 'reg_class_list' : reg_class_list, 'nid_idx':nid_idx, 'idx_nid':idx_nid, 'split_points' : split_points_list, 'use_distances': use_distance_list, "positionalSpillWeights": positionalSpillWeights_list}
+    obs = {'raw_graph_mat':raw_graph_mat, 'initial_node_representation':initial_node_representation, 'annotations':annotations, 'adjacency_lists' : adjacency_lists,  'graph_topology':graph_topology, 'spill_cost_list' : spill_cost_list, 'reg_class_list' : reg_class_list, 'nid_idx':nid_idx, 'idx_nid':idx_nid, 'idx_cls':idx_cls, 'split_points' : split_points_list, 'use_distances': use_distance_list, "positionalSpillWeights": positionalSpillWeights_list}
     obs = Namespace(**obs) 
     return obs
     
@@ -488,7 +470,7 @@ def get_observations(graph):
     
     idx_nid = {}
     nid_idx = {}
-    nid_cls={}
+    idx_cls={}
     # self.unique_type_map = {'pair' : []}
     all_edges = []
     spill_cost_list = []
@@ -511,7 +493,7 @@ def get_observations(graph):
         #print("properties above: ",properties)
         logging.debug('Node idx={} | {}'.format(idx, properties))
         regClass = parseProp(properties[0]) 
-        nid_cls[idx]=regClass
+        idx_cls[idx]=regClass
         spill_cost = parseProp(properties[1])
         allocate_type = parseProp(properties[2])
         split_points = []
@@ -575,28 +557,17 @@ def get_observations(graph):
         #print("propertiess: ",propertiess)
         nl=nl+1
         regClass = parseProp(propertiess[0]) 
-        print("regClass: ",regClass) 
-
-        if regClass == "Phy":
-            for i, adj in enumerate(adjlist):
-                if i==idx:
-                    for nlink in adj:
-                        neighId = nid_idx[nlink['id']]
-                        if i != neighId:
-                            all_edges.append((i,neighId))
-        else:
-            nodeType1 = identify_node_cls(regClass, nodeId)
-            #print("nodeType1: ", nodeType1)
-            for i, adj in enumerate(adjlist):
-                if i==idx:
-                    for nlink in adj:
-                        neighId = nid_idx[nlink['id']]
-                        if neighId != i:
-                            Cls = nid_cls[neighId]
-                            nodeType2 = identify_node_cls(Cls, neighId)
-                            #print("nodeType2: ",nodeType2)
-                            if (nodeType1 == "GR" and nodeType2 == "GR") or (nodeType1 == "Non-GR" and nodeType2 == "Non-GR"):
-                                all_edges.append((idx, neighId))
+        
+        nodeId = node.regID
+        regClass = node.cls
+        
+        nodeType1 = identify_node_cls(regClass, nodeId)
+        for nlink in node.interferences:
+            neighIdx = nid_idx[nlink]
+            Cls = idx_cls[neighIdx]
+            nodeType2 = identify_node_cls(Cls, nlink)
+            if (nodeType1 == "GR" and nodeType2 == "GR") or (nodeType1 == "Non-GR" and nodeType2 == "Non-GR"):
+                all_edges.append((idx, neighIdx))        
 
     #print("all_edges: ",all_edges)
    
