@@ -113,7 +113,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.iteration_number = 1
         self.use_pipe = False
         self.curr_file_name = None
-
+        
         print("env_config.worker_index", env_config.worker_index)
         
         if self.mode != 'inference':
@@ -158,6 +158,26 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.annotation_size = env_config["annotations"]
         random.seed(123)
         np.random.seed(123)
+    #/home/intern24002/ml-llvm-project_backup/ml-llvm-project/config/regalloc/X86_supported_RegClasses.json
+    def list_of_phy_registers(self):
+        if self.env_config["target"] == "X86":
+            fileName= os.path.join(self.env_config["Register_config"], 'regalloc/X86_supported_RegClasses.json')
+            #fileName="/home/intern24002/ml-llvm-project_backup/ml-llvm-project/config/regalloc/X86_supported_RegClasses.json"
+            
+        elif self.env_config["target"] == "AArch64":
+            fileName= os.path.join(self.env_config["Register_config"], 'regalloc/AArch64_supported_RegClasses.json')
+            #fileName="/home/intern24002/ml-llvm-project_backup/ml-llvm-project/config/regalloc/X86_supported_RegClasses.json"
+        
+        list_of_phy_registers_ofGR_type = set()
+        with open(fileName, 'r') as file:
+            data = json.load(file)
+            for key, values in data.items():
+                if "GR" in key:
+                    for value in values:
+                        list_of_phy_registers_ofGR_type.add(value['regId'])
+        #print("list is: ",list(list_of_phy_registers_ofGR_type))
+        return list(list_of_phy_registers_ofGR_type)
+        
 
     def reward_formula(self, value, action):
         if value in [float("inf"), 'inf', "INF"]:
@@ -1174,9 +1194,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         return updated_graphs
     
     def identify_node_cls(self, regClass,nodeId):
-        #here
-        list_of_phy_registers_ofGRtype=[2,3,5,9,11,13,16,18,19,21,49,51,52,53,54,57,59,61,127,128,129,130,131,132,133,134,239,240,
-                        241,242,243,244,245,246,263,264,265,266,267,268,269,270]
+        
+        list_of_phy_registers_ofGRtype = self.list_of_phy_registers()
         if regClass=="Phy":
             if nodeId in list_of_phy_registers_ofGRtype:
                 nodeType="GR"

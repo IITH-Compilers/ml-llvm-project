@@ -7,7 +7,7 @@ from torch.autograd import Variable
 import torch.nn.functional as F
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
 from torch.nn.functional import normalize
-
+import os
 from typing import List, Tuple, Dict, Sequence, Any
 from topologicalSort_1 import Graph
 import logging
@@ -303,10 +303,22 @@ def parseProp(val):
     val = val.strip()
     return val[1: len(val) - 1]
 
+def list_of_phy_registers(): 
+        fileName="/home/intern24002/ml-llvm-project_backup/ml-llvm-project/config/regalloc/X86_supported_RegClasses.json"
+        list_of_phy_registers_ofGR_type = set()
+        with open(fileName, 'r') as file:
+            data = json.load(file)
+            for key, values in data.items():
+                if "GR" in key:
+                    for value in values:
+                        list_of_phy_registers_ofGR_type.add(value['regId'])
+        #print("list is: ",list(list_of_phy_registers_ofGR_type))
+        return list(list_of_phy_registers_ofGR_type)
+
 def identify_node_cls(regClass,nodeId):
-    #here
-    list_of_phy_registers_ofGRtype=[2,3,5,9,11,13,16,18,19,21,49,51,52,53,54,57,59,61,127,128,129,130,131,132,133,134,239,240,
-                       241,242,243,244,245,246,263,264,265,266,267,268,269,270]
+
+    list_of_phy_registers_ofGRtype=list_of_phy_registers()
+
     if regClass=="Phy":
         if nodeId in list_of_phy_registers_ofGRtype:
             nodeType="GR"
@@ -325,8 +337,6 @@ def identify_node_cls(regClass,nodeId):
 def get_observationsInf(graph):
     print("In get_observationsInf")
     nodes = graph.regProf
-    list_of_phy_registers_ofGRtype=[2,3,5,9,11,13,16,18,19,21,49,51,52,53,54,57,59,61,127,128,129,130,131,132,133,134,239,240,
-                       241,242,243,244,245,246,263,264,265,266,267,268,269,270]
     #adjlist = graph['adjacency']
     #print("adjList: ",adjlist)
     num_nodes = len(nodes)
