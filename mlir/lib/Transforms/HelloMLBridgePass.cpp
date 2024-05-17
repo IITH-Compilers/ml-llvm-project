@@ -326,24 +326,12 @@ public:
     }
   };
 
-  void setTFModelRunner(int n) {
-    switch (n) {
-#define M(x)                                                                   \
-  case x:                                                                      \
-    MLRunner = new TFModelRunner<LinearModel##x>("output");                    \
-    break;
-      MODELS(M)
-#undef M
-    }
-    // MLRunner = new TFModelRunner<LinearModel1000>("output");
-  }
-
   void TFinitCommunication() {
     auto StartTime = std::chrono::high_resolution_clock::now();
 
     std::pair<std::string, std::vector<float>> p1("x", FeatureVector);
 
-    setTFModelRunner(n);
+    auto MLRunner = new TFModelRunner<LinearModel1000>("output");
     MLRunner->populateFeatures(p1);
     double Out = MLRunner->evaluate<float>();
 
@@ -375,7 +363,7 @@ public:
     } else {
       if (training) {
         HelloMLIRTraining *gRPCTrainer = new HelloMLIRTraining();
-        MLRunner = new gRPCModelRunner<
+        auto MLRunner = new gRPCModelRunner<
             helloMLBridgegRPC::HelloMLBridgeService::Service,
             helloMLBridgegRPC::HelloMLBridgeService::Stub,
             helloMLBridgegRPC::TensorResponse,
@@ -390,7 +378,7 @@ public:
         agents["agent"] = agent;
         auto StartTime = std::chrono::high_resolution_clock::now();
         Env = new HelloMLBridgeEnv();
-        MLRunner = new ONNXModelRunner(this, agents, nullptr);
+        auto MLRunner = new ONNXModelRunner(this, agents, nullptr);
         populateFeatureVector(FeatureVector);
         int Out = MLRunner->evaluate<int>();
         auto EndTime = std::chrono::high_resolution_clock::now();
@@ -406,7 +394,7 @@ public:
 
         helloMLBridgegRPC::TensorResponse request;
         helloMLBridgegRPC::ActionRequest response;
-        MLRunner =
+        auto MLRunner =
             new gRPCModelRunner<helloMLBridgegRPC::HelloMLBridgeService,
                                 helloMLBridgegRPC::HelloMLBridgeService::Stub,
                                 helloMLBridgegRPC::TensorResponse,
@@ -435,7 +423,6 @@ private:
   SerDesKind SerDesType;
   HelloMLBridgeEnv *Env;
   std::string basename = "/tmp/" + pipe_name;
-  MLModelRunner *MLRunner;
   static void populateFeatureVector(std::vector<float> &FeatureVector);
   void initCommunication();
   void setModelRunner(int n);
@@ -449,7 +436,7 @@ void MLIRHelloMLBridge::initCommunication() {
   }
   basename = "/tmp/" + pipe_name;
   auto StartTime = std::chrono::high_resolution_clock::now();
-  MLRunner =
+  auto MLRunner =
       new PipeModelRunner(basename + ".out", basename + ".in", SerDesType);
 
   std::pair<std::string, std::vector<float>> p1("tensor", FeatureVector);
@@ -475,8 +462,6 @@ void MLIRHelloMLBridge::populateFeatureVector(
     FeatureVector[i] = dis(gen);
   }
 }
-
-void MLIRHelloMLBridge::setModelRunner(int n) { MLRunner = nullptr; }
 
 } // end anonymous namespace
 
