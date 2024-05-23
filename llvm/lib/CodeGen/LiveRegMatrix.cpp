@@ -187,18 +187,14 @@ LiveRegMatrix::checkInterference(LiveInterval &VirtReg, unsigned PhysReg) {
   if (VirtReg.empty()){
     return IK_Free;
   }
-    
   // Regmask interference is the fastest check.
   if (checkRegMaskInterference(VirtReg, PhysReg)) {
     return IK_RegMask;
   }
-
   // Check for fixed interference.
   if (checkRegUnitInterference(VirtReg, PhysReg)) {
     return IK_RegUnit;
   }
-
-   
   // Check the matrix for virtual register interference.
   bool Interference = foreachUnit(TRI, VirtReg, PhysReg,
                                   [&](unsigned Unit, const LiveRange &LR) {
@@ -206,7 +202,6 @@ LiveRegMatrix::checkInterference(LiveInterval &VirtReg, unsigned PhysReg) {
                                   });
   if (Interference){
     return IK_VirtReg;
-
   }
     
   return IK_Free;
