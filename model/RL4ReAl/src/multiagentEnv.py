@@ -21,7 +21,8 @@ import math
 import torch
 import signal
 from gym.spaces import Discrete, Box
-
+import time
+import grpc
 # from ggnn import constructGraph
 from ggnn_1 import get_observations, get_observationsInf, GatedGraphNeuralNetwork, constructVectorFromMatrix, AdjacencyList, SPILL_COST_THRESHOLD
 from register_action_space import RegisterActionSpace
@@ -46,11 +47,10 @@ import sys
 import re
 
 from config import BUILD_DIR
-sys.path.append(f"{BUILD_DIR}/tools/MLCompilerBridge/Python-Utilities/")
-from client import *
 from client import RegisterAllocationClient
+sys.path.append(f"{BUILD_DIR}/tools/MLCompilerBridge/Python-Utilities")
 import RegisterAllocationInference_pb2, RegisterAllocation_pb2
-
+from ggnn_1 import set_precision_forList, set_precision
 config_path=None
 
 logger = logging.getLogger(__file__)
@@ -94,7 +94,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.max_number_nodes = env_config["max_number_nodes"]
         self.emb_size = env_config["state_size"]
         self.last_task_done = 0
-        self.node_representation_mat = None
+        self.node_representation_mat = None   #this one
         self.max_edge_count = env_config["max_edge_count"]
         self.use_mca_reward = env_config["use_mca_reward"]
         self.use_local_reward =  env_config["use_local_reward"]
@@ -157,7 +157,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         np.random.seed(123)
 
     def reward_formula(self, value, action):
-        #print("action: ",action)
         if value in [float("inf"), 'inf', "INF"]:
             reward = self.reward_max_value
         elif value > self.reward_max_value:
@@ -203,7 +202,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         return self.getReward_Static(action)
 
     def reset(self, graph=None):
-            
         self.reset_env(graph)
         self.agent_count = 0
         self.select_node_agent_id = "select_node_agent_{}".format(self.agent_count)
@@ -212,26 +210,17 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.colour_node_agent_id = "colour_node_agent_{}".format(self.agent_count)
 
         select_node_mask = self.createNodeSelectMask()
-        #print("Shape of select_node_mask:", select_node_mask.shape)
         # select_node_mask = self.createNodeSelectMaskSpillWeightBased()
         # spill_weight_list = self.getSpillWeightListExpanded()
         state = self.obs
         node_mat = state.initial_node_representation
-        cur_obs = np.zeros((self.max_number_nodes, self.emb_size))
-        cur_obs[0:node_mat.shape[0], :] = node_mat
-        #print("Shape of cur_obs:", cur_obs.shape)
-        self.node_representation_mat = cur_obs
-        
+        cur_obs = np.zeros((self.max_number_nodes, self.emb_size))  
+        cur_obs[0:node_mat.shape[0], :] = node_mat   
         annotations = np.zeros((self.max_number_nodes, self.annotation_size))  #annotations initialised to zeros
         annotations[0:state.annotations.shape[0], :] = state.annotations
-        #print("Shape of annotations:", annotations.shape)
         spill_weight_list = annotations[:, 0]  # Annotations first element is spill weights 
-        #print("spill weight list in reset: ",spill_weight_list)
-        #print("Shape of spill_weight_list:", spill_weight_list.shape)
         adjacency_lists = (state.adjacency_lists[0].getNodeNum(), np.array(state.adjacency_lists[0].getData()))
-        #print("state.adjacency_lists[0].getNodeNum(): ",state.adjacency_lists[0].getNodeNum())
         torch.set_printoptions(threshold=1000000)    
-        #print("state.adjacency_lists[0].getData(): ",state.adjacency_lists[0].getData())
         torch.set_printoptions(profile="full")
         
         result = None
@@ -242,16 +231,14 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 result = i
             else:
                 result = torch.cat([result, i], dim=0)
-                #print("result: ",result)
-      
+              
         max_edge_count = self.max_edge_count
         edges_unroll = np.zeros((2*max_edge_count,))
         if self.mode == 'inference':
             if result is None or result.shape[0] > 2*max_edge_count:
                 print("Exiting inference due to no edge or more then max edge:", result)
                 return None
-
-        #print("result.shape[0]: ",result.shape[0])
+            
         if result is not None:
             edges_unroll[0:result.shape[0]] = result
         
@@ -261,7 +248,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             "edge_num": state.adjacency_lists[0].getData().shape[0],
             "data": state.adjacency_lists[0].getData().tolist()
         }
-        #print("Shape of adjacency_lists['data']:", np.array(adjacency_lists['data']).shape)
         obs = {
             # self.select_node_agent_id: { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(select_node_mask), 'state' : cur_obs}
             self.select_node_agent_id: { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(select_node_mask), 'state' : cur_obs, 'annotations': np.array(annotations) ,'adjacency_lists': adjacency_lists}
@@ -270,28 +256,16 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.split_successful = 0
         self.colour_successful = 0
 
-        #print("spill weight list: ",spill_weight_list[275:280])
-        # for key, value in obs.items():
-        #     #print("Agent ID:", key)
-        #     for sub_key, sub_value in value.items():
-        #         print("Shape of", sub_key + ":", sub_value.shape)
-
-        # print("Length of spill_weight_list:", len(spill_weight_list))
-        # print("Length of select_node_mask:", len(select_node_mask))
-        # print("Length of cur_obs:", len(cur_obs))
-        # print("Length of annotations:", len(annotations))
-        # print("Number of edges in adjacency_lists:", adjacency_lists["edge_num"])
-
         return obs
 
     def step(self, action_dict, extra_info=None):
         if self.mode != 'inference':
             if extra_info and 'select_node_policy' in extra_info.keys():
-                self.node_representation_mat = extra_info['select_node_policy'][0, :, :]                
+                self.obs.initial_node_representation = extra_info['select_node_policy'][0, :, :]                   
         else:
             if extra_info is not None:
                 if len(extra_info.shape) == 3:
-                    self.node_representation_mat = extra_info[0, :, :]                
+                    self.obs.initial_node_representation = torch.from_numpy(extra_info[0, :, :])                         
         if self.select_node_agent_id in action_dict:
             return self._select_node_step(action_dict[self.select_node_agent_id])
         if self.select_task_agent_id in action_dict:
@@ -304,7 +278,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
     def createNodeSelectMask(self):
         mask = [0]*self.max_number_nodes
         eligibleNodes = self.obs.graph_topology.get_eligibleNodes()
-        #print("eligibleNodes in createNodeSelectMask: ",eligibleNodes)
         assert len(eligibleNodes) < self.max_number_nodes, "Graph has more then maximum nodes allowed"
         for inx, x in enumerate(eligibleNodes):            
             if x in eligibleNodes:
@@ -317,7 +290,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
     def createNodeSelectMaskSpillWeightBased(self):
         mask = [0]*self.max_number_nodes
         eligibleNodes = self.obs.graph_topology.get_eligibleNodes()
-        #print("eligibleNodes in createNodeSelectMaskSpillWeightBased: ",eligibleNodes)
         assert len(eligibleNodes) < self.max_number_nodes, "Graph has more then maximum nodes allowed"
         if len(eligibleNodes) > 0:
             eligible_spill_wight_list = []
@@ -358,14 +330,11 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             mask = [1]*2
         return mask
 
-    #apr18
     def getSpillWeightListExpanded(self):
-        #print("Inside getSpillWeightListExpanded")
         spill_weight_list = [0]*self.max_number_nodes
         for i in range(len(self.obs.spill_cost_list)):
 
             spill_weight_list[i] = self.formatRewardValue(self.obs.spill_cost_list[i])
-        #print("spill_weight_list inside getSpillWeightListExpanded: ",spill_weight_list)
         return spill_weight_list
 
     def getNodeProperties(self):
@@ -431,7 +400,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.virtRegId = self.obs.idx_nid[self.cur_node]
         # logging.info("Node selected = {}, corresponding register id = {}".format(action, self.virtRegId))
         state = self.obs
-        self.cur_obs = self.node_representation_mat[self.cur_node][0:self.emb_size]
+        self.cur_obs = self.obs.initial_node_representation[self.cur_node][0:self.emb_size]
         if self.cur_obs is not None and not isinstance(self.cur_obs, np.ndarray):
             self.cur_obs = self.cur_obs.detach().numpy()
         prop = self.getNodeProperties()
@@ -446,9 +415,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         obs = {
             self.select_task_agent_id: { 'action_mask': np.array(select_task_mask), 'node_properties': np.array(prop_value_list, dtype=np.float), 'state' : self.cur_obs},
         }
-        #print("obs inside _select_node_step: ",obs)
-        # print("Length of select_task_mask:", len(select_task_mask))
-        # print("Length of prop_value_list:", len(prop_value_list))
         logging.debug("Exit _select_node_step")        
         return obs, reward, done, {}
 
@@ -522,13 +488,12 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         return obs, reward, done, {}
         
     
-    #apr17
 
     def _colour_node_step(self, action):
         logging.debug("Enter _colour_node_step")
         colour_reward, done_all, response  = self.step_colorTask(action)
         state = self.obs
-        self.cur_obs = self.node_representation_mat[self.cur_node][0:self.emb_size]
+        self.cur_obs = self.obs.initial_node_representation[self.cur_node][0:self.emb_size]
         if self.cur_obs is not None and not isinstance(self.cur_obs, np.ndarray):
             self.cur_obs = self.cur_obs.detach().numpy()
         
@@ -551,11 +516,12 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         select_task_mask = self.creatTaskSelectMask()
 
         state = self.obs
-        cur_obs = self.node_representation_mat
+        cur_obs = self.obs.initial_node_representation
+        if cur_obs is not None and not isinstance(cur_obs, np.ndarray):
+            cur_obs = cur_obs.detach().numpy()
         annotations = np.zeros((self.max_number_nodes, self.annotation_size))
         annotations[0:state.annotations.shape[0], :] = state.annotations
         spill_weight_list = annotations[:, 0]  # Annotations first element is spill weights 
-        #print("spill weight list in color node step: ", self.cur_node, spill_weight_list)
         adjacency_lists = (state.adjacency_lists[0].getNodeNum(), np.array(state.adjacency_lists[0].getData()))
        
         result = None
@@ -669,12 +635,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             self.select_task_agent_id = "select_task_agent_{}".format(self.agent_count)
             self.split_node_agent_id = "split_node_agent_{}".format(self.agent_count)
             self.colour_node_agent_id = "colour_node_agent_{}".format(self.agent_count)
-            
-            torch.set_printoptions(threshold=1000000)    
-            #print("adjacency list inside _colour_node_step: ",adjacency_lists) 
-            torch.set_printoptions(profile="full")
-            
-
             obs[self.select_node_agent_id] = { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(select_node_mask), 'state' : cur_obs, 'annotations': np.array(annotations) ,'adjacency_lists': adjacency_lists}
             
             reward[self.select_node_agent_id] = 0
@@ -682,14 +642,10 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         logging.debug("Exit _colour_node_step")
         return obs, reward, done, {}
 
-    def _split_node_step(self, action):   #apr12
-
-        print("Splitting at point: ",action)
+    def _split_node_step(self, action):   
         logging.debug("Enter _split_node_step")
         # self.cur_obs = self.flat_env.reset()
-        #logging.debug("{} {} {}".format(self.virtRegId, self.obs.idx_nid[self.cur_node], self.cur_node))
         logging.debug("{} {}".format(self.obs.idx_nid, self.obs.nid_idx))
-        #assert self.virtRegId == self.obs.idx_nid[self.cur_node], "Virtual should be same." # 
         use_distances = self.obs.use_distances[self.cur_node]
         done = False
         logging.debug("****Split index****** {} {}".format( len(use_distances), use_distances))
@@ -731,11 +687,12 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
            # logging.info("Select node mask is all zero")
 
         state = self.obs
-        cur_obs = self.node_representation_mat
+        cur_obs = self.obs.initial_node_representation
+        if cur_obs is not None and not isinstance(cur_obs, np.ndarray):
+            cur_obs = cur_obs.detach().numpy()
         annotations = np.zeros((self.max_number_nodes, self.annotation_size))
         annotations[0:state.annotations.shape[0], :] = state.annotations
         spill_weight_list = annotations[:, 0]  # Annotations first element is spill weights 
-        #print("spill weight list in _split_node_step: ",spill_weight_list)
         # annotations = state.annotations
         adjacency_lists = (state.adjacency_lists[0].getNodeNum(), np.array(state.adjacency_lists[0].getData()))
         result = None
@@ -847,26 +804,19 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             # os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
             # if self.server_pid.poll() is not None:
             #   print('Force stop')
-            self.stopServer()
+            self.server_pid.send_signal(signal.SIGTERM)
             self.server_pid = None
             print('Stop server')
             #time.sleep(5)
             
         logging.debug("Exit _split_node_step")
         return obs, reward, done, {}
-    #apr12
+    
     def step_splitTask(self, action):
-
         split_point= action
         self.split_point = split_point
         nodeChoosen = self.cur_node 
-        print("index in step_splittask: ",nodeChoosen)
-        
         node_id =  self.obs.idx_nid[nodeChoosen]
-        print("nodeid to index: ",node_id)
-
-        # self.obs.annotations[nodeChoosen][1] = torch.tensor(split_point)# .to(device)
-       
         reward = 0
         done = False
         
@@ -875,7 +825,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         # logging.info('try Split register {} on point {}'.format(node_id, split_point))
         # print('try Split register {} on point {}'.format(node_id, split_point))
         
-        if self.mode != 'inference':
+        if self.mode != 'inference':   
             updated_graphs = self.stable_grpc('Split', int(node_id), int(split_point))
             if updated_graphs is None:
                 self.obs.graph_topology.markNodeAsNotVisited(nodeChoosen)
@@ -938,7 +888,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             self.obs.next_stage = 'end'
             if self.mode != 'inference':
                 exit_response = self.stable_grpc('Exit', 0, 0)
-                self.stopServer()
                 current_cost = SPILL_COST_THRESHOLD
                 if exit_response:
                     # print("Cost of spilling and moves:", exit_response.cost)
@@ -962,10 +911,10 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                         outs, errs = self.server_pid.communicate(timeout=self.mca_timeout)
                     except:
                         # self.server_pid.kill()
-                        outs, errs = self.server_pid.communicate()
                         process_completed = False
                         os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
                         print("Clang failing")
+                    outs, errs = self.server_pid.communicate()
                     mlra_throughput = 0
                     mlra_cycles = 0
                     if process_completed:                    
@@ -1089,11 +1038,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                         f.close()
                 else:
                     # print("Killing Server pid", self.server_pid.pid)         
-                    # os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
-                    self.stopServer()
-
-                if self.server_pid.poll() is None:
-                    os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
+                    os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)             
+                if self.server_pid.poll() is not None:
                     print('Force stop')
                 self.server_pid = None                
             
@@ -1108,7 +1054,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             inx = (((self.worker_index-1) * self.env_config['current_batch']) + self.graph_counter)
             path=self.training_graphs[inx]
             logging.debug('Graphs selected : {}'.format(path))
-            print('Graphs selected : {}'.format(path))
             self.reset_count+=1
             if self.reset_count % self.repeat_freq == 0:
                 self.graph_counter+=1
@@ -1119,7 +1064,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 with open(path) as f:
                    graph = json.load(f)
             except Exception as ex:
-                print(traceback.format_exc())
                 logging.error(path)
                 logging.error(traceback.format_exc())                
                 return None
@@ -1143,8 +1087,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             self.obs = get_observations(self.graph)
             if self.server_pid is not None:
                 print('terminate the pid if alive : {}'.format(self.server_pid.pid))
-                self.stopServer()
-                # os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
+                os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
             hostip = "0.0.0.0"
             hostport = str(int(self.env_config['Workers_starting_port']) + self.worker_index)
             ipadd = "{}:{}".format(hostip, hostport)
@@ -1199,7 +1142,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                     attempt += 1
                     if attempt > max_retries:
                         print("Maximum attempts completed")
-                        print("Error details:", e.details()) 
                         return None
                         # exit(0)
                     remaining = max_retries - attempt
@@ -1214,11 +1156,10 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         return updated_graphs
 
     def update_obs(self, updated_graphs, register_id, split_point):
-        
         if updated_graphs.result:
             num_edges = 0
             new_node_count = 0
-            for node_prof in updated_graphs.regProf:            
+            for node_prof in updated_graphs.regProf:  
                 if self.mode != 'inference':
                     nodeId = str(node_prof.regID)
                 else:
@@ -1232,30 +1173,20 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             num_edges = num_edges + new_node_count*len(updated_graphs.regProf)*2
             num_nodes = len(self.obs.nid_idx.keys()) + new_node_count
             if num_nodes > self.max_number_nodes or num_edges > self.max_edge_count:
-                print("Max limit exceded for number of node or edges", num_nodes, num_edges)
                 return "error"
-            
-            #print("self.cur_node: ",self.cur_node)
             register_id = self.obs.idx_nid[self.cur_node]
-            #print("self.obs.graph_topology.adjList[self.cur_node]: ",self.obs.graph_topology.adjList[self.cur_node])
             old_node_interferences = len(self.obs.graph_topology.adjList[self.cur_node])
             if self.mode != 'inference':
                 splited_node_idx = self.obs.nid_idx[str(register_id)]
             else:
                 splited_node_idx = self.obs.nid_idx[register_id]
-                #print("splited_node_idx: ",splited_node_idx)
             self.obs.graph_topology.indegree[splited_node_idx] = 0
             cur_adj = None
             try:
-                #print("entered try block................")
-                #this code basically removes the splitted_node_idx from the all the adjlists of the nodes which are adjacent to splitted node.
                 for adj in self.obs.graph_topology.adjList[splited_node_idx]:
-                    #print("adj: ",adj)
                     cur_adj = adj
-                    if splited_node_idx in self.obs.graph_topology.adjList[adj]:
-                        #print("entered try blocks if.................")
+                    if splited_node_idx in self.obs.graph_topology.adjList[adj]
                         self.obs.graph_topology.adjList[adj].remove(splited_node_idx)
-                        #print("self.obs.graph_topology.indegree[adj]: ",self.obs.graph_topology.indegree[adj])
                         self.obs.graph_topology.indegree[adj] = self.obs.graph_topology.indegree[adj] - 1                    
             except:
                 print("Adjency list for {} is {} for register {}".format(cur_adj, self.obs.graph_topology.adjList[cur_adj], register_id))
@@ -1277,19 +1208,15 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 if self.mode != 'inference':
                     nodeId = str(node_prof.regID)
                 else:
-                    #print("node_prof.regID: ",node_prof.regID)
                     nodeId = node_prof.regID
                 
                 if nodeId not in self.obs.nid_idx.keys():
                     new_nodes+=1
                     new_nodes_list.append(nodeId)
-                    #print("nodeId is not in self.obs.nid_idx.keys: ",nodeId)
                     # logging.info('{}th New node {} '.format(new_nodes, nodeId))
                     # assert new_nodes < 3, "Splitting having more than 2 intervals"
                     self.obs.nid_idx[nodeId] = self.obs.graph_topology.num_nodes
-                    # print("NodeId and index", nodeId, self.obs.graph_topology.num_nodes, register_id)
                     self.obs.idx_nid[self.obs.graph_topology.num_nodes] = nodeId
-                    #print("self.obs.graph_topology.num_nodes: ",self.obs.graph_topology.num_nodes)
                     self.obs.graph_topology.num_nodes = self.obs.graph_topology.num_nodes + 1
                     self.obs.graph_topology.discovered.append(False)
                     self.obs.graph_topology.adjList.append([])
@@ -1304,24 +1231,15 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                                     self.obs.graph_topology.adjList[self.obs.nid_idx[str(neigh)]].append(self.obs.nid_idx[str(nodeId)])
                             else:
                                 if neigh in self.obs.nid_idx:
-                                    # print("neigh: ",neigh)
-                                    # print("self.obs.nid_idx: ",self.obs.nid_idx)
                                     self.obs.graph_topology.adjList[self.obs.nid_idx[neigh]].append(self.obs.nid_idx[nodeId])
                         except:
                             print("Node idx map and type", self.obs.nid_idx, type(neigh), neigh)
                             return "error"
                             # raise
-                        
-                    #apr27
+            
                     formatted_spill_cost =  "{:.13f}".format(node_prof.spillWeight)
-                    #print("node.spillWeight: ", node_prof.spillWeight)
                     spill_cost = formatted_spill_cost
-                    #print("node.spillWeight: ", spill_cost)
                     self.obs.spill_cost_list.append(float(spill_cost))
-
-                    #print("spill_cost_list: ",self.obs.spill_cost_list)
-
-                    #print("spill_cost_list.append(node_prof.spillWeight): ",node_prof.spillWeight)
                     self.obs.reg_class_list.append(self.obs.reg_class_list[splited_node_idx])
                     self.obs.use_distances.append(sorted(node_prof.useDistances))
                     self.obs.positionalSpillWeights.append(node_prof.positionalSpillWeights)
@@ -1332,21 +1250,22 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
                     annotation_zero = torch.zeros((1, 3))
                     self.obs.annotations = torch.cat((self.obs.annotations, annotation_zero),0)
-                    if new_nodes < 3:
-                        new_matrix = new_nodes_matrix[new_nodes-1]
+
+                    new_matrix=[] 
+                    if len(node_prof.vectors) > 0:
+                        for vector in node_prof.vectors:
+                            new_row = [set_precision(value) for value in vector.vec]
+                            new_matrix.append(new_row)
                     else:
-                        new_matrix = [CPY_INST_VEC]
-                    if len(new_matrix) == len(node_prof.positionalSpillWeights):
-                        # new_matrix = [ sc(vec, sw) for vec,sw in zip(new_matrix, node_prof.positionalSpillWeights)]
-                        new_matrix = new_matrix
+                        new_matrix = [[0]*100]
+
                     # else:
-                    #     logging.warning('Spill weight not updated {} : {}'.format(len(new_matrix), len(node_prof.positionalSpillWeights)))
+                    #     logging.warning('Spill weight not updated {} : {}'.format(len(new_matrix), len(node_prof.positionalSpillWeights)))  
                     self.obs.raw_graph_mat.append(new_matrix)
                     node_tansor_matrix = torch.FloatTensor(new_matrix)
-                    nodeVec = constructVectorFromMatrix(node_tansor_matrix).view(1,-1)
-                    self.obs.initial_node_representation = torch.cat((self.obs.initial_node_representation, nodeVec),0)
-
-                    #self.obs.initial_node_representation[]
+                    nodeVec = constructVectorFromMatrix(node_tansor_matrix)
+                    val=self.obs.nid_idx[nodeId]
+                    self.obs.initial_node_representation[val] = nodeVec
 
                     # interfering_node_idx = self.obs.nid_idx[nodeId]
 
@@ -1357,13 +1276,11 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             logging.debug('update the interfering node data.')
             adjList_helper = [[] for _ in range(self.obs.graph_topology.num_nodes)]
             for node_prof in updated_graphs.regProf:
-                #print("node_prof: ",node_prof)
                 if self.mode != 'inference':
                     nodeId = str(node_prof.regID)
                 else:
                     nodeId = node_prof.regID
                 interfering_node_idx = self.obs.nid_idx[nodeId]
-                #print("interfering_node_idx: ",interfering_node_idx)
                 try:
                     if self.mode != 'inference':
                         # self.obs.graph_topology.adjList[interfering_node_idx] = list(map(lambda x: self.obs.nid_idx[str(x)], node_prof.interferences))
@@ -1372,25 +1289,13 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                     else:
                         # self.obs.graph_topology.adjList[interfering_node_idx] = list(set().union(self.obs.graph_topology.adjList[interfering_node_idx], list(map(lambda x: self.obs.nid_idx[x], node_prof.interferences)))) 
                         self.obs.graph_topology.adjList[interfering_node_idx] = list(set(self.obs.graph_topology.adjList[interfering_node_idx] + list(map(lambda x: self.obs.nid_idx[x], node_prof.interferences))))
-                        #print("self.obs.graph_topology.adjList[interfering_node_idx]: ",self.obs.graph_topology.adjList[interfering_node_idx])
                 except:
-                    print("Node idx map", self.obs.graph_topology.adjList[interfering_node_idx], node_prof.interferences, self.obs.nid_idx)
                     return "error"
                     # raise
                 self.obs.graph_topology.indegree[interfering_node_idx] = len(self.obs.graph_topology.adjList[interfering_node_idx])
-
-                #self.obs.spill_cost_list[interfering_node_idx] = node_prof.spillWeight
-
                 formatted_spill_cost =  "{:.13f}".format(node_prof.spillWeight)
-                #print("node_prof.spillWeight: ", node_prof.spillWeight)
                 spill_cost = formatted_spill_cost
-                #print("node.spillWeight: ", spill_cost)
-
                 self.obs.spill_cost_list[interfering_node_idx] = float(spill_cost)
-
-                #print("spill_cost_list: ",self.obs.spill_cost_list)
-                
-               
                 self.obs.use_distances[interfering_node_idx] = np.array(sorted(node_prof.useDistances))
                 self.obs.positionalSpillWeights[interfering_node_idx] = node_prof.positionalSpillWeights
                 self.obs.split_points[interfering_node_idx] = np.array(node_prof.splitSlots)
@@ -1427,15 +1332,9 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             # a = list(map(lambda x:list(map(lambda y: (x[0], y) , x[1])) , enumerate(self.obs.graph_topology.adjList)))
             edges = []
             for i, adj in enumerate(self.obs.graph_topology.adjList):
-                #print("i: ",i)
-                #print("adj: ",adj)
                 sorted_adj=sorted(adj)
-                #print("adj: ",sorted_adj)
                 for node in sorted_adj:
-
                     edges.append((i, node))
-                    # edges.append((node, i))
-            # edges = list(set(edges))
 
             logging.debug("egdes({}) after after update : {} ".format(len(edges), edges))
             logging.debug("self.obs.graph_topology.adjList : {} ".format(self.obs.graph_topology.adjList))            
@@ -1453,13 +1352,3 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             logging.debug("updated_graphs= type:{} result:{}".format(type(updated_graphs), updated_graphs.result))
         logging.debug("Exit update_obs")
         return updated_graphs.result
-
-    def stopServer(self):
-        self.server_pid.stdin.write("Terminate\n")
-        self.server_pid.stdin.flush()
-        try:
-            out, errs = self.server_pid.communicate(timeout=15)
-        except:
-            self.server_pid.kill()
-            out, errs = self.server_pid.communicate()
-            print("Force Stop")

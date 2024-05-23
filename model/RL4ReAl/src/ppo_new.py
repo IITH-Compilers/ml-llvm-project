@@ -109,7 +109,7 @@ class PPOConfig(PGConfig):
         self.model["vf_share_layers"] = False
         self._disable_preprocessor_api = False
 
-        self.num_gpus = 1
+        self.num_gpus = 0
         self.num_cpus_per_worker = 1
         self.num_gpus_per_worker = 0
         self.num_envs_per_worker = 1
@@ -139,16 +139,15 @@ class PPOConfig(PGConfig):
             "dataset": f"{DATA_DIR}",
             "graphs_num": 10000,
             "action_space_size": RegisterActionSpace("X86", CONFIG_DIR).ac_sp_normlize_size,
-            #"check_point": "/home/intern24002/ml-llvm-project/model/RL4ReAl/src/checkpoint_dir/w10_CPU/trial_name_w10_CPU_0_2024-02-21_13-23-37/checkpoint_011896",
-            "check_point":"/home/intern24002/ml-llvm-project/model/RL4ReAl/src/checkpoint_dir/experiment_2024-04-20_19-57-32/experiment_HierarchicalGraphColorEnv_1fd4f_00000_0_2024-04-20_19-57-32/checkpoint_00257",
-            "episode_number": 500,
+            "check_point": None,
+            "episode_number": 10,
             "GPU_ID": '0',
             "X86_CFLAGS": "-mllvm -regalloc=greedy  -march=core2",
             "AArch64_CFLAGS": "-mllvm -regalloc=greedy  -mcpu=cortex-a72",
             "dataset_bucket": "set_5000",
             "enable_GGNN": True,
             "file_repeat_frequency": 1,
-            "current_batch": 500, 
+            "current_batch": 1, 
             "Workers_starting_port": "52147",
             "disable_spliting": False,
             "use_costbased_reward": True,

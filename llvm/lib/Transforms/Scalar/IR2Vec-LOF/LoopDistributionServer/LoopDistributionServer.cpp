@@ -22,6 +22,8 @@
 #include <bits/stdint-intn.h>
 #include <cstdint>
 
+#define DEBUG_TYPE "custom_loop_distribution"
+
 using namespace llvm;
 using namespace MLBridge;
 

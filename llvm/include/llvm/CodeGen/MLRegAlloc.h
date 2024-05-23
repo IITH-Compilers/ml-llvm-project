@@ -283,6 +283,8 @@ private:
   void processMLInputs(SmallSetVector<unsigned, 8> *updatedRegIdxs, bool IsStart = false, bool IsJson=false);
   void processMLInputsProtobuf(SmallSetVector<unsigned, 8> *updatedRegIdxs, bool IsStart = false);
   void printFeatures();
+  float set_precision(float weight);
+  IR2Vec::Vector set_precision(const IR2Vec::Vector& input);
   // void processMLAdvice();
 
   // std::map<std::string, std::map<std::string, int64_t>>
@@ -336,7 +338,6 @@ private:
 
   void loadTargetRegisterConfig(std::string config_colorMap) {
     assert(config_colorMap != "" && "Path is empty");
-    errs() << "config_colorMap:"<<config_colorMap<< "\n";
     LLVM_DEBUG(errs() << config_colorMap << "\n");
     std::ifstream targert_color2reg_file(config_colorMap);
     assert(!targert_color2reg_file.fail() && "Config file is not present.");

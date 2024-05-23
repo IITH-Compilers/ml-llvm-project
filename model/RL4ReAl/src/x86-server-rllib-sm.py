@@ -16,8 +16,10 @@ sys.path.append(
 )
 import rollout as inference
 from argparse import Namespace
-from compilerinterface import PipeCompilerInterface, GrpcCompilerInterface
 
+sys.path.append(f"{BUILD_DIR}/../MLCompilerBridge/CompilerInterface/")
+from PipeCompilerInterface import PipeCompilerInterface
+from GrpcCompilerInterface import GrpcCompilerInterface
 
 def blockPrint():
     sys.stdout = open(os.devnull, 'w')
@@ -332,7 +334,7 @@ def run_pipe_communication(data_format, pipe_name, dump_onnx_model=False):
                 if not inference_model.update_obs(inter_graphs):
                     print("Current split failed")
                     inference_model.setCurrentNodeAsNotVisited()
-                inference_model.updateSelectNodeObs()
+                inference_model.updateSelectNodeObs() 
 
             else:
                 inference_model.setCurrentNodeAsNotVisited()

@@ -17,7 +17,7 @@
 
 #include <fstream>
 #include <map>
-
+#include <iostream>
 class MIR2Vec_Symbolic {
 
 private:
@@ -50,6 +50,7 @@ public:
 
   llvm::SmallMapVector<const llvm::MachineInstr *, IR2Vec::Vector, 128>
   getInstVecMap() {
+    //std::cout<<"instVecMap: "<<instVecMap<<"\n";
     return instVecMap;
   }
 

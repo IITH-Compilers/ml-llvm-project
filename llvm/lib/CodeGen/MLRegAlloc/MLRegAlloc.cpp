@@ -374,8 +374,6 @@ void MLRA::processMLInputsProtobuf(SmallSetVector<unsigned, 8> *updatedRegIdxs,
     }
         
       //spillWeight.second = -1.0f;
-      //errs()<<"Inside processMLInputs_protobuf infinity: "<<"\n";
-      
 
     std::pair<std::string, std::vector<int>> interferences(
         "interferences",
@@ -444,7 +442,6 @@ void MLRA::printFeatures() {
 
 void MLRA::processMLInputs(SmallSetVector<unsigned, 8> *updatedRegIdxs,
                            bool IsStart, bool IsJson) {
-  errs() << "Inside processMLInputs\n";
   if (data_format == "protobuf") {
     processMLInputsProtobuf(updatedRegIdxs, IsStart);
     return;
@@ -496,8 +493,6 @@ void MLRA::processMLInputs(SmallSetVector<unsigned, 8> *updatedRegIdxs,
     std::pair<std::string, float> spillWeight("spillWeight" + app,
                                               rp.spillWeight);
     if (rp.spillWeight == INFINITY)
-        errs()<<"entered into processMlInputs Infinity"<<"\n";
-      //spillWeight.second = -1.0f;
         spillWeight.second = 10000;
 
     std::pair<std::string, std::vector<int>> interferences(
@@ -665,6 +660,13 @@ void MLRA::sendRegProfData(T *response,
     google::protobuf::RepeatedField<float> posSpillWeights(
         rp.spillWeights.begin(), rp.spillWeights.end());
     regprofResponse->mutable_positionalspillweights()->Swap(&posSpillWeights);
+
+    for (auto vec : rp.vecRep) {
+    auto vector = regprofResponse->add_vectors();
+    google::protobuf::RepeatedField<double> vecs(vec.begin(), vec.end());
+    vector->mutable_vec()->Swap(&vecs);
+   }
+   
   }
   if (regIdxs.size() > 0) {
     numSplits++;
@@ -1588,6 +1590,27 @@ void MLRA::findLastUseBefore(const SmallVector<SlotIndex, 8> &startpts,
   }
 }
 
+float MLRA::set_precision(float weight){
+    char buffer[50];
+    memset(buffer, 0, sizeof(buffer));
+    sprintf(buffer, "%.13f",weight);
+    float store = atof(buffer); 
+    return store;
+}
+
+IR2Vec::Vector MLRA::set_precision(const IR2Vec::Vector& input) {
+    IR2Vec::Vector output;
+    output.reserve(input.size());
+    for (float value : input) {
+        char buffer[50];
+        memset(buffer, 0, sizeof(buffer));
+        sprintf(buffer, "%.13f", value);
+        float precision_value = atof(buffer);
+        output.push_back(precision_value);
+    }
+    return output;
+}
+
 void MLRA::calculatePositionalSpillWeights(
     LiveInterval *VirtReg, SmallVector<float, 8> &spillWeights) {
   VirtRegAuxInfo VRAI(*MF, *LIS, VRM, *Loops, *MBFI);
@@ -1604,15 +1627,9 @@ void MLRA::calculatePositionalSpillWeights(
       startIdx = LIS->getMBBStartIdx(LIS->getMBBFromIndex(use));
     }
 
-    spillWeights.push_back(VRAI.futureWeight(*VirtReg, startIdx, use));
+    float futureWeight = VRAI.futureWeight(*VirtReg, startIdx, use);
+    spillWeights.push_back(set_precision(futureWeight));
   }
-
-  // std::cout << "Contents of spillWeights:" << std::endl;
-  // for (const auto &weight : spillWeights) {
-  //   std::cout << weight << " ";
-  // }
-  // std::cout << std::endl;
-
 }
 
 void MLRA::computeVectors(LiveInterval *VirtReg,
@@ -1626,7 +1643,9 @@ void MLRA::computeVectors(LiveInterval *VirtReg,
       if (!MIR)
         continue;
       IR2Vec::Vector vec = instVecMap[MIR];
-      vectors.push_back(vec);
+      if (!vec.empty()) {
+        vectors.push_back(set_precision(vec));
+      }
       if (vec.size() <= 0) {
         LLVM_DEBUG(errs() << "Value not found in the map \n");
         continue;
@@ -1669,7 +1688,6 @@ void MLRA::computeSplitPoints(LiveInterval *VirtReg,
   }
 }
 
-//captureRegisterProfile
 bool MLRA::captureRegisterProfile() {
   LLVM_DEBUG(errs() << "captureRegProf Processing function ID: "
                     << FunctionCounter << "\n");
@@ -1678,7 +1696,6 @@ bool MLRA::captureRegisterProfile() {
 
   for (unsigned i = 0, e = MRI->getNumVirtRegs(); i != e; ++i) {
     unsigned Reg = Register::index2VirtReg(i);
-    //errs()<<"Reg is: "<<Reg<<"\n";
     if (!isSafeVReg(Reg))
       continue;
     LIS->getInterval(Reg);
@@ -1743,13 +1760,11 @@ bool MLRA::captureRegisterProfile() {
   for (unsigned i = 0, e = MRI->getNumVirtRegs(); i < e; ++i) {
     RegisterProfile regProf;
     unsigned Reg = Register::index2VirtReg(i);
-    //errs()<<"i: "<<i<<"\n";
     if (!isSafeVReg(Reg))
       continue;
     LLVM_DEBUG(errs() << "Starting to process - " << printReg(Reg, TRI)
                       << "\n");
     LiveInterval *VirtReg = &LIS->getInterval(Reg);
-    //errs()<<"VirtReg: "<<*VirtReg<<"\n";
     SA->analyze(VirtReg);
     if (SA->getUseSlots().empty() || MRI->reg_nodbg_empty(Reg)) {
       LLVM_DEBUG(errs() << "Skipping vreg due to empty slot: "
@@ -1777,37 +1792,9 @@ bool MLRA::captureRegisterProfile() {
     calculatePositionalSpillWeights(VirtReg, positionalSpillWeights);
 
     regProf.spillWeights = positionalSpillWeights;
-
-  //   errs()<<"spillweights in capture register profile"<<"\n";
-  //   for (const auto &weights : spillWeights) {
-  //     errs()<<"weights in capture regiter profile: "<<weights<<"\n";
-  //   }
-  // std::cout << std::endl;
-
     regProf.vecRep = vectors;
-    //regProf.spillWeight = VirtReg->weight;
-
-
-    char buffer[50];
-    memset(buffer, 0, sizeof(buffer));
-    sprintf(buffer, "%.13f", VirtReg->weight);
-    float store = atof(buffer); 
-    //printf("The value of regProf is %.13f\n", VirtReg->weight);
-    //printf("The value stored in 'store' is %.13f\n", store);
+    float store = set_precision(VirtReg->weight); 
     regProf.spillWeight = store;
-
-    printf("The value sored in regProf.spillWeight:%.13f \n",regProf.spillWeight);
-
-
-    //precision setting
-
-    // std::ostringstream ss;
-    // ss << std::fixed << std::setprecision(8) << VirtReg->weight;
-    // std::string spillWeightStr = ss.str();
-    // regProf.spillWeight = std::stof(spillWeightStr);
-
-    //errs()<<"single regProf.spillWeight: "<<regProf.spillWeight<<"\n";  //here
-
     SmallVector<int, 8> useDistances;
     SmallVector<unsigned, 8> splitPoints;
     computeSplitPoints(VirtReg, useDistances, splitPoints);
@@ -1843,7 +1830,6 @@ bool MLRA::captureRegisterProfile() {
     regProf.frwdInterferences = frwdInterference;
     LLVM_DEBUG(errs() << "Adding reg here2: " << step + i << "\n");
     regProfMap[step + i] = regProf;
-    errs()<<"regProfMap[step + i]: "<<step+i<<"\n";
   }
 
   // Adding interferences in other direction
@@ -1953,8 +1939,6 @@ void MLRA::updateRegisterProfileAfterSplit(
     unsigned NewVRegIdx = Register::virtReg2Index(NewVRegs[i]);
     LLVM_DEBUG(errs() << "Updating RP for " << printReg(NewVRegs[i], TRI)
                       << "--" << NewVRegIdx + step << "\n");
-    errs() << "Updating RP for " << printReg(NewVRegs[i], TRI)
-                      << "--" << NewVRegIdx + step << "\n";
     // unsigned Reg = Register::index2VirtReg(NewVRegs[i]);
     LiveInterval *NewVirtReg = &LIS->getInterval(NewVRegs[i]); //harika
     if (NewVirtReg->empty()) {
@@ -1963,15 +1947,7 @@ void MLRA::updateRegisterProfileAfterSplit(
     }
     // rp.cls = oldRP.cls;
     rp.cls = TRI->getRegClassName(MRI->getRegClass(NewVirtReg->reg));
-
-    //rp.spillWeight = NewVirtReg->weight;
-
-    char buffer[50];
-    memset(buffer, 0, sizeof(buffer));
-    sprintf(buffer, "%.13f", NewVirtReg->weight);
-    float store = atof(buffer); 
-    printf("The value of regProf in updateRegisterProfileAfterSplit is %.13f\n", NewVirtReg->weight);
-    printf("The value stored in 'store' in updateRegisterProfileAfterSplit is %.13f\n", store);
+    float store = set_precision(NewVirtReg->weight); 
     rp.spillWeight = store;
 
     SmallVector<int, 8> useDistances;
@@ -1982,6 +1958,10 @@ void MLRA::updateRegisterProfileAfterSplit(
       LLVM_DEBUG(errs() << "There are no uses.. skipping this new virt reg\n");
       continue;
     }
+   
+    SmallVector<IR2Vec::Vector, 12> vectors;
+    computeVectors(NewVirtReg, vectors);
+    rp.vecRep = vectors;
     computeSplitPoints(NewVirtReg, useDistances, splitPoints);
 
     // auto firstUse = uses.front();
@@ -2717,6 +2697,11 @@ void MLRA::inference() {
       }
 
       LLVM_DEBUG(errs() << "edge_count = " << edge_count << "\n");
+      //num function to process -> ONNX
+      // if (count >= 500 || count <= 0) {
+      //   LLVM_DEBUG(errs() << "Error msg: Node count is more then max value\n");
+      //   return;
+      // }
       if (count > MAX_VARS || count < MIN_VARS) {
         LLVM_DEBUG(errs() << "Error msg: Node count is more then max value\n");
         return;
@@ -2736,13 +2721,11 @@ void MLRA::inference() {
         colorMap[std::to_string(pair.first)] = pair.second;
       }
       // inference_driver->getInfo(regProfMap, colorMap);
-      LLVM_DEBUG(errs() << "Processing funtion: " << MF->getName() << "\n");
-      LLVM_DEBUG(errs() << "Colour Map: \n");
+     errs() << "Processing funtion: " << MF->getName() << "\n";
+      errs() << "Colour Map: \n";
       unsigned numSpills = 0;
-      for (auto pair : colorMap) {
-        LLVM_DEBUG(errs() << pair.first << " : " << pair.second << "\n");
-        if (pair.second == 0)
-          numSpills++;
+      for (const auto& pair : colorMap) {
+          std::cout << "Key: " << pair.first << ", Value: " << pair.second << std::endl;
       }
 
       this->FunctionVirtRegToColorMap[MF->getName()] = colorMap;

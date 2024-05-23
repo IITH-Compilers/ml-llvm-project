@@ -37,8 +37,6 @@ class Graph:
     def UpdateVisitList(self, v):
         try:
             if not self.discovered[v]:
-
-                # for every adjacent vertex u of v, reduce in-degree of u by 1
                 for u in self.adjList[v]:
                     self.indegree[u] = self.indegree[u] - 1
                 self.discovered[v] = True
@@ -49,7 +47,6 @@ class Graph:
                 return False
                 # assert False, 'discovered node visited.'
         except:
-            print("List out of bound", len(self.discovered), v)
             return False
 
     def markNodeAsNotVisited(self, v):

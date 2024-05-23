@@ -58,7 +58,7 @@ def experiment(config):
     last_checkpoint = 0
     for i in range(iterations):
         train_results = train_agent.train()
-        if i == iterations - 1 or (train_results['episodes_total'] - last_checkpoint) > 10:
+        if i == iterations - 1 or (train_results['episodes_total'] - last_checkpoint) > 5:
             last_checkpoint = train_results['episodes_total']
             checkpoint = train_agent.save(tune.get_trial_dir())
             tune.report(**train_results)

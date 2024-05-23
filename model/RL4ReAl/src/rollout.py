@@ -280,7 +280,7 @@ class RollOutInference:
                 "dataset": "/home/venkat/level-O0-llfiles_train_mlra_aarch64_new_data",
                 "graphs_num": 10000,
                 "action_space_size": RegisterActionSpace("AArch64", "/home/venkat/IF-DV/Rohit/regAlloc/iith-compilers/benchmarking/ML-Register-Allocation/llvm/lib/CodeGen/MLRegAlloc/config_json").ac_sp_normlize_size,
-                "check_point": None,
+                "check_point": "/home/intern24002/ml-llvm-project/model/RL4ReAl/src/checkpoint_dir/experiment_2024-05-20_12-36-13/experiment_HierarchicalGraphColorEnv_71ccf_00000_0_2024-05-20_12-36-14/checkpoint_000011",
                 "episode_number": 49999,
                 "GPU_ID": '0',
                 "X86_CFLAGS": "-mllvm -regalloc=greedy  -march=core2",
@@ -306,7 +306,7 @@ class RollOutInference:
                 "max_number_nodes": 600,
                 "max_usepoint_count": 200,
                 "annotations": 3,
-                "max_edge_count": 30000,
+                "max_edge_count": 70000,
                 "mode": 'inference',
                 "dump_type": 'One',
                 "dump_color_graph": True,
@@ -317,14 +317,15 @@ class RollOutInference:
                 "dataset": f"{DATA_DIR}/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_generated_at_05-05-22/",
                 "graphs_num": 10000,
                 "action_space_size": RegisterActionSpace("X86", f"{CONFIG_DIR}").ac_sp_normlize_size,
-                "check_point": None,
-                "episode_number": 10000,
+                #"check_point": "/home/intern24002/ml-llvm-project/model/RL4ReAl/src/checkpoint_dir/experiment_2024-05-21_18-33-35/experiment_HierarchicalGraphColorEnv_88427_00000_0_2024-05-21_18-33-35/checkpoint_000011",
+                "check_poin":"/home/intern24002/ml-llvm-project/model/RL4ReAl/src/checkpoint_dir/experiment_2024-05-22_15-41-19/experiment_HierarchicalGraphColorEnv_a2223_00000_0_2024-05-22_15-41-21/checkpoint_000012",
+                "episode_number": 10,
                 "GPU_ID": '0',
                 "X86_CFLAGS": "-mllvm -regalloc=greedy  -march=core2",
                 "AArch64_CFLAGS": "-mllvm -regalloc=greedy  -mcpu=cortex-a72",
                 "dataset_bucket": "set_70-120",
                 "file_repeat_frequency": 1,
-                "current_batch": 100,
+                "current_batch": 1,
                 "enable_GGNN": True,
                 "Workers_starting_port": "50001",
                 "disable_spliting": False,
@@ -579,14 +580,31 @@ class RollOutInference:
     def updateSelectNodeObs(self):
         select_node_mask = self.env.createNodeSelectMask()
         curr_obs = self.obs[self.env.select_node_agent_id]
+        state = self.env.obs
+        cu_obs=self.env.obs.initial_node_representation
+        annotations = np.zeros((self.env.max_number_nodes, self.env.annotation_size))
+        annotations[0:state.annotations.shape[0], :] = state.annotations
+        spill_weight_list = annotations[:, 0]  
         curr_obs['action_mask'] = np.array(select_node_mask)
+        curr_obs['spill_weights']=np.array(spill_weight_list)
+        adjacency_lists = {
+            "node_num": state.adjacency_lists[0].getNodeNum() - self.env.split_successful,
+            "edge_num": state.adjacency_lists[0].getData().shape[0],
+            "data": state.adjacency_lists[0].getData().tolist()
+        }
+        curr_obs['adjacency_lists']=adjacency_lists
+        if cu_obs is not None and not isinstance(cu_obs, np.ndarray):
+            cu_obs = cu_obs.detach().numpy()
+        curr_obs['state']=cu_obs
+        curr_obs['annotations']=np.array(annotations)
+        # if curr_obs is not None and not isinstance(curr_obs, np.ndarray):
+        #     curr_obs = curr_obs.detach().numpy()
         self.obs[self.env.select_node_agent_id] = curr_obs
 
     def getLastTaskDone(self):
         return self.env.last_task_done
 
     def compute_action(self):
-        mapping_cache = {}  # in case policy_agent_mapping is stochastic
         agent_states = DefaultMapping(
             lambda agent_id: self.state_init[mapping_cache[agent_id]])
         prev_actions = DefaultMapping(
@@ -597,7 +615,7 @@ class RollOutInference:
         # while not done and keep_going(steps, num_steps, episodes,
         #                               num_episodes):
         actions_response = {}
-        while not done:        
+        while not done:    
             multi_obs = self.obs if self.multiagent else {_DUMMY_AGENT_ID: obs}
             action_dict = {}
             for agent_id, a_obs in multi_obs.items():
@@ -605,7 +623,6 @@ class RollOutInference:
                     policy_id = mapping_cache.setdefault(
                         agent_id, self.policy_agent_mapping(agent_id))
                     p_use_lstm = self.use_lstm[policy_id]
-                    #print("p_use_lstm: ",p_use_lstm)
                     if p_use_lstm:
                         a_action, p_state, _ = self.agent.compute_single_action(
                             a_obs,
@@ -613,8 +630,6 @@ class RollOutInference:
                             prev_action=prev_actions[agent_id],
                             prev_reward=prev_rewards[agent_id],
                             policy_id=policy_id, explore=False)
-
-                        #print("policy_id in p_use_lstm: ",policy_id)
                         agent_states[agent_id] = p_state
                     else:
                         a_action, extra_info = self.agent.compute_single_action(
@@ -622,8 +637,6 @@ class RollOutInference:
                             prev_action=prev_actions[agent_id],
                             prev_reward=prev_rewards[agent_id],
                             policy_id=policy_id, explore = False)
-                    
-                    #print("policy id not in p_use_lstm: ",policy_id)
                     a_action = flatten_to_single_ndarray(a_action)
                     action_dict[agent_id] = a_action
                     prev_actions[agent_id] = a_action
