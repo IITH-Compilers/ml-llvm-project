@@ -156,9 +156,10 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.colour_successful = 0
         self.path = None
         self.annotation_size = env_config["annotations"]
+        self.Phy_registers_of_GRtype = self.list_of_phy_registers()
         random.seed(123)
         np.random.seed(123)
-    #/home/intern24002/ml-llvm-project_backup/ml-llvm-project/config/regalloc/X86_supported_RegClasses.json
+  
     def list_of_phy_registers(self):
         if self.env_config["target"] == "X86":
             fileName= os.path.join(self.env_config["Register_config"], 'regalloc/X86_supported_RegClasses.json')
@@ -1121,7 +1122,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             self.functionName = graph['graph'][1][1]['Function'].strip('\"')
             self.fun_id = graph['graph'][1][1]['Function_ID']
             self.num_nodes = len(self.graph['nodes'])
-            self.obs = get_observations(self.graph)
+            self.obs = get_observations(self.graph,self.Phy_registers_of_GRtype)
             if self.server_pid is not None:
                 print('terminate the pid if alive : {}'.format(self.server_pid.pid))
                 self.stopServer()
@@ -1144,7 +1145,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             self.functionName = graph.funcName
             self.fun_id = graph.funid    
             self.num_nodes = len(graph.regProf)
-            self.obs = get_observationsInf(self.graph)
+            self.obs = get_observationsInf(self.graph,self.Phy_registers_of_GRtype)
             self.color_assignment_map = []
 
         edge_count = 0
@@ -1195,7 +1196,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
     
     def identify_node_cls(self, regClass,nodeId):
         
-        list_of_phy_registers_ofGRtype = self.list_of_phy_registers()
+        list_of_phy_registers_ofGRtype = self.Phy_registers_of_GRtype
         if regClass=="Phy":
             if nodeId in list_of_phy_registers_ofGRtype:
                 nodeType="GR"

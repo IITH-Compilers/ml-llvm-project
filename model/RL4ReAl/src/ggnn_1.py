@@ -303,21 +303,7 @@ def parseProp(val):
     val = val.strip()
     return val[1: len(val) - 1]
 
-def list_of_phy_registers(): 
-        fileName="/home/intern24002/ml-llvm-project_backup/ml-llvm-project/config/regalloc/X86_supported_RegClasses.json"
-        list_of_phy_registers_ofGR_type = set()
-        with open(fileName, 'r') as file:
-            data = json.load(file)
-            for key, values in data.items():
-                if "GR" in key:
-                    for value in values:
-                        list_of_phy_registers_ofGR_type.add(value['regId'])
-        #print("list is: ",list(list_of_phy_registers_ofGR_type))
-        return list(list_of_phy_registers_ofGR_type)
-
-def identify_node_cls(regClass,nodeId):
-
-    list_of_phy_registers_ofGRtype=list_of_phy_registers()
+def identify_node_cls(regClass,nodeId,list_of_phy_registers_ofGRtype):
 
     if regClass=="Phy":
         if nodeId in list_of_phy_registers_ofGRtype:
@@ -334,7 +320,7 @@ def identify_node_cls(regClass,nodeId):
         return nodeType
 
 
-def get_observationsInf(graph):
+def get_observationsInf(graph,Phy_registers_of_GRtype):
     print("In get_observationsInf")
     nodes = graph.regProf
     #adjlist = graph['adjacency']
@@ -404,11 +390,11 @@ def get_observationsInf(graph):
         nodeId = node.regID
         regClass = node.cls
         
-        nodeType1 = identify_node_cls(regClass, nodeId)
+        nodeType1 = identify_node_cls(regClass, nodeId,Phy_registers_of_GRtype)
         for nlink in node.interferences:
             neighIdx = nid_idx[nlink]
             Cls = idx_cls[neighIdx]
-            nodeType2 = identify_node_cls(Cls, nlink)
+            nodeType2 = identify_node_cls(Cls, nlink,Phy_registers_of_GRtype)
             if (nodeType1 == "GR" and nodeType2 == "GR") or (nodeType1 == "Non-GR" and nodeType2 == "Non-GR"):
                 all_edges.append((idx, neighIdx))
                     
@@ -471,7 +457,7 @@ def get_observationsInf(graph):
     obs = Namespace(**obs) 
     return obs
     
-def get_observations(graph):
+def get_observations(graph,Phy_registers_of_GRtype):
     nodes = graph['nodes']
     adjlist = graph['adjacency']
     num_nodes = len(nodes)
@@ -571,11 +557,11 @@ def get_observations(graph):
         nodeId = node.regID
         regClass = node.cls
         
-        nodeType1 = identify_node_cls(regClass, nodeId)
+        nodeType1 = identify_node_cls(regClass, nodeId,Phy_registers_of_GRtype)
         for nlink in node.interferences:
             neighIdx = nid_idx[nlink]
             Cls = idx_cls[neighIdx]
-            nodeType2 = identify_node_cls(Cls, nlink)
+            nodeType2 = identify_node_cls(Cls, nlink,Phy_registers_of_GRtype)
             if (nodeType1 == "GR" and nodeType2 == "GR") or (nodeType1 == "Non-GR" and nodeType2 == "Non-GR"):
                 all_edges.append((idx, neighIdx))        
 
