@@ -371,9 +371,7 @@ void MLRA::processMLInputsProtobuf(SmallSetVector<unsigned, 8> *updatedRegIdxs,
     std::pair<std::string, float> spillWeight("spillWeight", rp.spillWeight);
     if (rp.spillWeight == INFINITY){
       spillWeight.second = 10000;
-    }
-        
-      //spillWeight.second = -1.0f;
+    }    
 
     std::pair<std::string, std::vector<int>> interferences(
         "interferences",
@@ -660,7 +658,6 @@ void MLRA::sendRegProfData(T *response,
     google::protobuf::RepeatedField<float> posSpillWeights(
         rp.spillWeights.begin(), rp.spillWeights.end());
     regprofResponse->mutable_positionalspillweights()->Swap(&posSpillWeights);
-
     for (auto vec : rp.vecRep) {
     auto vector = regprofResponse->add_vectors();
     google::protobuf::RepeatedField<double> vecs(vec.begin(), vec.end());
@@ -1626,7 +1623,6 @@ void MLRA::calculatePositionalSpillWeights(
     if (MIR->getParent() != LIS->getMBBFromIndex(startIdx)) {
       startIdx = LIS->getMBBStartIdx(LIS->getMBBFromIndex(use));
     }
-
     float futureWeight = VRAI.futureWeight(*VirtReg, startIdx, use);
     spillWeights.push_back(set_precision(futureWeight));
   }
@@ -1709,7 +1705,6 @@ bool MLRA::captureRegisterProfile() {
     RegisterProfile regProf;
     regProf.cls = "Phy";
     regProf.spillWeight = 0;
-    
     if (this->target_PhyReg2ColorMap[targetName].find(i) !=
         this->target_PhyReg2ColorMap[targetName].end()) {
       regProf.color = this->target_PhyReg2ColorMap[targetName][i];
@@ -1869,9 +1864,7 @@ bool MLRA::captureRegisterProfile() {
   // }
 
   LLVM_DEBUG(errs() << "\ncaptureRegisterProfile() call ended.\n");
-  //LLVM_DEBUG(printRegisterProfile());
-  printRegisterProfile();
-
+  LLVM_DEBUG(printRegisterProfile());
   return validProf;
 }
 
@@ -1940,7 +1933,7 @@ void MLRA::updateRegisterProfileAfterSplit(
     LLVM_DEBUG(errs() << "Updating RP for " << printReg(NewVRegs[i], TRI)
                       << "--" << NewVRegIdx + step << "\n");
     // unsigned Reg = Register::index2VirtReg(NewVRegs[i]);
-    LiveInterval *NewVirtReg = &LIS->getInterval(NewVRegs[i]); //harika
+    LiveInterval *NewVirtReg = &LIS->getInterval(NewVRegs[i]);
     if (NewVirtReg->empty()) {
       LLVM_DEBUG(errs() << "empty newvirtreg detected.. continue\n");
       continue;
@@ -1958,7 +1951,6 @@ void MLRA::updateRegisterProfileAfterSplit(
       LLVM_DEBUG(errs() << "There are no uses.. skipping this new virt reg\n");
       continue;
     }
-   
     SmallVector<IR2Vec::Vector, 12> vectors;
     computeVectors(NewVirtReg, vectors);
     rp.vecRep = vectors;
@@ -2697,11 +2689,6 @@ void MLRA::inference() {
       }
 
       LLVM_DEBUG(errs() << "edge_count = " << edge_count << "\n");
-      //num function to process -> ONNX
-      // if (count >= 500 || count <= 0) {
-      //   LLVM_DEBUG(errs() << "Error msg: Node count is more then max value\n");
-      //   return;
-      // }
       if (count > MAX_VARS || count < MIN_VARS) {
         LLVM_DEBUG(errs() << "Error msg: Node count is more then max value\n");
         return;
@@ -2721,13 +2708,16 @@ void MLRA::inference() {
         colorMap[std::to_string(pair.first)] = pair.second;
       }
       // inference_driver->getInfo(regProfMap, colorMap);
-     errs() << "Processing funtion: " << MF->getName() << "\n";
-      errs() << "Colour Map: \n";
+      LLVM_DEBUG(errs() << "Processing funtion: " << MF->getName() << "\n");
+      LLVM_DEBUG(errs() << "Colour Map: \n");
       unsigned numSpills = 0;
-      for (const auto& pair : colorMap) {
-          std::cout << "Key: " << pair.first << ", Value: " << pair.second << std::endl;
-      }
+      for (auto pair : colorMap) {
+        LLVM_DEBUG(errs() << pair.first << " : " << pair.second << "\n");
 
+        if (pair.second == 0)
+          numSpills++;
+      }
+      
       this->FunctionVirtRegToColorMap[MF->getName()] = colorMap;
       // assert(reply->funcname() == MF->getName());
       allocatePhysRegsViaRL();

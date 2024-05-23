@@ -90,11 +90,7 @@ class APPOConfig(ImpalaConfig):
         # Override some of ImpalaConfig's default values with APPO-specific values.
         self.num_rollout_workers = 10
         self.rollout_fragment_length = 8
-<<<<<<< HEAD
-        self.train_batch_size = 256
-=======
         self.train_batch_size = 32
->>>>>>> 7a2345f28bdf70fc2a2cca42a4810381267448bd
         self.sample_async = False
         self.num_gpus = 1
         # self.num_multi_gpu_tower_stacks = 2
@@ -145,25 +141,16 @@ class APPOConfig(ImpalaConfig):
             "graphs_num": 10000,
             "action_space_size": RegisterActionSpace("X86", CONFIG_DIR).ac_sp_normlize_size,
             "check_point": None,
-<<<<<<< HEAD
-            "episode_number": 100000,
-            "GPU_ID": '0',
-=======
             "episode_number": 5,
             "GPU_ID": 0,
->>>>>>> 7a2345f28bdf70fc2a2cca42a4810381267448bd
             "X86_CFLAGS": "-mllvm -regalloc=greedy  -march=core2",
             "AArch64_CFLAGS": "-mllvm -regalloc=greedy  -mcpu=cortex-a72",
             "dataset_bucket": "set_5000",
             "enable_GGNN": True,
             "file_repeat_frequency": 1,
             "current_batch": 500,
-<<<<<<< HEAD
-            "Workers_starting_port": "50056",
-=======
             "Workers_starting_port": "50045",
             "disable_spliting": False,
->>>>>>> 7a2345f28bdf70fc2a2cca42a4810381267448bd
             "use_costbased_reward":True,
             "use_local_reward": False,
             "use_mca_reward": False,

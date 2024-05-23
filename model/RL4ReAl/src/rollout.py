@@ -280,7 +280,7 @@ class RollOutInference:
                 "dataset": "/home/venkat/level-O0-llfiles_train_mlra_aarch64_new_data",
                 "graphs_num": 10000,
                 "action_space_size": RegisterActionSpace("AArch64", "/home/venkat/IF-DV/Rohit/regAlloc/iith-compilers/benchmarking/ML-Register-Allocation/llvm/lib/CodeGen/MLRegAlloc/config_json").ac_sp_normlize_size,
-                "check_point": "/home/intern24002/ml-llvm-project/model/RL4ReAl/src/checkpoint_dir/experiment_2024-05-20_12-36-13/experiment_HierarchicalGraphColorEnv_71ccf_00000_0_2024-05-20_12-36-14/checkpoint_000011",
+                "check_point": None,
                 "episode_number": 49999,
                 "GPU_ID": '0',
                 "X86_CFLAGS": "-mllvm -regalloc=greedy  -march=core2",
@@ -306,7 +306,7 @@ class RollOutInference:
                 "max_number_nodes": 600,
                 "max_usepoint_count": 200,
                 "annotations": 3,
-                "max_edge_count": 70000,
+                "max_edge_count": 30000,
                 "mode": 'inference',
                 "dump_type": 'One',
                 "dump_color_graph": True,
@@ -317,15 +317,14 @@ class RollOutInference:
                 "dataset": f"{DATA_DIR}/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_generated_at_05-05-22/",
                 "graphs_num": 10000,
                 "action_space_size": RegisterActionSpace("X86", f"{CONFIG_DIR}").ac_sp_normlize_size,
-                #"check_point": "/home/intern24002/ml-llvm-project/model/RL4ReAl/src/checkpoint_dir/experiment_2024-05-21_18-33-35/experiment_HierarchicalGraphColorEnv_88427_00000_0_2024-05-21_18-33-35/checkpoint_000011",
-                "check_poin":"/home/intern24002/ml-llvm-project/model/RL4ReAl/src/checkpoint_dir/experiment_2024-05-22_15-41-19/experiment_HierarchicalGraphColorEnv_a2223_00000_0_2024-05-22_15-41-21/checkpoint_000012",
-                "episode_number": 10,
+                "check_point":None,
+                "episode_number": 10000,
                 "GPU_ID": '0',
                 "X86_CFLAGS": "-mllvm -regalloc=greedy  -march=core2",
                 "AArch64_CFLAGS": "-mllvm -regalloc=greedy  -mcpu=cortex-a72",
                 "dataset_bucket": "set_70-120",
                 "file_repeat_frequency": 1,
-                "current_batch": 1,
+                "current_batch": 500,
                 "enable_GGNN": True,
                 "Workers_starting_port": "50001",
                 "disable_spliting": False,
@@ -605,6 +604,7 @@ class RollOutInference:
         return self.env.last_task_done
 
     def compute_action(self):
+        mapping_cache={}
         agent_states = DefaultMapping(
             lambda agent_id: self.state_init[mapping_cache[agent_id]])
         prev_actions = DefaultMapping(

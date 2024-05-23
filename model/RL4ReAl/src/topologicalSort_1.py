@@ -47,6 +47,7 @@ class Graph:
                 return False
                 # assert False, 'discovered node visited.'
         except:
+            print("List out of bound", len(self.discovered), v)
             return False
 
     def markNodeAsNotVisited(self, v):

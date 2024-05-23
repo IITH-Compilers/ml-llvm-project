@@ -316,6 +316,8 @@ def set_precision_forList(lst):
 
 def get_observationsInf(graph):
     nodes = graph.regProf
+    # adjlist = graph['adjacency']
+    
     num_nodes = len(nodes)
     
     initial_node_representation = []

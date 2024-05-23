@@ -44,7 +44,6 @@ from tqdm import tqdm
 import traceback
 import random
 import sys
-
 import re
 
 from config import BUILD_DIR
@@ -95,7 +94,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.max_number_nodes = env_config["max_number_nodes"]
         self.emb_size = env_config["state_size"]
         self.last_task_done = 0
-        self.node_representation_mat = None   #this one
+        self.node_representation_mat = None 
         self.max_edge_count = env_config["max_edge_count"]
         self.use_mca_reward = env_config["use_mca_reward"]
         self.use_local_reward =  env_config["use_local_reward"]
@@ -221,11 +220,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         annotations[0:state.annotations.shape[0], :] = state.annotations
         spill_weight_list = annotations[:, 0]  # Annotations first element is spill weights 
         adjacency_lists = (state.adjacency_lists[0].getNodeNum(), np.array(state.adjacency_lists[0].getData()))
-        torch.set_printoptions(threshold=1000000)    
-        torch.set_printoptions(profile="full")
-        
         result = None
-
         for inx, i in enumerate(state.adjacency_lists[0].getData()):
             flag = True
             if inx ==0:
@@ -334,7 +329,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
     def getSpillWeightListExpanded(self):
         spill_weight_list = [0]*self.max_number_nodes
         for i in range(len(self.obs.spill_cost_list)):
-
             spill_weight_list[i] = self.formatRewardValue(self.obs.spill_cost_list[i])
         return spill_weight_list
 
@@ -1173,7 +1167,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 else:
                     nodeId = node_prof.regID
                 if nodeId not in self.obs.nid_idx.keys():
-                        new_node_count += 1  #num_of_nodes are incremented here
+                        new_node_count += 1
             for i, adj in enumerate(self.obs.graph_topology.adjList):
                 for node in adj:
                     num_edges += 1
@@ -1193,7 +1187,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             try:
                 for adj in self.obs.graph_topology.adjList[splited_node_idx]:
                     cur_adj = adj
-                    if splited_node_idx in self.obs.graph_topology.adjList[adj]
+                    if splited_node_idx in self.obs.graph_topology.adjList[adj]:
                         self.obs.graph_topology.adjList[adj].remove(splited_node_idx)
                         self.obs.graph_topology.indegree[adj] = self.obs.graph_topology.indegree[adj] - 1                    
             except:
@@ -1245,7 +1239,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                             return "error"
                             # raise
             
-                    formatted_spill_cost =  "{:.13f}".format(node_prof.spillWeight)
+                    formatted_spill_cost =  set_precision(node_prof.spillWeight)
                     spill_cost = formatted_spill_cost
                     self.obs.spill_cost_list.append(float(spill_cost))
                     self.obs.reg_class_list.append(self.obs.reg_class_list[splited_node_idx])
@@ -1301,7 +1295,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                     return "error"
                     # raise
                 self.obs.graph_topology.indegree[interfering_node_idx] = len(self.obs.graph_topology.adjList[interfering_node_idx])
-                formatted_spill_cost =  "{:.13f}".format(node_prof.spillWeight)
+                formatted_spill_cost =  set_precision(node_prof.spillWeight)
                 spill_cost = formatted_spill_cost
                 self.obs.spill_cost_list[interfering_node_idx] = float(spill_cost)
                 self.obs.use_distances[interfering_node_idx] = np.array(sorted(node_prof.useDistances))

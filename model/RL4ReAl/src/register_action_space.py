@@ -101,7 +101,6 @@ class RegisterActionSpace:
 
     @staticmethod
     def loadRegConfig(target, baseDir):
-        
         if target == "X86":
             fileName= os.path.join(baseDir, 'regalloc/X86_supported_RegClasses.json')
             overlapfile = os.path.join(baseDir, 'regalloc/X86_overlaps_info.json')

@@ -182,26 +182,19 @@ LiveIntervalUnion::Query &LiveRegMatrix::query(const LiveRange &LR,
   return Q;
 }
 
-//apr22
 LiveRegMatrix::InterferenceKind
 LiveRegMatrix::checkInterference(LiveInterval &VirtReg, unsigned PhysReg) {
   if (VirtReg.empty()){
-    //errs()<<"Entered VirtReg.empty(): "<<VirtReg.empty()<<"IK_Free: "<<IK_Free<<"\n";
     return IK_Free;
   }
     
   // Regmask interference is the fastest check.
   if (checkRegMaskInterference(VirtReg, PhysReg)) {
-
-    //errs()<<"Enered checkRegMaskInterference(VirtReg, PhysReg): "<<checkRegMaskInterference(VirtReg, PhysReg)<<"IK_RegMask: "<<IK_RegMask<<"\n";
     return IK_RegMask;
-
   }
 
   // Check for fixed interference.
   if (checkRegUnitInterference(VirtReg, PhysReg)) {
-
-    //errs()<<"Entered checkRegUnitInterference(VirtReg, PhysReg): "<<checkRegUnitInterference(VirtReg, PhysReg)<<"IK_RegUnit: "<<IK_RegUnit<<"\n";
     return IK_RegUnit;
   }
 
@@ -211,17 +204,11 @@ LiveRegMatrix::checkInterference(LiveInterval &VirtReg, unsigned PhysReg) {
                                   [&](unsigned Unit, const LiveRange &LR) {
                                     return query(LR, Unit).checkInterference();
                                   });
-  //errs()<<"Interference: "<<Interference<<"\n";
   if (Interference){
-
-    //errs()<<"IK_VirtReg: "<<IK_VirtReg<<"\n";
     return IK_VirtReg;
-  
+
   }
     
-    
-  //errs()<<"IK_Free outside: "<<IK_Free<<"\n";
-
   return IK_Free;
 }
 
