@@ -107,6 +107,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.best_throughput_map = {}
         self.best_allocation_cost = {}
         self.use_costbased_reward = env_config["use_costbased_reward"]
+        self.use_percentbased_cost_reward = env_config["use_percentbased_cost_reward"]
         self.iteration_number = 1
         self.use_pipe = False
         self.curr_file_name = None
@@ -912,6 +913,25 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                         reward = 10
                     elif best_cost == current_cost:
                         reward = 0
+                    else:
+                        reward = -10
+                
+                elif self.use_percentbased_cost_reward:
+                    if key not in self.best_allocation_cost.keys():
+                        self.best_allocation_cost[key] = current_cost
+                    best_cost = self.best_allocation_cost[key]
+                    
+                    if current_cost==0:
+                        current_cost+=1e-6
+                    percent = (best_cost-current_cost)/(current_cost+1e-6)
+                    
+                    if best_cost > current_cost:
+                        self.best_allocation_cost[key] = current_cost
+    
+                    if percent>0.1:
+                        reward = 20
+                    elif percent>=-0.2 and percent<=0.1:
+                        reward = 10 + 100*(percent)
                     else:
                         reward = -10
                     # print("Cost based reward is", best_cost, current_cost, reward)

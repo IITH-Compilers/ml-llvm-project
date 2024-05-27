@@ -56,40 +56,40 @@ class SANetwork(TorchModelV2, nn.Module):
         """Build a network that maps state -> action values."""
         input_state_list = torch.zeros(input_dict["obs"]["state"].shape[0], self.max_number_nodes)
                 
-        if self.enable_ggnn:
-            assert not torch.isnan(input_dict["obs"]["state"]).any(), "Nan in select node model obs:state"
-            assert not torch.isnan(input_dict['obs']['adjacency_lists']['data'].values).any(), "Nan in select node model adjlist"    
+        # if self.enable_ggnn:
+        assert not torch.isnan(input_dict["obs"]["state"]).any(), "Nan in select node model obs:state"
+        assert not torch.isnan(input_dict['obs']['adjacency_lists']['data'].values).any(), "Nan in select node model adjlist"    
 
-            ggnn_input_x = torch.dstack((input_dict["obs"]["state"], input_dict["obs"]["annotations"]))
-            edge_index = input_dict['obs']['adjacency_lists']['data'].values
-
-
+        ggnn_input_x = torch.dstack((input_dict["obs"]["state"], input_dict["obs"]["annotations"]))
+        edge_index = input_dict['obs']['adjacency_lists']['data'].values
 
 
-            # print("ggnn_input_x.device = ", ggnn_input_x.device)
-            # print("edge_index.device = ", edge_index.device)
-            batch_size = ggnn_input_x.shape[0]
-            # #################### batch method #######################
-            data_list = []
-
-            data_list = [Data(x=ggnn_input_x[i], edge_index=edge_index[i].long().T) for i in range(batch_size)]
-            
-            batch_data = Batch.from_data_list(data_list=data_list)
 
 
-            node_mat = torch.tanh(self.ggnn(batch_data.x, batch_data.edge_index).reshape(batch_size, -1, 100))
-            
-            #For GATConv
-            if isinstance(self.ggnn, GATConv):
-                node_mat = self.ggnn(batch_data.x, batch_data.edge_index).reshape(batch_size, -1, 100)
-                node_mat = F.normalize(node_mat, p=2, dim=-1)
-                node_mat = torch.tanh(node_mat)
-            else:
-                node_mat = torch.tanh(self.ggnn(batch_data.x, batch_data.edge_index).reshape(batch_size, -1, 100))
-            
-            input_state_list = node_mat
-        else:
-            input_state_list = initial_node_representation = input_dict["obs"]["state"]
+        # print("ggnn_input_x.device = ", ggnn_input_x.device)
+        # print("edge_index.device = ", edge_index.device)
+        batch_size = ggnn_input_x.shape[0]
+        # #################### batch method #######################
+        data_list = []
+
+        data_list = [Data(x=ggnn_input_x[i], edge_index=edge_index[i].long().T) for i in range(batch_size)]
+        
+        batch_data = Batch.from_data_list(data_list=data_list)
+
+
+        node_mat = torch.tanh(self.ggnn(batch_data.x, batch_data.edge_index).reshape(batch_size, -1, 100))
+        
+        #For GATConv
+        # if isinstance(self.ggnn, GATConv):
+        #     node_mat = self.ggnn(batch_data.x, batch_data.edge_index).reshape(batch_size, -1, 100)
+        #     node_mat = F.normalize(node_mat, p=2, dim=-1)
+        #     node_mat = torch.tanh(node_mat)
+        # else:
+        #     node_mat = torch.tanh(self.ggnn(batch_data.x, batch_data.edge_index).reshape(batch_size, -1, 100))
+        
+        input_state_list = node_mat
+        # else:
+        #     input_state_list = initial_node_representation = input_dict["obs"]["state"]
         input_state_list = input_state_list.to(input_dict["obs"]["state"].device)
         
         x = F.relu(self.fc1(input_state_list))
