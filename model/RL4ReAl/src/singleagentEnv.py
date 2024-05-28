@@ -134,6 +134,7 @@ class HierarchicalGraphColorEnv(gym.Env):
         self.best_throughput_map = {}
         self.best_allocation_cost = {}
         self.use_costbased_reward = env_config["use_costbased_reward"]
+        self.use_percentbased_cost_reward = env_config["use_percentbased_cost_reward"]
         self.iteration_number = 1
         self.use_pipe = False
         self.curr_file_name = None
@@ -1005,11 +1006,12 @@ class HierarchicalGraphColorEnv(gym.Env):
             }
             self.obs.next_stage = 'end'
             self.stable_grpc('Exit', 0, 0)   
-            os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
-            if self.server_pid.poll() is not None:
-                print('Force stop')
-            self.server_pid = None
-            print('Stop server')
+            self.stopServer()
+            # os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
+            # if self.server_pid.poll() is not None:
+            #     print('Force stop')
+            # self.server_pid = None
+            print('Stop server due to split')
             #time.sleep(5)
             
         logging.debug("Exit _split_node_step")
@@ -1094,9 +1096,10 @@ class HierarchicalGraphColorEnv(gym.Env):
             # print("Colour map ", self.colormap)
             done = True
             self.obs.next_stage = 'end'
-            if self.mode != 'inference':
+            if self.mode != 'inference':                                                                                                    
                 exit_response = self.stable_grpc('Exit', 0, 0)
-                os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
+                self.stopServer()
+                print('Stop server due to colouring')
                 current_cost = SPILL_COST_THRESHOLD
                 if exit_response:
                     # print("Cost of spilling and moves:", exit_response.cost)
@@ -1119,15 +1122,34 @@ class HierarchicalGraphColorEnv(gym.Env):
                     else:
                         reward = -10
                     # print("Cost based reward is", best_cost, current_cost, reward)
+                elif self.use_percentbased_cost_reward:
+                    if key not in self.best_allocation_cost.keys():
+                        self.best_allocation_cost[key] = current_cost
+                    best_cost = self.best_allocation_cost[key]
+                    
+                    if current_cost==0:
+                        current_cost+=1e-6
+                    percent = (best_cost-current_cost)/(current_cost+1e-6)
+                    
+                    if best_cost > current_cost:
+                        self.best_allocation_cost[key] = current_cost
+    
+                    if percent>0.1:
+                        reward = 20
+                    elif percent>=-0.2 and percent<=0.1:
+                        reward = 10 + 100*(percent)
+                    else:
+                        reward = -10
+                        
                 elif self.use_mca_reward:
                     process_completed = True
-                    try:
-                        outs, errs = self.server_pid.communicate(timeout=self.mca_timeout)
-                    except:
-                        self.server_pid.kill()
-                        process_completed = False
-                        print("Clang failing")
-                    outs, errs = self.server_pid.communicate()
+                    # try:
+                    #     outs, errs = self.server_pid.communicate(timeout=self.mca_timeout)
+                    # except:
+                    #     self.server_pid.kill()
+                    #     process_completed = False
+                    #     print("Clang failing")
+                    # outs, errs = self.server_pid.communicate()
                     mlra_throughput = 0
                     mlra_cycles = 0
                     if process_completed:                    
@@ -1146,8 +1168,8 @@ class HierarchicalGraphColorEnv(gym.Env):
                             outs, errs = self.mca_pid.communicate()
                         if outs != "":
                             try:
-                                mlra_cycles = re.search('Total Cycles:      [0-9]+', outs).group()
-                                mlra_cycles = int(re.search('[0-9]+', mlra_cycles).group())
+                                # mlra_cycles = re.search('Total Cycles:      [0-9]+', outs).group()
+                                # mlra_cycles = int(re.search('[0-9]+', mlra_cycles).group())
                                 mlra_throughput = re.search('Block RThroughput: [0-9]+.[0-9]+', outs).group()
                                 mlra_throughput = float(re.search('[0-9]+.[0-9]+', mlra_throughput).group())                                                                
                             except AttributeError:
@@ -1170,8 +1192,8 @@ class HierarchicalGraphColorEnv(gym.Env):
                                 else:
                                     reward = 0
                                 # reward = (throughput_diff/best_throughput)*self.env_config["mca_reward_clip"]
-                                # print("Throughput:", mlra_throughput, best_throughput)
-                                # print("Reward from self play throughput:", reward)
+                                print("Throughput:", mlra_throughput, best_throughput)
+                                print("Reward from self play throughput:", reward)
                                                                                                     
                             else:
                                 if key in greedy_throughput_map.keys():
@@ -1249,13 +1271,15 @@ class HierarchicalGraphColorEnv(gym.Env):
                         # print("Adding function to iteration map", key, self.iteration_number)
                         json.dump(mlra_cycle_map, f)
                         f.close()
-                else:
-                    # print("Killing Server pid", self.server_pid.pid)         
-                    os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
+                
+                # else:
+                #     # print("Killing Server pid", self.server_pid.pid)         
+                #     os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
 
-                if self.server_pid.poll() is not None:
-                    print('Force stop')
-                self.server_pid = None                
+                # if self.server_pid.poll() is not None:
+                #     print('Force stop')
+                
+                # self.server_pid = None                 
             
             logging.debug('All visited and colored graph visisted')
             return reward, done, response
@@ -1303,7 +1327,8 @@ class HierarchicalGraphColorEnv(gym.Env):
             self.obs = get_observations(self.graph)
             if self.server_pid is not None:
                 print('terminate the pid if alive : {}'.format(self.server_pid.pid))
-                os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
+                self.stopServer()
+                # os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
             hostip = "0.0.0.0"
 
             hostport = str(int(self.env_config['Workers_starting_port']) + self.worker_index)
@@ -1568,3 +1593,17 @@ class HierarchicalGraphColorEnv(gym.Env):
             logging.debug("updated_graphs= type:{} result:{}".format(type(updated_graphs), updated_graphs.result))
         logging.debug("Exit update_obs")
         return updated_graphs.result
+
+    def stopServer(self):
+        if self.server_pid.poll() is None:
+            self.server_pid.stdin.write("Terminate\n")
+            self.server_pid.stdin.flush()
+            try:
+                out, errs = self.server_pid.communicate(timeout=30)
+            except:
+                self.server_pid.kill()
+                out, errs = self.server_pid.communicate()
+                print("Force Stop")
+        else:
+            print("Server failed before episode end")
+        self.server_pid = None

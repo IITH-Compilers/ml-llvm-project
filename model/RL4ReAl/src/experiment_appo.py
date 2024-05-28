@@ -66,7 +66,7 @@ def experiment(config):
             last_checkpoint = train_results['episodes_total']
             checkpoint = train_agent.save(tune.get_trial_dir())
             # print("***************Checkpoint****************", checkpoint)
-        tune.report(**train_results)
+            tune.report(**train_results)
         if train_results['episodes_total'] > config["env_config"]["episode_number"]:
             print("Traning Ended")
             checkpoint = train_agent.save(tune.get_trial_dir())
