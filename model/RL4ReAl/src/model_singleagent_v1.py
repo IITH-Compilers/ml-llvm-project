@@ -57,34 +57,26 @@ class ColorNetwork(TorchModelV2, nn.Module):
         """Build a network that maps state -> action values."""
         input_state_list = torch.zeros(input_dict["obs"]["state"].shape[0], self.max_number_nodes)
                 
-        if self.enable_ggnn:
-            assert not torch.isnan(input_dict["obs"]["state"]).any(), "Nan in select node model obs:state"
-            assert not torch.isnan(input_dict['obs']['adjacency_lists']['data'].values).any(), "Nan in select node model adjlist"    
+        assert not torch.isnan(input_dict["obs"]["state"]).any(), "Nan in select node model obs:state"
+        assert not torch.isnan(input_dict['obs']['adjacency_lists']['data'].values).any(), "Nan in select node model adjlist"    
 
-            ggnn_input_x = torch.dstack((input_dict["obs"]["state"], input_dict["obs"]["annotations"]))
-            edge_index = input_dict['obs']['adjacency_lists']['data'].values
+        ggnn_input_x = torch.dstack((input_dict["obs"]["state"], input_dict["obs"]["annotations"]))
+        edge_index = input_dict['obs']['adjacency_lists']['data'].values
 
-            # print("ggnn_input_x.device = ", ggnn_input_x.device)
-            # print("edge_index.device = ", edge_index.device)
-            batch_size = ggnn_input_x.shape[0]
-            # #################### batch method #######################
-            data_list = []
+        # print("ggnn_input_x.device = ", ggnn_input_x.device)
+        # print("edge_index.device = ", edge_index.device)
+        batch_size = ggnn_input_x.shape[0]
+        # #################### batch method #######################
+        data_list = []
 
-            data_list = [Data(x=ggnn_input_x[i], edge_index=edge_index[i].long().T) for i in range(batch_size)]
-            
-            batch_data = Batch.from_data_list(data_list=data_list)
-           
-            #For GATConv
-            if isinstance(self.ggnn, GATConv):
-                node_mat = self.ggnn(batch_data.x, batch_data.edge_index).reshape(batch_size, -1, 100)
-                node_mat = F.normalize(node_mat, p=2, dim=-1)
-                node_mat = torch.tanh(node_mat)
-            else:
-                node_mat = torch.tanh(self.ggnn(batch_data.x, batch_data.edge_index).reshape(batch_size, -1, 100))
-            
-            input_state_list = node_mat
-        else:
-            input_state_list = initial_node_representation = input_dict["obs"]["state"]
+        data_list = [Data(x=ggnn_input_x[i], edge_index=edge_index[i].long().T) for i in range(batch_size)]
+        
+        batch_data = Batch.from_data_list(data_list=data_list)
+        
+        node_mat = torch.tanh(self.ggnn(batch_data.x, batch_data.edge_index).reshape(batch_size, -1, 100))
+        
+        input_state_list = node_mat
+    
         input_state_list = input_state_list.to(input_dict["obs"]["state"].device)
         
         x = F.relu(self.fc1(input_state_list))
@@ -152,22 +144,16 @@ class SplitNetwork(TorchModelV2, nn.Module):
         # assert not torch.isnan(input_dict["obs"]["state"]).any(), "Nan in split node model input"
         x = F.relu(self.fc1(input_dict["obs"]["state"].values))
         # assert not torch.isnan(x).any(), "Nan in split node model after fc1"
-        print("Usepoint properties shape: ", usepoint_properties.shape)
         x_shape = x.shape
         x = x.repeat(1, 1, usepoint_properties.shape[2]).reshape(usepoint_properties.shape[0], usepoint_properties.shape[1],usepoint_properties.shape[2], x_shape[-1])
-        print("Shape of X: ", x.shape)
         
         x = torch.cat((usepoint_properties, x), 3)
-        
-        print("Shape of X: ", x.shape)
-        
+                
         x = F.relu(self.fc2(x))
         # assert not torch.isnan(x).any(), "Nan in split node model after fc2"
         x = torch.transpose(x, 2, 3)
         x = self.attention(x)
-        
-        print("Shape after attention layer: ", x.shape)
-        
+            
         x = torch.squeeze(x, 3)
         x = self.fc3(x)                
         # assert not torch.isnan(x).any(), "Nan in split node model after fc3"
@@ -175,11 +161,9 @@ class SplitNetwork(TorchModelV2, nn.Module):
         mask = input_dict["obs"]["split_mask"].values
         # masking_value = -1e6
         # masking_value = FLOAT_MIN
-        print("Final x shape: ", x.shape)
         inf_mask = torch.clamp(torch.log(mask), min=FLOAT_MIN)
         x = x + inf_mask
         # assert not torch.isnan(x).any(), "Nan in split node model output"
-        print("Shape of X: ", x.shape)
         x = x.reshape(x.shape[0], x.shape[1]*x.shape[2])
         
         self._features = self._features.flatten(start_dim=1)
