@@ -27,7 +27,6 @@ void FloatWrapper::operator = (float& v) {
     this->value = v;
     this->isVector = false;
     set_precision(this->value);
-    // return *this;
 }
 
 
@@ -35,16 +34,6 @@ void FloatWrapper::operator=(IR2Vec::Vector& v) {
     this->vec = v;
     this->isVector = true;
     set_precision(vec);
-    //return *this;
 }
-
-
-// FloatWrapper::operator float() {
-//     if (isVector) {
-//         return vec[0];
-//     } else {
-//         return value;
-//     }
-// }
 
 
