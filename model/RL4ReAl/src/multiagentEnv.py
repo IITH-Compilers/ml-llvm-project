@@ -913,126 +913,122 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                     #     print("Clang failing")
                     # outs, errs = self.server_pid.communicate()
                     mlra_throughput = 0
-                    mlra_cycles = 0
-                    if process_completed:                    
-                        print("Clang process finished")
-                        build_path = self.env_config["build_path"]
-                        if self.env_config["target"] == 'X86':
-                            cflags = "-mcpu=core2"
-                        else:
-                            cflags = "-mcpu=cortex-a72"
-                        self.mca_pid = utils_1.runMCA(self.functionName, self.worker_index, build_path, cflags, self.env_config["log_dir"])
-                        # while self.mca_pid.poll() is None:
+                    mlra_cycles = 0                  
+                    print("Clang process finished")
+                    build_path = self.env_config["build_path"]
+                    if self.env_config["target"] == 'X86':
+                        cflags = "-mcpu=core2"
+                    else:
+                        cflags = "-mcpu=cortex-a72"
+                    self.mca_pid = utils_1.runMCA(self.functionName, self.worker_index, build_path, cflags, self.env_config["log_dir"])
+                    # while self.mca_pid.poll() is None:
+                    try:
+                        outs, errs = self.mca_pid.communicate(timeout=self.mca_timeout)
+                    except:
+                        self.mca_pid.kill()
+                        outs, errs = self.mca_pid.communicate()
+                    if outs != "":
                         try:
-                            outs, errs = self.mca_pid.communicate(timeout=self.mca_timeout)
-                        except:
-                            self.mca_pid.kill()
-                            outs, errs = self.mca_pid.communicate()
-                        if outs != "":
-                            try:
-                                # mlra_cycles = re.search('Total Cycles:      [0-9]+', outs).group()
-                                # mlra_cycles = int(re.search('[0-9]+', mlra_cycles).group())
-                                mlra_throughput = re.search('Block RThroughput: [0-9]+.[0-9]+', outs).group()
-                                mlra_throughput = float(re.search('[0-9]+.[0-9]+', mlra_throughput).group())                                                                
-                            except AttributeError:
-                                pass                                                        
-                            
-                            # Reward from throughout
-                            with open(self.greedy_mca_throughput_file_path) as f:
-                                greedy_throughput_map = json.load(f)
-                            # with open('greedy-throughput.json') as f:
-                            #     greedy_throughput_map = json.load(f)
-                            if self.use_mca_self_play_reward:
-                                if key not in self.best_throughput_map.keys():
-                                    self.best_throughput_map[key] = mlra_throughput
-                                best_throughput = self.best_throughput_map[key]
-                                throughput_diff = (best_throughput - mlra_throughput)
-                                if best_throughput > mlra_throughput:
-                                    self.best_throughput_map[key] = mlra_throughput
-                                    best_throughput = mlra_throughput
-                                    reward = 5
-                                else:
-                                    reward = 0
-                                # reward = (throughput_diff/best_throughput)*self.env_config["mca_reward_clip"]
-                                # print("Throughput:", mlra_throughput, best_throughput)
-                                # print("Reward from self play throughput:", reward)
-                                                                                                    
+                            # mlra_cycles = re.search('Total Cycles:      [0-9]+', outs).group()
+                            # mlra_cycles = int(re.search('[0-9]+', mlra_cycles).group())
+                            mlra_throughput = re.search('Block RThroughput: [0-9]+.[0-9]+', outs).group()
+                            mlra_throughput = float(re.search('[0-9]+.[0-9]+', mlra_throughput).group())                                                                
+                        except AttributeError:
+                            pass                                                        
+                        
+                        # Reward from throughout
+                        with open(self.greedy_mca_throughput_file_path) as f:
+                            greedy_throughput_map = json.load(f)
+                        # with open('greedy-throughput.json') as f:
+                        #     greedy_throughput_map = json.load(f)
+                        if self.use_mca_self_play_reward:
+                            if key not in self.best_throughput_map.keys():
+                                self.best_throughput_map[key] = mlra_throughput
+                            best_throughput = self.best_throughput_map[key]
+                            throughput_diff = (best_throughput - mlra_throughput)
+                            if best_throughput > mlra_throughput:
+                                self.best_throughput_map[key] = mlra_throughput
+                                best_throughput = mlra_throughput
+                                reward = 5
                             else:
-                                if key in greedy_throughput_map.keys():
-                                    greedy_throughput = greedy_throughput_map[key]
-                                    # throughput_diff = (greedy_throughput - mlra_throughput)
-                                    # reward = (throughput_diff/greedy_throughput)*self.env_config["mca_reward_clip"]                                    
-                                    throughput_diff = (mlra_throughput - greedy_throughput)
-                                    # if throughput_diff <= 0.5:
-                                    #     reward = self.env_config["mca_reward_clip"]
-                                    # else:
-                                    #     reward = (greedy_throughput/throughput_diff)
-                                    
-                                    if throughput_diff < 0:
-                                        reward = 10
-                                    elif throughput_diff == 0:
-                                        reward = 0
-                                    else:
-                                        reward = -10
-                                    print("Throughput:", mlra_throughput, greedy_throughput)
-                                    print("Reward in compare to greedy throughput:", reward)
-
+                                reward = 0
+                            # reward = (throughput_diff/best_throughput)*self.env_config["mca_reward_clip"]
+                            # print("Throughput:", mlra_throughput, best_throughput)
+                            # print("Reward from self play throughput:", reward)
+                                                                                                
+                        else:
+                            if key in greedy_throughput_map.keys():
+                                greedy_throughput = greedy_throughput_map[key]
+                                # throughput_diff = (greedy_throughput - mlra_throughput)
+                                # reward = (throughput_diff/greedy_throughput)*self.env_config["mca_reward_clip"]                                    
+                                throughput_diff = (mlra_throughput - greedy_throughput)
+                                # if throughput_diff <= 0.5:
+                                #     reward = self.env_config["mca_reward_clip"]
+                                # else:
+                                #     reward = (greedy_throughput/throughput_diff)
+                                
+                                if throughput_diff < 0:
+                                    reward = 10
+                                elif throughput_diff == 0:
+                                    reward = 0
                                 else:
-                                    print("Following key not in Greedy map:", key)
-                            
-                        else:
-                            print("MCA timeout happned")                    
-                    else:
-                        print("Excided timer for asembly generation")
-                        reward = 0
-                    
-                    logdir = self.env_config["log_dir"]
-                    mlra_mca_throughput_file_path = os.path.join(logdir, str(self.worker_index) + '_mlra_throughput.json')
-                    if os.path.exists(mlra_mca_throughput_file_path):
-                        with open(mlra_mca_throughput_file_path) as f:
-                            mlra_throughput_map = json.load(f)
-                            f.close()
-                    else:
-                        mlra_throughput_map = {}
-                    
-                    with open(mlra_mca_throughput_file_path, 'w') as f:
-                        fileName = os.path.basename(self.fileName)
-                        if str(self.iteration_number) not in mlra_throughput_map.keys():
-                            mlra_throughput_map[str(self.iteration_number)] = {}
-                        key = fileName + "_" + self.functionName
-                        # if key not in mlra_throughput_map.keys():
-                        #     mlra_throughput_map[key] = []
-                        if key in mlra_throughput_map[str(self.iteration_number)]:
-                            (mlra_throughput_map[str(self.iteration_number)][key]).append(mlra_throughput)
-                        else:
-                            mlra_throughput_map[str(self.iteration_number)][key] = [mlra_throughput]
-                        # print("Adding function to iteration map", key, self.iteration_number)
-                        json.dump(mlra_throughput_map, f)
-                        f.close()
+                                    reward = -10
+                                print("Throughput:", mlra_throughput, greedy_throughput)
+                                print("Reward in compare to greedy throughput:", reward)
 
-                    mlra_mca_cycle_file_path = os.path.join(logdir, str(self.worker_index) + '_mlra_cycle.json')
-                    if os.path.exists(mlra_mca_cycle_file_path):
-                        with open(mlra_mca_cycle_file_path) as f:
-                            mlra_cycle_map = json.load(f)
-                            f.close()
+                            else:
+                                print("Following key not in Greedy map:", key)
+                        
                     else:
-                        mlra_cycle_map = {}
-                    
-                    with open(mlra_mca_cycle_file_path, 'w') as f:
-                        fileName = os.path.basename(self.fileName)
-                        if str(self.iteration_number) not in mlra_cycle_map.keys():
-                            mlra_cycle_map[str(self.iteration_number)] = {}
-                            # print("Adding iteration key to map", self.iteration_number, mlra_cycle_map.keys())
-                        key = fileName + "_" + self.functionName
-                        # if key not in mlra_cycle_map.keys():
-                        #     mlra_cycle_map[key] = []
-                        if key in mlra_cycle_map[str(self.iteration_number)]:
-                            (mlra_cycle_map[str(self.iteration_number)][key]).append(mlra_cycles)
-                        else:
-                            mlra_cycle_map[str(self.iteration_number)][key] = [mlra_cycles]
-                        # print("Adding function to iteration map", key, self.iter.ation_number)
-                        json.dump(mlra_cycle_map, f)
+                        print("MCA timeout happned")                    
+                
+                logdir = self.env_config["log_dir"]
+                mlra_mca_throughput_file_path = os.path.join(logdir, str(self.worker_index) + '_mlra_throughput.json')
+                if os.path.exists(mlra_mca_throughput_file_path):
+                    with open(mlra_mca_throughput_file_path) as f:
+                        mlra_throughput_map = json.load(f)
                         f.close()
+                else:
+                    mlra_throughput_map = {}
+                
+                with open(mlra_mca_throughput_file_path, 'w') as f:
+                    fileName = os.path.basename(self.fileName)
+                    if str(self.iteration_number) not in mlra_throughput_map.keys():
+                        mlra_throughput_map[str(self.iteration_number)] = {}
+                    key = fileName + "_" + self.functionName
+                    # if key not in mlra_throughput_map.keys():
+                    #     mlra_throughput_map[key] = []
+                    if key in mlra_throughput_map[str(self.iteration_number)]:
+                        (mlra_throughput_map[str(self.iteration_number)][key]).append(mlra_throughput)
+                    else:
+                        mlra_throughput_map[str(self.iteration_number)][key] = [mlra_throughput]
+                    # print("Adding function to iteration map", key, self.iteration_number)
+                    json.dump(mlra_throughput_map, f)
+                    f.close()
+
+                mlra_mca_cycle_file_path = os.path.join(logdir, str(self.worker_index) + '_mlra_cycle.json')
+                if os.path.exists(mlra_mca_cycle_file_path):
+                    with open(mlra_mca_cycle_file_path) as f:
+                        mlra_cycle_map = json.load(f)
+                        f.close()
+                else:
+                    mlra_cycle_map = {}
+                
+                with open(mlra_mca_cycle_file_path, 'w') as f:
+                    fileName = os.path.basename(self.fileName)
+                    if str(self.iteration_number) not in mlra_cycle_map.keys():
+                        mlra_cycle_map[str(self.iteration_number)] = {}
+                        # print("Adding iteration key to map", self.iteration_number, mlra_cycle_map.keys())
+                    key = fileName + "_" + self.functionName
+                    # if key not in mlra_cycle_map.keys():
+                    #     mlra_cycle_map[key] = []
+                    if key in mlra_cycle_map[str(self.iteration_number)]:
+                        (mlra_cycle_map[str(self.iteration_number)][key]).append(mlra_cycles)
+                    else:
+                        mlra_cycle_map[str(self.iteration_number)][key] = [mlra_cycles]
+                    # print("Adding function to iteration map", key, self.iter.ation_number)
+                    json.dump(mlra_cycle_map, f)
+                    f.close()
                 # else:
                 #     # print("Killing Server pid", self.server_pid.pid)         
                 #     # os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
@@ -1239,8 +1235,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                             return "error"
                             # raise
             
-                    formatted_spill_cost =  set_precision(node_prof.spillWeight)
-                    spill_cost = formatted_spill_cost
+                    spill_cost = set_precision(node_prof.spillWeight)
                     self.obs.spill_cost_list.append(float(spill_cost))
                     self.obs.reg_class_list.append(self.obs.reg_class_list[splited_node_idx])
                     self.obs.use_distances.append(sorted(node_prof.useDistances))
@@ -1295,8 +1290,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                     return "error"
                     # raise
                 self.obs.graph_topology.indegree[interfering_node_idx] = len(self.obs.graph_topology.adjList[interfering_node_idx])
-                formatted_spill_cost =  set_precision(node_prof.spillWeight)
-                spill_cost = formatted_spill_cost
+                spill_cost = set_precision(node_prof.spillWeight)
                 self.obs.spill_cost_list[interfering_node_idx] = float(spill_cost)
                 self.obs.use_distances[interfering_node_idx] = np.array(sorted(node_prof.useDistances))
                 self.obs.positionalSpillWeights[interfering_node_idx] = node_prof.positionalSpillWeights
@@ -1334,10 +1328,9 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             # a = list(map(lambda x:list(map(lambda y: (x[0], y) , x[1])) , enumerate(self.obs.graph_topology.adjList)))
             edges = []
             for i, adj in enumerate(self.obs.graph_topology.adjList):
-                sorted_adj=sorted(adj)
-                for node in sorted_adj:
-                    edges.append((i, node))
-
+                for sorted_node in sorted(adj):
+                    edges.append((i, sorted_node))
+            
             logging.debug("egdes({}) after after update : {} ".format(len(edges), edges))
             logging.debug("self.obs.graph_topology.adjList : {} ".format(self.obs.graph_topology.adjList))            
             if self.obs.graph_topology.num_nodes > self.max_number_nodes or len(edges) > self.max_edge_count:

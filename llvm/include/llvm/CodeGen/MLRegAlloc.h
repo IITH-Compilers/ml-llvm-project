@@ -283,8 +283,6 @@ private:
   void processMLInputs(SmallSetVector<unsigned, 8> *updatedRegIdxs, bool IsStart = false, bool IsJson=false);
   void processMLInputsProtobuf(SmallSetVector<unsigned, 8> *updatedRegIdxs, bool IsStart = false);
   void printFeatures();
-  float set_precision(float weight);
-  IR2Vec::Vector set_precision(const IR2Vec::Vector& input);
   // void processMLAdvice();
 
   // std::map<std::string, std::map<std::string, int64_t>>

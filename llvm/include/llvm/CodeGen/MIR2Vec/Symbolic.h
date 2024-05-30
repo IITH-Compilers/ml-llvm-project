@@ -17,7 +17,7 @@
 
 #include <fstream>
 #include <map>
-#include <iostream>
+
 class MIR2Vec_Symbolic {
 
 private:

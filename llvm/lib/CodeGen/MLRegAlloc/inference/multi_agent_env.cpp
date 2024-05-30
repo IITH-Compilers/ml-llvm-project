@@ -4,8 +4,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <fstream>
-#include <iostream>
-#include <iomanip>
 
 using namespace llvm;
 
@@ -180,7 +178,7 @@ void MultiAgentEnv::update_env(RegisterProfileMap *regProfMapHelper,
     if (this->regProfMapHelper.find(rpi.first) == this->regProfMapHelper.end()) {
       newNodeIdxs.insert(newNodeIdxs.end(), rpi.first);
       this->nid_idx[rpi.first] =
-          this->graph_topology->node_number + newNodeCount; 
+          this->graph_topology->node_number + newNodeCount;
       this->idx_nid[this->graph_topology->node_number + newNodeCount] =
           rpi.first;
       // this->nid_idx.insert(std::pair<unsigned, unsigned>(

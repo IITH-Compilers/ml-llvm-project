@@ -104,7 +104,7 @@
 #include <tuple>
 #include <utility>
 #include <vector>
-#include <iomanip>
+#include "Floatwrapper.h"
 // #include "Service/RegisterAllocationInference/RegisterAllocationInference.h"
 
 #define DIS_SANITY_CHECK 1
@@ -1587,27 +1587,6 @@ void MLRA::findLastUseBefore(const SmallVector<SlotIndex, 8> &startpts,
   }
 }
 
-float MLRA::set_precision(float weight){
-    char buffer[50];
-    memset(buffer, 0, sizeof(buffer));
-    sprintf(buffer, "%.13f",weight);
-    float store = atof(buffer); 
-    return store;
-}
-
-IR2Vec::Vector MLRA::set_precision(const IR2Vec::Vector& input) {
-    IR2Vec::Vector output;
-    output.reserve(input.size());
-    for (float value : input) {
-        char buffer[50];
-        memset(buffer, 0, sizeof(buffer));
-        sprintf(buffer, "%.13f", value);
-        float precision_value = atof(buffer);
-        output.push_back(precision_value);
-    }
-    return output;
-}
-
 void MLRA::calculatePositionalSpillWeights(
     LiveInterval *VirtReg, SmallVector<float, 8> &spillWeights) {
   VirtRegAuxInfo VRAI(*MF, *LIS, VRM, *Loops, *MBFI);
@@ -1624,7 +1603,8 @@ void MLRA::calculatePositionalSpillWeights(
       startIdx = LIS->getMBBStartIdx(LIS->getMBBFromIndex(use));
     }
     float futureWeight = VRAI.futureWeight(*VirtReg, startIdx, use);
-    spillWeights.push_back(set_precision(futureWeight));
+    FloatWrapper fw =   futureWeight;  
+    spillWeights.push_back(futureWeight);
   }
 }
 
@@ -1639,13 +1619,12 @@ void MLRA::computeVectors(LiveInterval *VirtReg,
       if (!MIR)
         continue;
       IR2Vec::Vector vec = instVecMap[MIR];
-      if (!vec.empty()) {
-        vectors.push_back(set_precision(vec));
-      }
       if (vec.size() <= 0) {
         LLVM_DEBUG(errs() << "Value not found in the map \n");
         continue;
       }
+      // FloatWrapper fw = vec;
+      vectors.push_back(vec);
     }
   }
 }
@@ -1788,8 +1767,8 @@ bool MLRA::captureRegisterProfile() {
 
     regProf.spillWeights = positionalSpillWeights;
     regProf.vecRep = vectors;
-    float store = set_precision(VirtReg->weight); 
-    regProf.spillWeight = store;
+    regProf.spillWeight = VirtReg->weight;
+    FloatWrapper fw = regProf.spillWeight;
     SmallVector<int, 8> useDistances;
     SmallVector<unsigned, 8> splitPoints;
     computeSplitPoints(VirtReg, useDistances, splitPoints);
@@ -1940,8 +1919,8 @@ void MLRA::updateRegisterProfileAfterSplit(
     }
     // rp.cls = oldRP.cls;
     rp.cls = TRI->getRegClassName(MRI->getRegClass(NewVirtReg->reg));
-    float store = set_precision(NewVirtReg->weight); 
-    rp.spillWeight = store;
+    rp.spillWeight = NewVirtReg->weight;
+    FloatWrapper fw = rp.spillWeight;
 
     SmallVector<int, 8> useDistances;
     SmallVector<unsigned, 8> splitPoints;
