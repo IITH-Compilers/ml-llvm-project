@@ -1,6 +1,8 @@
 import sys
 from config import BUILD_DIR, MODEL_PATH,MODEL_DIR
-sys.path.append(f"{BUILD_DIR}/tools/MLCompilerBridge/Python-Utilities/")
+sys.path.append(
+    f"{BUILD_DIR}/tools/MLCompilerBridge/Python-Utilities"
+)
 import RegisterAllocationInference_pb2_grpc, RegisterAllocationInference_pb2
 
 from concurrent import futures
