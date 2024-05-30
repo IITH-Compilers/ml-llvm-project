@@ -956,8 +956,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                             outs, errs = self.mca_pid.communicate()
                         if outs != "":
                             try:
-                                mlra_cycles = re.search('Total Cycles:      [0-9]+', outs).group()
-                                mlra_cycles = int(re.search('[0-9]+', mlra_cycles).group())
+                                # mlra_cycles = re.search('Total Cycles:      [0-9]+', outs).group()
+                                # mlra_cycles = int(re.search('[0-9]+', mlra_cycles).group())
                                 mlra_throughput = re.search('Block RThroughput: [0-9]+.[0-9]+', outs).group()
                                 mlra_throughput = float(re.search('[0-9]+.[0-9]+', mlra_throughput).group())                                                                
                             except AttributeError:
@@ -1059,10 +1059,10 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                         # print("Adding function to iteration map", key, self.iteration_number)
                         json.dump(mlra_cycle_map, f)
                         f.close()
-                else:
-                    # print("Killing Server pid", self.server_pid.pid)         
-                    # os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
-                    self.stopServer()
+                # else:
+                #     # print("Killing Server pid", self.server_pid.pid)         
+                #     # os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
+                #     self.stopServer()
 
                 # if self.server_pid.poll() is None:
                 #     # os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
