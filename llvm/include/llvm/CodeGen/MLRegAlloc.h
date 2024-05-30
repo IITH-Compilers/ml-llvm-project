@@ -342,7 +342,8 @@ private:
     std::string config;
     config.assign((std::istreambuf_iterator<char>(targert_color2reg_file)),
                   (std::istreambuf_iterator<char>()));
-    // LLVM_DEBUG(errs() << config << "\n");
+    LLVM_DEBUG(errs() << config << "\n");
+    
     if (Expected<json::Value> E = json::parse(config)) {
 
       if (json::Object *J = E->getAsObject()) {

@@ -324,7 +324,6 @@ def get_observationsInf(graph,Phy_registers_of_GRtype):
     print("In get_observationsInf")
     nodes = graph.regProf
     #adjlist = graph['adjacency']
-    #print("adjList: ",adjlist)
     num_nodes = len(nodes)
     
     initial_node_representation = []
@@ -361,9 +360,7 @@ def get_observationsInf(graph,Phy_registers_of_GRtype):
         positionalSpillWeights_list.append(np.array(positionalSpillWeights))
         #print("spill_cost: ",spill_cost)
         if spill_cost in [float('inf'), "inf", "INF"] or spill_cost > SPILL_COST_THRESHOLD:
-            #print("Inside spill_cost in spill_cost > SPILL_COST_THRESHOLD:")
             spill_cost = float(SPILL_COST_THRESHOLD)  
-            #print("spill_cost: ",spill_cost)
         
         if len(node.vectors) > 0:
             node_mat = [ vector.vec for vector in node.vectors]
@@ -380,8 +377,6 @@ def get_observationsInf(graph,Phy_registers_of_GRtype):
         nid_idx[nodeId] = idx
         idx_nid[idx] = nodeId
         assert not torch.isnan(nodeVec).any(), "Nan is present"
-        # print("nid and idx are: ",nodeId, idx)
-        # print("spill_Cost: ", spill_cost)
 
     '''logic to count  number of GR_GR_edges and NGR_NGR edges'''
 
@@ -431,22 +426,8 @@ def get_observationsInf(graph,Phy_registers_of_GRtype):
             annotations[node_idx][0] =  torch.tensor(0)# .to(device)
             # set the color assigned to the node
             annotations[node_idx][1] = torch.tensor(color)# .to(device)
-            #print("node_Idx: ",node_idx)
-            # print("annotations[node_idx][0]: ",node_idx, annotations[node_idx][0])
-            # print("annotations[node_idx][1]: ",node_idx, annotations[node_idx][1])
     
-    adjacency_lists = [ AdjacencyList(node_num=num_nodes, adj_list=all_edges, device=device)]
-    # torch.set_printoptions(threshold=1000000)  
-    # #print("adjacency_lists:", adjacency_lists[0].data)
-    # torch.set_printoptions(profile="full")
-    # #print("List is: ")
-    # #print(adjacency_lists[0].data.tolist())
-    # adjList=adjacency_lists[0].data.tolist()
-    # for i in range(0,len(adjList)):
-    #     
-    #     if(adjList[i][0]==):
-    #         sec_val=adjList[i][1]
-              
+    adjacency_lists = [ AdjacencyList(node_num=num_nodes, adj_list=all_edges, device=device)]          
     assert not torch.isnan(adjacency_lists[0].data).any(), "AdjacencyList is NAN"
     assert not torch.isnan(annotations).any(), "Annotation is NAN"
      
@@ -479,14 +460,10 @@ def get_observations(graph,Phy_registers_of_GRtype):
     node_label=[]
     for idx, node in enumerate(nodes):
         
-        #print("node: ",node)
         nodeId = node['id']
-        #print("node['label'] before: ",node['label'])
         node_label.append(node['label'])
         properties = re.findall("{[^}]*}", node['label'])
-        #print("node['label'] after: ",node['label'])
         # properties = properties.split()
-        #print("properties above: ",properties)
         logging.debug('Node idx={} | {}'.format(idx, properties))
         regClass = parseProp(properties[0]) 
         idx_cls[idx]=regClass
@@ -496,7 +473,6 @@ def get_observations(graph,Phy_registers_of_GRtype):
         use_distances = []
         positionalSpillWeights = []
         if len(properties) > 3:
-            # print(properties)
             split_points = parseProp(properties[3])
             use_distances = parseProp(properties[4])
             positionalSpillWeights = parseProp(properties[5])
@@ -508,8 +484,6 @@ def get_observations(graph,Phy_registers_of_GRtype):
             if len(positionalSpillWeights) > 0:
                 positionalSpillWeights = list(map(lambda x : float(x), positionalSpillWeights.split(', ')))
             
-            
-        
         split_points_list.append(np.array(split_points))
         use_distance_list.append(np.array(use_distances))
         positionalSpillWeights_list.append(np.array(positionalSpillWeights))
@@ -544,28 +518,19 @@ def get_observations(graph,Phy_registers_of_GRtype):
         idx_nid[idx] = nodeId
  
     '''logic to count number of GR_GR_edges and NGR_NGR edges'''
-
     nl=0
     for idx, node in enumerate(nodes):
         nodeId = node['id']
-        #print("NL: ",node_label[nl])
         propertiess = re.findall("{[^}]*}", node_label[nl])
-        #print("propertiess: ",propertiess)
         nl=nl+1
         regClass = parseProp(propertiess[0]) 
-        
-        nodeId = node.regID
-        regClass = node.cls
-        
         nodeType1 = identify_node_cls(regClass, nodeId,Phy_registers_of_GRtype)
-        for nlink in node.interferences:
-            neighIdx = nid_idx[nlink]
-            Cls = idx_cls[neighIdx]
-            nodeType2 = identify_node_cls(Cls, nlink,Phy_registers_of_GRtype)
+        for i, adj in enumerate(adjlist[idx]):
+            neighId = nid_idx[adj['id']]
+            Cls = idx_cls[neighId]
+            nodeType2 = identify_node_cls(Cls, neighId,Phy_registers_of_GRtype)
             if (nodeType1 == "GR" and nodeType2 == "GR") or (nodeType1 == "Non-GR" and nodeType2 == "Non-GR"):
-                all_edges.append((idx, neighIdx))        
-
-    #print("all_edges: ",all_edges)
+                all_edges.append((i, neighId))    
    
     initial_node_representation = torch.stack(initial_node_representation, dim=0)# .to(device)
     
@@ -605,7 +570,7 @@ def get_observations(graph,Phy_registers_of_GRtype):
     '''
     Main call to the compute representation
     '''
-    obs = {'raw_graph_mat':raw_graph_mat, 'initial_node_representation':initial_node_representation, 'annotations':annotations, 'adjacency_lists' : adjacency_lists,  'graph_topology':graph_topology, 'spill_cost_list' : spill_cost_list, 'reg_class_list' : reg_class_list, 'nid_idx':nid_idx, 'idx_nid':idx_nid, 'split_points' : split_points_list, 'use_distances': use_distance_list, "positionalSpillWeights": positionalSpillWeights_list}
+    obs = {'raw_graph_mat':raw_graph_mat, 'initial_node_representation':initial_node_representation, 'annotations':annotations, 'adjacency_lists' : adjacency_lists,  'graph_topology':graph_topology, 'spill_cost_list' : spill_cost_list, 'reg_class_list' : reg_class_list, 'nid_idx':nid_idx, 'idx_nid':idx_nid,'idx_cls':idx_cls, 'split_points' : split_points_list, 'use_distances': use_distance_list, "positionalSpillWeights": positionalSpillWeights_list}
     obs = Namespace(**obs) 
     return obs
 

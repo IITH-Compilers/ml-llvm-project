@@ -317,7 +317,8 @@ class RollOutInference:
                 "dataset": f"{DATA_DIR}/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_generated_at_05-05-22/",
                 "graphs_num": 10000,
                 "action_space_size": RegisterActionSpace("X86", f"{CONFIG_DIR}").ac_sp_normlize_size,
-                "check_point": None,
+                "check_point":"/home/intern24002/RL4ReAl_project/RL4ReAl-2.0/model/RL4ReAl/src/checkpoint_GR_NGR/checkpoint_000255",
+                #"check_point":None,
                 "episode_number": 10000,
                 "GPU_ID": '0',
                 "X86_CFLAGS": "-mllvm -regalloc=greedy  -march=core2",
@@ -578,11 +579,7 @@ class RollOutInference:
 
     def updateSelectNodeObs(self):
         select_node_mask = self.env.createNodeSelectMask()
-        print("Curres obs keys before:", self.obs.keys())
-        print("self.env.select_node_agent_id: ",self.env.select_node_agent_id) 
         curr_obs = self.obs[self.env.select_node_agent_id]
-        print("Curres obs keys after:", self.obs.keys())
-        curr_obs['action_mask'] = np.array(select_node_mask)
         self.obs[self.env.select_node_agent_id] = curr_obs
 
     def getLastTaskDone(self):

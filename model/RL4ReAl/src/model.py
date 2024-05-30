@@ -117,16 +117,6 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
         
     def forward(self, input_dict, state, seq_lens):
         """Build a network that maps state -> action values."""
-        #print("Obs keys are:", input_dict.keys())
-        # print("State shape:", input_dict["obs_flat"].shape)
-        torch.set_printoptions(threshold=1000000)    
-        #print("Node select model input", input_dict["obs_flat"]) 
-        torch.set_printoptions(profile="full")
-        #print("Node select model input", input_dict["obs_flat"].size())
-        #element = input_dict["obs_flat"][0][91210:91220]
-        #print("Index is: ",element)
-        torch.set_printoptions(profile="default")
-
         input_state_list = torch.zeros(input_dict["obs"]["state"].shape[0], self.max_number_nodes, self.emb_size)
         if self.enable_ggnn:
             # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")

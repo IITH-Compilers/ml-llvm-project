@@ -653,6 +653,9 @@ void MLRA::sendRegProfData(T *response,
     // Set spillweights
     regprofResponse->set_spillweight(rp.spillWeight);
 
+    //set cls
+    regprofResponse->set_cls(rp.cls);
+
     // Copying the positional spill weights
     google::protobuf::RepeatedField<float> posSpillWeights(
         rp.spillWeights.begin(), rp.spillWeights.end());

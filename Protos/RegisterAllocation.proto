@@ -27,10 +27,11 @@ message RegisterProfileList {
   message RegisterProfile {
     uint32 regID = 1;
     float spillWeight = 2;
-    repeated uint32 interferences = 3;
-    repeated uint32 useDistances = 4;
-    repeated uint32 splitSlots = 5;
-    repeated float positionalSpillWeights = 6;
+    string cls=3;
+    repeated uint32 interferences = 4;
+    repeated uint32 useDistances = 5;
+    repeated uint32 splitSlots = 6;
+    repeated float positionalSpillWeights = 7;
   }
   repeated RegisterProfile regProf = 1;
   bool result = 2;

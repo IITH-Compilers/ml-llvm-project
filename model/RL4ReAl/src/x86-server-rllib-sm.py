@@ -1,10 +1,6 @@
 import sys
 from config import BUILD_DIR, MODEL_PATH,MODEL_DIR
-sys.path.extend(
-    [
-        f"{BUILD_DIR}/tools/MLCompilerBridge/Python-Utilities/",
-    ]
-)
+sys.path.append(f"{BUILD_DIR}/tools/MLCompilerBridge/Python-Utilities/")
 import RegisterAllocationInference_pb2_grpc, RegisterAllocationInference_pb2
 
 from concurrent import futures
@@ -135,8 +131,7 @@ class service_server(
                 out = encode_action(out)
                 return RegisterAllocationInference_pb2.Data(data=out)
             return reply
-        except:
-            print("Error")
+        except Exception as e:
             traceback.print_exc()
             reply = RegisterAllocationInference_pb2.Data(
                 message="Split", regidx=0, payload=0 

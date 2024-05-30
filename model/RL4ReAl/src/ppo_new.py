@@ -109,7 +109,7 @@ class PPOConfig(PGConfig):
         self.model["vf_share_layers"] = False
         self._disable_preprocessor_api = False
 
-        self.num_gpus = 1
+        self.num_gpus = 0
         self.num_cpus_per_worker = 1
         self.num_gpus_per_worker = 0
         self.num_envs_per_worker = 1
@@ -139,15 +139,16 @@ class PPOConfig(PGConfig):
             "dataset": f"{DATA_DIR}",
             "graphs_num": 10000,
             "action_space_size": RegisterActionSpace("X86", CONFIG_DIR).ac_sp_normlize_size,
+            #"check_point":"/home/intern24002/RL4ReAl_project/RL4ReAl-2.0/model/RL4ReAl/src/checkpoint_GR_NGR/checkpoint_000255",
             "check_point":None,
-            "episode_number": 100000,
+            "episode_number": 10,
             "GPU_ID": '0',
             "X86_CFLAGS": "-mllvm -regalloc=greedy  -march=core2",
             "AArch64_CFLAGS": "-mllvm -regalloc=greedy  -mcpu=cortex-a72",
             "dataset_bucket": "set_5000",
             "enable_GGNN": True,
             "file_repeat_frequency": 1,
-            "current_batch": 500, 
+            "current_batch": 1, 
             "Workers_starting_port": "52147",
             "disable_spliting": False,
             "use_costbased_reward": True,
