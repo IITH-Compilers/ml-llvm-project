@@ -62,12 +62,14 @@ namespace llvm {
     private:
         const TargetRegisterInfo *TRI = nullptr;
         // MachineRegisterInfo *MRI = nullptr;
+        const MCRegisterInfo *MCRI = nullptr;
         // LiveIntervals *LIS = nullptr;
         RegisterClassInfo RCI;
         MachineFunction *MF = nullptr;
         
         void dumpTargetRegisterClasssConfig();
         void dumpRegisterOverlapInfo();
+        void dumpMCRegisterClassesJson();
         bool runOnMachineFunction(MachineFunction &mf) override;
 
     // void getAnalysisUsage(AnalysisUsage &AU) const {

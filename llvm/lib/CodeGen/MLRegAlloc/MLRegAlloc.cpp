@@ -198,10 +198,10 @@ MLRA::MLRA() {
   // }
   if (enable_dump_ig_dot || enable_mlra_inference || enable_mlra_training) {
     loadTargetRegisterConfig(MLConfig::mlconfig +
-                             "/regalloc/RegColorMap_Both.json");
+                             "/regalloc/RegColorMap_Both_riscv64.json");
     symbolic = new MIR2Vec_Symbolic(MLConfig::mlconfig +
 
-                                    "/ir2vec/seedEmbedding_5500E_100D.txt");
+                                    "/ir2vec/seedEmbedding_1500E_300D_riscv64.txt");
   }
   //???
   // SetStub<registerallocationinference::RegisterAllocationInference>(
@@ -1358,7 +1358,7 @@ std::string MLRA::getDotGraphAsString() {
 }
 
 void MLRA::dumpInterferenceGraph(std::string ID) {
-  LLVM_DEBUG(errs() << "\n******************* Dump the graphs "
+  (errs() << "\n******************* Dump the graphs "
                        "(START)*************************** \n\n");
 
   std::string graph = getDotGraphAsString();
@@ -1387,7 +1387,7 @@ void MLRA::dumpInterferenceGraph(std::string ID) {
                           newID + ".dot",
                       EC, sys::fs::F_Text);
   File << graph;
-  LLVM_DEBUG(errs() << "Dump done : " << graph << "\n");
+  (errs() << "Dump done : " << graph << "\n");
 }
 
 // void MLRA::findOverlapingInterval(LiveInterval *VirtReg1,

@@ -10,6 +10,7 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 
 #include "Config.h"
@@ -67,6 +68,7 @@ FunctionPass *llvm::createCollectMachineIRPass() {
 
 bool CollectMachineIR::runOnMachineFunction(MachineFunction &MF) {
   static bool run = false;
+  // errs() << "In COLLECT IR PASS\n";
   if (!run) {
     opcDescMap =
         IR2Vec::createOpcodeMap(MF.getTarget().getTargetTriple().getArch());
@@ -81,14 +83,15 @@ bool CollectMachineIR::runOnMachineFunction(MachineFunction &MF) {
 }
 
 void CollectMachineIR::traverseBasicBlock(MachineBasicBlock &MB) {
+  std::string PrevInst = "";
   for (MachineInstr &I : MB) {
     std::string temp;
     // errs() << "----------------------------------------\n";
     // I.dump();
     // errs() << I.getDesc().getFlags() << "\n";
     // errs() << "----------------------------------------\n";
-
-    temp += "\n " + opcDescMap[I.getOpcode()] + " ";
+    std::string CurrInst = opcDescMap[I.getOpcode()];
+    temp += "\n " + CurrInst + " ";
 
     for (unsigned i = 0; i < I.getNumOperands(); i++) {
       auto MO = I.getOperand(i);
@@ -164,5 +167,10 @@ void CollectMachineIR::traverseBasicBlock(MachineBasicBlock &MB) {
     }
     // errs() << temp << "\n";
     res += temp;
+    if(PrevInst != "") {
+      temp = "\n: " + PrevInst + "  " + CurrInst;
+    }
+    res += temp;
+    PrevInst = CurrInst;
   }
 }

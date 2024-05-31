@@ -79,3 +79,5 @@ trained_model/
 
 .env
 .eggs
+
+install*

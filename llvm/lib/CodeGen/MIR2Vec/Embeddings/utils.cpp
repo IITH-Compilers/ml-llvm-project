@@ -7,6 +7,7 @@
 
 #include "llvm/CodeGen/MIR2Vec/utils.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include "Config.h"
 #include "MLModelRunner/Utils/MLConfig.h"
@@ -58,7 +59,11 @@ IR2Vec::createOpcodeMap(llvm::Triple::ArchType archType) {
   }
   case Triple::ArchType::x86:
   case Triple::ArchType::x86_64: {
-    extFile += "/regalloc/extracted_x86.csv";
+    extFile += "/regalloc/extracted_x86_updated.csv";
+    break;
+  }
+  case Triple::ArchType::riscv64: {
+    extFile += "/regalloc/extracted_riscv64.csv";
     break;
   }
   default:
