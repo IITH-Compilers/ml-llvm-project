@@ -9,6 +9,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MLRegAlloc.h"
+#include "llvm/CodeGen/Floatwrapper.h"
+
 #include "AllocationOrder.h"
 #include "Config.h"
 #include "InterferenceCache.h"
@@ -94,6 +96,7 @@
 #include <future>
 #include <google/protobuf/text_format.h>
 #include <iostream>
+#include <llvm-19/llvm/IR/Value.h>
 #include <map>
 #include <memory>
 #include <queue>
@@ -104,7 +107,6 @@
 #include <tuple>
 #include <utility>
 #include <vector>
-#include "Floatwrapper.h"
 // #include "Service/RegisterAllocationInference/RegisterAllocationInference.h"
 
 #define DIS_SANITY_CHECK 1
@@ -1603,7 +1605,8 @@ void MLRA::calculatePositionalSpillWeights(
       startIdx = LIS->getMBBStartIdx(LIS->getMBBFromIndex(use));
     }
     float futureWeight = VRAI.futureWeight(*VirtReg, startIdx, use);
-    FloatWrapper fw =   futureWeight;  
+    FloatWrapper fw = futureWeight;  
+    futureWeight = fw.get_Values();
     spillWeights.push_back(futureWeight);
   }
 }
@@ -1623,8 +1626,8 @@ void MLRA::computeVectors(LiveInterval *VirtReg,
         LLVM_DEBUG(errs() << "Value not found in the map \n");
         continue;
       }
-      // FloatWrapper fw = vec;
-      vectors.push_back(vec);
+      auto fw_vec =  vectorPrecision<double>(vec);
+      vectors.push_back(fw_vec);
     }
   }
 }
@@ -1769,6 +1772,7 @@ bool MLRA::captureRegisterProfile() {
     regProf.vecRep = vectors;
     regProf.spillWeight = VirtReg->weight;
     FloatWrapper fw = regProf.spillWeight;
+    regProf.spillWeight = fw.get_Values();
     SmallVector<int, 8> useDistances;
     SmallVector<unsigned, 8> splitPoints;
     computeSplitPoints(VirtReg, useDistances, splitPoints);
@@ -1921,7 +1925,7 @@ void MLRA::updateRegisterProfileAfterSplit(
     rp.cls = TRI->getRegClassName(MRI->getRegClass(NewVirtReg->reg));
     rp.spillWeight = NewVirtReg->weight;
     FloatWrapper fw = rp.spillWeight;
-
+    rp.spillWeight = fw.get_Values();
     SmallVector<int, 8> useDistances;
     SmallVector<unsigned, 8> splitPoints;
     SA->analyze(NewVirtReg);

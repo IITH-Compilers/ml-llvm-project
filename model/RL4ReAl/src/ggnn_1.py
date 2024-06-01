@@ -302,15 +302,13 @@ def parseProp(val):
     return val[1: len(val) - 1]
 
 def set_precision(spillWeight):
-    formatted_spill_cost = "%.13f" %spillWeight
-    formatted_spill_cost=float(formatted_spill_cost)
+    formatted_spill_cost=float("%.13f" %spillWeight)
     return formatted_spill_cost
 
 def set_precision_forList(lst):
     precise_lst=[]
     for val in lst:
-        formatted_positional_weight = "%.13f" %val
-        formatted_positional_weight=float(formatted_positional_weight)
+        formatted_positional_weight=float("%.13f" %val)
         precise_lst.append(formatted_positional_weight)
     return precise_lst
 

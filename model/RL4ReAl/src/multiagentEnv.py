@@ -240,7 +240,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         
         
         adjacency_lists = {
-            "node_num": state.adjacency_lists[0].getNodeNum() - self.split_successful,
+            "node_num": state.adjacency_lists[0].getNodeNum(),
             "edge_num": state.adjacency_lists[0].getData().shape[0],
             "data": state.adjacency_lists[0].getData().tolist()
         }
@@ -903,15 +903,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                         reward = -10
                     # print("Cost based reward is", best_cost, current_cost, reward)
                 elif self.use_mca_reward:
-                    process_completed = True
-                    # try:
-                    #     outs, errs = self.server_pid.communicate(timeout=self.mca_timeout)
-                    # except:
-                    #     # self.server_pid.kill()
-                    #     process_completed = False
-                    #     os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
-                    #     print("Clang failing")
-                    # outs, errs = self.server_pid.communicate()
                     mlra_throughput = 0
                     mlra_cycles = 0                  
                     print("Clang process finished")
