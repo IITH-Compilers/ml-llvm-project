@@ -109,7 +109,7 @@ class PPOConfig(PGConfig):
         self.model["vf_share_layers"] = False
         self._disable_preprocessor_api = False
 
-        self.num_gpus = 0
+        self.num_gpus = 1
         self.num_cpus_per_worker = 1
         self.num_gpus_per_worker = 0
         self.num_envs_per_worker = 1

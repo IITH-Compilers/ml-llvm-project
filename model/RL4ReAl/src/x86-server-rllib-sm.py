@@ -16,8 +16,8 @@ sys.path.append(
 )
 import rollout as inference
 from argparse import Namespace
-
 from compilerinterface import PipeCompilerInterface, GrpcCompilerInterface
+
 
 def blockPrint():
     sys.stdout = open(os.devnull, 'w')
@@ -65,7 +65,7 @@ class service_server(
             "steps": 0,
             "episodes": 0,
             "arch": "X86",
-            "dump_onnx_model": dump_onnx_model
+            "dump_onnx_model": dump_onnx_model 
         }
         args = Namespace(**args)
         self.inference_model = inference.RollOutInference(args)
@@ -332,7 +332,7 @@ def run_pipe_communication(data_format, pipe_name, dump_onnx_model=False):
                 if not inference_model.update_obs(inter_graphs):
                     print("Current split failed")
                     inference_model.setCurrentNodeAsNotVisited()
-                inference_model.updateSelectNodeObs() 
+                inference_model.updateSelectNodeObs()
 
             else:
                 inference_model.setCurrentNodeAsNotVisited()

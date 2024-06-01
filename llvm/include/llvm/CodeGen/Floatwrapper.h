@@ -16,7 +16,7 @@ template<typename T>class FloatWrapper {
         FloatWrapper(T v);
 
         FloatWrapper& operator=(T v);
-        T get_Values();
+        T getValue();
 };
 
 template<typename T>
@@ -38,7 +38,7 @@ FloatWrapper<T>& FloatWrapper<T>::operator=(T val) {
 }
 
 template<typename T>
-T FloatWrapper<T>::get_Values() {
+T FloatWrapper<T>::getValue() {
     return this->value;
 }
 
@@ -47,7 +47,7 @@ llvm::SmallVector<T, 100> vectorPrecision(llvm::SmallVector<T, 100>& val) {
     llvm::SmallVector<T, 100> result;
     for (auto wrapper : val) {
         FloatWrapper<T> temp =  wrapper;
-        result.emplace_back( temp.get_Values());
+        result.emplace_back( temp.getValue());
     }
     return result;
 }
