@@ -154,6 +154,7 @@ class APPOConfig(ImpalaConfig):
             "use_costbased_reward":True,
             "use_local_reward": False,
             "use_mca_reward": False,
+            "disable_spliting":False,
             "use_mca_self_play_reward": False,
             "mca_reward_clip": 10,
             "mca_timeout": 30,

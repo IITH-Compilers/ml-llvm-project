@@ -168,13 +168,13 @@ if __name__ == "__main__":
     box_obs = Box(
             FLOAT_MIN, FLOAT_MAX, shape=(config["env_config"]["state_size"], ), dtype=np.float32)
     box_obs_select_node = Box(
-            FLOAT_MIN, FLOAT_MAX, shape=(config["env_config"]["max_number_nodes"], config["env_config"]["state_size"]), dtype=np.float32)
+            FLOAT_MIN, FLOAT_MAX, shape=(config["env_config"]["max_number_nodes"], config["env_config"]["state_size"]), dtype=np.float32) 
     
     max_edge_count = config["env_config"]["max_edge_count"]
     adjacency_lists = Dict({
         "node_num": Discrete(config["env_config"]["max_number_nodes"]),
-        "edge_num": Discrete(max_edge_count),
-        "data": Repeated(Box(0.0, config["env_config"]["max_number_nodes"], shape=(2,)), max_len = max_edge_count)
+        "edge_num": Discrete(max_edge_count), 
+        "data": Repeated(Box(0.0, config["env_config"]["max_number_nodes"], shape=(2,)), max_len = max_edge_count) 
     })
     obs_colour_node = Dict({
         "action_mask": Box(0, 1, shape=(config["env_config"]["action_space_size"],)),
@@ -183,9 +183,9 @@ if __name__ == "__main__":
         })
     obs_select_node = Dict({
         "spill_weights": Box(FLOAT_MIN, FLOAT_MAX, shape=(config["env_config"]["max_number_nodes"],), dtype=np.float32), 
-        "action_mask": Box(0, 1, shape=(config["env_config"]["max_number_nodes"],)),
-        "state": box_obs_select_node,
-        "annotations": Box(FLOAT_MIN, FLOAT_MAX, shape=(config["env_config"]["max_number_nodes"], config["env_config"]["annotations"]), dtype=np.float32),
+        "action_mask": Box(0, 1, shape=(config["env_config"]["max_number_nodes"],)), 
+        "state": box_obs_select_node, 
+        "annotations": Box(FLOAT_MIN, FLOAT_MAX, shape=(config["env_config"]["max_number_nodes"], config["env_config"]["annotations"]), dtype=np.float32), 
         "adjacency_lists": adjacency_lists,
         }) 
     obs_select_task = Dict({

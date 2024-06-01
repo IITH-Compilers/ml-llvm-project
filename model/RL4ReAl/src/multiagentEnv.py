@@ -50,7 +50,7 @@ from config import BUILD_DIR
 from client import RegisterAllocationClient
 sys.path.append(f"{BUILD_DIR}/tools/MLCompilerBridge/Python-Utilities/")
 import RegisterAllocationInference_pb2, RegisterAllocation_pb2
-
+from ggnn_1 import set_precision_forList, set_precision
 config_path=None
 
 logger = logging.getLogger(__file__)
@@ -94,7 +94,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.max_number_nodes = env_config["max_number_nodes"]
         self.emb_size = env_config["state_size"]
         self.last_task_done = 0
-        self.node_representation_mat = None
+        self.node_representation_mat = None 
         self.max_edge_count = env_config["max_edge_count"]
         self.use_mca_reward = env_config["use_mca_reward"]
         self.use_local_reward =  env_config["use_local_reward"]
@@ -202,7 +202,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         return self.getReward_Static(action)
 
     def reset(self, graph=None):
-            
         self.reset_env(graph)
         self.agent_count = 0
         self.select_node_agent_id = "select_node_agent_{}".format(self.agent_count)
@@ -215,12 +214,9 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         # spill_weight_list = self.getSpillWeightListExpanded()
         state = self.obs
         node_mat = state.initial_node_representation
-        cur_obs = np.zeros((self.max_number_nodes, self.emb_size))
-        cur_obs[0:node_mat.shape[0], :] = node_mat
-
-        self.node_representation_mat = cur_obs
-        
-        annotations = np.zeros((self.max_number_nodes, self.annotation_size))
+        cur_obs = np.zeros((self.max_number_nodes, self.emb_size))  
+        cur_obs[0:node_mat.shape[0], :] = node_mat   
+        annotations = np.zeros((self.max_number_nodes, self.annotation_size))  #annotations initialised to zeros
         annotations[0:state.annotations.shape[0], :] = state.annotations
         spill_weight_list = annotations[:, 0]  # Annotations first element is spill weights 
         adjacency_lists = (state.adjacency_lists[0].getNodeNum(), np.array(state.adjacency_lists[0].getData()))
@@ -231,23 +227,23 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 result = i
             else:
                 result = torch.cat([result, i], dim=0)
-      
+              
         max_edge_count = self.max_edge_count
         edges_unroll = np.zeros((2*max_edge_count,))
         if self.mode == 'inference':
             if result is None or result.shape[0] > 2*max_edge_count:
                 print("Exiting inference due to no edge or more then max edge:", result)
                 return None
-
+            
         if result is not None:
             edges_unroll[0:result.shape[0]] = result
+        
         
         adjacency_lists = {
             "node_num": state.adjacency_lists[0].getNodeNum(),
             "edge_num": state.adjacency_lists[0].getData().shape[0],
             "data": state.adjacency_lists[0].getData().tolist()
         }
-        
         obs = {
             # self.select_node_agent_id: { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(select_node_mask), 'state' : cur_obs}
             self.select_node_agent_id: { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(select_node_mask), 'state' : cur_obs, 'annotations': np.array(annotations) ,'adjacency_lists': adjacency_lists}
@@ -261,11 +257,11 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
     def step(self, action_dict, extra_info=None):
         if self.mode != 'inference':
             if extra_info and 'select_node_policy' in extra_info.keys():
-                self.node_representation_mat = extra_info['select_node_policy'][0, :, :]                
+                self.obs.initial_node_representation = extra_info['select_node_policy'][0, :, :]                   
         else:
             if extra_info is not None:
                 if len(extra_info.shape) == 3:
-                    self.node_representation_mat = extra_info[0, :, :]                
+                    self.obs.initial_node_representation = torch.from_numpy(extra_info[0, :, :])                         
         if self.select_node_agent_id in action_dict:
             return self._select_node_step(action_dict[self.select_node_agent_id])
         if self.select_task_agent_id in action_dict:
@@ -329,7 +325,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         else:
             mask = [1]*2
         return mask
-
 
     def getSpillWeightListExpanded(self):
         spill_weight_list = [0]*self.max_number_nodes
@@ -400,7 +395,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.virtRegId = self.obs.idx_nid[self.cur_node]
         # logging.info("Node selected = {}, corresponding register id = {}".format(action, self.virtRegId))
         state = self.obs
-        self.cur_obs = self.node_representation_mat[self.cur_node][0:self.emb_size]
+        self.cur_obs = self.obs.initial_node_representation[self.cur_node][0:self.emb_size]
         if self.cur_obs is not None and not isinstance(self.cur_obs, np.ndarray):
             self.cur_obs = self.cur_obs.detach().numpy()
         prop = self.getNodeProperties()
@@ -489,12 +484,11 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         
     
 
-
     def _colour_node_step(self, action):
         logging.debug("Enter _colour_node_step")
         colour_reward, done_all, response  = self.step_colorTask(action)
         state = self.obs
-        self.cur_obs = self.node_representation_mat[self.cur_node][0:self.emb_size]
+        self.cur_obs = self.obs.initial_node_representation[self.cur_node][0:self.emb_size]
         if self.cur_obs is not None and not isinstance(self.cur_obs, np.ndarray):
             self.cur_obs = self.cur_obs.detach().numpy()
         
@@ -517,11 +511,14 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         select_task_mask = self.creatTaskSelectMask()
 
         state = self.obs
-        cur_obs = self.node_representation_mat
+        cur_obs = self.obs.initial_node_representation
+        if cur_obs is not None and not isinstance(cur_obs, np.ndarray):
+            cur_obs = cur_obs.detach().numpy()
         annotations = np.zeros((self.max_number_nodes, self.annotation_size))
         annotations[0:state.annotations.shape[0], :] = state.annotations
         spill_weight_list = annotations[:, 0]  # Annotations first element is spill weights 
         adjacency_lists = (state.adjacency_lists[0].getNodeNum(), np.array(state.adjacency_lists[0].getData()))
+       
         result = None
         for inx, i in enumerate(state.adjacency_lists[0].getData()):
             
@@ -535,10 +532,11 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             edges_unroll[0:result.shape[0]] = result
         
         adjacency_lists = {
-            "node_num": state.adjacency_lists[0].getNodeNum(),
+            "node_num": state.adjacency_lists[0].getNodeNum() - self.split_successful,
             "edge_num": state.adjacency_lists[0].getData().shape[0],
             "data": state.adjacency_lists[0].getData().tolist()
         }
+        
         discount_factor = 0
         prop = self.getNodeProperties()
         prop_value_list = list(prop.values())
@@ -632,9 +630,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             self.select_task_agent_id = "select_task_agent_{}".format(self.agent_count)
             self.split_node_agent_id = "split_node_agent_{}".format(self.agent_count)
             self.colour_node_agent_id = "colour_node_agent_{}".format(self.agent_count)
-            
-            
-
             obs[self.select_node_agent_id] = { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(select_node_mask), 'state' : cur_obs, 'annotations': np.array(annotations) ,'adjacency_lists': adjacency_lists}
             
             reward[self.select_node_agent_id] = 0
@@ -642,12 +637,10 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         logging.debug("Exit _colour_node_step")
         return obs, reward, done, {}
 
-    def _split_node_step(self, action):
+    def _split_node_step(self, action):   
         logging.debug("Enter _split_node_step")
         # self.cur_obs = self.flat_env.reset()
-        #logging.debug("{} {} {}".format(self.virtRegId, self.obs.idx_nid[self.cur_node], self.cur_node))
         logging.debug("{} {}".format(self.obs.idx_nid, self.obs.nid_idx))
-        #assert self.virtRegId == self.obs.idx_nid[self.cur_node], "Virtual should be same." # 
         use_distances = self.obs.use_distances[self.cur_node]
         done = False
         logging.debug("****Split index****** {} {}".format( len(use_distances), use_distances))
@@ -689,7 +682,9 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
            # logging.info("Select node mask is all zero")
 
         state = self.obs
-        cur_obs = self.node_representation_mat
+        cur_obs = self.obs.initial_node_representation
+        if cur_obs is not None and not isinstance(cur_obs, np.ndarray):
+            cur_obs = cur_obs.detach().numpy()
         annotations = np.zeros((self.max_number_nodes, self.annotation_size))
         annotations[0:state.annotations.shape[0], :] = state.annotations
         spill_weight_list = annotations[:, 0]  # Annotations first element is spill weights 
@@ -706,8 +701,9 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         edges_unroll = np.zeros((2*max_edge_count,))
         if result is not None:
             edges_unroll[0:result.shape[0]] = result
+        #apr12
         adjacency_lists = {
-            "node_num": state.adjacency_lists[0].getNodeNum(),
+            "node_num": state.adjacency_lists[0].getNodeNum() - self.split_successful,
             "edge_num": state.adjacency_lists[0].getData().shape[0],
             "data": state.adjacency_lists[0].getData().tolist()
         }
@@ -799,27 +795,24 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 "__all__": True 
             }
             self.obs.next_stage = 'end'
-            self.stable_grpc('Exit', 0, 0)   
+            self.stable_grpc('Exit', 0, 0)
+            self.stopServer()   
             # os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
             # if self.server_pid.poll() is not None:
             #   print('Force stop')
-            self.stopServer()
-            self.server_pid = None
+            # self.server_pid.send_signal(signal.SIGTERM)
+            # self.server_pid = None
             print('Stop server due to split')
             #time.sleep(5)
             
         logging.debug("Exit _split_node_step")
         return obs, reward, done, {}
-
+    
     def step_splitTask(self, action):
-
         split_point= action
         self.split_point = split_point
         nodeChoosen = self.cur_node 
         node_id =  self.obs.idx_nid[nodeChoosen]
-
-        self.obs.annotations[nodeChoosen][1] = torch.tensor(split_point)# .to(device)
-       
         reward = 0
         done = False
         
@@ -828,7 +821,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         # logging.info('try Split register {} on point {}'.format(node_id, split_point))
         # print('try Split register {} on point {}'.format(node_id, split_point))
         
-        if self.mode != 'inference':
+        if self.mode != 'inference':   
             updated_graphs = self.stable_grpc('Split', int(node_id), int(split_point))
             if updated_graphs is None:
                 self.obs.graph_topology.markNodeAsNotVisited(nodeChoosen)
@@ -910,136 +903,123 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                         reward = -10
                     # print("Cost based reward is", best_cost, current_cost, reward)
                 elif self.use_mca_reward:
-                    process_completed = True
-                    try:
-                        outs, errs = self.server_pid.communicate(timeout=self.mca_timeout)
-                    except:
-                        # self.server_pid.kill()
-                        outs, errs = self.server_pid.communicate()
-                        process_completed = False
-                        os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
-                        print("Clang failing")
                     mlra_throughput = 0
-                    mlra_cycles = 0
-                    if process_completed:                    
-                        print("Clang process finished")
-                        build_path = self.env_config["build_path"]
-                        if self.env_config["target"] == 'X86':
-                            cflags = "-mcpu=core2"
-                        else:
-                            cflags = "-mcpu=cortex-a72"
-                        self.mca_pid = utils_1.runMCA(self.functionName, self.worker_index, build_path, cflags, self.env_config["log_dir"])
-                        # while self.mca_pid.poll() is None:
+                    mlra_cycles = 0                  
+                    print("Clang process finished")
+                    build_path = self.env_config["build_path"]
+                    if self.env_config["target"] == 'X86':
+                        cflags = "-mcpu=core2"
+                    else:
+                        cflags = "-mcpu=cortex-a72"
+                    self.mca_pid = utils_1.runMCA(self.functionName, self.worker_index, build_path, cflags, self.env_config["log_dir"])
+                    # while self.mca_pid.poll() is None:
+                    try:
+                        outs, errs = self.mca_pid.communicate(timeout=self.mca_timeout)
+                    except:
+                        self.mca_pid.kill()
+                        outs, errs = self.mca_pid.communicate()
+                    if outs != "":
                         try:
-                            outs, errs = self.mca_pid.communicate(timeout=self.mca_timeout)
-                        except:
-                            self.mca_pid.kill()
-                            outs, errs = self.mca_pid.communicate()
-                        if outs != "":
-                            try:
-                                # mlra_cycles = re.search('Total Cycles:      [0-9]+', outs).group()
-                                # mlra_cycles = int(re.search('[0-9]+', mlra_cycles).group())
-                                mlra_throughput = re.search('Block RThroughput: [0-9]+.[0-9]+', outs).group()
-                                mlra_throughput = float(re.search('[0-9]+.[0-9]+', mlra_throughput).group())                                                                
-                            except AttributeError:
-                                pass                                                        
-                            
-                            # Reward from throughout
-                            with open(self.greedy_mca_throughput_file_path) as f:
-                                greedy_throughput_map = json.load(f)
-                            # with open('greedy-throughput.json') as f:
-                            #     greedy_throughput_map = json.load(f)
-                            if self.use_mca_self_play_reward:
-                                if key not in self.best_throughput_map.keys():
-                                    self.best_throughput_map[key] = mlra_throughput
-                                best_throughput = self.best_throughput_map[key]
-                                throughput_diff = (best_throughput - mlra_throughput)
-                                if best_throughput > mlra_throughput:
-                                    self.best_throughput_map[key] = mlra_throughput
-                                    best_throughput = mlra_throughput
-                                    reward = 5
-                                else:
-                                    reward = 0
-                                # reward = (throughput_diff/best_throughput)*self.env_config["mca_reward_clip"]
-                                # print("Throughput:", mlra_throughput, best_throughput)
-                                # print("Reward from self play throughput:", reward)
-                                                                                                    
+                            # mlra_cycles = re.search('Total Cycles:      [0-9]+', outs).group()
+                            # mlra_cycles = int(re.search('[0-9]+', mlra_cycles).group())
+                            mlra_throughput = re.search('Block RThroughput: [0-9]+.[0-9]+', outs).group()
+                            mlra_throughput = float(re.search('[0-9]+.[0-9]+', mlra_throughput).group())                                                                
+                        except AttributeError:
+                            pass                                                        
+                        
+                        # Reward from throughout
+                        with open(self.greedy_mca_throughput_file_path) as f:
+                            greedy_throughput_map = json.load(f)
+                        # with open('greedy-throughput.json') as f:
+                        #     greedy_throughput_map = json.load(f)
+                        if self.use_mca_self_play_reward:
+                            if key not in self.best_throughput_map.keys():
+                                self.best_throughput_map[key] = mlra_throughput
+                            best_throughput = self.best_throughput_map[key]
+                            throughput_diff = (best_throughput - mlra_throughput)
+                            if best_throughput > mlra_throughput:
+                                self.best_throughput_map[key] = mlra_throughput
+                                best_throughput = mlra_throughput
+                                reward = 5
                             else:
-                                if key in greedy_throughput_map.keys():
-                                    greedy_throughput = greedy_throughput_map[key]
-                                    # throughput_diff = (greedy_throughput - mlra_throughput)
-                                    # reward = (throughput_diff/greedy_throughput)*self.env_config["mca_reward_clip"]                                    
-                                    throughput_diff = (mlra_throughput - greedy_throughput)
-                                    # if throughput_diff <= 0.5:
-                                    #     reward = self.env_config["mca_reward_clip"]
-                                    # else:
-                                    #     reward = (greedy_throughput/throughput_diff)
-                                    
-                                    if throughput_diff < 0:
-                                        reward = 10
-                                    elif throughput_diff == 0:
-                                        reward = 0
-                                    else:
-                                        reward = -10
-                                    print("Throughput:", mlra_throughput, greedy_throughput)
-                                    print("Reward in compare to greedy throughput:", reward)
-
+                                reward = 0
+                            # reward = (throughput_diff/best_throughput)*self.env_config["mca_reward_clip"]
+                            # print("Throughput:", mlra_throughput, best_throughput)
+                            # print("Reward from self play throughput:", reward)
+                                                                                                
+                        else:
+                            if key in greedy_throughput_map.keys():
+                                greedy_throughput = greedy_throughput_map[key]
+                                # throughput_diff = (greedy_throughput - mlra_throughput)
+                                # reward = (throughput_diff/greedy_throughput)*self.env_config["mca_reward_clip"]                                    
+                                throughput_diff = (mlra_throughput - greedy_throughput)
+                                # if throughput_diff <= 0.5:
+                                #     reward = self.env_config["mca_reward_clip"]
+                                # else:
+                                #     reward = (greedy_throughput/throughput_diff)
+                                
+                                if throughput_diff < 0:
+                                    reward = 10
+                                elif throughput_diff == 0:
+                                    reward = 0
                                 else:
-                                    print("Following key not in Greedy map:", key)
-                            
-                        else:
-                            print("MCA timeout happned")                    
-                    else:
-                        print("Excided timer for asembly generation")
-                        reward = 0
-                    
-                    logdir = self.env_config["log_dir"]
-                    mlra_mca_throughput_file_path = os.path.join(logdir, str(self.worker_index) + '_mlra_throughput.json')
-                    if os.path.exists(mlra_mca_throughput_file_path):
-                        with open(mlra_mca_throughput_file_path) as f:
-                            mlra_throughput_map = json.load(f)
-                            f.close()
-                    else:
-                        mlra_throughput_map = {}
-                    
-                    with open(mlra_mca_throughput_file_path, 'w') as f:
-                        fileName = os.path.basename(self.fileName)
-                        if str(self.iteration_number) not in mlra_throughput_map.keys():
-                            mlra_throughput_map[str(self.iteration_number)] = {}
-                        key = fileName + "_" + self.functionName
-                        # if key not in mlra_throughput_map.keys():
-                        #     mlra_throughput_map[key] = []
-                        if key in mlra_throughput_map[str(self.iteration_number)]:
-                            (mlra_throughput_map[str(self.iteration_number)][key]).append(mlra_throughput)
-                        else:
-                            mlra_throughput_map[str(self.iteration_number)][key] = [mlra_throughput]
-                        # print("Adding function to iteration map", key, self.iteration_number)
-                        json.dump(mlra_throughput_map, f)
-                        f.close()
+                                    reward = -10
+                                print("Throughput:", mlra_throughput, greedy_throughput)
+                                print("Reward in compare to greedy throughput:", reward)
 
-                    mlra_mca_cycle_file_path = os.path.join(logdir, str(self.worker_index) + '_mlra_cycle.json')
-                    if os.path.exists(mlra_mca_cycle_file_path):
-                        with open(mlra_mca_cycle_file_path) as f:
-                            mlra_cycle_map = json.load(f)
-                            f.close()
+                            else:
+                                print("Following key not in Greedy map:", key)
+                        
                     else:
-                        mlra_cycle_map = {}
-                    
-                    with open(mlra_mca_cycle_file_path, 'w') as f:
-                        fileName = os.path.basename(self.fileName)
-                        if str(self.iteration_number) not in mlra_cycle_map.keys():
-                            mlra_cycle_map[str(self.iteration_number)] = {}
-                            # print("Adding iteration key to map", self.iteration_number, mlra_cycle_map.keys())
-                        key = fileName + "_" + self.functionName
-                        # if key not in mlra_cycle_map.keys():
-                        #     mlra_cycle_map[key] = []
-                        if key in mlra_cycle_map[str(self.iteration_number)]:
-                            (mlra_cycle_map[str(self.iteration_number)][key]).append(mlra_cycles)
-                        else:
-                            mlra_cycle_map[str(self.iteration_number)][key] = [mlra_cycles]
-                        # print("Adding function to iteration map", key, self.iteration_number)
-                        json.dump(mlra_cycle_map, f)
+                        print("MCA timeout happned")                    
+                
+                logdir = self.env_config["log_dir"]
+                mlra_mca_throughput_file_path = os.path.join(logdir, str(self.worker_index) + '_mlra_throughput.json')
+                if os.path.exists(mlra_mca_throughput_file_path):
+                    with open(mlra_mca_throughput_file_path) as f:
+                        mlra_throughput_map = json.load(f)
                         f.close()
+                else:
+                    mlra_throughput_map = {}
+                
+                with open(mlra_mca_throughput_file_path, 'w') as f:
+                    fileName = os.path.basename(self.fileName)
+                    if str(self.iteration_number) not in mlra_throughput_map.keys():
+                        mlra_throughput_map[str(self.iteration_number)] = {}
+                    key = fileName + "_" + self.functionName
+                    # if key not in mlra_throughput_map.keys():
+                    #     mlra_throughput_map[key] = []
+                    if key in mlra_throughput_map[str(self.iteration_number)]:
+                        (mlra_throughput_map[str(self.iteration_number)][key]).append(mlra_throughput)
+                    else:
+                        mlra_throughput_map[str(self.iteration_number)][key] = [mlra_throughput]
+                    # print("Adding function to iteration map", key, self.iteration_number)
+                    json.dump(mlra_throughput_map, f)
+                    f.close()
+
+                mlra_mca_cycle_file_path = os.path.join(logdir, str(self.worker_index) + '_mlra_cycle.json')
+                if os.path.exists(mlra_mca_cycle_file_path):
+                    with open(mlra_mca_cycle_file_path) as f:
+                        mlra_cycle_map = json.load(f)
+                        f.close()
+                else:
+                    mlra_cycle_map = {}
+                
+                with open(mlra_mca_cycle_file_path, 'w') as f:
+                    fileName = os.path.basename(self.fileName)
+                    if str(self.iteration_number) not in mlra_cycle_map.keys():
+                        mlra_cycle_map[str(self.iteration_number)] = {}
+                        # print("Adding iteration key to map", self.iteration_number, mlra_cycle_map.keys())
+                    key = fileName + "_" + self.functionName
+                    # if key not in mlra_cycle_map.keys():
+                    #     mlra_cycle_map[key] = []
+                    if key in mlra_cycle_map[str(self.iteration_number)]:
+                        (mlra_cycle_map[str(self.iteration_number)][key]).append(mlra_cycles)
+                    else:
+                        mlra_cycle_map[str(self.iteration_number)][key] = [mlra_cycles]
+                    # print("Adding function to iteration map", key, self.iter.ation_number)
+                    json.dump(mlra_cycle_map, f)
+                    f.close()
                 # else:
                 #     # print("Killing Server pid", self.server_pid.pid)         
                 #     # os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
@@ -1049,7 +1029,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 #     # os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
                 #     self.server_pid.kill()
                 #     print('Force stop')
-                self.server_pid = None                
+                # self.server_pid = None                
             
             logging.debug('All visited and colored graph visisted')
             return reward, done, response
@@ -1062,7 +1042,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             inx = (((self.worker_index-1) * self.env_config['current_batch']) + self.graph_counter)
             path=self.training_graphs[inx]
             logging.debug('Graphs selected : {}'.format(path))
-            print('Graphs selected : {}'.format(path))
             self.reset_count+=1
             if self.reset_count % self.repeat_freq == 0:
                 self.graph_counter+=1
@@ -1073,7 +1052,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 with open(path) as f:
                    graph = json.load(f)
             except Exception as ex:
-                print(traceback.format_exc())
                 logging.error(path)
                 logging.error(traceback.format_exc())                
                 return None
@@ -1167,11 +1145,10 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         return updated_graphs
 
     def update_obs(self, updated_graphs, register_id, split_point):
-        
         if updated_graphs.result:
             num_edges = 0
             new_node_count = 0
-            for node_prof in updated_graphs.regProf:            
+            for node_prof in updated_graphs.regProf:  
                 if self.mode != 'inference':
                     nodeId = str(node_prof.regID)
                 else:
@@ -1185,9 +1162,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             num_edges = num_edges + new_node_count*len(updated_graphs.regProf)*2
             num_nodes = len(self.obs.nid_idx.keys()) + new_node_count
             if num_nodes > self.max_number_nodes or num_edges > self.max_edge_count:
-                print("Max limit exceded for number of node or edges", num_nodes, num_edges)
                 return "error"
-            
             register_id = self.obs.idx_nid[self.cur_node]
             old_node_interferences = len(self.obs.graph_topology.adjList[self.cur_node])
             if self.mode != 'inference':
@@ -1230,7 +1205,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                     # logging.info('{}th New node {} '.format(new_nodes, nodeId))
                     # assert new_nodes < 3, "Splitting having more than 2 intervals"
                     self.obs.nid_idx[nodeId] = self.obs.graph_topology.num_nodes
-                    # print("NodeId and index", nodeId, self.obs.graph_topology.num_nodes, register_id)
                     self.obs.idx_nid[self.obs.graph_topology.num_nodes] = nodeId
                     self.obs.graph_topology.num_nodes = self.obs.graph_topology.num_nodes + 1
                     self.obs.graph_topology.discovered.append(False)
@@ -1239,7 +1213,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                     self.obs.graph_topology.colored.append(-1)
                      
 
-                    for neigh in node_prof.interferences:
+                    for neigh in node_prof.interferences:             
                         try:
                             if self.mode != 'inference':
                                 if str(neigh) in self.obs.nid_idx:
@@ -1251,8 +1225,9 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                             print("Node idx map and type", self.obs.nid_idx, type(neigh), neigh)
                             return "error"
                             # raise
-
-                    self.obs.spill_cost_list.append(node_prof.spillWeight)
+            
+                    spill_cost = set_precision(node_prof.spillWeight)
+                    self.obs.spill_cost_list.append(float(spill_cost))
                     self.obs.reg_class_list.append(self.obs.reg_class_list[splited_node_idx])
                     self.obs.use_distances.append(sorted(node_prof.useDistances))
                     self.obs.positionalSpillWeights.append(node_prof.positionalSpillWeights)
@@ -1263,21 +1238,22 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
                     annotation_zero = torch.zeros((1, 3))
                     self.obs.annotations = torch.cat((self.obs.annotations, annotation_zero),0)
-                    if new_nodes < 3:
-                        new_matrix = new_nodes_matrix[new_nodes-1]
+
+                    new_matrix=[] 
+                    if len(node_prof.vectors) > 0:
+                        for vector in node_prof.vectors:
+                            new_row = [set_precision(value) for value in vector.vec]
+                            new_matrix.append(new_row)
                     else:
-                        new_matrix = [CPY_INST_VEC]
-                    if len(new_matrix) == len(node_prof.positionalSpillWeights):
-                        # new_matrix = [ sc(vec, sw) for vec,sw in zip(new_matrix, node_prof.positionalSpillWeights)]
-                        new_matrix = new_matrix
+                        new_matrix = [[0]*100]
+
                     # else:
-                    #     logging.warning('Spill weight not updated {} : {}'.format(len(new_matrix), len(node_prof.positionalSpillWeights)))
+                    #     logging.warning('Spill weight not updated {} : {}'.format(len(new_matrix), len(node_prof.positionalSpillWeights)))  
                     self.obs.raw_graph_mat.append(new_matrix)
                     node_tansor_matrix = torch.FloatTensor(new_matrix)
-                    nodeVec = constructVectorFromMatrix(node_tansor_matrix).view(1,-1)
-                    self.obs.initial_node_representation = torch.cat((self.obs.initial_node_representation, nodeVec),0)
-
-                    #self.obs.initial_node_representation[]
+                    nodeVec = constructVectorFromMatrix(node_tansor_matrix)
+                    val=self.obs.nid_idx[nodeId]
+                    self.obs.initial_node_representation[val] = nodeVec
 
                     # interfering_node_idx = self.obs.nid_idx[nodeId]
 
@@ -1302,12 +1278,11 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                         # self.obs.graph_topology.adjList[interfering_node_idx] = list(set().union(self.obs.graph_topology.adjList[interfering_node_idx], list(map(lambda x: self.obs.nid_idx[x], node_prof.interferences)))) 
                         self.obs.graph_topology.adjList[interfering_node_idx] = list(set(self.obs.graph_topology.adjList[interfering_node_idx] + list(map(lambda x: self.obs.nid_idx[x], node_prof.interferences))))
                 except:
-                    print("Node idx map", self.obs.graph_topology.adjList[interfering_node_idx], node_prof.interferences, self.obs.nid_idx)
                     return "error"
                     # raise
                 self.obs.graph_topology.indegree[interfering_node_idx] = len(self.obs.graph_topology.adjList[interfering_node_idx])
-                
-                self.obs.spill_cost_list[interfering_node_idx] = node_prof.spillWeight
+                spill_cost = set_precision(node_prof.spillWeight)
+                self.obs.spill_cost_list[interfering_node_idx] = float(spill_cost)
                 self.obs.use_distances[interfering_node_idx] = np.array(sorted(node_prof.useDistances))
                 self.obs.positionalSpillWeights[interfering_node_idx] = node_prof.positionalSpillWeights
                 self.obs.split_points[interfering_node_idx] = np.array(node_prof.splitSlots)
@@ -1344,16 +1319,17 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             # a = list(map(lambda x:list(map(lambda y: (x[0], y) , x[1])) , enumerate(self.obs.graph_topology.adjList)))
             edges = []
             for i, adj in enumerate(self.obs.graph_topology.adjList):
-                for node in adj:
-                    edges.append((i, node))
-                    # edges.append((node, i))
-            edges = list(set(edges))
-
+                for sorted_node in sorted(adj):
+                    edges.append((i, sorted_node))
+            
             logging.debug("egdes({}) after after update : {} ".format(len(edges), edges))
             logging.debug("self.obs.graph_topology.adjList : {} ".format(self.obs.graph_topology.adjList))            
             if self.obs.graph_topology.num_nodes > self.max_number_nodes or len(edges) > self.max_edge_count:
                 print("Max limit exceded for number of node or edges", self.obs.graph_topology.num_nodes, len(edges))
                 return "error"
+
+            if self.mode == 'inference':
+                self.split_successful += 1
 
             self.obs.adjacency_lists = [ AdjacencyList(node_num=self.obs.graph_topology.num_nodes, adj_list=edges, device=self.obs.adjacency_lists[0].device)]
         else:
@@ -1364,11 +1340,16 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         return updated_graphs.result
 
     def stopServer(self):
-        self.server_pid.stdin.write("Terminate\n")
-        self.server_pid.stdin.flush()
-        try:
-            out, errs = self.server_pid.communicate(timeout=30)
-        except:
-            self.server_pid.kill()
-            out, errs = self.server_pid.communicate()
-            print("Force Stop")
+        
+        if self.server_pid.poll() is None:
+            self.server_pid.stdin.write("Terminate\n")
+            self.server_pid.stdin.flush()
+            try:
+                out, errs = self.server_pid.communicate(timeout=30)
+            except:
+                self.server_pid.kill()
+                out, errs = self.server_pid.communicate()
+                print("Force Stop")
+        else:
+            print("Server failed before episode end")
+        self.server_pid = None

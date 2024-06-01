@@ -43,6 +43,7 @@ class SelectTaskNetwork(TorchModelV2, nn.Module):
             out_size=1,
             initializer=normc_initializer(0.01),
             activation_fn=None)
+        self.softmax = nn.Softmax(dim=1)
         self._features = None
 
         
@@ -58,7 +59,7 @@ class SelectTaskNetwork(TorchModelV2, nn.Module):
         x = self.fc3(x)
         # assert not torch.isnan(x).any(), "Nan in select task model after fc3"
         self._features = x.clone().detach()
-
+        x=self.softmax(x)
         mask = input_dict["obs"]["action_mask"]
         # x = torch.where(mask, x, torch.tensor(FLOAT_MIN).to(x.device))
 
@@ -100,12 +101,13 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
         # self.attention = nn.Linear(custom_config["max_number_nodes"], 1)
         self.fc3 = nn.Linear( custom_config["fc2_units"], custom_config["fc3_units"])
         self.fc4 = nn.Linear( custom_config["fc3_units"], 1)
-        # self.softmax = nn.Softmax(dim=1)
+        
         self._value_branch = SlimFC(
             in_size=custom_config["max_number_nodes"],
             out_size=1,
             initializer=normc_initializer(0.01),
             activation_fn=None)
+        self.softmax = nn.Softmax(dim=1)
         self._features = None
         state_size: int = custom_config["state_size"]
         annotations_size: int = custom_config["annotations_size"]
@@ -117,22 +119,11 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
         
     def forward(self, input_dict, state, seq_lens):
         """Build a network that maps state -> action values."""
-
         input_state_list = torch.zeros(input_dict["obs"]["state"].shape[0], self.max_number_nodes, self.emb_size)
         if self.enable_ggnn:
             # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-            # print("from select node forward func : ", device)
-            # print("adjacency list device = ", input_dict["obs"]["adjacency_lists"][0].data.device)
-            # print("annotations device = ", input_dict["obs"]["annotations"].device)
-            # assert not torch.isnan(input_dict["obs"]["state"]).any(), "Nan in select node model obs:state"
-            # assert not torch.isnan(input_dict['obs']['adjacency_lists']['data'].values).any(), "Nan in select node model adjlist"
-
-
             ggnn_input_x = torch.dstack((input_dict["obs"]["state"], input_dict["obs"]["annotations"]))
             edge_index = input_dict['obs']['adjacency_lists']['data'].values.mT
-
-            # print("ggnn_input_x.device = ", ggnn_input_x.device)
-            # print("edge_index.device = ", edge_index.device)
             batch_size = ggnn_input_x.shape[0]
             # #################### batch method #######################
             data_list = []
@@ -142,13 +133,6 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
 
             node_mat = self.ggnn(batch_data.x, batch_data.edge_index).reshape(batch_size, -1, 100)
             # assert not torch.isnan(node_mat).any(), "Nan in select node model input after ggnn"
-
-
-            # print(batch_data)
-            # # print('num_graphs = ', batch_data.num_graphs)
-
-
-
             # outs = [self.ggnn(ggnn_input_x[i], edge_index[i].long()) for i in range(batch_size)]
             # node_mat = torch.stack(outs)
             # print("GOT NODE_MAT!!!!!!!!!!!!", node_mat.shape)
@@ -193,14 +177,15 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
         x = torch.squeeze(x, 2)
         # assert not torch.isnan(x).any(), "Nan in select node model after fc3"
         self._features = x.clone().detach()
+        x=self.softmax(x)
         mask = input_dict["obs"]["action_mask"]
         # masking_value = -1e6
         # masking_value = FLOAT_MIN
         inf_mask = torch.clamp(torch.log(mask), min=FLOAT_MIN)
-        x = x + inf_mask
+        x = x + inf_mask 
         # x = torch.where(mask, x, torch.tensor(masking_value).to(x.device))
         #x = torch.where(mask, x, torch.tensor(FLOAT_MIN).to(x.device))
-        # print("Select node output and emb device", x.device, node_mat.device)        
+        # print("Select node output and emb device", x.device, node_mat.device)         
         # assert not torch.isnan(x).any(), "Nan in select node model output"
         return x, state, input_state_list
         # return x, state
@@ -235,6 +220,7 @@ class ColorNetwork(TorchModelV2, nn.Module):
             out_size=1,
             initializer=normc_initializer(0.01),
             activation_fn=None)
+        self.softmax = nn.Softmax(dim=1)
         self._features = None
         
     def forward(self, input_dict, state, seq_lens):
@@ -249,14 +235,13 @@ class ColorNetwork(TorchModelV2, nn.Module):
         # # assert False, "Hoho"
         x = self.fc3(x)
         self._features = x.clone().detach()
-        # x = self.softmax(x)
+        x = self.softmax(x)
         mask = input_dict["obs"]["action_mask"]
         # masking_value = -1e6
         # masking_value = FLOAT_MIN
         inf_mask = torch.clamp(torch.log(mask), min=FLOAT_MIN)
         x = x + inf_mask
         # x = torch.where(mask, x, torch.tensor(masking_value).to(x.device))
-        #x = torch.where(mask, x, torch.tensor(FLOAT_MIN).to(x.device))  
         return x, state, self._features
         # return x, state
     
@@ -290,6 +275,7 @@ class SplitNodeNetwork(TorchModelV2, nn.Module):
             out_size=1,
             initializer=normc_initializer(0.01),
             activation_fn=None)
+        self.softmax = nn.Softmax(dim=1)
         self._features = None
         
     def forward(self, input_dict, state, seq_lens):
@@ -312,6 +298,7 @@ class SplitNodeNetwork(TorchModelV2, nn.Module):
         mask = input_dict["obs"]["action_mask"]
         # masking_value = -1e6
         # masking_value = FLOAT_MIN
+        x=self.softmax(x)
         inf_mask = torch.clamp(torch.log(mask), min=FLOAT_MIN)
         x = x + inf_mask
         # assert not torch.isnan(x).any(), "Nan in split node model output"
