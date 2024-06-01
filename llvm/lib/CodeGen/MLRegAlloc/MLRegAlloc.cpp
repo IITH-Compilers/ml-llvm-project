@@ -1606,7 +1606,7 @@ void MLRA::calculatePositionalSpillWeights(
     }
     float futureWeight = VRAI.futureWeight(*VirtReg, startIdx, use);
     FloatWrapper fw = futureWeight;  
-    futureWeight = fw.get_Values();
+    futureWeight = fw.getValue();
     spillWeights.push_back(futureWeight);
   }
 }
@@ -1772,7 +1772,7 @@ bool MLRA::captureRegisterProfile() {
     regProf.vecRep = vectors;
     regProf.spillWeight = VirtReg->weight;
     FloatWrapper fw = regProf.spillWeight;
-    regProf.spillWeight = fw.get_Values();
+    regProf.spillWeight = fw.getValue();
     SmallVector<int, 8> useDistances;
     SmallVector<unsigned, 8> splitPoints;
     computeSplitPoints(VirtReg, useDistances, splitPoints);
@@ -1925,7 +1925,7 @@ void MLRA::updateRegisterProfileAfterSplit(
     rp.cls = TRI->getRegClassName(MRI->getRegClass(NewVirtReg->reg));
     rp.spillWeight = NewVirtReg->weight;
     FloatWrapper fw = rp.spillWeight;
-    rp.spillWeight = fw.get_Values();
+    rp.spillWeight = fw.getValue();
     SmallVector<int, 8> useDistances;
     SmallVector<unsigned, 8> splitPoints;
     SA->analyze(NewVirtReg);
