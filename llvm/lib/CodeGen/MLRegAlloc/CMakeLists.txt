@@ -9,7 +9,6 @@ message(STATUS "Using protobuf Include Dirs ${Protobuf_INCLUDE_DIRS}")
 
 add_llvm_component_library(LLVMMLRegAlloc
 MLRegAlloc.cpp
-Floatwrapper.cpp
 
 DEPENDS 
 intrinsics_gen
