@@ -7,7 +7,6 @@ from torch.autograd import Variable
 import torch.nn.functional as F
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
 from torch.nn.functional import normalize
-import os
 from typing import List, Tuple, Dict, Sequence, Any
 from topologicalSort_1 import Graph
 import logging
@@ -350,9 +349,6 @@ def get_observationsInf(graph):
     use_distance_list = []
     raw_graph_mat = []
     positionalSpillWeights_list = []
-    print("Start processing**********")
-    print("len(nodes):", num_nodes)
-    
     for idx, node in enumerate(nodes):
         
         nodeId = node.regID
