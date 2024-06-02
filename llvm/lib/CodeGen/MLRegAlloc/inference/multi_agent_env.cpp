@@ -23,7 +23,6 @@ Observation& MultiAgentEnv::reset() {
     // errs() << "Adding node: " << rpi.first << "\n";
     this->regProfMapHelper.insert({rpi.first, rpi.second});
   }
-
   LLVM_DEBUG(errs() << "rp size = " << this->regProfMapHelper.size() << "\n");
   LLVM_DEBUG(errs() << "noderep size = " << this->nodeRepresentation.size()
                     << "\n");
@@ -137,12 +136,9 @@ Observation& MultiAgentEnv::step(Action action) {
     // errs() << "Selected Task is: " << action << "\n";
   } else if (this->getNextAgent() == COLOR_NODE_AGENT) {
     CurrObs = this->colour_node_step(action);
-    // errs() << "Node coloured is: " << action << "\n";
-    
   } else if (this->getNextAgent() == SPLIT_NODE_AGENT) {
     splitStepCount++;
     CurrObs = this->split_node_step(action);
-    // errs() << "Node spliting is: " << action << "\n";
   } else {
     llvm_unreachable("Unexpected agent found");
   }
@@ -240,11 +236,12 @@ void MultiAgentEnv::update_env(RegisterProfileMap *regProfMapHelper,
       //     rpi.first, graph_topology->node_number));
       // idx_nid.insert(std::pair<unsigned, unsigned>(
       //     graph_topology->node_number, rpi.first));
-      LLVM_DEBUG(errs() << "Adding pair to idx_nid map: " << rpi.first << "\n");
+      LLVM_DEBUG(errs() << "Adding pair to idx_nid map: " << rpi.first <<"\n");
       llvm::SmallVector<unsigned, 8> interferences;
       for (auto item : rp.interferences) {
         interferences.push_back(this->nid_idx[item]);
       }
+      sort(interferences.begin(),interferences.end());
       LLVM_DEBUG(errs() << "Node " << rpi.first << " adj Nodes: ");
       for (auto item : rp.interferences) {
         LLVM_DEBUG(errs() << item << ", ");
@@ -263,20 +260,9 @@ void MultiAgentEnv::update_env(RegisterProfileMap *regProfMapHelper,
       LLVM_DEBUG(errs() << "Adding nodeId to map regProfMapHelper: " << rpi.first
                         << "\n");
       SmallVector<IR2Vec::Vector, 12> newNodeMatrix;
-      IR2Vec::Vector nodeVec(IR2Vec_size);
-      if (newNodecount < 3) {
-        // if(newNodecount == 1) {
-        //   nodeVec = this->constructNodeVector(V1);
-        // }
-        // else if(newNodecount == 2) {
-        //   nodeVec = this->constructNodeVector(V2);
-        // }
-        this->constructNodeVector(rp.vecRep, nodeVec);
-      } else {
-        newNodeMatrix.push_back(CPY_INST_VEC);
-        this->constructNodeVector(newNodeMatrix, nodeVec);
-      }
-      this->nodeRepresentation.push_back(nodeVec);
+      IR2Vec::Vector nodeVec(IR2Vec_size);       
+      this->constructNodeVector(rp.vecRep, nodeVec);
+      this->nodeRepresentation.push_back(nodeVec);    
       // this->nodeRepresentation.insert(this->nodeRepresentation.end(),
       // nodeVec);
       LLVM_DEBUG(errs() << "Added nodeRepresentation for new node: "
@@ -359,7 +345,7 @@ Observation MultiAgentEnv::colour_node_step(unsigned action) {
   unsigned current_node_idx = this->nid_idx[this->current_node_id];
   LLVM_DEBUG(errs() << "Selected colour for node is: " << action << "\n");
   LLVM_DEBUG(errs() << this->current_node_id << " idx is: " << current_node_idx
-                    << "\n");
+                    << "\n");  
   this->annotations[current_node_idx][0] = 0;
   this->annotations[current_node_idx][1] = action;
   this->graph_topology->UpdateColorVisitedNode(current_node_idx, action);
@@ -466,7 +452,7 @@ void MultiAgentEnv::selectNodeObsConstructor(Observation &obs) {
   // LLVM_DEBUG(errs() << "\n");
   // Set edge count in graph
   assertObsSize(143);
-  obs[current_index++] = this->edge_count; 
+  obs[current_index++] = this->edge_count;  
   Observation edgesFlattened(MAX_EDGE_COUNT * 2);
   this->computeEdgesFlatened(edgesFlattened);
   for (int i = 0; i < MAX_EDGE_COUNT * 2; i++) {
@@ -482,15 +468,16 @@ void MultiAgentEnv::selectNodeObsConstructor(Observation &obs) {
   current_index += max_node_number;
   assert(current_index == 91201 && "current_index is not 91201\n");
   // Setting anotations
-  Observation annotations;
   LLVM_DEBUG(errs() << "current_index = " << current_index << "\n");
-  this->createAnnotations(annotations);
-  for (int i = 0; i < max_node_number * 3; i++) {
+  // this->createAnnotations(annotations);
+  for (int i = 0; i < max_node_number; i++) {
     assertObsSize(166);
-    obs[current_index++] = annotations[i];  
-   
+    obs[current_index++] = this->annotations[i][0];  
+    obs[current_index++] = this->annotations[i][1];  
+    obs[current_index++] = this->annotations[i][2];  
+    // current_index++;
   }
-  // Set Spill weights
+
   for (int i = 0; i < max_node_number; i++) {
     assertObsSize(171);
     obs[current_index++] = this->annotations[i][0];
@@ -537,13 +524,14 @@ void MultiAgentEnv::computeAnnotations() {
     RegisterProfile rp = rpi.second;
     assert((current_idx < 600) && "exceeded annotations array size!!!!!!!\n");
     if (rp.cls == "Phy") {
-      this->annotations[current_idx][0] = 0;
+      this->annotations[current_idx][0] = 0; 
       this->annotations[current_idx][1] = rp.color;
     } else {
       if (std::isinf(rp.spillWeight)) {
-        this->annotations[current_idx][0] = -1;
+        this->annotations[current_idx][0] = 10000;
       } else {
-        this->annotations[current_idx][0] = rp.spillWeight;
+          
+      this->annotations[current_idx][0] = rp.spillWeight;    
       }
       this->annotations[current_idx][1] = 0;
     }
@@ -686,14 +674,12 @@ void MultiAgentEnv::taskSelectionObsConstructor(Observation &obs) {
   obs[current_index++] = adj_nodes.size();
   obs[current_index++] = masked_action_space.size();
   if (std::isinf(spillcost)) {
-    obs[current_index]=10000;
-    this->annotations[current_index++][0] = 10000;
+    obs[current_index++]=10000;
   } else {
-    obs[current_index]=spillcost;
-    this->annotations[current_index++][0] = spillcost; 
+    obs[current_index++]=spillcost;
   }
   // obs[current_index++] = spillcost;
-  obs[current_index++] = use_distances.size();      
+  obs[current_index++] = use_distances.size();    
   // Set node state
   // int current_node_idx = this->nid_idx[this->current_node_id];
   auto nodeVec = this->nodeRepresentation[current_node_idx];

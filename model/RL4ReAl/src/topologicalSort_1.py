@@ -38,8 +38,6 @@ class Graph:
     def UpdateVisitList(self, v):
         try:
             if not self.discovered[v]:
-
-                # for every adjacent vertex u of v, reduce in-degree of u by 1
                 for u in self.adjList[v]:
                     self.indegree[u] = self.indegree[u] - 1
                 self.discovered[v] = True
@@ -158,4 +156,3 @@ if __name__ == '__main__':
     print(listm)
     # print all topological ordering of the graph
     # printAllTopologicalOrders(graph)
-

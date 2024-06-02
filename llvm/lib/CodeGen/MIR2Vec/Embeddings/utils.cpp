@@ -64,7 +64,6 @@ IR2Vec::createOpcodeMap(llvm::Triple::ArchType archType) {
   default:
     llvm_unreachable("Should be one among the supported targets");
   }
-
   std::ifstream opcDesc(extFile);
   assert(!opcDesc.fail() && "Config file is not present.");
 

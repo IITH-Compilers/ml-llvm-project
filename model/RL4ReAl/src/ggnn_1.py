@@ -125,10 +125,8 @@ class GatedGraphNeuralNetwork(nn.Module):
                 initial_node_representation = torch.cat([initial_node_representation, zero_pads], dim=-1)
         elif len(initial_node_representation.shape) == 3:
             if torch.isnan(initial_node_representation).any():
-                print("initial_node_representation is nan", initial_node_representation)
                 raise
             elif torch.isnan(annotations).any():
-                print("annotations are nan", annotations)
                 raise
 
             initial_node_representation = torch.cat([initial_node_representation, annotations], dim=2)
@@ -319,11 +317,21 @@ def identify_node_cls(regClass,nodeId,list_of_phy_registers_ofGRtype):
         nodeType="Non-GR"
         return nodeType
 
+def set_precision(spillWeight):
+    formatted_spill_cost=float("%.13f" %spillWeight)
+    return formatted_spill_cost
 
-def get_observationsInf(graph,Phy_registers_of_GRtype):
-    print("In get_observationsInf")
+def set_precision_forList(lst):
+    precise_lst=[]
+    for val in lst:
+        formatted_positional_weight=float("%.13f" %val)
+        precise_lst.append(formatted_positional_weight)
+    return precise_lst
+
+def get_observationsInf(graph):
     nodes = graph.regProf
-    #adjlist = graph['adjacency']
+    # adjlist = graph['adjacency']
+    
     num_nodes = len(nodes)
     
     initial_node_representation = []
@@ -354,25 +362,24 @@ def get_observationsInf(graph,Phy_registers_of_GRtype):
         color = node.color # parseProp(properties[2])
         split_points = node.splitSlots
         use_distances = node.useDistances
-        positionalSpillWeights = node.positionalSpillWeights        
+        positionalSpillWeights = set_precision_forList(node.positionalSpillWeights)  
         split_points_list.append(np.array(split_points))
         use_distance_list.append(np.array(use_distances))
         positionalSpillWeights_list.append(np.array(positionalSpillWeights))
-        #print("spill_cost: ",spill_cost)
-        if spill_cost in [float('inf'), "inf", "INF"] or spill_cost > SPILL_COST_THRESHOLD:
-            spill_cost = float(SPILL_COST_THRESHOLD)  
+        if spill_cost in [float('inf'), "inf", "INF"] or float(spill_cost) > SPILL_COST_THRESHOLD:
+            spill_cost = float(SPILL_COST_THRESHOLD)
         
+        #may 6
         if len(node.vectors) > 0:
-            node_mat = [ vector.vec for vector in node.vectors]
+            node_mat = [[set_precision(value) for value in vector.vec] for vector in node.vectors]
         else:
             node_mat = [[0]*100]
-        
         raw_graph_mat.append(node_mat)
         node_tansor_matrix = torch.FloatTensor(node_mat)
         nodeVec = constructVectorFromMatrix(node_tansor_matrix)
         reg_class_list.append(regClass)
-        spill_cost_list.append(spill_cost)  
-        color_list.append(color)    
+        spill_cost_list.append(float(spill_cost))  
+        color_list.append(color)
         initial_node_representation.append(nodeVec)
         nid_idx[nodeId] = idx
         idx_nid[idx] = nodeId
@@ -404,7 +411,6 @@ def get_observationsInf(graph,Phy_registers_of_GRtype):
     logging.debug("adjList : {}".format(graph_topology.adjList) )
     logging.debug('All edges num : {}'.format(len(all_edges)))
     
-
     assert not np.isnan(spill_cost_list).any(), "Spill cost is NAN"
     annotation_zero = np.zeros((num_nodes, 3))
     annotation_zero[:, 0] = spill_cost_list
@@ -557,7 +563,6 @@ def get_observations(graph,Phy_registers_of_GRtype):
             color, phyReg = map( lambda x : int(x.split('=')[-1]), allocate_type_list[node_idx].split(';'))
             # color = color_list[node_idx]
             logging.debug('creating graph; Marking node_idx={} with color={}'.format(node_idx, color))
-            
             graph_topology.UpdateVisitList(node_idx)
             graph_topology.UpdateColorVisitedNode(node_idx, color) 
             # ggnn.updateAnnotation(node_idx, color)

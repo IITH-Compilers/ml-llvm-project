@@ -9,6 +9,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MLRegAlloc.h"
+#include "llvm/CodeGen/Floatwrapper.h"
+
 #include "AllocationOrder.h"
 #include "Config.h"
 #include "InterferenceCache.h"
@@ -94,6 +96,7 @@
 #include <future>
 #include <google/protobuf/text_format.h>
 #include <iostream>
+#include <llvm-19/llvm/IR/Value.h>
 #include <map>
 #include <memory>
 #include <queue>
@@ -368,8 +371,9 @@ void MLRA::processMLInputsProtobuf(SmallSetVector<unsigned, 8> *updatedRegIdxs,
         "positionalSpillWeights",
         std::vector<float>(rp.spillWeights.begin(), rp.spillWeights.end()));
     std::pair<std::string, float> spillWeight("spillWeight", rp.spillWeight);
-    if (rp.spillWeight == INFINITY)
-      spillWeight.second = -1.0f;
+    if (rp.spillWeight == INFINITY){
+      spillWeight.second = 10000;
+    }    
 
     std::pair<std::string, std::vector<int>> interferences(
         "interferences",
@@ -438,7 +442,6 @@ void MLRA::printFeatures() {
 
 void MLRA::processMLInputs(SmallSetVector<unsigned, 8> *updatedRegIdxs,
                            bool IsStart, bool IsJson) {
-  // errs() << "Inside processMLInputs\n";
   if (data_format == "protobuf") {
     processMLInputsProtobuf(updatedRegIdxs, IsStart);
     return;
@@ -490,7 +493,7 @@ void MLRA::processMLInputs(SmallSetVector<unsigned, 8> *updatedRegIdxs,
     std::pair<std::string, float> spillWeight("spillWeight" + app,
                                               rp.spillWeight);
     if (rp.spillWeight == INFINITY)
-      spillWeight.second = -1.0f;
+        spillWeight.second = 10000;
 
     std::pair<std::string, std::vector<int>> interferences(
         "interferences" + app,
@@ -660,6 +663,12 @@ void MLRA::sendRegProfData(T *response,
     google::protobuf::RepeatedField<float> posSpillWeights(
         rp.spillWeights.begin(), rp.spillWeights.end());
     regprofResponse->mutable_positionalspillweights()->Swap(&posSpillWeights);
+    for (auto vec : rp.vecRep) {
+    auto vector = regprofResponse->add_vectors();
+    google::protobuf::RepeatedField<double> vecs(vec.begin(), vec.end());
+    vector->mutable_vec()->Swap(&vecs);
+   }
+   
   }
   if (regIdxs.size() > 0) {
     numSplits++;
@@ -1598,7 +1607,10 @@ void MLRA::calculatePositionalSpillWeights(
     if (MIR->getParent() != LIS->getMBBFromIndex(startIdx)) {
       startIdx = LIS->getMBBStartIdx(LIS->getMBBFromIndex(use));
     }
-    spillWeights.push_back(VRAI.futureWeight(*VirtReg, startIdx, use));
+    float futureWeight = VRAI.futureWeight(*VirtReg, startIdx, use);
+    FloatWrapper fw = futureWeight;  
+    futureWeight = fw.getValue();
+    spillWeights.push_back(futureWeight);
   }
 }
 
@@ -1613,11 +1625,12 @@ void MLRA::computeVectors(LiveInterval *VirtReg,
       if (!MIR)
         continue;
       IR2Vec::Vector vec = instVecMap[MIR];
-      vectors.push_back(vec);
       if (vec.size() <= 0) {
         LLVM_DEBUG(errs() << "Value not found in the map \n");
         continue;
       }
+      auto fw_vec =  vectorPrecision<double>(vec);
+      vectors.push_back(fw_vec);
     }
   }
 }
@@ -1677,7 +1690,6 @@ bool MLRA::captureRegisterProfile() {
     RegisterProfile regProf;
     regProf.cls = "Phy";
     regProf.spillWeight = 0;
-
     if (this->target_PhyReg2ColorMap[targetName].find(i) !=
         this->target_PhyReg2ColorMap[targetName].end()) {
       regProf.color = this->target_PhyReg2ColorMap[targetName][i];
@@ -1762,7 +1774,8 @@ bool MLRA::captureRegisterProfile() {
     regProf.spillWeights = positionalSpillWeights;
     regProf.vecRep = vectors;
     regProf.spillWeight = VirtReg->weight;
-
+    FloatWrapper fw = regProf.spillWeight;
+    regProf.spillWeight = fw.getValue();
     SmallVector<int, 8> useDistances;
     SmallVector<unsigned, 8> splitPoints;
     computeSplitPoints(VirtReg, useDistances, splitPoints);
@@ -1838,7 +1851,6 @@ bool MLRA::captureRegisterProfile() {
 
   LLVM_DEBUG(errs() << "\ncaptureRegisterProfile() call ended.\n");
   LLVM_DEBUG(printRegisterProfile());
-
   return validProf;
 }
 
@@ -1906,7 +1918,6 @@ void MLRA::updateRegisterProfileAfterSplit(
     unsigned NewVRegIdx = Register::virtReg2Index(NewVRegs[i]);
     LLVM_DEBUG(errs() << "Updating RP for " << printReg(NewVRegs[i], TRI)
                       << "--" << NewVRegIdx + step << "\n");
-
     // unsigned Reg = Register::index2VirtReg(NewVRegs[i]);
     LiveInterval *NewVirtReg = &LIS->getInterval(NewVRegs[i]);
     if (NewVirtReg->empty()) {
@@ -1916,7 +1927,8 @@ void MLRA::updateRegisterProfileAfterSplit(
     // rp.cls = oldRP.cls;
     rp.cls = TRI->getRegClassName(MRI->getRegClass(NewVirtReg->reg));
     rp.spillWeight = NewVirtReg->weight;
-
+    FloatWrapper fw = rp.spillWeight;
+    rp.spillWeight = fw.getValue();
     SmallVector<int, 8> useDistances;
     SmallVector<unsigned, 8> splitPoints;
     SA->analyze(NewVirtReg);
@@ -1925,6 +1937,9 @@ void MLRA::updateRegisterProfileAfterSplit(
       LLVM_DEBUG(errs() << "There are no uses.. skipping this new virt reg\n");
       continue;
     }
+    SmallVector<IR2Vec::Vector, 12> vectors;
+    computeVectors(NewVirtReg, vectors);
+    rp.vecRep = vectors;
     computeSplitPoints(NewVirtReg, useDistances, splitPoints);
 
     // auto firstUse = uses.front();
@@ -2686,10 +2701,11 @@ void MLRA::inference() {
       unsigned numSpills = 0;
       for (auto pair : colorMap) {
         LLVM_DEBUG(errs() << pair.first << " : " << pair.second << "\n");
+
         if (pair.second == 0)
           numSpills++;
       }
-
+      
       this->FunctionVirtRegToColorMap[MF->getName()] = colorMap;
       // assert(reply->funcname() == MF->getName());
       allocatePhysRegsViaRL();

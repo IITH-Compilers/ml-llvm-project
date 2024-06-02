@@ -24,6 +24,9 @@ message Path {
 message GraphList { bytes payload = 1; }
 
 message RegisterProfileList {
+  message vector {
+    repeated double vec=1;
+  }
   message RegisterProfile {
     uint32 regID = 1;
     float spillWeight = 2;
@@ -32,6 +35,7 @@ message RegisterProfileList {
     repeated uint32 useDistances = 5;
     repeated uint32 splitSlots = 6;
     repeated float positionalSpillWeights = 7;
+    repeated vector vectors = 8;
   }
   repeated RegisterProfile regProf = 1;
   bool result = 2;
