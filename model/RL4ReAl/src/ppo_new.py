@@ -146,6 +146,7 @@ class PPOConfig(PGConfig):
             "AArch64_CFLAGS": "-mllvm -regalloc=greedy  -mcpu=cortex-a72",
             "dataset_bucket": "set_5000",
             "enable_GGNN": True,
+            "remove_GR_NonGR_edge": True,
             "file_repeat_frequency": 1,
             "current_batch": 100, 
             "Workers_starting_port": "52147",

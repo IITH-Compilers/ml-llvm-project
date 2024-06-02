@@ -327,7 +327,7 @@ def set_precision_forList(lst):
         precise_lst.append(formatted_positional_weight)
     return precise_lst
 
-def get_observationsInf(graph):
+def get_observationsInf(graph, Phy_registers_of_GRtype, remove_GR_NonGR_edge):
     nodes = graph.regProf
     # adjlist = graph['adjacency']
     
@@ -381,20 +381,28 @@ def get_observationsInf(graph):
         idx_nid[idx] = nodeId
         assert not torch.isnan(nodeVec).any(), "Nan is present"
 
-    '''logic to count  number of GR_GR_edges and NGR_NGR edges'''
+    if remove_GR_NonGR_edge:
+        '''logic to count  number of GR_GR_edges and NGR_NGR edges'''
 
-    for idx,node in enumerate(nodes):
-    
-        nodeId = node.regID
-        regClass = node.cls
+        for idx,node in enumerate(nodes):
         
-        nodeType1 = identify_node_cls(regClass, nodeId,Phy_registers_of_GRtype)
-        for nlink in node.interferences:
-            neighIdx = nid_idx[nlink]
-            Cls = idx_cls[neighIdx]
-            nodeType2 = identify_node_cls(Cls, nlink,Phy_registers_of_GRtype)
-            if (nodeType1 == "GR" and nodeType2 == "GR") or (nodeType1 == "Non-GR" and nodeType2 == "Non-GR"):
-                all_edges.append((idx, neighIdx))
+            nodeId = node.regID
+            regClass = node.cls
+
+            nodeType1 = identify_node_cls(regClass, nodeId,Phy_registers_of_GRtype)
+            for nlink in node.interferences:
+                neighIdx = nid_idx[nlink]
+                Cls = idx_cls[neighIdx]
+                nodeType2 = identify_node_cls(Cls, nlink,Phy_registers_of_GRtype)
+                if (nodeType1 == "GR" and nodeType2 == "GR") or (nodeType1 == "Non-GR" and nodeType2 == "Non-GR"):
+                    all_edges.append((idx, neighIdx))
+    else:
+        for i, node in enumerate(nodes):
+            for nlink in node.interferences:
+                neighId = nid_idx[nlink]
+                if i != neighId:
+                    all_edges.append((i, neighId))
+                    #all_edges.append((neighId, i))
                     
     initial_node_representation = torch.stack(initial_node_representation, dim=0)# .to(device)
     
@@ -440,7 +448,7 @@ def get_observationsInf(graph):
     obs = Namespace(**obs) 
     return obs
     
-def get_observations(graph,Phy_registers_of_GRtype):
+def get_observations(graph, Phy_registers_of_GRtype, remove_GR_NonGR_edge):
     nodes = graph['nodes']
     adjlist = graph['adjacency']
     num_nodes = len(nodes)
@@ -518,22 +526,29 @@ def get_observations(graph,Phy_registers_of_GRtype):
         initial_node_representation.append(nodeVec)
         nid_idx[nodeId] = idx
         idx_nid[idx] = nodeId
- 
-    '''logic to count number of GR_GR_edges and NGR_NGR edges'''
-    nl=0
-    for idx, node in enumerate(nodes):
-        nodeId = node['id']
-        propertiess = re.findall("{[^}]*}", node_label[nl])
-        nl=nl+1
-        regClass = parseProp(propertiess[0]) 
-        nodeType1 = identify_node_cls(regClass, nodeId,Phy_registers_of_GRtype)
-        for i, adj in enumerate(adjlist[idx]):
-            neighId = nid_idx[adj['id']]
-            Cls = idx_cls[neighId]
-            nodeType2 = identify_node_cls(Cls, neighId,Phy_registers_of_GRtype)
-            if (nodeType1 == "GR" and nodeType2 == "GR") or (nodeType1 == "Non-GR" and nodeType2 == "Non-GR"):
-                all_edges.append((i, neighId))    
-   
+    
+    if remove_GR_NonGR_edge:
+        '''logic to count number of GR_GR_edges and NGR_NGR edges'''
+        nl=0
+        for idx, node in enumerate(nodes):
+            nodeId = node['id']
+            propertiess = re.findall("{[^}]*}", node_label[nl])
+            nl=nl+1
+            regClass = parseProp(propertiess[0]) 
+            nodeType1 = identify_node_cls(regClass, nodeId,Phy_registers_of_GRtype)
+            for i, adj in enumerate(adjlist[idx]):
+                neighId = nid_idx[adj['id']]
+                Cls = idx_cls[neighId]
+                nodeType2 = identify_node_cls(Cls, neighId,Phy_registers_of_GRtype)
+                if (nodeType1 == "GR" and nodeType2 == "GR") or (nodeType1 == "Non-GR" and nodeType2 == "Non-GR"):
+                    all_edges.append((i, neighId))    
+    else:
+        for i, adj in enumerate(adjlist):
+            for nlink in adj:
+                neighId = nid_idx[nlink['id']]
+                if i != neighId:
+                    all_edges.append((i, neighId))
+
     initial_node_representation = torch.stack(initial_node_representation, dim=0)# .to(device)
     
     logging.debug("Shape of the hidden nodes matrix N X D : {}".format(initial_node_representation.shape)) 

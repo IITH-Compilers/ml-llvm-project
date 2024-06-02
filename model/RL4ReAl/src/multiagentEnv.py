@@ -154,6 +154,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.path = None
         self.annotation_size = env_config["annotations"]
         self.Phy_registers_of_GRtype = self.list_of_phy_registers()
+        self.remove_GR_NonGR_edge = env_config["remove_GR_NonGR_edge"]
         random.seed(123)
         np.random.seed(123)
   
@@ -166,7 +167,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         with open(fileName, 'r') as file:
             data = json.load(file)
             for key, values in data.items():
-                if "GR" in key:
+                if (self.env_config["target"] == "X86" and "GR" in key) or  (self.env_config["target"] == "AArch64" and "GPR" in key):
                     for value in values:
                         list_of_phy_registers_ofGR_type.add(value['regId'])
         return list(list_of_phy_registers_ofGR_type)
@@ -1088,7 +1089,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             self.functionName = graph['graph'][1][1]['Function'].strip('\"')
             self.fun_id = graph['graph'][1][1]['Function_ID']
             self.num_nodes = len(self.graph['nodes'])
-            self.obs = get_observations(self.graph,self.Phy_registers_of_GRtype)
+            self.obs = get_observations(self.graph, self.Phy_registers_of_GRtype, self.remove_GR_NonGR_edge)
             if self.server_pid is not None:
                 print('terminate the pid if alive : {}'.format(self.server_pid.pid))
                 self.stopServer()
@@ -1111,7 +1112,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             self.functionName = graph.funcName
             self.fun_id = graph.funid    
             self.num_nodes = len(graph.regProf)
-            self.obs = get_observationsInf(self.graph,self.Phy_registers_of_GRtype)
+            self.obs = get_observationsInf(self.graph, self.Phy_registers_of_GRtype, self.remove_GR_NonGR_edge)
             self.color_assignment_map = []
 
         edge_count = 0
@@ -1353,22 +1354,28 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             # a = list(map(lambda x:list(map(lambda y: (x[0], y) , x[1])) , enumerate(self.obs.graph_topology.adjList)))
             edges = []
                     
-            '''logic to count  number of GR_GR_edges and NGR_NGR edges'''
-            for idx, adj in enumerate(self.obs.graph_topology.adjList):
+            if self.remove_GR_NonGR_edge:
             
-                nodeId = self.obs.idx_nid[idx]
-                regClass = self.obs.idx_cls[idx]
-                nodeType1 = self.identify_node_cls(regClass, nodeId)
-                for neighIdx in adj:
-                    Cls = self.obs.idx_cls[neighIdx]
-                    if neighIdx not in self.obs.idx_nid.keys():                        
-                        print("Node index {} of type {} not found in the nid_idx map {}".format(neighIdx, type(neighIdx), self.obs.nid_idx.keys()) )
-                    neighId = self.obs.idx_nid[neighIdx]
-                    nodeType2 = self.identify_node_cls(Cls, neighId)
-                    if (nodeType1 == "GR" and nodeType2 == "GR") or (nodeType1 == "Non-GR" and nodeType2 == "Non-GR"):
-                        edges.append((idx, neighIdx))                           
-            
-            edges = list(set(edges))
+                '''logic to count  number of GR_GR_edges and NGR_NGR edges'''
+                for idx, adj in enumerate(self.obs.graph_topology.adjList):
+                
+                    nodeId = self.obs.idx_nid[idx]
+                    regClass = self.obs.idx_cls[idx]
+                    nodeType1 = self.identify_node_cls(regClass, nodeId)
+                    for neighIdx in adj:
+                        Cls = self.obs.idx_cls[neighIdx]
+                        if neighIdx not in self.obs.idx_nid.keys():                        
+                            print("Node index {} of type {} not found in the nid_idx map {}".format(neighIdx, type(neighIdx), self.obs.nid_idx.keys()) )
+                        neighId = self.obs.idx_nid[neighIdx]
+                        nodeType2 = self.identify_node_cls(Cls, neighId)
+                        if (nodeType1 == "GR" and nodeType2 == "GR") or (nodeType1 == "Non-GR" and nodeType2 == "Non-GR"):
+                            edges.append((idx, neighIdx))                           
+                
+                edges = list(set(edges))
+            else:
+                for i, adj in enumerate(self.obs.graph_topology.adjList):
+                    for sorted_node in sorted(adj):
+                        edges.append((i, sorted_node))
 
             logging.debug("egdes({}) after after update : {} ".format(len(edges), edges))
             logging.debug("self.obs.graph_topology.adjList : {} ".format(self.obs.graph_topology.adjList))            
