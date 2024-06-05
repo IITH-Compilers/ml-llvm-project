@@ -128,7 +128,7 @@ class PPOConfig(PGConfig):
             "max_number_nodes": 600,
             "max_usepoint_count": 200,
             "annotations": 3,
-            "max_edge_count": 70000,
+            "max_edge_count": 30000,
             "mode": 'training',
             "dump_type": 'One',
             "dump_color_graph": True,

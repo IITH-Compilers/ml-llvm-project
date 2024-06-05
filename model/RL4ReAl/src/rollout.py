@@ -317,7 +317,7 @@ class RollOutInference:
                 "dataset": f"{DATA_DIR}/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_generated_at_05-05-22/",
                 "graphs_num": 10000,
                 "action_space_size": RegisterActionSpace("X86", f"{CONFIG_DIR}").ac_sp_normlize_size,
-                "check_point": None,
+                "check_point":None,
                 "episode_number": 10000,
                 "GPU_ID": '0',
                 "X86_CFLAGS": "-mllvm -regalloc=greedy  -march=core2",
@@ -579,14 +579,32 @@ class RollOutInference:
     def updateSelectNodeObs(self):
         select_node_mask = self.env.createNodeSelectMask()
         curr_obs = self.obs[self.env.select_node_agent_id]
+        state = self.env.obs
+        cu_obs=self.env.obs.initial_node_representation
+        annotations = np.zeros((self.env.max_number_nodes, self.env.annotation_size))
+        annotations[0:state.annotations.shape[0], :] = state.annotations
+        spill_weight_list = annotations[:, 0]  
         curr_obs['action_mask'] = np.array(select_node_mask)
+        curr_obs['spill_weights']=np.array(spill_weight_list)
+        adjacency_lists = {
+            "node_num": state.adjacency_lists[0].getNodeNum() - self.env.split_successful,
+            "edge_num": state.adjacency_lists[0].getData().shape[0],
+            "data": state.adjacency_lists[0].getData().tolist()
+        }
+        curr_obs['adjacency_lists']=adjacency_lists
+        if cu_obs is not None and not isinstance(cu_obs, np.ndarray):
+            cu_obs = cu_obs.detach().numpy()
+        curr_obs['state']=cu_obs
+        curr_obs['annotations']=np.array(annotations)
+        # if curr_obs is not None and not isinstance(curr_obs, np.ndarray):
+        #     curr_obs = curr_obs.detach().numpy()
         self.obs[self.env.select_node_agent_id] = curr_obs
 
     def getLastTaskDone(self):
         return self.env.last_task_done
 
     def compute_action(self):
-        mapping_cache = {}  # in case policy_agent_mapping is stochastic
+        mapping_cache={}
         agent_states = DefaultMapping(
             lambda agent_id: self.state_init[mapping_cache[agent_id]])
         prev_actions = DefaultMapping(
@@ -597,7 +615,7 @@ class RollOutInference:
         # while not done and keep_going(steps, num_steps, episodes,
         #                               num_episodes):
         actions_response = {}
-        while not done:        
+        while not done:    
             multi_obs = self.obs if self.multiagent else {_DUMMY_AGENT_ID: obs}
             action_dict = {}
             for agent_id, a_obs in multi_obs.items():
