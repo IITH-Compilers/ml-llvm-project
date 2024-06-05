@@ -130,7 +130,7 @@ class SplitNetwork(TorchModelV2, nn.Module):
         self.attention = nn.Linear(custom_config["max_usepoint_count"], 1)
         self.fc3 = nn.Linear( custom_config["fc2_units"], custom_config["max_usepoint_count"])
         self._value_branch = SlimFC(
-            in_size=custom_config["max_number_nodes"]*custom_config["max_usepoint_count"],
+            in_size=custom_config["max_split_map_len"]*custom_config["max_usepoint_count"],
             out_size=1,
             initializer=normc_initializer(0.01),
             activation_fn=None)

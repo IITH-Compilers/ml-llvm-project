@@ -194,11 +194,12 @@ if __name__ == "__main__":
         "colour_mask": Box(0, 1, shape=(config["env_config"]["max_number_nodes"],config["env_config"]["action_space_size"])),
     })
     
-    ## TODO Update the observation space and action space for split node agent
+    # max length of batch of splits
+    split_map_len = config["env_config"]["max_split_map_len"]
     obs_split_node = Dict({
-        "usepoint_properties": Repeated(Box(FLOAT_MIN, FLOAT_MAX, shape=(config["env_config"]["max_usepoint_count"], 2), dtype=np.float32), max_len=config["env_config"]["max_number_nodes"]),
-        "split_mask": Repeated(Box(0, 1, shape=(config["env_config"]["max_usepoint_count"],)), max_len=config["env_config"]["max_number_nodes"]),
-        "state": Repeated(node_obs, max_len=config["env_config"]["max_number_nodes"])
+        "usepoint_properties": Repeated(Box(FLOAT_MIN, FLOAT_MAX, shape=(config["env_config"]["max_usepoint_count"], 2), dtype=np.float32), max_len=split_map_len),
+        "split_mask": Repeated(Box(0, 1, shape=(config["env_config"]["max_usepoint_count"],)), max_len=split_map_len),
+        "state": Repeated(node_obs, max_len=split_map_len)
     })
     policies = {
         "color_node_policy": (None, obs_color_node,
@@ -221,7 +222,7 @@ if __name__ == "__main__":
                             }),
         
         "split_node_policy": (None, obs_split_node,
-                                MultiDiscrete([config["env_config"]["max_usepoint_count"]]*config["env_config"]["max_number_nodes"]), {
+                                MultiDiscrete([config["env_config"]["max_usepoint_count"]]*split_map_len), {
                                 "gamma": 0.9,
                                 "model": {
                                     "custom_model": "split_agent_model",
@@ -230,7 +231,8 @@ if __name__ == "__main__":
                                         "fc1_units": 64,
                                         "fc2_units": 64,
                                         "max_number_nodes": config["env_config"]["max_number_nodes"],
-                                        "max_usepoint_count": config["env_config"]["max_usepoint_count"]
+                                        "max_usepoint_count": config["env_config"]["max_usepoint_count"],
+                                        "max_split_map_len": config["env_config"]["max_split_map_len"]
                                     },
                                 },        
                             }),

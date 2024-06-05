@@ -122,6 +122,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.no_of_splits = env_config["no_of_splits"]
         self.times_split = 0
         self.spilled = []
+        self.max_split_map_len = env_config["max_split_map_len"]
         
         if self.mode != 'inference':
             self.color_assignment_map = []
@@ -154,7 +155,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.useDistancesThreshold = 500
         self.interference_difference_threshold = 50
         self.task_selected = 0
-        self.split_threshold = 10
+        self.split_threshold = 100
         self.reward_max_value = SPILL_COST_THRESHOLD
 
         self.grpc_rtt = 0
@@ -354,11 +355,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         node_properties = self.getNodePropertiesforColoring()
         prop_value_list_colouring = list(node_properties.values())
         
-        # colour_node_obs = { 'action_mask': np.array(colour_node_mask),'node_properties': np.array(prop_value_list_colouring), 'state' : self.cur_obs}
-        # select_node_obs = { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(select_node_mask), 'state' : cur_obs, 'annotations': np.array(annotations) ,'adjacency_lists': adjacency_lists}
-        # select_task_obs = { 'action_mask': np.array(select_task_mask), 'node_properties': np.array(prop_value_list, dtype=np.float), 'state' : self.cur_obs}
-        # split_node_obs = { 'action_mask': np.array(split_node_mask), 'state' : self.cur_obs, "usepoint_properties": usepoint_prop_mat}
-        
         self.total_reward += colour_reward
         s_reward = 0
         s_done = False
@@ -403,42 +399,47 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 usepoint_prop_mat_list = []
                 split_masks = []
         
-                for node, color in enumerate(self.obs.graph_topology.colored):
-                    if not self.spilled[node] and color==0:
-                        usepoint_prop = self.getUsepointProperties(node)
-                        usepoint_prop_value = np.array(list(usepoint_prop.values())).transpose()
-                        
-                        usepoint_prop_mat = self.getUsepointPropertiesMatrix(usepoint_prop_value)
-                        splitpoints = self.obs.split_points[node]
-                        
-                        if usepoint_prop_mat is not None:
-                            split_node_mask = []
-                        use_distance_list = self.obs.use_distances[node]
-                        # print(f"Index: {node} RegID: {self.obs.idx_nid[node]}")
-                        # print("Split points:")
-                        # print(splitpoints)
-                        # print("Valid split points")
-                        for i in range(usepoint_prop_mat.shape[0]):
-                            if not isinstance(splitpoints, str) and i in splitpoints and i != len(use_distance_list) - 1:
-                                split_node_mask.append(1)
-                                print(i)
-                            else:
-                                split_node_mask.append(0)
-                        
-                        if all(v == 0 for v in split_node_mask):
-                            self.spilled[node] = True
-                        else:
-                            # print(f"Test passed {node}")
-                            self.uncolored_nodes.append(node)
-                            usepoint_prop_mat_list.append(usepoint_prop_mat)
-                            split_masks.append(split_node_mask)
+                if not self.disable_spliting:
+                    for node, color in enumerate(self.obs.graph_topology.colored):
+                        if not self.spilled[node] and color==0:
+                            usepoint_prop = self.getUsepointProperties(node)
+                            usepoint_prop_value = np.array(list(usepoint_prop.values())).transpose()
                             
+                            usepoint_prop_mat = self.getUsepointPropertiesMatrix(usepoint_prop_value)
+                            splitpoints = self.obs.split_points[node]
+                            
+                            if usepoint_prop_mat is not None:
+                                split_node_mask = []
+                            use_distance_list = self.obs.use_distances[node]
+                            
+                            for i in range(usepoint_prop_mat.shape[0]):
+                                if not isinstance(splitpoints, str) and i in splitpoints and i != len(use_distance_list) - 1:
+                                    split_node_mask.append(1)
+                                else:
+                                    split_node_mask.append(0)
+                            
+                            if all(v == 0 for v in split_node_mask):
+                                self.spilled[node] = True
+                            else:
+                                # print(f"Test passed {node}")
+                                self.uncolored_nodes.append(node)
+                                usepoint_prop_mat_list.append(usepoint_prop_mat)
+                                split_masks.append(split_node_mask)
+                        
+                        if len(self.uncolored_nodes)==self.max_split_map_len:
+                            break
+                                
             
-                print(f"Number of time split till now: {self.times_split}")
                 # print(colour_reward)
                 if len(self.uncolored_nodes)>0:
+                    if self.disable_spliting:
+                        print("Terminating the episode.. max number of times split")
+                        c_done = True
+                        s_done = True
+                        done_all = True
+                        
                     if self.times_split<self.no_of_splits:
-                        print("Sending obs to split agent")
+                        # print("Sending obs to split agent")
                         s_obs = {
                             "usepoint_properties": np.array(usepoint_prop_mat_list),
                             "state": cur_obs[self.uncolored_nodes,:],
@@ -539,13 +540,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 split_done = False
                 nodeChoosen = cur_node
                 self.obs.graph_topology.markNodeAsNotVisited(nodeChoosen)
-        
-        # print("Before Splitting")
-        # print(f"Eligible Nodes: {self.obs.graph_topology.get_eligibleNodes()}")        
-        split_reward, split_done = self.step_splitTask(split_map)
-        
-        # print("After Splitting")
-        # print(f"Eligible Nodes: {self.obs.graph_topology.get_eligibleNodes()}")        
+               
+        split_reward, split_done = self.step_splitTask(split_map)       
         
         split_reward = 0
         
@@ -609,7 +605,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 
                 self.obs.next_stage = "color"
                 
-                print("Sending the observations to color agent again")
+                # print("Sending the observations to color agent again")
         else:
             reward = {}
             obs = {}
@@ -738,40 +734,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             
         return mask
 
-    def creatTaskSelectMask(self):
-        splitpoints = self.obs.split_points[self.cur_node]
-        if type(splitpoints) == np.ndarray:
-            splitpoints = splitpoints.tolist()
-        usepoint_prop = self.getUsepointProperties()
-        usepoint_prop_value = np.array(list(usepoint_prop.values())).transpose()
-        usepoint_prop_mat = self.getUsepointPropertiesMatrix(usepoint_prop_value)            
-        if usepoint_prop_mat is None:
-            return [1, 0]
-        split_node_mask = []
-        use_distance_list = self.obs.use_distances[self.cur_node]
-        for i in range(usepoint_prop_mat.shape[0]):            
-            try:
-                if not isinstance(splitpoints, str) and i in splitpoints and i != len(use_distance_list) - 1:
-                    split_node_mask.append(1)
-                else:
-                    split_node_mask.append(0)
-            except:
-                print("Splitpoint and i type and value", type(splitpoints), type(i), splitpoints, i)
-                raise
-        mask = [0]*2
-        if all(v == 0 for v in split_node_mask) or (self.split_steps > self.split_threshold):
-            mask[0] = 1
-        else:
-            mask = [1]*2
-        return mask
-
-
-    def getSpillWeightListExpanded(self):
-        spill_weight_list = [0]*self.max_number_nodes
-        for i in range(len(self.obs.spill_cost_list)):
-            spill_weight_list[i] = self.formatRewardValue(self.obs.spill_cost_list[i])
-        return spill_weight_list
-
     def getNodeProperties(self):
         regclass = self.obs.reg_class_list[self.cur_node]
         adj_colors = self.obs.graph_topology.getColorOfVisitedAdjNodes(self.cur_node)
@@ -824,428 +786,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             "node_unvisited": len(eligibleNodes)
         }
         return prop
-
-    
-    def _select_node_step(self, action):        
-        logging.debug("Enter _select_node_step")                
-
-        self.cur_node = action
-        update_status = self.obs.graph_topology.UpdateVisitList(self.cur_node)
-        if not update_status:
-            print("UpdateVisitList failed for {} graph at {} node".format(self.path, self.cur_node))
-            assert False, 'discovered node visited.'
-        self.virtRegId = self.obs.idx_nid[self.cur_node]
-        # logging.info("Node selected = {}, corresponding register id = {}".format(action, self.virtRegId))
-        state = self.obs
-        self.cur_obs = self.node_representation_mat[self.cur_node][0:self.emb_size]
-        if self.cur_obs is not None and not isinstance(self.cur_obs, np.ndarray):
-            self.cur_obs = self.cur_obs.detach().numpy()
-        prop = self.getNodeProperties()
-        prop_value_list = list(prop.values())
-        select_task_mask = self.creatTaskSelectMask()
-        if self.disable_spliting:
-            select_task_mask = [1, 0]
-        reward = {
-            self.select_task_agent_id: 0
-        }
-        done = {"__all__": False}
-        obs = {
-            self.select_task_agent_id: { 'action_mask': np.array(select_task_mask), 'node_properties': np.array(prop_value_list, dtype=np.float), 'state' : self.cur_obs},
-        }
-        logging.debug("Exit _select_node_step")        
-        return obs, reward, done, {}
-
-    def _select_task_step(self, action):
-        logging.debug("Enter _select_task_step")
-        done = {"__all__": False}
-        # print("Select Task action", action)
-        splitpoints = self.obs.split_points[self.cur_node]
-        self.task_selected = action
-        if type(splitpoints) == np.ndarray:
-            splitpoints = splitpoints.tolist()
-        if action == 0 or len(splitpoints) < 1 or self.split_steps > self.split_threshold: # Colour node
-            self.last_task_done = 0
-            self.colour_steps += 1
-            if self.task_selected == 1:
-                self.split_steps += 1
-            regclass = self.obs.reg_class_list[self.cur_node]
-            adj_colors = self.obs.graph_topology.getColorOfVisitedAdjNodes(self.cur_node)
-            masked_action_space = self.registerAS.maskActionSpace(regclass, adj_colors)            
-            is_mask_empty = True
-            colour_node_mask = []
-            count = 0
-            for i in range(self.action_space_size):
-                if i in masked_action_space:
-                    colour_node_mask.append(1)
-                    is_mask_empty = False
-                    count += 1
-                else:
-                    colour_node_mask.append(0)
-            
-            if count == 1: # If only sigle register avialable then avoid coloring for 'ran out of register' error
-                colour_node_mask = [0]*self.action_space_size
-                colour_node_mask[0] = 1
-            
-            if is_mask_empty:
-                colour_node_mask[0] = 1            
-
-            node_properties = self.getNodePropertiesforColoring()
-            prop_value_list_colouring = list(node_properties.values())
-            reward = {
-                self.colour_node_agent_id : 0,
-            }
-            obs = {
-                self.colour_node_agent_id : { 'action_mask': np.array(colour_node_mask),'node_properties': np.array(prop_value_list_colouring), 'state' : self.cur_obs},
-            }
-        else:
-            self.last_task_done = 1
-            self.split_steps += 1
-            usepoint_prop = self.getUsepointProperties()
-            usepoint_prop_value = np.array(list(usepoint_prop.values())).transpose()
-            usepoint_prop_mat = self.getUsepointPropertiesMatrix(usepoint_prop_value)            
-            split_node_mask = []
-            use_distance_list = self.obs.use_distances[self.cur_node]
-
-            for i in range(usepoint_prop_mat.shape[0]):
-                if i in splitpoints and i != len(use_distance_list) - 1:
-                    split_node_mask.append(1)
-                else:
-                    split_node_mask.append(0)
-            if all(v == 0 for v in split_node_mask):
-                split_node_mask[len(use_distance_list) - 1] = 1
-                # logging.info("Curr Nodes split points", splitpoints, use_distance_list)            
-                        
-            reward = {
-                self.split_node_agent_id : 0,  
-            }
-            obs = {
-                self.split_node_agent_id : { 'action_mask': np.array(split_node_mask), 'state' : self.cur_obs, "usepoint_properties": usepoint_prop_mat},
-            }
-                
-        logging.debug("Exit _select_task_step")
-        return obs, reward, done, {}
-        
-    
-
-
-    def _colour_node_step(self, action):
-        logging.debug("Enter _colour_node_step")
-        
-        colour_reward, done_all, response  = self.step_colorTask(action)
-        state = self.obs
-        self.cur_obs = self.node_representation_mat[self.cur_node][0:self.emb_size]
-        if self.cur_obs is not None and not isinstance(self.cur_obs, np.ndarray):
-            self.cur_obs = self.cur_obs.detach().numpy()
-        
-        regclass = self.obs.reg_class_list[self.cur_node]
-        adj_colors = self.obs.graph_topology.getColorOfVisitedAdjNodes(self.cur_node)
-
-        masked_action_space = self.registerAS.maskActionSpace(regclass, adj_colors)
-
-        colour_node_mask = []
-        for i in range(self.action_space_size):
-            colour_node_mask.append(0)
-        
-        colour_node_mask[0] = 1
-        # Handling mask all zero issue
-        select_node_mask = self.createNodeSelectMask()
-        # select_node_mask = self.createNodeSelectMaskSpillWeightBased()
-        if select_node_mask is None and not done_all:
-            done_all = True
-
-        select_task_mask = self.creatTaskSelectMask()
-
-        state = self.obs
-        cur_obs = self.node_representation_mat
-        annotations = np.zeros((self.max_number_nodes, self.annotation_size))
-        annotations[0:state.annotations.shape[0], :] = state.annotations
-        spill_weight_list = annotations[:, 0]  # Annotations first element is spill weights 
-        result = None
-        for inx, i in enumerate(state.adjacency_lists[0].getData()):
-            
-            if inx ==0:
-                result = i
-            else:
-                result = torch.cat([result, i], dim=0)
-        max_edge_count = self.max_edge_count
-        edges_unroll = np.zeros((2*max_edge_count,))
-        if result is not None:
-            edges_unroll[0:result.shape[0]] = result
-        
-        adjacency_lists = {
-            "node_num": state.adjacency_lists[0].getNodeNum(),
-            "edge_num": state.adjacency_lists[0].getData().shape[0],
-            "data": [np.array(x) for x in state.adjacency_lists[0].getData().tolist()]
-        }
-        discount_factor = 0
-        prop = self.getNodeProperties()
-        prop_value_list = list(prop.values())
-
-        usepoint_prop = self.getUsepointProperties()
-        usepoint_prop_value = np.array(list(usepoint_prop.values())).transpose()
-        
-        usepoint_prop_mat = self.getUsepointPropertiesMatrix(usepoint_prop_value)
-        if usepoint_prop_mat is None:
-            usepoint_prop_mat = np.zeros((self.max_usepoint_count, 2), dtype=float)
-        splitpoints = self.obs.split_points[self.cur_node]
-        split_node_mask = []
-        use_distance_list = self.obs.use_distances[self.cur_node]
-        for i in range(usepoint_prop_mat.shape[0]):
-            if i in splitpoints and i != len(use_distance_list) - 1:
-                split_node_mask.append(1)
-            else:
-                split_node_mask.append(0)
-
-        node_properties = self.getNodePropertiesforColoring()
-        prop_value_list_colouring = list(node_properties.values())
-
-        colour_node_obs = { 'action_mask': np.array(colour_node_mask),'node_properties': np.array(prop_value_list_colouring), 'state' : self.cur_obs}
-        select_node_obs = { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(select_node_mask), 'state' : cur_obs, 'annotations': np.array(annotations) ,'adjacency_lists': adjacency_lists}
-        select_task_obs = { 'action_mask': np.array(select_task_mask), 'node_properties': np.array(prop_value_list, dtype=np.float), 'state' : self.cur_obs}
-        split_node_obs = { 'action_mask': np.array(split_node_mask), 'state' : self.cur_obs, "usepoint_properties": usepoint_prop_mat}
-        
-        self.total_reward += colour_reward
-        if self.mode != 'inference':
-            if self.use_local_reward:
-                reward = {
-                    self.colour_node_agent_id: colour_reward,
-                    self.select_node_agent_id: colour_reward,
-                    self.select_task_agent_id: colour_reward - (self.task_selected * discount_factor),
-                    self.split_node_agent_id: 0
-                }
-            else:
-                reward = {
-                    self.colour_node_agent_id: colour_reward,
-                    self.select_node_agent_id: 0,
-                    self.select_task_agent_id: 0,
-                    self.split_node_agent_id: 0
-                }
-            obs = {
-                self.colour_node_agent_id: colour_node_obs,
-                self.select_node_agent_id: select_node_obs,
-                self.select_task_agent_id: select_task_obs,
-                self.split_node_agent_id: split_node_obs,
-            }
-            done = {
-                self.colour_node_agent_id: True,
-                self.select_node_agent_id: True,
-                self.select_task_agent_id: True,
-                self.split_node_agent_id: True,
-                "__all__": False
-            }
-        else:
-            reward = {}
-            obs = {}
-            done = {
-                "__all__": False
-            } 
-
-        if done_all:
-            if self.mode != 'inference':
-                reward = {
-                    self.colour_node_agent_id: colour_reward,
-                    self.select_node_agent_id: colour_reward,
-                    self.select_task_agent_id: colour_reward,
-                    self.split_node_agent_id: colour_reward
-                }
-            done['__all__'] = True
-            from csv import writer
-            with open('traning_stats_'+str(self.worker_index)+'.csv', 'a') as f_object:
-  
-                # Pass this file object to csv.writer()
-                # and get a writer object
-                writer_object = writer(f_object)
-            
-                # Pass the list as an argument into
-                # the writerow()
-                episode_stat = [self.path, self.colour_successful, self.spill_successful, self.split_successful]
-                writer_object.writerow(episode_stat)
-            
-                #Close the file object
-                f_object.close()
-
-        else:
-            self.agent_count += 1
-            self.select_node_agent_id = "select_node_agent_{}".format(self.agent_count)
-            self.select_task_agent_id = "select_task_agent_{}".format(self.agent_count)
-            self.split_node_agent_id = "split_node_agent_{}".format(self.agent_count)
-            self.colour_node_agent_id = "colour_node_agent_{}".format(self.agent_count)
-            
-            
-
-            obs[self.select_node_agent_id] = { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(select_node_mask), 'state' : cur_obs, 'annotations': np.array(annotations) ,'adjacency_lists': adjacency_lists}
-            
-            reward[self.select_node_agent_id] = 0
-            done[self.select_node_agent_id] = done_all
-        logging.debug("Exit _colour_node_step")
-        return obs, reward, done, {}
-
-    def _split_node_step(self, action):
-        logging.debug("Enter _split_node_step")
-        # self.cur_obs = self.flat_env.reset()
-        logging.debug("{} {} {}".format(self.virtRegId, self.obs.idx_nid[self.cur_node], self.cur_node))
-        logging.debug("{} {}".format(self.obs.idx_nid, self.obs.nid_idx))
-        assert self.virtRegId == self.obs.idx_nid[self.cur_node], "Virtual should be same." # 
-        use_distances = self.obs.use_distances[self.cur_node]
-        done = False
-        logging.debug("****Split index****** {} {}".format( len(use_distances), use_distances))
-        userDistanceDiff = 0
-        split_index = action
-        split_point = split_index
-        use_distance_list = self.obs.use_distances[self.cur_node]
-        if action != len(use_distance_list) - 1:
-            split_reward, split_done = self.step_splitTask(split_point)
-            '''userDistanceDiff = use_distances[split_index + 1] - use_distances[split_index]
-            if userDistanceDiff > self.useDistancesThreshold:        
-                userDistanceDiff = self.useDistancesThreshold
-            if self.interference_difference > self.interference_difference_threshold:
-                self.interference_difference = self.interference_difference_threshold
-            discount_factor = (1.001*self.split_steps)/10
-            split_reward = userDistanceDiff + self.spliting_reward_scaling_factor*self.interference_difference'''
-            split_reward = self.spill_weight_diff/self.reward_max_value
-            # discount_factor = 0 if self.split_steps < 11 else (1.001*self.split_steps)
-           
-        else:
-            split_reward = 0
-            split_done = False
-            nodeChoosen = self.cur_node
-            self.obs.graph_topology.markNodeAsNotVisited(nodeChoosen)
-        
-        select_task_mask = self.creatTaskSelectMask()
-
-        colour_node_mask = []
-        for i in range(self.action_space_size):
-            colour_node_mask.append(0)
-        
-        colour_node_mask[0] = 1
-
-        select_node_mask = self.createNodeSelectMask()
-        # select_node_mask = self.createNodeSelectMaskSpillWeightBased()
-        # Handling mask all zero issue
-        if select_node_mask is None:
-           split_done = True
-           # logging.info("Select node mask is all zero")
-
-        state = self.obs
-        cur_obs = self.node_representation_mat
-        annotations = np.zeros((self.max_number_nodes, self.annotation_size))
-        annotations[0:state.annotations.shape[0], :] = state.annotations
-        spill_weight_list = annotations[:, 0]  # Annotations first element is spill weights 
-        # annotations = state.annotations
-        result = None
-        for inx, i in enumerate(state.adjacency_lists[0].getData()):
-            
-            if inx ==0:
-                result = i
-            else:
-                result = torch.cat([result, i], dim=0)
-        max_edge_count = self.max_edge_count
-        edges_unroll = np.zeros((2*max_edge_count,))
-        if result is not None:
-            edges_unroll[0:result.shape[0]] = result
-        adjacency_lists = {
-            "node_num": state.adjacency_lists[0].getNodeNum(),
-            "edge_num": state.adjacency_lists[0].getData().shape[0],
-            "data": [np.array(x) for x in state.adjacency_lists[0].getData().tolist()]
-        }
-
-        prop = self.getNodeProperties()
-        prop_value_list = list(prop.values())
-
-        usepoint_prop = self.getUsepointProperties()
-        usepoint_prop_value = np.array(list(usepoint_prop.values())).transpose()
-        
-        usepoint_prop_mat = self.getUsepointPropertiesMatrix(usepoint_prop_value)
-        if usepoint_prop_mat is None:
-            usepoint_prop_mat = np.zeros((self.max_usepoint_count, 2), dtype=float)
-        splitpoints = self.obs.split_points[self.cur_node]
-        split_node_mask = []
-        use_distance_list = self.obs.use_distances[self.cur_node]
-        for i in range(usepoint_prop_mat.shape[0]):
-            if i in splitpoints and i != len(use_distance_list) - 1:
-                split_node_mask.append(1)
-            else:
-                split_node_mask.append(0)
-
-        node_properties = self.getNodePropertiesforColoring()
-        prop_value_list_colouring = list(node_properties.values())
-
-        done = {"__all__": False}
-        if self.mode != 'inference':
-            if self.use_local_reward:
-                reward = {
-                    self.colour_node_agent_id: 0,
-                    self.select_node_agent_id: 0,
-                    self.select_task_agent_id: 0,
-                    self.split_node_agent_id: split_reward
-                }
-            else:
-                reward = {
-                    self.colour_node_agent_id: 0,
-                    self.select_node_agent_id: 0,
-                    self.select_task_agent_id: 0,
-                    self.split_node_agent_id: 0
-                }
-            obs = {
-                self.colour_node_agent_id: { 'action_mask': np.array(colour_node_mask),'node_properties': np.array(prop_value_list_colouring), 'state' : self.cur_obs},
-                # self.select_node_agent_id: { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(select_node_mask), 'state' : cur_obs},
-                self.select_node_agent_id: { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(select_node_mask), 'state' : cur_obs, 'annotations': np.array(annotations) ,'adjacency_lists': adjacency_lists},
-                self.select_task_agent_id: { 'action_mask': np.array(select_task_mask), 'node_properties': np.array(prop_value_list, dtype=np.float), 'state' : self.cur_obs},
-                self.split_node_agent_id: { 'action_mask': np.array(split_node_mask), 'state' : self.cur_obs, "usepoint_properties": usepoint_prop_mat},
-            }
-            done = {
-                self.colour_node_agent_id: True,
-                self.select_node_agent_id: True,
-                self.select_task_agent_id: True,
-                self.split_node_agent_id: True,
-                "__all__": False
-            }
-        else:
-            reward = {}
-            obs = {}
-            done = {
-                "__all__": False
-            }
-        if self.mode == 'inference':
-            done = {"__all__": split_done }
-            # self.agent_count += 1
-            self.split_node_agent_id = "split_node_agent_{}".format(self.agent_count)
-            obs[self.select_node_agent_id] = { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(select_node_mask), 'state' : cur_obs, 'annotations': np.array(annotations) ,'adjacency_lists': adjacency_lists}
-            reward[self.select_node_agent_id] = 0
-        elif not split_done:
-            self.agent_count += 1
-            self.select_node_agent_id = "select_node_agent_{}".format(self.agent_count)
-            self.select_task_agent_id = "select_task_agent_{}".format(self.agent_count)
-            self.split_node_agent_id = "split_node_agent_{}".format(self.agent_count)
-            self.colour_node_agent_id = "colour_node_agent_{}".format(self.agent_count)
-
-            
-
-            # obs[self.select_node_agent_id] = { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(select_node_mask), 'state' : cur_obs}
-            obs[self.select_node_agent_id] = { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(select_node_mask), 'state' : cur_obs, 'annotations': np.array(annotations) ,'adjacency_lists': adjacency_lists}
-
-            # obs[self.select_node_agent_id] = self.cur_obs
-            reward[self.select_node_agent_id] = 0
-
-        if split_done and self.mode != 'inference':
-            done = {
-                self.colour_node_agent_id: True,
-                self.select_node_agent_id: True,
-                self.select_task_agent_id: True,
-                self.split_node_agent_id: True,
-                "__all__": True 
-            }
-            self.obs.next_stage = 'end'
-            self.stable_grpc('Exit', split=None)   
-            os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
-            if self.server_pid.poll() is not None:
-                print('Force stop')
-            self.server_pid = None
-            print('Stop server')
-            #time.sleep(5)
-            
-        logging.debug("Exit _split_node_step")
-        return obs, reward, done, {}
 
     def step_splitTask(self, split_map):
 
@@ -1503,7 +1043,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 with open(path) as f:
                    graph = json.load(f)
             except Exception as ex:
-                print(traceback.format_exc())
                 logging.error(path)
                 logging.error(traceback.format_exc())                
                 return None
@@ -1574,7 +1113,6 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 logging.debug("Observation {}, split map {}".format(op, split))
                 t1 = time.time()
                 if op == "Split":
-                    print("Sending the entire split map!")
                     updated_graphs = self.queryllvm.codeGen(op, split=split)
                 elif op != "Exit":
                     updated_graphs = self.queryllvm.codeGen(op, split=split)
