@@ -884,87 +884,74 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                         reward = -10
                     # print("Cost based reward is", best_cost, current_cost, reward)
                 elif self.use_mca_reward:
-                    process_completed = True
+                    mlra_throughput = 0
+                    mlra_cycles = 0                  
+                    print("Clang process finished")
+                    build_path = self.env_config["build_path"]
+                    if self.env_config["target"] == 'X86':
+                        cflags = "-mcpu=core2"
+                    else:
+                        cflags = "-mcpu=cortex-a72"
+                    self.mca_pid = utils_1.runMCA(self.functionName, self.worker_index, build_path, cflags, self.env_config["log_dir"])
                     try:
                         outs, errs = self.server_pid.communicate(timeout=self.mca_timeout)
                     except:
-                        self.server_pid.kill()
-                        process_completed = False
-                        print("Clang failing")
-                    outs, errs = self.server_pid.communicate()
-                    mlra_throughput = 0
-                    mlra_cycles = 0
-                    if process_completed:                    
-                        print("Clang process finished")
-                        build_path = self.env_config["build_path"]
-                        if self.env_config["target"] == 'X86':
-                            cflags = "-mcpu=core2"
-                        else:
-                            cflags = "-mcpu=cortex-a72"
-                        self.mca_pid = utils_1.runMCA(self.functionName, self.worker_index, build_path, cflags, self.env_config["log_dir"])
-                        # while self.mca_pid.poll() is None:
+                        self.mca_pid.kill()
+                        outs, errs = self.mca_pid.communicate()
+                    if outs != "":
                         try:
-                            outs, errs = self.mca_pid.communicate(timeout=self.mca_timeout)
-                        except:
-                            self.mca_pid.kill()
-                            outs, errs = self.mca_pid.communicate()
-                        if outs != "":
-                            try:
-                                mlra_cycles = re.search('Total Cycles:      [0-9]+', outs).group()
-                                mlra_cycles = int(re.search('[0-9]+', mlra_cycles).group())
-                                mlra_throughput = re.search('Block RThroughput: [0-9]+.[0-9]+', outs).group()
-                                mlra_throughput = float(re.search('[0-9]+.[0-9]+', mlra_throughput).group())                                                                
-                            except AttributeError:
-                                pass                                                        
-                            
-                            # Reward from throughout
-                            with open(self.greedy_mca_throughput_file_path) as f:
-                                greedy_throughput_map = json.load(f)
-                            # with open('greedy-throughput.json') as f:
-                            #     greedy_throughput_map = json.load(f)
-                            if self.use_mca_self_play_reward:
-                                if key not in self.best_throughput_map.keys():
-                                    self.best_throughput_map[key] = mlra_throughput
-                                best_throughput = self.best_throughput_map[key]
-                                throughput_diff = (best_throughput - mlra_throughput)
-                                if best_throughput > mlra_throughput:
-                                    self.best_throughput_map[key] = mlra_throughput
-                                    best_throughput = mlra_throughput
-                                    reward = 5
-                                else:
-                                    reward = 0
-                                # reward = (throughput_diff/best_throughput)*self.env_config["mca_reward_clip"]
-                                # print("Throughput:", mlra_throughput, best_throughput)
-                                # print("Reward from self play throughput:", reward)
-                                                                                                    
+                            # mlra_cycles = re.search('Total Cycles:      [0-9]+', outs).group()
+                            # mlra_cycles = int(re.search('[0-9]+', mlra_cycles).group())
+                            mlra_throughput = re.search('Block RThroughput: [0-9]+.[0-9]+', outs).group()
+                            mlra_throughput = float(re.search('[0-9]+.[0-9]+', mlra_throughput).group())                                                                
+                        except AttributeError:
+                            pass                                                        
+                        
+                        # Reward from throughout
+                        with open(self.greedy_mca_throughput_file_path) as f:
+                            greedy_throughput_map = json.load(f)
+                        # with open('greedy-throughput.json') as f:
+                        #     greedy_throughput_map = json.load(f)
+                        if self.use_mca_self_play_reward:
+                            if key not in self.best_throughput_map.keys():
+                                self.best_throughput_map[key] = mlra_throughput
+                            best_throughput = self.best_throughput_map[key]
+                            throughput_diff = (best_throughput - mlra_throughput)
+                            if best_throughput > mlra_throughput:
+                                self.best_throughput_map[key] = mlra_throughput
+                                best_throughput = mlra_throughput
+                                reward = 5
                             else:
-                                if key in greedy_throughput_map.keys():
-                                    greedy_throughput = greedy_throughput_map[key]
-                                    # throughput_diff = (greedy_throughput - mlra_throughput)
-                                    # reward = (throughput_diff/greedy_throughput)*self.env_config["mca_reward_clip"]                                    
-                                    throughput_diff = (mlra_throughput - greedy_throughput)
-                                    # if throughput_diff <= 0.5:
-                                    #     reward = self.env_config["mca_reward_clip"]
-                                    # else:
-                                    #     reward = (greedy_throughput/throughput_diff)
-                                    
-                                    if throughput_diff < 0:
-                                        reward = 10
-                                    elif throughput_diff == 0:
-                                        reward = 0
-                                    else:
-                                        reward = -10
-                                    print("Throughput:", mlra_throughput, greedy_throughput)
-                                    print("Reward in compare to greedy throughput:", reward)
-
-                                else:
-                                    print("Following key not in Greedy map:", key)
-                            
+                                reward = 0
+                            # reward = (throughput_diff/best_throughput)*self.env_config["mca_reward_clip"]
+                            # print("Throughput:", mlra_throughput, best_throughput)
+                            # print("Reward from self play throughput:", reward)
+                                                                                                
                         else:
-                            print("MCA timeout happned", errs)                    
+                            if key in greedy_throughput_map.keys():
+                                greedy_throughput = greedy_throughput_map[key]
+                                # throughput_diff = (greedy_throughput - mlra_throughput)
+                                # reward = (throughput_diff/greedy_throughput)*self.env_config["mca_reward_clip"]                                    
+                                throughput_diff = (mlra_throughput - greedy_throughput)
+                                # if throughput_diff <= 0.5:
+                                #     reward = self.env_config["mca_reward_clip"]
+                                # else:
+                                #     reward = (greedy_throughput/throughput_diff)
+                                
+                                if throughput_diff < 0:
+                                    reward = 10
+                                elif throughput_diff == 0:
+                                    reward = 0
+                                else:
+                                    reward = -10
+                                print("Throughput:", mlra_throughput, greedy_throughput)
+                                print("Reward in compare to greedy throughput:", reward)
+
+                            else:
+                                print("Following key not in Greedy map:", key)
+                        
                     else:
-                        print("Excided timer for asembly generation")
-                        reward = 0
+                        print("MCA timeout happned", errs)                    
                     
                     logdir = self.env_config["log_dir"]
                     mlra_mca_throughput_file_path = os.path.join(logdir, str(self.worker_index) + '_mlra_throughput.json')
