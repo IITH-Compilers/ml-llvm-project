@@ -300,8 +300,8 @@ def parseProp(val):
     val = val.strip()
     return val[1: len(val) - 1]
 
-def identify_node_cls(regClass,nodeId,list_of_phy_registers_ofGRtype):
-
+def identify_node_cls(regClass, nodeId, list_of_phy_registers_ofGRtype):
+    nodeId = int(nodeId)
     if regClass=="Phy":
         if nodeId in list_of_phy_registers_ofGRtype:
             nodeType="GR"
@@ -529,19 +529,17 @@ def get_observations(graph, Phy_registers_of_GRtype, remove_GR_NonGR_edge):
     
     if remove_GR_NonGR_edge:
         '''logic to count number of GR_GR_edges and NGR_NGR edges'''
-        nl=0
         for idx, node in enumerate(nodes):
             nodeId = node['id']
-            propertiess = re.findall("{[^}]*}", node_label[nl])
-            nl=nl+1
+            propertiess = re.findall("{[^}]*}", node_label[idx])
             regClass = parseProp(propertiess[0]) 
-            nodeType1 = identify_node_cls(regClass, nodeId,Phy_registers_of_GRtype)
+            nodeType1 = identify_node_cls(regClass, nodeId, Phy_registers_of_GRtype)
             for i, adj in enumerate(adjlist[idx]):
-                neighId = nid_idx[adj['id']]
-                Cls = idx_cls[neighId]
-                nodeType2 = identify_node_cls(Cls, neighId,Phy_registers_of_GRtype)
+                neighIdx = nid_idx[adj['id']]
+                Cls = idx_cls[neighIdx]
+                nodeType2 = identify_node_cls(Cls, adj['id'], Phy_registers_of_GRtype)
                 if (nodeType1 == "GR" and nodeType2 == "GR") or (nodeType1 == "Non-GR" and nodeType2 == "Non-GR"):
-                    all_edges.append((i, neighId))    
+                    all_edges.append((idx, neighIdx))                    
     else:
         for i, adj in enumerate(adjlist):
             for nlink in adj:

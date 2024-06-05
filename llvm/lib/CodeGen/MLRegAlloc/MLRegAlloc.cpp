@@ -73,6 +73,7 @@
 #include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Value.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Pass.h"
@@ -96,7 +97,6 @@
 #include <future>
 #include <google/protobuf/text_format.h>
 #include <iostream>
-#include <llvm-19/llvm/IR/Value.h>
 #include <map>
 #include <memory>
 #include <queue>

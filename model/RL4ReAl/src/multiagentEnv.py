@@ -990,53 +990,53 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                     else:
                         print("MCA timeout happned")                    
                 
-                logdir = self.env_config["log_dir"]
-                mlra_mca_throughput_file_path = os.path.join(logdir, str(self.worker_index) + '_mlra_throughput.json')
-                if os.path.exists(mlra_mca_throughput_file_path):
-                    with open(mlra_mca_throughput_file_path) as f:
-                        mlra_throughput_map = json.load(f)
-                        f.close()
-                else:
-                    mlra_throughput_map = {}
-                
-                with open(mlra_mca_throughput_file_path, 'w') as f:
-                    fileName = os.path.basename(self.fileName)
-                    if str(self.iteration_number) not in mlra_throughput_map.keys():
-                        mlra_throughput_map[str(self.iteration_number)] = {}
-                    key = fileName + "_" + self.functionName
-                    # if key not in mlra_throughput_map.keys():
-                    #     mlra_throughput_map[key] = []
-                    if key in mlra_throughput_map[str(self.iteration_number)]:
-                        (mlra_throughput_map[str(self.iteration_number)][key]).append(mlra_throughput)
+                    logdir = self.env_config["log_dir"]
+                    mlra_mca_throughput_file_path = os.path.join(logdir, str(self.worker_index) + '_mlra_throughput.json')
+                    if os.path.exists(mlra_mca_throughput_file_path):
+                        with open(mlra_mca_throughput_file_path) as f:
+                            mlra_throughput_map = json.load(f)
+                            f.close()
                     else:
-                        mlra_throughput_map[str(self.iteration_number)][key] = [mlra_throughput]
-                    # print("Adding function to iteration map", key, self.iteration_number)
-                    json.dump(mlra_throughput_map, f)
-                    f.close()
+                        mlra_throughput_map = {}
+                    
+                    with open(mlra_mca_throughput_file_path, 'w') as f:
+                        fileName = os.path.basename(self.fileName)
+                        if str(self.iteration_number) not in mlra_throughput_map.keys():
+                            mlra_throughput_map[str(self.iteration_number)] = {}
+                        key = fileName + "_" + self.functionName
+                        # if key not in mlra_throughput_map.keys():
+                        #     mlra_throughput_map[key] = []
+                        if key in mlra_throughput_map[str(self.iteration_number)]:
+                            (mlra_throughput_map[str(self.iteration_number)][key]).append(mlra_throughput)
+                        else:
+                            mlra_throughput_map[str(self.iteration_number)][key] = [mlra_throughput]
+                        # print("Adding function to iteration map", key, self.iteration_number)
+                        json.dump(mlra_throughput_map, f)
+                        f.close()
 
-                mlra_mca_cycle_file_path = os.path.join(logdir, str(self.worker_index) + '_mlra_cycle.json')
-                if os.path.exists(mlra_mca_cycle_file_path):
-                    with open(mlra_mca_cycle_file_path) as f:
-                        mlra_cycle_map = json.load(f)
-                        f.close()
-                else:
-                    mlra_cycle_map = {}
-                
-                with open(mlra_mca_cycle_file_path, 'w') as f:
-                    fileName = os.path.basename(self.fileName)
-                    if str(self.iteration_number) not in mlra_cycle_map.keys():
-                        mlra_cycle_map[str(self.iteration_number)] = {}
-                        # print("Adding iteration key to map", self.iteration_number, mlra_cycle_map.keys())
-                    key = fileName + "_" + self.functionName
-                    # if key not in mlra_cycle_map.keys():
-                    #     mlra_cycle_map[key] = []
-                    if key in mlra_cycle_map[str(self.iteration_number)]:
-                        (mlra_cycle_map[str(self.iteration_number)][key]).append(mlra_cycles)
+                    mlra_mca_cycle_file_path = os.path.join(logdir, str(self.worker_index) + '_mlra_cycle.json')
+                    if os.path.exists(mlra_mca_cycle_file_path):
+                        with open(mlra_mca_cycle_file_path) as f:
+                            mlra_cycle_map = json.load(f)
+                            f.close()
                     else:
-                        mlra_cycle_map[str(self.iteration_number)][key] = [mlra_cycles]
-                    # print("Adding function to iteration map", key, self.iter.ation_number)
-                    json.dump(mlra_cycle_map, f)
-                    f.close()
+                        mlra_cycle_map = {}
+                    
+                    with open(mlra_mca_cycle_file_path, 'w') as f:
+                        fileName = os.path.basename(self.fileName)
+                        if str(self.iteration_number) not in mlra_cycle_map.keys():
+                            mlra_cycle_map[str(self.iteration_number)] = {}
+                            # print("Adding iteration key to map", self.iteration_number, mlra_cycle_map.keys())
+                        key = fileName + "_" + self.functionName
+                        # if key not in mlra_cycle_map.keys():
+                        #     mlra_cycle_map[key] = []
+                        if key in mlra_cycle_map[str(self.iteration_number)]:
+                            (mlra_cycle_map[str(self.iteration_number)][key]).append(mlra_cycles)
+                        else:
+                            mlra_cycle_map[str(self.iteration_number)][key] = [mlra_cycles]
+                        # print("Adding function to iteration map", key, self.iter.ation_number)
+                        json.dump(mlra_cycle_map, f)
+                        f.close()
                 # else:
                 #     # print("Killing Server pid", self.server_pid.pid)         
                 #     # os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
@@ -1154,9 +1154,14 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                     time.sleep(retry_wait_seconds)
                     retry_wait_seconds *= retry_wait_backoff_exponent
                 else:
+                    attempt += 1
                     if self.mode != 'inference':
-                        print("Unknown error", e.code())
-                        return None
+                        if attempt > max_retries:
+                            print("Unknown error", e.code())
+                            return None
+                        remaining = max_retries - attempt
+                        time.sleep(retry_wait_seconds)
+                        retry_wait_seconds *= retry_wait_backoff_exponent
                     else:
                         raise
         return updated_graphs
@@ -1369,7 +1374,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                         neighId = self.obs.idx_nid[neighIdx]
                         nodeType2 = self.identify_node_cls(Cls, neighId)
                         if (nodeType1 == "GR" and nodeType2 == "GR") or (nodeType1 == "Non-GR" and nodeType2 == "Non-GR"):
-                            edges.append((idx, neighIdx))                           
+                            edges.append((idx, neighIdx))
                 
                 edges = list(set(edges))
             else:
