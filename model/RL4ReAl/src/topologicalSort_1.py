@@ -1,5 +1,4 @@
 import logging
-import sys
 logger = logging.getLogger(__file__) 
 # class to represent a graph object:
 class Graph:
@@ -60,8 +59,7 @@ class Graph:
             self.discovered[v] = False
             # print("Following node is marked as un visited", v)
         else:
-            exit(0)
-            #assert False, 'discovered is node visited.'
+            assert False, 'discovered is node visited.'
 
     def UpdateColorVisitedNode(self, v, color):
         if self.discovered[v] and self.colored[v] == -1 :
