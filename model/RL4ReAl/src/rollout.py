@@ -332,6 +332,7 @@ class RollOutInference:
                 "use_local_reward": True,
                 "use_mca_reward": False,
                 "use_mca_self_play_reward": False,
+                "remove_GR_NonGR_edge":True,
                 "mca_reward_clip": 10,
                 "mca_timeout": 30,
                 "greedy_mca_throughput_file_path": f"{MODEL_DIR}/greedy-throughput_set_70-120.json",
