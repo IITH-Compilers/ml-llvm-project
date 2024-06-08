@@ -48,7 +48,7 @@ import re
 
 from config import BUILD_DIR
 from client import RegisterAllocationClient
-sys.path.append(f"{BUILD_DIR}/tools/MLCompilerBridge/Python-Utilities/")
+sys.path.append(f"{BUILD_DIR}/tools/MLCompilerBridge/Python-Utilities")
 import RegisterAllocationInference_pb2, RegisterAllocation_pb2
 from ggnn_1 import set_precision_forList, set_precision
 config_path=None
@@ -110,7 +110,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.iteration_number = 1
         self.use_pipe = False
         self.curr_file_name = None
-
+        
         print("env_config.worker_index", env_config.worker_index)
         
         if self.mode != 'inference':
@@ -153,8 +153,25 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.colour_successful = 0
         self.path = None
         self.annotation_size = env_config["annotations"]
+        self.Phy_registers_of_GRtype = self.list_of_phy_registers()
+        self.remove_GR_NonGR_edge = env_config["remove_GR_NonGR_edge"]
         random.seed(123)
         np.random.seed(123)
+  
+    def list_of_phy_registers(self):
+        if self.env_config["target"] == "X86":
+            fileName= os.path.join(self.env_config["Register_config"], 'regalloc/X86_supported_RegClasses.json')
+        elif self.env_config["target"] == "AArch64":
+            fileName= os.path.join(self.env_config["Register_config"], 'regalloc/AArch64_supported_RegClasses.json')
+        list_of_phy_registers_ofGR_type = set()
+        with open(fileName, 'r') as file:
+            data = json.load(file)
+            for key, values in data.items():
+                if (self.env_config["target"] == "X86" and "GR" in key) or  (self.env_config["target"] == "AArch64" and "GPR" in key):
+                    for value in values:
+                        list_of_phy_registers_ofGR_type.add(value['regId'])
+        return list(list_of_phy_registers_ofGR_type)
+        
 
     def reward_formula(self, value, action):
         if value in [float("inf"), 'inf', "INF"]:
@@ -393,7 +410,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             print("UpdateVisitList failed for {} graph at {} node".format(self.path, self.cur_node))
             assert False, 'discovered node visited.'
         self.virtRegId = self.obs.idx_nid[self.cur_node]
-        # logging.info("Node selected = {}, corresponding register id = {}".format(action, self.virtRegId))
+        #logging.info("Node selected = {}, corresponding register id = {}".format(action, self.virtRegId))
         state = self.obs
         self.cur_obs = self.obs.initial_node_representation[self.cur_node][0:self.emb_size]
         if self.cur_obs is not None and not isinstance(self.cur_obs, np.ndarray):
@@ -973,53 +990,53 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                     else:
                         print("MCA timeout happned")                    
                 
-                logdir = self.env_config["log_dir"]
-                mlra_mca_throughput_file_path = os.path.join(logdir, str(self.worker_index) + '_mlra_throughput.json')
-                if os.path.exists(mlra_mca_throughput_file_path):
-                    with open(mlra_mca_throughput_file_path) as f:
-                        mlra_throughput_map = json.load(f)
-                        f.close()
-                else:
-                    mlra_throughput_map = {}
-                
-                with open(mlra_mca_throughput_file_path, 'w') as f:
-                    fileName = os.path.basename(self.fileName)
-                    if str(self.iteration_number) not in mlra_throughput_map.keys():
-                        mlra_throughput_map[str(self.iteration_number)] = {}
-                    key = fileName + "_" + self.functionName
-                    # if key not in mlra_throughput_map.keys():
-                    #     mlra_throughput_map[key] = []
-                    if key in mlra_throughput_map[str(self.iteration_number)]:
-                        (mlra_throughput_map[str(self.iteration_number)][key]).append(mlra_throughput)
+                    logdir = self.env_config["log_dir"]
+                    mlra_mca_throughput_file_path = os.path.join(logdir, str(self.worker_index) + '_mlra_throughput.json')
+                    if os.path.exists(mlra_mca_throughput_file_path):
+                        with open(mlra_mca_throughput_file_path) as f:
+                            mlra_throughput_map = json.load(f)
+                            f.close()
                     else:
-                        mlra_throughput_map[str(self.iteration_number)][key] = [mlra_throughput]
-                    # print("Adding function to iteration map", key, self.iteration_number)
-                    json.dump(mlra_throughput_map, f)
-                    f.close()
+                        mlra_throughput_map = {}
+                    
+                    with open(mlra_mca_throughput_file_path, 'w') as f:
+                        fileName = os.path.basename(self.fileName)
+                        if str(self.iteration_number) not in mlra_throughput_map.keys():
+                            mlra_throughput_map[str(self.iteration_number)] = {}
+                        key = fileName + "_" + self.functionName
+                        # if key not in mlra_throughput_map.keys():
+                        #     mlra_throughput_map[key] = []
+                        if key in mlra_throughput_map[str(self.iteration_number)]:
+                            (mlra_throughput_map[str(self.iteration_number)][key]).append(mlra_throughput)
+                        else:
+                            mlra_throughput_map[str(self.iteration_number)][key] = [mlra_throughput]
+                        # print("Adding function to iteration map", key, self.iteration_number)
+                        json.dump(mlra_throughput_map, f)
+                        f.close()
 
-                mlra_mca_cycle_file_path = os.path.join(logdir, str(self.worker_index) + '_mlra_cycle.json')
-                if os.path.exists(mlra_mca_cycle_file_path):
-                    with open(mlra_mca_cycle_file_path) as f:
-                        mlra_cycle_map = json.load(f)
-                        f.close()
-                else:
-                    mlra_cycle_map = {}
-                
-                with open(mlra_mca_cycle_file_path, 'w') as f:
-                    fileName = os.path.basename(self.fileName)
-                    if str(self.iteration_number) not in mlra_cycle_map.keys():
-                        mlra_cycle_map[str(self.iteration_number)] = {}
-                        # print("Adding iteration key to map", self.iteration_number, mlra_cycle_map.keys())
-                    key = fileName + "_" + self.functionName
-                    # if key not in mlra_cycle_map.keys():
-                    #     mlra_cycle_map[key] = []
-                    if key in mlra_cycle_map[str(self.iteration_number)]:
-                        (mlra_cycle_map[str(self.iteration_number)][key]).append(mlra_cycles)
+                    mlra_mca_cycle_file_path = os.path.join(logdir, str(self.worker_index) + '_mlra_cycle.json')
+                    if os.path.exists(mlra_mca_cycle_file_path):
+                        with open(mlra_mca_cycle_file_path) as f:
+                            mlra_cycle_map = json.load(f)
+                            f.close()
                     else:
-                        mlra_cycle_map[str(self.iteration_number)][key] = [mlra_cycles]
-                    # print("Adding function to iteration map", key, self.iter.ation_number)
-                    json.dump(mlra_cycle_map, f)
-                    f.close()
+                        mlra_cycle_map = {}
+                    
+                    with open(mlra_mca_cycle_file_path, 'w') as f:
+                        fileName = os.path.basename(self.fileName)
+                        if str(self.iteration_number) not in mlra_cycle_map.keys():
+                            mlra_cycle_map[str(self.iteration_number)] = {}
+                            # print("Adding iteration key to map", self.iteration_number, mlra_cycle_map.keys())
+                        key = fileName + "_" + self.functionName
+                        # if key not in mlra_cycle_map.keys():
+                        #     mlra_cycle_map[key] = []
+                        if key in mlra_cycle_map[str(self.iteration_number)]:
+                            (mlra_cycle_map[str(self.iteration_number)][key]).append(mlra_cycles)
+                        else:
+                            mlra_cycle_map[str(self.iteration_number)][key] = [mlra_cycles]
+                        # print("Adding function to iteration map", key, self.iter.ation_number)
+                        json.dump(mlra_cycle_map, f)
+                        f.close()
                 # else:
                 #     # print("Killing Server pid", self.server_pid.pid)         
                 #     # os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
@@ -1072,7 +1089,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             self.functionName = graph['graph'][1][1]['Function'].strip('\"')
             self.fun_id = graph['graph'][1][1]['Function_ID']
             self.num_nodes = len(self.graph['nodes'])
-            self.obs = get_observations(self.graph)
+            self.obs = get_observations(self.graph, self.Phy_registers_of_GRtype, self.remove_GR_NonGR_edge)
             if self.server_pid is not None:
                 print('terminate the pid if alive : {}'.format(self.server_pid.pid))
                 self.stopServer()
@@ -1095,7 +1112,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             self.functionName = graph.funcName
             self.fun_id = graph.funid    
             self.num_nodes = len(graph.regProf)
-            self.obs = get_observationsInf(self.graph)
+            self.obs = get_observationsInf(self.graph, self.Phy_registers_of_GRtype, self.remove_GR_NonGR_edge)
             self.color_assignment_map = []
 
         edge_count = 0
@@ -1137,12 +1154,34 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                     time.sleep(retry_wait_seconds)
                     retry_wait_seconds *= retry_wait_backoff_exponent
                 else:
+                    attempt += 1
                     if self.mode != 'inference':
-                        print("Unknown error", e.code())
-                        return None
+                        if attempt > max_retries:
+                            print("Unknown error", e.code())
+                            return None
+                        remaining = max_retries - attempt
+                        time.sleep(retry_wait_seconds)
+                        retry_wait_seconds *= retry_wait_backoff_exponent
                     else:
                         raise
         return updated_graphs
+    
+    def identify_node_cls(self, regClass,nodeId):
+        
+        list_of_phy_registers_ofGRtype = self.Phy_registers_of_GRtype
+        if regClass=="Phy":
+            if nodeId in list_of_phy_registers_ofGRtype:
+                nodeType="GR"
+                return nodeType
+            else:
+                nodeType="Non-GR"
+                return nodeType
+        elif "GR" in regClass:
+            nodeType="GR"
+            return nodeType
+        elif "GR" not in regClass:
+            nodeType="Non-GR"
+            return nodeType
 
     def update_obs(self, updated_graphs, register_id, split_point):
         if updated_graphs.result:
@@ -1206,6 +1245,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                     # assert new_nodes < 3, "Splitting having more than 2 intervals"
                     self.obs.nid_idx[nodeId] = self.obs.graph_topology.num_nodes
                     self.obs.idx_nid[self.obs.graph_topology.num_nodes] = nodeId
+                    self.obs.idx_cls[self.obs.graph_topology.num_nodes] = node_prof.cls
                     self.obs.graph_topology.num_nodes = self.obs.graph_topology.num_nodes + 1
                     self.obs.graph_topology.discovered.append(False)
                     self.obs.graph_topology.adjList.append([])
@@ -1318,10 +1358,30 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             # def topo
             # a = list(map(lambda x:list(map(lambda y: (x[0], y) , x[1])) , enumerate(self.obs.graph_topology.adjList)))
             edges = []
-            for i, adj in enumerate(self.obs.graph_topology.adjList):
-                for sorted_node in sorted(adj):
-                    edges.append((i, sorted_node))
+                    
+            if self.remove_GR_NonGR_edge:
             
+                '''logic to count  number of GR_GR_edges and NGR_NGR edges'''
+                for idx, adj in enumerate(self.obs.graph_topology.adjList):
+                
+                    nodeId = self.obs.idx_nid[idx]
+                    regClass = self.obs.idx_cls[idx]
+                    nodeType1 = self.identify_node_cls(regClass, nodeId)
+                    for neighIdx in adj:
+                        Cls = self.obs.idx_cls[neighIdx]
+                        if neighIdx not in self.obs.idx_nid.keys():                        
+                            print("Node index {} of type {} not found in the nid_idx map {}".format(neighIdx, type(neighIdx), self.obs.nid_idx.keys()) )
+                        neighId = self.obs.idx_nid[neighIdx]
+                        nodeType2 = self.identify_node_cls(Cls, neighId)
+                        if (nodeType1 == "GR" and nodeType2 == "GR") or (nodeType1 == "Non-GR" and nodeType2 == "Non-GR"):
+                            edges.append((idx, neighIdx))
+                
+                edges = list(set(edges))
+            else:
+                for i, adj in enumerate(self.obs.graph_topology.adjList):
+                    for sorted_node in sorted(adj):
+                        edges.append((i, sorted_node))
+
             logging.debug("egdes({}) after after update : {} ".format(len(edges), edges))
             logging.debug("self.obs.graph_topology.adjList : {} ".format(self.obs.graph_topology.adjList))            
             if self.obs.graph_topology.num_nodes > self.max_number_nodes or len(edges) > self.max_edge_count:
