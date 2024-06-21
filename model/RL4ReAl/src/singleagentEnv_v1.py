@@ -462,6 +462,12 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                     print(f"Cost in previous iter {self.curr_prev_cost} and now {self.curr_file_cost}")
                     s_reward = self.curr_prev_cost-self.curr_file_cost
                 
+                # clipping split rewards
+                if s_reward>=0:
+                    s_reward = 10
+                else:
+                    s_reward = -10
+                
                 self.curr_prev_cost = self.curr_file_cost
                     
             c_done = True
@@ -799,10 +805,18 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             updated_graphs = self.stable_grpc('Split', split=split_map)
             if updated_graphs is None:
                 return reward, False
-                
+            
+            nodes_split = []
             for i, result in enumerate(updated_graphs.result):
                 # marking spilled as true for all the nodes that were sent for splitting to avoid sending them to split agent again
                 self.spilled[self.uncolored_nodes[i]] = True
+                
+                if result:
+                    node_id = self.obs.idx_nid[self.uncolored_nodes[i]]
+                    nodes_split.append(node_id)
+            
+            # removing nodes from color map that are split (they are no longer spilled now)
+            self.colormap = list(filter(lambda i: i.value!=0 or i.key not in nodes_split, self.colormap))
     
             update_obs_result = self.update_obs(updated_graphs, split_map)
 
@@ -844,7 +858,9 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         reward = 0
         done = False
         
-        reward = self.getReward(reg_allocated)
+        if self.use_local_reward:
+            reward = self.getReward(reg_allocated)
+            
         response = None 
         if False not in self.obs.graph_topology.discovered:
             if self.mode != 'inference': 

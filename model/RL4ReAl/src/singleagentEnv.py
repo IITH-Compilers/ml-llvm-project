@@ -1082,7 +1082,9 @@ class HierarchicalGraphColorEnv(gym.Env):
         reward = 0
         done = False
         
-        reward = self.getReward(reg_allocated)
+        if self.use_local_reward:
+            reward = self.getReward(reg_allocated)
+            
         response = None 
         if False not in self.obs.graph_topology.discovered:
             if self.mode != 'inference': 
