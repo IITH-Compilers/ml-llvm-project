@@ -7,7 +7,6 @@ from torch.autograd import Variable
 import torch.nn.functional as F
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
 from torch.nn.functional import normalize
-
 from typing import List, Tuple, Dict, Sequence, Any
 from topologicalSort_1 import Graph
 import logging
@@ -301,6 +300,22 @@ def parseProp(val):
     val = val.strip()
     return val[1: len(val) - 1]
 
+def identify_node_cls(regClass, nodeId, list_of_phy_registers_ofGRtype):
+    nodeId = int(nodeId)
+    if regClass=="Phy":
+        if nodeId in list_of_phy_registers_ofGRtype:
+            nodeType="GR"
+            return nodeType
+        else:
+            nodeType="Non-GR"
+            return nodeType
+    elif "GR" in regClass:
+        nodeType="GR"
+        return nodeType
+    elif "GR" not in regClass:
+        nodeType="Non-GR"
+        return nodeType
+
 def set_precision(spillWeight):
     formatted_spill_cost=float("%.13f" %spillWeight)
     return formatted_spill_cost
@@ -312,7 +327,7 @@ def set_precision_forList(lst):
         precise_lst.append(formatted_positional_weight)
     return precise_lst
 
-def get_observationsInf(graph):
+def get_observationsInf(graph, Phy_registers_of_GRtype, remove_GR_NonGR_edge):
     nodes = graph.regProf
     # adjlist = graph['adjacency']
     
@@ -322,6 +337,8 @@ def get_observationsInf(graph):
     
     idx_nid = {}
     nid_idx = {}
+    idx_cls={}
+      #additional
     # self.unique_type_map = {'pair' : []}
     all_edges = []
     spill_cost_list = []
@@ -332,10 +349,12 @@ def get_observationsInf(graph):
     use_distance_list = []
     raw_graph_mat = []
     positionalSpillWeights_list = []
-    for idx, node in enumerate(nodes):    
+    for idx, node in enumerate(nodes):
+        
         nodeId = node.regID
-        regClass = node.cls #parseProp(properties[0]) 
-        spill_cost = set_precision(node.spillWeight) #parseProp(properties[1])  
+        regClass = node.cls #parseProp(properties[0])
+        idx_cls[idx]=regClass
+        spill_cost = node.spillWeight #parseProp(properties[1])
         color = node.color # parseProp(properties[2])
         split_points = node.splitSlots
         use_distances = node.useDistances
@@ -359,15 +378,32 @@ def get_observationsInf(graph):
         color_list.append(color)
         initial_node_representation.append(nodeVec)
         nid_idx[nodeId] = idx
-        idx_nid[idx] = nodeId  
+        idx_nid[idx] = nodeId
         assert not torch.isnan(nodeVec).any(), "Nan is present"
-    for i, node in enumerate(nodes):
-        for nlink in node.interferences:
-            neighId = nid_idx[nlink]
-            if i != neighId:
-                all_edges.append((i, neighId))
-                #all_edges.append((neighId, i))
 
+    if remove_GR_NonGR_edge:
+        '''logic to count  number of GR_GR_edges and NGR_NGR edges'''
+
+        for idx,node in enumerate(nodes):
+        
+            nodeId = node.regID
+            regClass = node.cls
+
+            nodeType1 = identify_node_cls(regClass, nodeId,Phy_registers_of_GRtype)
+            for nlink in node.interferences:
+                neighIdx = nid_idx[nlink]
+                Cls = idx_cls[neighIdx]
+                nodeType2 = identify_node_cls(Cls, nlink,Phy_registers_of_GRtype)
+                if (nodeType1 == "GR" and nodeType2 == "GR") or (nodeType1 == "Non-GR" and nodeType2 == "Non-GR"):
+                    all_edges.append((idx, neighIdx))
+    else:
+        for i, node in enumerate(nodes):
+            for nlink in node.interferences:
+                neighId = nid_idx[nlink]
+                if i != neighId:
+                    all_edges.append((i, neighId))
+                    #all_edges.append((neighId, i))
+                    
     initial_node_representation = torch.stack(initial_node_representation, dim=0)# .to(device)
     
     logging.debug("Shape of the hidden nodes matrix N X D : {}".format(initial_node_representation.shape)) 
@@ -383,7 +419,6 @@ def get_observationsInf(graph):
     annotation_zero = np.zeros((num_nodes, 3))
     annotation_zero[:, 0] = spill_cost_list
     annotations = torch.FloatTensor(annotation_zero)# .to(device)
-    
     '''
     Support for already allocated registers.
     Mark the nodes as visted in the graph and 
@@ -396,33 +431,33 @@ def get_observationsInf(graph):
             color = color_list[node_idx]
             logging.debug('creating graph; Marking node_idx={} with color={}'.format(node_idx, color))
             
-            graph_topology.UpdateVisitList(node_idx)
+            graph_topology.UpdateVisitList(node_idx) #updaing elg_node list
             graph_topology.UpdateColorVisitedNode(node_idx, color) 
             annotations[node_idx][0] =  torch.tensor(0)# .to(device)
             # set the color assigned to the node
             annotations[node_idx][1] = torch.tensor(color)# .to(device)
     
-    adjacency_lists = [ AdjacencyList(node_num=num_nodes, adj_list=all_edges, device=device)]
+    adjacency_lists = [ AdjacencyList(node_num=num_nodes, adj_list=all_edges, device=device)]          
     assert not torch.isnan(adjacency_lists[0].data).any(), "AdjacencyList is NAN"
     assert not torch.isnan(annotations).any(), "Annotation is NAN"
      
     '''
     Main call to the compute representation
     '''
-    obs = {'raw_graph_mat':raw_graph_mat, 'initial_node_representation':initial_node_representation, 'annotations':annotations, 'adjacency_lists' : adjacency_lists,  'graph_topology':graph_topology, 'spill_cost_list' : spill_cost_list, 'reg_class_list' : reg_class_list, 'nid_idx':nid_idx, 'idx_nid':idx_nid, 'split_points' : split_points_list, 'use_distances': use_distance_list, "positionalSpillWeights": positionalSpillWeights_list}
+    obs = {'raw_graph_mat':raw_graph_mat, 'initial_node_representation':initial_node_representation, 'annotations':annotations, 'adjacency_lists' : adjacency_lists,  'graph_topology':graph_topology, 'spill_cost_list' : spill_cost_list, 'reg_class_list' : reg_class_list, 'nid_idx':nid_idx, 'idx_nid':idx_nid, 'idx_cls':idx_cls, 'split_points' : split_points_list, 'use_distances': use_distance_list, "positionalSpillWeights": positionalSpillWeights_list}
     obs = Namespace(**obs) 
     return obs
-
-def get_observations(graph):
+    
+def get_observations(graph, Phy_registers_of_GRtype, remove_GR_NonGR_edge):
     nodes = graph['nodes']
     adjlist = graph['adjacency']
-
     num_nodes = len(nodes)
     
     initial_node_representation = []
     
     idx_nid = {}
     nid_idx = {}
+    idx_cls={}
     # self.unique_type_map = {'pair' : []}
     all_edges = []
     spill_cost_list = []
@@ -432,21 +467,22 @@ def get_observations(graph):
     use_distance_list = []
     raw_graph_mat = []
     positionalSpillWeights_list = []
+    node_label=[]
     for idx, node in enumerate(nodes):
         
         nodeId = node['id']
+        node_label.append(node['label'])
         properties = re.findall("{[^}]*}", node['label'])
-        # print(properties)
         # properties = properties.split()
         logging.debug('Node idx={} | {}'.format(idx, properties))
         regClass = parseProp(properties[0]) 
+        idx_cls[idx]=regClass
         spill_cost = parseProp(properties[1])
         allocate_type = parseProp(properties[2])
         split_points = []
         use_distances = []
         positionalSpillWeights = []
         if len(properties) > 3:
-            # print(properties)
             split_points = parseProp(properties[3])
             use_distances = parseProp(properties[4])
             positionalSpillWeights = parseProp(properties[5])
@@ -458,8 +494,6 @@ def get_observations(graph):
             if len(positionalSpillWeights) > 0:
                 positionalSpillWeights = list(map(lambda x : float(x), positionalSpillWeights.split(', ')))
             
-            
-        
         split_points_list.append(np.array(split_points))
         use_distance_list.append(np.array(use_distances))
         positionalSpillWeights_list.append(np.array(positionalSpillWeights))
@@ -492,12 +526,26 @@ def get_observations(graph):
         initial_node_representation.append(nodeVec)
         nid_idx[nodeId] = idx
         idx_nid[idx] = nodeId
-        
-    for i, adj in enumerate(adjlist):
-        for nlink in adj:
-            neighId = nid_idx[nlink['id']]
-            if i != neighId:
-                all_edges.append((i, neighId))
+    
+    if remove_GR_NonGR_edge:
+        '''logic to count number of GR_GR_edges and NGR_NGR edges'''
+        for idx, node in enumerate(nodes):
+            nodeId = node['id']
+            propertiess = re.findall("{[^}]*}", node_label[idx])
+            regClass = parseProp(propertiess[0]) 
+            nodeType1 = identify_node_cls(regClass, nodeId, Phy_registers_of_GRtype)
+            for i, adj in enumerate(adjlist[idx]):
+                neighIdx = nid_idx[adj['id']]
+                Cls = idx_cls[neighIdx]
+                nodeType2 = identify_node_cls(Cls, adj['id'], Phy_registers_of_GRtype)
+                if (nodeType1 == "GR" and nodeType2 == "GR") or (nodeType1 == "Non-GR" and nodeType2 == "Non-GR"):
+                    all_edges.append((idx, neighIdx))                    
+    else:
+        for i, adj in enumerate(adjlist):
+            for nlink in adj:
+                neighId = nid_idx[nlink['id']]
+                if i != neighId:
+                    all_edges.append((i, neighId))
 
     initial_node_representation = torch.stack(initial_node_representation, dim=0)# .to(device)
     
@@ -536,7 +584,7 @@ def get_observations(graph):
     '''
     Main call to the compute representation
     '''
-    obs = {'raw_graph_mat':raw_graph_mat, 'initial_node_representation':initial_node_representation, 'annotations':annotations, 'adjacency_lists' : adjacency_lists,  'graph_topology':graph_topology, 'spill_cost_list' : spill_cost_list, 'reg_class_list' : reg_class_list, 'nid_idx':nid_idx, 'idx_nid':idx_nid, 'split_points' : split_points_list, 'use_distances': use_distance_list, "positionalSpillWeights": positionalSpillWeights_list}
+    obs = {'raw_graph_mat':raw_graph_mat, 'initial_node_representation':initial_node_representation, 'annotations':annotations, 'adjacency_lists' : adjacency_lists,  'graph_topology':graph_topology, 'spill_cost_list' : spill_cost_list, 'reg_class_list' : reg_class_list, 'nid_idx':nid_idx, 'idx_nid':idx_nid,'idx_cls':idx_cls, 'split_points' : split_points_list, 'use_distances': use_distance_list, "positionalSpillWeights": positionalSpillWeights_list}
     obs = Namespace(**obs) 
     return obs
 

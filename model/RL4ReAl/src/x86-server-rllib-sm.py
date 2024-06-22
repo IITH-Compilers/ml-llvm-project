@@ -16,8 +16,8 @@ sys.path.append(
 )
 import rollout as inference
 from argparse import Namespace
-from compilerinterface import PipeCompilerInterface, GrpcCompilerInterface
 
+from compilerinterface import PipeCompilerInterface, GrpcCompilerInterface
 
 def blockPrint():
     sys.stdout = open(os.devnull, 'w')
@@ -133,8 +133,7 @@ class service_server(
                 out = encode_action(out)
                 return RegisterAllocationInference_pb2.Data(data=out)
             return reply
-        except:
-            print("Error")
+        except Exception as e:
             traceback.print_exc()
             reply = RegisterAllocationInference_pb2.Data(
                 message="Split", regidx=0, payload=0 
@@ -365,7 +364,6 @@ def run_pipe_communication(data_format, pipe_name, dump_onnx_model=False):
             print("*******Exception*******", e)
             compiler_interface.init_pipes()
             compiler_interface.reset_pipes()
-
 
 
 if __name__ == "__main__":

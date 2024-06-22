@@ -21,6 +21,9 @@ import math
 import torch
 import signal
 from gym.spaces import Discrete, Box, Dict
+import grpc
+import time 
+
 from ray.rllib.utils.spaces.repeated import Repeated
 # from memory_profiler import profile
 
@@ -50,11 +53,11 @@ import re
 
 
 from config import BUILD_DIR
+from client import RegisterAllocationClient
 
 sys.path.append(f"{BUILD_DIR}/tools/MLCompilerBridge/Python-Utilities/")
-from client import *
 import RegisterAllocationInference_pb2, RegisterAllocation_pb2
-
+from ggnn_1 import set_precision_forList, set_precision
 config_path=None
 
 logger = logging.getLogger(__file__)
@@ -113,6 +116,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.best_throughput_map = {}
         self.best_allocation_cost = {}
         self.use_costbased_reward = env_config["use_costbased_reward"]
+        self.use_percentbased_cost_reward = env_config["use_percentbased_cost_reward"]
         self.iteration_number = 1
         self.use_pipe = False
         self.curr_file_name = None
@@ -164,8 +168,24 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.colour_successful = 0
         self.path = None
         self.annotation_size = env_config["annotations"]
+        self.Phy_registers_of_GRtype = self.list_of_phy_registers()
+        self.remove_GR_NonGR_edge = env_config["remove_GR_NonGR_edge"]
         random.seed(123)
         np.random.seed(123)
+    
+    def list_of_phy_registers(self):
+        if self.env_config["target"] == "X86":
+            fileName= os.path.join(self.env_config["Register_config"], 'regalloc/X86_supported_RegClasses.json')
+        elif self.env_config["target"] == "AArch64":
+            fileName= os.path.join(self.env_config["Register_config"], 'regalloc/AArch64_supported_RegClasses.json')
+        list_of_phy_registers_ofGR_type = set()
+        with open(fileName, 'r') as file:
+            data = json.load(file)
+            for key, values in data.items():
+                if (self.env_config["target"] == "X86" and "GR" in key) or  (self.env_config["target"] == "AArch64" and "GPR" in key):
+                    for value in values:
+                        list_of_phy_registers_ofGR_type.add(value['regId'])
+        return list(list_of_phy_registers_ofGR_type)
 
     def reward_formula(self, value, action):
         if value in [float("inf"), 'inf', "INF"]:
@@ -467,6 +487,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                     s_reward = 10
                 else:
                     s_reward = -10
+                
+                print("split reward: ", s_reward)
                 
                 self.curr_prev_cost = self.curr_file_cost
                     
@@ -891,14 +913,29 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                     if key not in self.best_allocation_cost.keys():
                         self.best_allocation_cost[key] = current_cost
                     best_cost = self.best_allocation_cost[key]
-                    if best_cost > current_cost:
-                        self.best_allocation_cost[key] = current_cost
-                        reward = 10
-                    elif best_cost == current_cost:
-                        reward = 0
+                    
+                    if self.use_percentbased_cost_reward:
+                        if current_cost==0:
+                            current_cost+=1e-6
+                        percent = (best_cost-current_cost)/(current_cost+1e-6)
+                        
+                        if best_cost > current_cost:
+                            self.best_allocation_cost[key] = current_cost
+        
+                        if percent>0.1:
+                            reward = 20
+                        elif percent>=-0.2 and percent<=0.1:
+                            reward = 10 + 100*(percent)
+                        else:
+                            reward = -10
                     else:
-                        reward = -10
-                    # print("Cost based reward is", best_cost, current_cost, reward)
+                        if best_cost > current_cost:
+                            self.best_allocation_cost[key] = current_cost
+                            reward = 10
+                        elif best_cost == current_cost:
+                            reward = 0
+                        else:
+                            reward = -10
                 elif self.use_mca_reward:
                     mlra_throughput = 0
                     mlra_cycles = 0                  
@@ -1068,7 +1105,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             self.fun_id = graph['graph'][1][1]['Function_ID']
             self.num_nodes = len(self.graph['nodes'])
             self.spilled = [False]*self.num_nodes
-            self.obs = get_observations(self.graph)
+            self.obs = get_observations(self.graph, self.Phy_registers_of_GRtype, self.remove_GR_NonGR_edge)
             if self.server_pid is not None:
                 print('terminate the pid if alive : {}'.format(self.server_pid.pid))
                 os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
@@ -1092,7 +1129,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             self.fun_id = graph.funid    
             self.num_nodes = len(graph.regProf)
             self.spilled = [False]*self.num_nodes
-            self.obs = get_observationsInf(self.graph)
+            self.obs = get_observationsInf(self.graph, self.Phy_registers_of_GRtype, self.remove_GR_NonGR_edge)
             self.color_assignment_map = []
 
         edge_count = 0
@@ -1142,6 +1179,23 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                         raise
         return updated_graphs
 
+    def identify_node_cls(self, regClass,nodeId):
+        
+        list_of_phy_registers_ofGRtype = self.Phy_registers_of_GRtype
+        if regClass=="Phy":
+            if nodeId in list_of_phy_registers_ofGRtype:
+                nodeType="GR"
+                return nodeType
+            else:
+                nodeType="Non-GR"
+                return nodeType
+        elif "GR" in regClass:
+            nodeType="GR"
+            return nodeType
+        elif "GR" not in regClass:
+            nodeType="Non-GR"
+            return nodeType
+        
     def update_obs(self, updated_graphs, split_map):
         def sc(vec, sw):
                 vec[-1] = sw
@@ -1214,6 +1268,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                     self.obs.nid_idx[nodeId] = self.obs.graph_topology.num_nodes
                     # print("NodeId and index", nodeId, self.obs.graph_topology.num_nodes, register_id)
                     self.obs.idx_nid[self.obs.graph_topology.num_nodes] = nodeId
+                    self.obs.idx_cls[self.obs.graph_topology.num_nodes] = node_prof.cls
                     self.obs.graph_topology.num_nodes = self.obs.graph_topology.num_nodes + 1
                     self.obs.graph_topology.discovered.append(False)
                     self.obs.graph_topology.adjList.append([])
@@ -1235,7 +1290,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                             return "error"
                             # raise
 
-                    self.obs.spill_cost_list.append(node_prof.spillWeight)
+                    spill_cost = set_precision(node_prof.spillWeight)
+                    self.obs.spill_cost_list.append(float(spill_cost))
                     self.obs.reg_class_list.append(self.obs.reg_class_list[splited_node_idx])
                     self.obs.use_distances.append(sorted(node_prof.useDistances))
                     self.obs.positionalSpillWeights.append(node_prof.positionalSpillWeights)
@@ -1291,8 +1347,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                     return "error"
                     # raise
                 self.obs.graph_topology.indegree[interfering_node_idx] = len(self.obs.graph_topology.adjList[interfering_node_idx])
-                
-                self.obs.spill_cost_list[interfering_node_idx] = node_prof.spillWeight
+                spill_cost = set_precision(node_prof.spillWeight)
+                self.obs.spill_cost_list[interfering_node_idx] = float(spill_cost)
                 self.obs.use_distances[interfering_node_idx] = np.array(sorted(node_prof.useDistances))
                 self.obs.positionalSpillWeights[interfering_node_idx] = node_prof.positionalSpillWeights
                 self.obs.split_points[interfering_node_idx] = np.array(node_prof.splitSlots)
@@ -1328,11 +1384,29 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 # def topo
                 # a = list(map(lambda x:list(map(lambda y: (x[0], y) , x[1])) , enumerate(self.obs.graph_topology.adjList)))
             edges = []
-            for i, adj in enumerate(self.obs.graph_topology.adjList):
-                for node in adj:
-                    edges.append((i, node))
-                    # edges.append((node, i))
-            edges = list(set(edges))
+            
+            if self.remove_GR_NonGR_edge:
+            
+                '''logic to count  number of GR_GR_edges and NGR_NGR edges'''
+                for idx, adj in enumerate(self.obs.graph_topology.adjList):
+                
+                    nodeId = self.obs.idx_nid[idx]
+                    regClass = self.obs.idx_cls[idx]
+                    nodeType1 = self.identify_node_cls(regClass, nodeId)
+                    for neighIdx in adj:
+                        Cls = self.obs.idx_cls[neighIdx]
+                        if neighIdx not in self.obs.idx_nid.keys():                        
+                            print("Node index {} of type {} not found in the nid_idx map {}".format(neighIdx, type(neighIdx), self.obs.nid_idx.keys()) )
+                        neighId = self.obs.idx_nid[neighIdx]
+                        nodeType2 = self.identify_node_cls(Cls, neighId)
+                        if (nodeType1 == "GR" and nodeType2 == "GR") or (nodeType1 == "Non-GR" and nodeType2 == "Non-GR"):
+                            edges.append((idx, neighIdx))
+                
+                edges = list(set(edges))
+            else:
+                for i, adj in enumerate(self.obs.graph_topology.adjList):
+                    for sorted_node in sorted(adj):
+                        edges.append((i, sorted_node))
 
             logging.debug("egdes({}) after after update : {} ".format(len(edges), edges))
             logging.debug("self.obs.graph_topology.adjList : {} ".format(self.obs.graph_topology.adjList))            
@@ -1349,11 +1423,15 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         return any(updated_graphs.result)
     
     def stopServer(self):
-        self.server_pid.stdin.write("Terminate\n")
-        self.server_pid.stdin.flush()
-        try:
-            out, errs = self.server_pid.communicate(timeout=15)
-        except:
-            self.server_pid.kill()
-            out, errs = self.server_pid.communicate()
-            print("Force Stop")
+        if self.server_pid.poll() is None:
+            self.server_pid.stdin.write("Terminate\n")
+            self.server_pid.stdin.flush()
+            try:
+                out, errs = self.server_pid.communicate(timeout=30)
+            except:
+                self.server_pid.kill()
+                out, errs = self.server_pid.communicate()
+                print("Force Stop")
+        else:
+            print("Server failed before episode end")
+        self.server_pid = None

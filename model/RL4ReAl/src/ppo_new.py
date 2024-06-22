@@ -109,7 +109,7 @@ class PPOConfig(PGConfig):
         self.model["vf_share_layers"] = False
         self._disable_preprocessor_api = False
 
-        self.num_gpus = 1
+        self.num_gpus = 0
         self.num_cpus_per_worker = 1
         self.num_gpus_per_worker = .1
         self.num_envs_per_worker = 1
@@ -146,14 +146,15 @@ class PPOConfig(PGConfig):
             "AArch64_CFLAGS": "-mllvm -regalloc=greedy  -mcpu=cortex-a72",
             "dataset_bucket": "set_5000",
             "enable_GGNN": True,
+            "remove_GR_NonGR_edge": True,
             "file_repeat_frequency": 1,
             "current_batch": 500,
-            "Workers_starting_port": "50060",
+            "Workers_starting_port": "56090",
             "disable_spliting": False,
             "max_split_map_len": 100,
-            "use_costbased_reward": False,
-            "use_percentbased_cost_reward": False,
-            "use_local_reward": True,
+            "use_costbased_reward": True,
+            "use_percentbased_cost_reward": True,
+            "use_local_reward": False,
             "use_mca_reward": False,
             "use_mca_self_play_reward": False,
             "mca_reward_clip": 10,

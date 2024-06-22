@@ -73,6 +73,7 @@
 #include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Value.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Pass.h"
@@ -97,7 +98,6 @@
 #include <future>
 #include <google/protobuf/text_format.h>
 #include <iostream>
-#include <llvm-19/llvm/IR/Value.h>
 #include <map>
 #include <memory>
 #include <queue>
@@ -669,6 +669,9 @@ void MLRA::sendRegProfData(T *response,
 
     // Set spillweights
     regprofResponse->set_spillweight(rp.spillWeight);
+
+    //set cls
+    regprofResponse->set_cls(rp.cls);
 
     // Copying the positional spill weights
     google::protobuf::RepeatedField<float> posSpillWeights(
@@ -2210,6 +2213,7 @@ void MLRA::allocatePhysRegsViaRL() {
                  //      << O;
                  // }
       );
+      LLVM_DEBUG(errs() << "Assiging color to regID: " << node_id << "\n");
       // LastEvicted.clearEvicteeInfo(VirtReg->reg);
 
       // Get the physical register mapped  to color
