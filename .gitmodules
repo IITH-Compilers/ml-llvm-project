@@ -1,8 +1,8 @@
 [submodule "IR2Vec"]
 	path = IR2Vec
-	url = git@github.com:IITH-Compilers/IR2Vec.git
+	url = https://github.com/IITH-Compilers/IR2Vec.git
 	branch = llvm10
 [submodule "MLCompilerBridge"]
 	path = MLCompilerBridge
-	url = git@github.com:IITH-Compilers/MLCompilerBridge.git
+	url = https://github.com/IITH-Compilers/MLCompilerBridge.git
 	branch = main
