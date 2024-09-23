@@ -73,6 +73,7 @@ LLVM/IR2Vec-Engine/IR2Vec-Binaries/*
 !LLVM/IR2Vec-Engine/IR2Vec-Binaries/README.md
 # Data
 /data
+install
 
 # trained model
 trained_model/

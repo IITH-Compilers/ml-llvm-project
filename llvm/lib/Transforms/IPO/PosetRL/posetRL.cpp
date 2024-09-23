@@ -1,5 +1,18 @@
 #include "llvm/Transforms/IPO/PosetRL/PosetRL.h"
+#include "MLModelRunner/MLModelRunner.h"
+#include "MLModelRunner/ONNXModelRunner/ONNXModelRunner.h"
+#include "MLModelRunner/PipeModelRunner.h"
+#include "MLModelRunner/Utils/MLConfig.h"
+#include "MLModelRunner/gRPCModelRunner.h"
+#include "SerDes/baseSerDes.h"
+#include "SerDes/bitstreamSerDes.h"
+#include "SerDes/jsonSerDes.h"
+#include "SerDes/protobufSerDes.h"
+#include "grpc/posetRL/posetRL.grpc.pb.h"
+#include "grpc/posetRL/posetRL.pb.h"
+#include "grpcpp/impl/codegen/status.h"
 #include "inference/poset_rl_env.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR2Vec.h"
@@ -15,17 +28,10 @@
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include <cstdlib>
 #include <fstream>
-#include "grpc/posetRL/posetRL.grpc.pb.h"
-#include "grpc/posetRL/posetRL.pb.h"
 #include <google/protobuf/text_format.h>
+#include <memory>
 #include <utility>
 #include <vector>
-#include "MLModelRunner/MLModelRunner.h"
-#include "MLModelRunner/ONNXModelRunner/ONNXModelRunner.h"
-#include "MLModelRunner/PipeModelRunner.h"
-#include "MLModelRunner/gRPCModelRunner.h"
-#include "MLModelRunner/Utils/MLConfig.h"
-#include "grpcpp/impl/codegen/status.h"
 
 using namespace llvm;
 using namespace grpc;
@@ -54,8 +60,8 @@ static cl::opt<std::string> server_address(
     cl::init("127.0.0.1:50051"));
 
 static cl::opt<std::string> pipe_name("pipe-name", cl::Hidden,
-                               cl::init("posetrl_pipe"),
-                               cl::desc("Name for pipe file"));
+                                      cl::init("posetrl_pipe"),
+                                      cl::desc("Name for pipe file"));
 
 namespace {
 struct PosetRL : public ModulePass,
@@ -64,45 +70,40 @@ struct PosetRL : public ModulePass,
   static char ID;
   PosetRL() : ModulePass(ID) {}
   bool runOnModule(Module &M) override {
-    assert(MLConfig::mlconfig != "" && "ml-config-path required" );
+    assert(MLConfig::mlconfig != "" && "ml-config-path required");
     this->M = &M;
     // Establish pipe communication
     if (usePipe) {
       // data_format can take values: protobuf, json, bytes
-      std::string basename =
-          "/tmp/" + pipe_name;
+      std::string basename = "/tmp/" + pipe_name;
 
-      BaseSerDes::Kind SerDesType;
-      if (data_format == "json")
-        SerDesType = BaseSerDes::Kind::Json;
-      else if (data_format == "protobuf")
-        SerDesType = BaseSerDes::Kind::Protobuf;
+      SerDesKind SerDesType;
+      if (data_format == "json") {
+        SerDesType = SerDesKind::Json;
+      } else if (data_format == "protobuf")
+        SerDesType = SerDesKind::Protobuf;
       else if (data_format == "bytes")
-        SerDesType = BaseSerDes::Kind::Bitstream;
+        SerDesType = SerDesKind::Bitstream;
       else {
         errs() << "Invalid data format\n";
         exit(1);
       }
 
-      MLRunner = std::make_unique<PipeModelRunner>(
+      auto MLRunner = std::make_unique<PipeModelRunner>(
           basename + ".out", basename + ".in", SerDesType, &M.getContext());
-      posetRLgRPC::EmbeddingResponse response;
-      posetRLgRPC::ActionRequest request;
-      MLRunner->setRequest(&response);
-      MLRunner->setResponse(&request);
-      initPipeCommunication();
+      initCommunication(MLRunner);
+
     } else {
       if (training) {
-        MLRunner = std::make_unique<gRPCModelRunner<
+        auto MLRunner = std::make_unique<gRPCModelRunner<
             posetRLgRPC::PosetRLService::Service,
             posetRLgRPC::PosetRLService::Stub, posetRLgRPC::EmbeddingResponse,
             posetRLgRPC::ActionRequest>>(server_address, this, &M.getContext());
       } else if (useONNX) {
-        Agent agent(MLConfig::mlconfig +
-                    "/posetrl/posetrl_model.onnx");
+        Agent agent(MLConfig::mlconfig + "/posetrl/posetrl_model.onnx");
         std::map<std::string, Agent *> agents;
         agents["agent"] = &agent;
-        MLRunner =
+        auto MLRunner =
             std::make_unique<ONNXModelRunner>(this, agents, &M.getContext());
         MLRunner->evaluate<int>();
         errs() << "Sequence: ";
@@ -112,24 +113,26 @@ struct PosetRL : public ModulePass,
       } else {
         posetRLgRPC::EmbeddingResponse request;
         posetRLgRPC::ActionRequest response;
-        MLRunner = std::make_unique<gRPCModelRunner<
+        auto MLRunner = std::make_unique<gRPCModelRunner<
             posetRLgRPC::PosetRLService, posetRLgRPC::PosetRLService::Stub,
             posetRLgRPC::EmbeddingResponse, posetRLgRPC::ActionRequest>>(
             server_address, &request, &response, &M.getContext());
         MLRunner->setRequest(&request);
         MLRunner->setResponse(&response);
-        initPipeCommunication();
+        initCommunication(MLRunner);
       }
     }
     return true;
   }
-  void initPipeCommunication() {
+
+  template <typename T> void initCommunication(T &MLRunner) {
     int passSequence = 0;
     while (passSequence != -1) {
       std::pair<std::string, std::vector<float>> p1("embedding",
                                                     getEmbeddings());
       MLRunner->populateFeatures(p1);
-      int Res = MLRunner->evaluate<int>();
+
+      int Res = MLRunner->template evaluate<int>();
       processMLAdvice(Res);
       passSequence = Res;
       errs() << "Sequence : " << passSequence << "\t";
@@ -139,9 +142,9 @@ struct PosetRL : public ModulePass,
   inline void processMLAdvice(int advice) { applySeq(advice); }
 
   Embedding getEmbeddings() override {
-    auto Ir2vec =
-        IR2Vec::Embeddings(*M, IR2Vec::IR2VecMode::FlowAware,
-                           MLConfig::mlconfig + "/ir2vec/seedEmbeddingVocab-300-llvm10.txt");
+    auto Ir2vec = IR2Vec::Embeddings(
+        *M, IR2Vec::IR2VecMode::FlowAware,
+        MLConfig::mlconfig + "/ir2vec/seedEmbeddingVocab-300-llvm10.txt");
     auto ProgVector = Ir2vec.getProgramVector();
     Embedding Vector(ProgVector.begin(), ProgVector.end());
     return Vector;
@@ -163,14 +166,13 @@ struct PosetRL : public ModulePass,
     }
   }
 
-  grpc::Status
-  applyActionGetEmbeddings(grpc::ServerContext *context,
-                           const ::posetRLgRPC::ActionRequest *request,
-                           ::posetRLgRPC::EmbeddingResponse *response) override {
+  grpc::Status applyActionGetEmbeddings(
+      grpc::ServerContext *context, const ::posetRLgRPC::ActionRequest *request,
+      ::posetRLgRPC::EmbeddingResponse *response) override {
     // errs() << "Action requested: " << request->action() << "\n";
     if (request->action() == -1) {
       return grpc::Status::OK;
-    } 
+    }
     if (request->action() != 0)
       processMLAdvice(request->action());
 
@@ -183,8 +185,8 @@ struct PosetRL : public ModulePass,
 
   grpc::Status
   queryCompiler(grpc::ServerContext *context,
-                           const ::posetRLgRPC::ActionRequest *request,
-                           ::posetRLgRPC::EmbeddingResponse *response) {
+                const ::posetRLgRPC::ActionRequest *request,
+                ::posetRLgRPC::EmbeddingResponse *response) override {
     if (request->action() == -1) {
       return grpc::Status::OK;
     } else if (request->action() != 0)
@@ -199,7 +201,6 @@ struct PosetRL : public ModulePass,
 
 private:
   Module *M;
-  std::unique_ptr<MLModelRunner> MLRunner;
 };
 } // namespace
 char PosetRL::ID = 0;

@@ -74,14 +74,14 @@ public:
   void setLid(unsigned int lid) { this->lid = lid; }
   void setPartition(std::string partition) { this->partition = partition; }
   
-  void computeDistribution(SmallVector<DataDependenceGraph *, 5> &SCCGraphs,
-                           SmallVector<Loop *, 5> &loops,
-                           SmallVector<std::string, 5> &dis_seqs);
+  // void computeDistribution(SmallVector<DataDependenceGraph *, 5> &SCCGraphs,
+  //                          SmallVector<Loop *, 5> &loops,
+  //                          SmallVector<std::string, 5> &dis_seqs);
 
-  void run(Function &F, FunctionAnalysisManager &fam,
-           SmallVector<DataDependenceGraph *, 5> &SCCGraphs,
-           SmallVector<Loop *, 5> &loops,
-           SmallVector<std::string, 5> &dis_seqs);
+  // void run(Function &F, FunctionAnalysisManager &fam,
+  //          SmallVector<DataDependenceGraph *, 5> &SCCGraphs,
+  //          SmallVector<Loop *, 5> &loops,
+  //          SmallVector<std::string, 5> &dis_seqs);
 
   bool
   findLoopAndDistribute(Function &F, ScalarEvolution *SE_, LoopInfo *LI_,
@@ -117,9 +117,9 @@ public:
   }*/
   bool runOnFunction(Function &F) override;
 
-  void run(SmallVector<DataDependenceGraph *, 5> &SCCGraphs,
-           SmallVector<Loop *, 5> &loops,
-           SmallVector<std::string, 5> &dis_seqs);
+  // void run(SmallVector<DataDependenceGraph *, 5> &SCCGraphs,
+  //          SmallVector<Loop *, 5> &loops,
+  //          SmallVector<std::string, 5> &dis_seqs);
 
   void getAnalysisUsage(AnalysisUsage &AU) const;
 };

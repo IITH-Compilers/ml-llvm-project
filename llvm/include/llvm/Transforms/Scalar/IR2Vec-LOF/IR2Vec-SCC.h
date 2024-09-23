@@ -78,7 +78,7 @@ public:
                        DOTData &rdg);
 };
 
-// RDGWrapperPass *createRDGWrapperPass();
+RDGWrapperPass *createRDGWrapperPass();
 
 } // namespace llvm
 

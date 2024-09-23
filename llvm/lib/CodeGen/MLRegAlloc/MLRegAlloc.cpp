@@ -319,16 +319,11 @@ grpc::Status MLRA::codeGen(grpc::ServerContext *context,
   return Status::OK;
 }
 
-void MLRA::processMLInputsProtobuf(SmallSetVector<unsigned, 8> *updatedRegIdxs,
+template <typename T>
+void MLRA::processMLInputsProtobuf(T &MLRunner,
+                                   SmallSetVector<unsigned, 8> *updatedRegIdxs,
                                    bool IsStart) {
   // errs() << "Inside processMLInputsProtobuf\n";
-
-  /// testting
-  // MLRunner->setRequest(&ClientTestRequest);
-  // std::pair<std::string, std::string> strPair("s", "umesh");
-  // MLRunner->populateFeatures(strPair);
-  // return;
-  /// testing
 
   regIdxs.clear();
 
@@ -436,11 +431,13 @@ void MLRA::printFeatures() {
   }
 }
 
-void MLRA::processMLInputs(SmallSetVector<unsigned, 8> *updatedRegIdxs,
+template <typename T>
+void MLRA::processMLInputs(T &MLRunner,
+                           SmallSetVector<unsigned, 8> *updatedRegIdxs,
                            bool IsStart, bool IsJson) {
   // errs() << "Inside processMLInputs\n";
   if (data_format == "protobuf") {
-    processMLInputsProtobuf(updatedRegIdxs, IsStart);
+    processMLInputsProtobuf(MLRunner, updatedRegIdxs, IsStart);
     return;
   }
   regIdxs.clear();
@@ -2398,7 +2395,7 @@ void MLRA::training_flow() {
   LLVM_DEBUG(errs() << "Done MLRA allocation for : " << MF->getName() << '\n');
 }
 
-void MLRA::initPipeCommunication() {
+template <typename T> void MLRA::initCommunication(T &MLRunner) {
   auto processOutput = [&](std::vector<int> &reply) {
     if (reply[0] == 0) {
       PipeResponseData.Action = "Split";
@@ -2434,7 +2431,7 @@ void MLRA::initPipeCommunication() {
       if (count < MIN_VARS || count > MAX_VARS) {
         errs() << "regProf size is not between 120 and 500\n";
         return;
-      }  
+      }
 
       for (auto it = MF->begin(); it != MF->end(); it++) {
         if (it->isEHFuncletEntry() || it->isEHPad() || it->isEHScopeEntry() ||
@@ -2447,7 +2444,7 @@ void MLRA::initPipeCommunication() {
           }
         }
       }
-      processMLInputs(nullptr, true, IsJson);
+      processMLInputs(MLRunner, nullptr, true, IsJson);
       isGraphSet = true;
     } else {
       JO["new"] = false;
@@ -2456,7 +2453,7 @@ void MLRA::initPipeCommunication() {
     size_t size;
     int *out;
     errs() << "Calling evaluate...\n";
-    MLRunner->evaluate<int *>(out, size);
+    MLRunner->template evaluate<int *>(out, size);
     std::vector<int> reply(out, out + size);
     errs() << "Reply:: ";
     for (auto x : reply)
@@ -2511,9 +2508,9 @@ void MLRA::initPipeCommunication() {
         // errs() << "**********************************\n";
         if (PipeResponseData.Action == "Split") {
           errs() << "calling processMLInputs upon splitting...\n";
-          processMLInputs(&updatedRegIdxs, false, IsJson);
-        } else
-          processMLInputs(nullptr, false, IsJson);
+            processMLInputs(MLRunner, &updatedRegIdxs, false, IsJson);
+          } else
+          processMLInputs(MLRunner, nullptr, false, IsJson);
       } else {
         // errs() << "ENTERED ELSE CASE!!!!!!!!!\n";
         this->CommuResult = false;
@@ -2582,22 +2579,21 @@ void MLRA::inference() {
   //   return;
   // }
   if (usePipe) {
-    std::string basename = "/tmp/" + mlra_pipe_name;  
-    BaseSerDes::Kind SerDesType;
+    std::string basename = "/tmp/" + mlra_pipe_name;
+    SerDesKind SerDesType;
     if (data_format == "json") {
-      SerDesType = BaseSerDes::Kind::Json;
+      SerDesType = SerDesKind::Json;
     } else if (data_format == "bytes") {
-      SerDesType = BaseSerDes::Kind::Bitstream;
+      SerDesType = SerDesKind::Bitstream;
     } else if (data_format == "protobuf") {
-      SerDesType = BaseSerDes::Kind::Protobuf;
+      SerDesType = SerDesKind::Protobuf;
     } else {
       errs() << "Invalid data format\n";
       return;
     }
-    MLRunner = std::make_unique<PipeModelRunner>(basename + ".out",
-                                                 basename + ".in", SerDesType);
-    MLRunner->setResponse(&ServerModeRequest);
-    initPipeCommunication();
+    auto MLRunner = std::make_unique<PipeModelRunner>(
+        basename + ".out", basename + ".in", SerDesType);
+    initCommunication(MLRunner);
   } else {
     if (enable_mlra_training) {
       // MLRunner =
@@ -2622,7 +2618,7 @@ void MLRA::inference() {
       agentMap[COLOR_NODE_AGENT] = new Agent(nodeColouringModelPath);
       agentMap[SPLIT_NODE_AGENT] = new Agent(nodeSplitingModelPath);
 
-      MLRunner = std::make_unique<ONNXModelRunner>(this, agentMap);
+      auto MLRunner = std::make_unique<ONNXModelRunner>(this, agentMap);
 
       bool emptyGraph = true;
       int count = 0;
@@ -2690,7 +2686,7 @@ void MLRA::inference() {
       allocatePhysRegsViaRL();
       return;
     } else {
-      MLRunner = std::make_unique<gRPCModelRunner<
+      auto MLRunner = std::make_unique<gRPCModelRunner<
           registerallocationinference::RegisterAllocationInference,
           registerallocationinference::RegisterAllocationInference::Stub,
           registerallocationinference::RegisterProfileList,
@@ -2699,220 +2695,9 @@ void MLRA::inference() {
 
       MLRunner->setResponse(&ClientModeResponse);
 
-      initPipeCommunication();
+      initCommunication(MLRunner);
     }
   }
-  bool isGraphSet = false;
-  // while (true) {
-  //   reply = new registerallocationinference::Data();
-  //   grpc::ClientContext context;
-  //   LLVM_DEBUG(errs() << "Printing register profile:\n";
-  //              printRegisterProfile());
-  //   if (!isGraphSet) {
-  //     request = new registerallocationinference::RegisterProfileList();
-  //     serializeRegProfData(request);
-  //     LLVM_DEBUG(errs() << "Call model first time\n");
-  //     if (request->mutable_regprof()->size() < 120 ||
-  //         request->mutable_regprof()->size() > 500) {
-  //       ORE->emit([&]() {
-  //         return MachineOptimizationRemark(
-  //                    DEBUG_TYPE, "MLRA skipped Function ",
-  //                    MF->getFunction().front().front().getDebugLoc(),
-  //                    &MF->front())
-  //                << MF->getFunction().getParent()->getSourceFileName() <<
-  //                "\t"
-  //                << MF->getFunction().getName()
-  //                << "--> skipped by MLRA (nodes not in serviceable range)";
-  //       });
-  //       return;
-  //     }
-
-  //     for (auto it = MF->begin(); it != MF->end(); it++) {
-  //       if (it->isEHFuncletEntry() || it->isEHPad() || it->isEHScopeEntry()
-  //       ||
-  //           it->isEHScopeReturnBlock()) {
-  //         return;
-  //       }
-  //       for (auto ist = it->begin(); ist != it->end(); ist++) {
-  //         if (ist->isEHLabel() || ist->isEHScopeReturn()) {
-  //           return;
-  //         }
-  //       }
-  //     }
-
-  //     ORE->emit([&]() {
-  //       return MachineOptimizationRemark(
-  //                  DEBUG_TYPE, "MLRA Allocating Function ",
-  //                  MF->getFunction().front().front().getDebugLoc(),
-  //                  &MF->front())
-  //              << MF->getFunction().getParent()->getSourceFileName() << "\t"
-  //              << MF->getFunction().getName() << "--> Allocated by MLRA";
-  //     });
-  //     /*errs() << "Before calling model \n";
-  //     if (std::string s;
-  //     google::protobuf::TextFormat::PrintToString(*request, &s)) { std::cout
-  //     << "Your message: " << s; } else { std::cerr << "Message not valid
-  //     (partial content: "
-  //                                                                                               << request->ShortDebugString() << ")\n";
-  //                                                         }
-  //     errs() << "Before calling -- requetObj\n";
-  //     if (std::string s;
-  //     google::protobuf::TextFormat::PrintToString(*request, &s)) { std::cout
-  //     << "Your message: " << s; } else { std::cerr << "Message not valid
-  //     (partial content: "
-  //                                                                                               << request->ShortDebugString() << ")\n";
-  //                                                         }
-  //    */
-  //     // Stub->getInfo(&context, *request, reply);
-  //     isGraphSet = true;
-  //     (errs() << "Processing funtion: " << MF->getName() << "\n");
-  //   } else {
-  //     // sendRegProfData<registerallocationinference::RegisterProfileList>(
-  //     //    request);
-  //     request->set_new_(false);
-  //     LLVM_DEBUG(errs() << "Call model again\n");
-  //     // Stub->getInfo(&context, *request, reply);
-  //   }
-  //   assert(request->mutable_regprof()->size() <= 1000 &&
-  //          "Graph size is greater than the expected.\n");
-  //   LLVM_DEBUG(errs() << "Before calling model \n");
-  //   /*  if (std::string s;
-  //      google::protobuf::TextFormat::PrintToString(*request, &s)) { std::cout
-  //      << "Your message: " << s; } else { std::cerr << "Message not valid
-  //      (partial content: "
-  //                                                                                               << request->ShortDebugString() << ")\n";
-  //                                                         }
-  //    */
-  //   Status status = Stub->getInfo(&context, *request, reply);
-  //   LLVM_DEBUG(errs() << "Status : " << status.error_code() << ": "
-  //                     << status.error_message() << "\n");
-  //   assert(status.ok() && "status i not OK.");
-  //   LLVM_DEBUG(errs() << "After calling model \n");
-  //   /*if (std::string s; google::protobuf::TextFormat::PrintToString(*reply,
-  //      &s)) { std::cout << "Yo
-  //   */
-  //   assert(reply->message() != "" && "reply msg is empty");
-  //   LLVM_DEBUG(errs() << "Taken performed : " << reply->message() << " vreg "
-  //                     << std::to_string(reply->regidx()) << " "
-  //                     << std::to_string(reply->payload()) << "\n");
-  //   // std::string str = "LLVM\n";
-  //   assert(!(reply->message() == "Split" && reply->regidx() == 0 &&
-  //            reply->payload() == 0) &&
-  //          "Error in python side...");
-  //   // response->set_payload(str);
-  //   if (reply->message() == "Color") {
-  //     ORE->emit([&]() {
-  //       return MachineOptimizationRemark(
-  //                  DEBUG_TYPE, "#Registers colored by MLRA:Greedy ",
-  //                  MF->getFunction().front().front().getDebugLoc(),
-  //                  &MF->front())
-  //              << "#Registers colored by MLRA:Greedy :: "
-  //              << std::to_string(reply->color_size()) + ":" +
-  //                     std::to_string(numUnsupportedRegs);
-  //     });
-
-  //     std::string ucf = "";
-  //     for (auto i : unsupportedClsFreq) {
-  //       ucf += "\n " + i.first.str() + " - " + std::to_string(i.second);
-  //     }
-
-  //     ORE->emit([&]() {
-  //       return MachineOptimizationRemark(
-  //                  DEBUG_TYPE, "Freq of unsupported reg cls",
-  //                  MF->getFunction().front().front().getDebugLoc(),
-  //                  &MF->front())
-  //              << "Freq of unsupported reg cls:\n"
-  //              << ucf;
-  //     });
-
-  //     ORE->emit([&]() {
-  //       return MachineOptimizationRemark(
-  //                  DEBUG_TYPE, "#Splits",
-  //                  MF->getFunction().front().front().getDebugLoc(),
-  //                  &MF->front())
-  //              << "#Splits: " << std::to_string(numSplits);
-  //     });
-
-  //     if (reply->color_size() == 0) {
-  //       LLVM_DEBUG(errs() << "*****Warning -" << MF->getName()
-  //                         << " - Predictions not generated for the graph\n");
-  //       return;
-  //     }
-
-  //     std::map<std::string, int64_t> colorMap;
-  //     unsigned numSpills = 0;
-  //     for (auto i : reply->color()) {
-  //       colorMap[i.key()] = i.value();
-  //       errs() << "RegName: " << i.key() << " color: " << i.value() << "\n";
-  //       if (i.value() == 0)
-  //         numSpills++;
-  //     }
-
-  //     ORE->emit([&]() {
-  //       return MachineOptimizationRemark(
-  //                  DEBUG_TYPE, "#Spills",
-  //                  MF->getFunction().front().front().getDebugLoc(),
-  //                  &MF->front())
-  //              << "#Spills predicted by MLRA: " << std::to_string(numSpills)
-  //              << "#Regs allocated excluding spills by MLRA: "
-  //              << std::to_string(reply->color_size() - numSpills);
-  //     });
-
-  //     this->FunctionVirtRegToColorMap[MF->getName()] = colorMap;
-  //     // assert(reply->funcname() == MF->getName());
-  //     allocatePhysRegsViaRL();
-  //     errs() << "ALLOCATION DONE for " << MF->getName() << "\n";
-  //     errs() << "***************************************************\n";
-  //     LLVM_DEBUG(errs() << "The ML allocated virtual registers: /n";
-  //                for (auto i
-  //                     : mlAllocatedRegs) errs()
-  //                << printReg(i, TRI) << "\t";
-  //                errs() << "Done MLRA allocation for : " << MF->getName()
-  //                       << '\n');
-  //     return;
-  //   }
-  //   if (reply->message() == "Split" || reply->message() == "SplitAndCapture")
-  //   {
-  //     unsigned splitRegIdx = reply->regidx();
-  //     int splitPoint = reply->payload();
-  //     SmallVector<unsigned, 2> NewVRegs;
-  //     LLVM_DEBUG(errs() << "==========================BEFORE "
-  //                          "SPLITTING==================================\n";
-  //                MF->dump(); errs() <<
-  //                "====================================="
-  //                                      "=======================\n");
-
-  //     errs() << "**************STARTING SPLITTING********************\n";
-  //     errs() << "Splitting regidx: " << splitRegIdx << " at " << splitPoint
-  //            << "\n";
-  //     if (splitVirtReg(splitRegIdx, splitPoint, NewVRegs)) {
-  //       SmallSetVector<unsigned, 8> updatedRegIdxs;
-  //       updateRegisterProfileAfterSplit(splitRegIdx, NewVRegs,
-  //       updatedRegIdxs); if (enable_dump_ig_dot)
-  //         dumpInterferenceGraph(std::to_string(SplitCounter));
-  //       if (enable_mlra_checks)
-  //         verifyRegisterProfile();
-  //       errs() << "Splitting done\n";
-  //       errs() << "**********************************\n";
-
-  //       request = new registerallocationinference::RegisterProfileList();
-  //       if (reply->message() == "Split")
-  //         sendRegProfData<registerallocationinference::RegisterProfileList>(
-  //             request, &updatedRegIdxs);
-  //       else
-  //         sendRegProfData<registerallocationinference::RegisterProfileList>(
-  //             request);
-  //     } else {
-  //       LLVM_DEBUG(
-  //           errs()
-  //           << "Still after spliting prediction; LLVM dees not
-  //           performit.\n");
-  //       request->set_result(false);
-  //     }
-  //   }
-  //   if (reply->message() == "Exit")
-  //     return;
-  // }
 }
 
 void MLRA::MLRegAlloc(MachineFunction &MF, SlotIndexes &Indexes,
@@ -3021,7 +2806,7 @@ void MLRA::MLRegAlloc(MachineFunction &MF, SlotIndexes &Indexes,
     // RunService(this, mlra_server_address);
     // training_flow();
     //????
-    MLRunner = std::make_unique<gRPCModelRunner<
+    auto MLRunner = std::make_unique<gRPCModelRunner<
         registerallocationinference::RegisterAllocationInference::Service,
         registerallocationinference::RegisterAllocationInference::Stub,
         registerallocationinference::RegisterProfileList,

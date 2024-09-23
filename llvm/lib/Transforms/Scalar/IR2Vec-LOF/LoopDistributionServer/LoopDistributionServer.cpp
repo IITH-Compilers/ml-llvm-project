@@ -22,6 +22,8 @@
 #include <bits/stdint-intn.h>
 #include <cstdint>
 
+#define DEBUG_TYPE "ld-server"
+
 using namespace llvm;
 using namespace MLBridge;
 
@@ -164,17 +166,17 @@ struct LoopDistributionServerPass
     std::string pipe_name = "loopdistppipe";
     std::string basename = "/tmp/" + pipe_name; // change
 
-    BaseSerDes::Kind SerDesType;
+    SerDesKind SerDesType;
     if (data_format == "json") {
-      SerDesType = BaseSerDes::Kind::Json;
+      SerDesType = SerDesKind::Json;
     } else if (data_format == "bytes") {
-      SerDesType = BaseSerDes::Kind::Bitstream;
+      SerDesType = SerDesKind::Bitstream;
     } else if (data_format == "protobuf") {
-      SerDesType = BaseSerDes::Kind::Protobuf;
+      SerDesType = SerDesKind::Protobuf;
     } else {
       return;
     }
-    MLRunner = std::make_unique<PipeModelRunner>(
+    auto MLRunner = std::make_unique<PipeModelRunner>(
         basename + ".out", basename + ".in", SerDesType, &M->getContext());
     std::pair<std::string, long> p1("loopcost", (long)OriginalLoopCost);
     MLRunner->populateFeatures(p1);
@@ -246,7 +248,6 @@ private:
   Module *M;
   uint64_t OriginalLoopCost;
   uint64_t DistributedLoopCost;
-  std::unique_ptr<MLModelRunner> MLRunner;
 };
 } // namespace
 char LoopDistributionServerPass::ID = 0;

@@ -236,8 +236,8 @@ namespace {
       (void) llvm::createHardwareLoopsPass();
       (void)llvm::createInjectTLIMappingsLegacyPass();
       (void) llvm::createcustom_loop_distributionPass();
-      // (void)llvm::createRDGWrapperPass();
-      // (void) llvm::createLoopDistributionWrapperPassPass();
+      (void)llvm::createRDGWrapperPass();
+      (void) llvm::createLoopDistributionWrapperPassPass();
 
       (void)new llvm::IntervalPartition();
       (void)new llvm::ScalarEvolutionWrapperPass();
