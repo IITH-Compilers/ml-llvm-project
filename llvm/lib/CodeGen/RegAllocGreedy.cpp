@@ -148,6 +148,8 @@ static cl::opt<bool> ConsiderLocalIntervalCost(
 cl::opt<std::string> statsFPGreedy("stats-path-greedy", cl::Hidden,
                                    cl::init("/home/"));
 
+cl::opt<std::string> gfuncID("greedy-funcID", cl::Hidden, cl::desc("Collecting stats for this func"), cl::init(""));
+
 static RegisterRegAlloc greedyRegAlloc("greedy", "greedy register allocator",
                                        createGreedyRegisterAllocator);
 
@@ -3135,6 +3137,7 @@ unsigned RAGreedy::selectOrSplitImpl(LiveInterval &VirtReg,
     NamedRegionTimer T("spill", "Spiller", TimerGroupName,
                        TimerGroupDescription, TimePassesIsEnabled);
     LiveRangeEdit LRE(&VirtReg, NewVRegs, *MF, *LIS, VRM, this, &DeadRemats);
+    spilledRegs.push_back(&VirtReg);
     spiller().spill(LRE);
     setStage(NewVRegs.begin(), NewVRegs.end(), RS_Done);
 
@@ -3319,6 +3322,10 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
   float movesCost = moveCostAfter - moveCostBefore;
   float totalCost = computeAllocationCost(movesCost);
   LLVM_DEBUG(errs() << "Computed cost score is: " << totalCost << "\n");
+
+  if(gfuncID == MF->getName().str()) {
+    errs() << "Computed Greedy cost score is: " << totalCost << "\n";
+  }
 
   std::ofstream outfile;
   int numAlloc = 0;

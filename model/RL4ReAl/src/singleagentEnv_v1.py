@@ -170,6 +170,10 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.annotation_size = env_config["annotations"]
         self.Phy_registers_of_GRtype = self.list_of_phy_registers()
         self.remove_GR_NonGR_edge = env_config["remove_GR_NonGR_edge"]
+        self.greedy_spillcost_map_file_path = env_config["greedy_spillcost_map_file_path"]
+        self.use_cost_self_play_reward = env_config["use_cost_self_play_reward"]
+        with open(self.greedy_spillcost_map_file_path) as f:
+            self.greedy_spillcost_map = json.load(f)
         random.seed(123)
         np.random.seed(123)
     
@@ -453,24 +457,24 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 # print(colour_reward)
                 if len(self.uncolored_nodes)>0:
                     if self.disable_spliting:
-                        print("Terminating the episode.. max number of times split")
+                        # print("Terminating the episode.. max number of times split")
                         c_done = True
                         s_done = True
                         done_all = True
-                        
-                    if self.times_split<self.no_of_splits:
-                        # print("Sending obs to split agent")
-                        s_obs = {
-                            "usepoint_properties": np.array(usepoint_prop_mat_list),
-                            "state": cur_obs[self.uncolored_nodes,:],
-                            'split_mask': np.array(split_masks)
-                        }
-                        
-                    else:
-                        print("Terminating the episode.. max number of times split")
-                        c_done = True
-                        s_done = True
-                        done_all = True
+                    else:    
+                        if self.times_split<self.no_of_splits:
+                            # print("Sending obs to split agent")
+                            s_obs = {
+                                "usepoint_properties": np.array(usepoint_prop_mat_list),
+                                "state": cur_obs[self.uncolored_nodes,:],
+                                'split_mask': np.array(split_masks)
+                            }
+                            
+                        else:
+                            print("Terminating the episode.. max number of times split")
+                            c_done = True
+                            s_done = True
+                            done_all = True
     
                 else:
                     print("All nodes are colored so skipping splitting")
@@ -480,15 +484,14 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                     
                 if self.times_split>0:
                     print(f"Cost in previous iter {self.curr_prev_cost} and now {self.curr_file_cost}")
-                    s_reward = self.curr_prev_cost-self.curr_file_cost
-                
-                # clipping split rewards
-                if s_reward>=0:
-                    s_reward = 10
-                else:
-                    s_reward = -10
-                
-                print("split reward: ", s_reward)
+                    s_reward = self.curr_prev_cost-self.curr_file_cost                
+                    # clipping split rewards
+                    if s_reward>=0:
+                        s_reward = 10
+                    else:
+                        s_reward = -10
+                    
+                    print("split reward: ", s_reward)
                 
                 self.curr_prev_cost = self.curr_file_cost
                     
@@ -910,9 +913,24 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 self.curr_file_name = self.fileName+"_F"+self.fun_id
                 self.curr_file_cost = current_cost
                 if self.use_costbased_reward:
-                    if key not in self.best_allocation_cost.keys():
-                        self.best_allocation_cost[key] = current_cost
-                    best_cost = self.best_allocation_cost[key]
+                    
+                    if self.use_cost_self_play_reward:                    
+                        if key not in self.best_allocation_cost.keys():
+                            self.best_allocation_cost[key] = current_cost
+                        best_cost = self.best_allocation_cost[key]
+                    else:
+                        if key in self.greedy_spillcost_map.keys():
+                            greedy_cost = self.greedy_spillcost_map[key]
+                            if greedy_cost >= current_cost:
+                                reward = 10
+                            # elif greedy_cost == current_cost:
+                            #     reward = 0
+                            else:
+                                reward = -10
+                            best_cost = greedy_cost 
+                            print("Cost based reward is", greedy_cost, current_cost, reward)
+                        else:
+                            best_cost = current_cost
                     
                     if self.use_percentbased_cost_reward:
                         if current_cost==0:
@@ -921,6 +939,12 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                         
                         if best_cost > current_cost:
                             self.best_allocation_cost[key] = current_cost
+                            # Dumping the best cost
+                            logdir = self.env_config["log_dir"]
+                            best_cost_file = os.path.join(logdir, str(self.worker_index) + '_best_cost.json')        
+                            with open(best_cost_file, 'w', encoding="utf8") as fp:
+                                json.dump(self.best_allocation_cost, fp)
+                                print('dictionary saved successfully to file')
         
                         if percent>0.1:
                             reward = 20
@@ -932,6 +956,12 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                         if best_cost > current_cost:
                             self.best_allocation_cost[key] = current_cost
                             reward = 10
+                            # Dumping the best cost
+                            logdir = self.env_config["log_dir"]
+                            best_cost_file = os.path.join(logdir, str(self.worker_index) + '_best_cost.json')        
+                            with open(best_cost_file, 'w', encoding="utf8") as fp:
+                                json.dump(self.best_allocation_cost, fp)
+                                print('dictionary saved successfully to file')
                         elif best_cost == current_cost:
                             reward = 0
                         else:

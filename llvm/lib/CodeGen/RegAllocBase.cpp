@@ -203,6 +203,7 @@ float RegAllocBase::accumulateSpilledRegWeights() {
   for (LiveInterval *vreg : spilledRegs) {
     spillWeightTotal += vreg->weight;
   }
+  spilledRegs.clear();
   return spillWeightTotal;
 }
 
