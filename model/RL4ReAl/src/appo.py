@@ -92,7 +92,6 @@ class APPOConfig(ImpalaConfig):
         self.rollout_fragment_length = 8
         self.train_batch_size = 32
         self.sample_async = False
-        self.num_gpus = 1
         # self.num_multi_gpu_tower_stacks = 2
         self.minibatch_buffer_size = 1
         self.num_sgd_iter = 1
@@ -113,9 +112,10 @@ class APPOConfig(ImpalaConfig):
         self.entropy_coeff = 0.01
         self.entropy_coeff_schedule = None
 
+        self.num_gpus = 0.2
         self.num_envs_per_worker = 1
         self.num_cpus_per_worker = 1
-        self.num_gpus_per_worker = 0
+        self.num_gpus_per_worker = 0.08
 
 
         # __sphinx_doc_end__
@@ -140,26 +140,31 @@ class APPOConfig(ImpalaConfig):
             "dataset": f"{DATA_DIR}",
             "graphs_num": 10000,
             "action_space_size": RegisterActionSpace("X86", CONFIG_DIR).ac_sp_normlize_size,
-            "check_point": None,
-            "episode_number": 5,
-            "GPU_ID": 0,
+            "check_point":None,
+            "episode_number": 100000,
+            "GPU_ID": '3',
             "X86_CFLAGS": "-mllvm -regalloc=greedy  -march=core2",
             "AArch64_CFLAGS": "-mllvm -regalloc=greedy  -mcpu=cortex-a72",
             "dataset_bucket": "set_5000",
             "enable_GGNN": True,
+            "remove_GR_NonGR_edge": True,
             "file_repeat_frequency": 1,
             "current_batch": 500,
-            "Workers_starting_port": "50045",
+            "Workers_starting_port": "50080",
             "disable_spliting": False,
-            "use_costbased_reward":True,
-            "use_local_reward": False,
+            "max_split_map_len": 100,
+            "use_costbased_reward": True,
+            "use_percentbased_cost_reward": False,
+            "use_cost_self_play_reward": False,
+            "use_local_reward": True,
             "use_mca_reward": False,
-            "disable_spliting":False,
             "use_mca_self_play_reward": False,
             "mca_reward_clip": 10,
             "mca_timeout": 30,
             "greedy_mca_throughput_file_path": f"{MODEL_DIR}/greedy-throughput_set_120-500.json",
-            "mca_cycles_file_path": f"{MODEL_DIR}/greedy-cycles_set_120-500.json"
+            "mca_cycles_file_path": f"{MODEL_DIR}/greedy-cycles_set_120-500.json",
+            "greedy_spillcost_map_file_path": f"{MODEL_DIR}/greedy-spillcost-spec17-profiled-set-120-500.json",
+            "no_of_splits": 1
         }
         self.horizon = 1000
 

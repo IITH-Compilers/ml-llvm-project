@@ -75,17 +75,24 @@ class ColorNetwork(TorchModelV2, nn.Module):
         
         node_mat = torch.tanh(self.ggnn(batch_data.x, batch_data.edge_index).reshape(batch_size, -1, 100))
         
+        assert not torch.isnan(node_mat).any(), "Nan in ggnn output"
+        
         input_state_list = node_mat
     
         input_state_list = input_state_list.to(input_dict["obs"]["state"].device)
         
         x = F.relu(self.fc1(input_state_list))
+        assert not torch.isnan(x).any(), "Nan in fc1 output"
         spill_weights = input_dict["obs"]["spill_weights"]
+        assert not torch.isnan(spill_weights).any(), "Nan in spill_weights output"        
         spill_weights = (spill_weights).reshape(spill_weights.shape[0], spill_weights.shape[1], 1)
         x = torch.cat((spill_weights, x), 2)
         x = F.relu(self.fc2(x))
+        assert not torch.isnan(x).any(), "Nan in fc2 output"
         x = F.relu(self.fc3(x))
+        assert not torch.isnan(x).any(), "Nan in fc3 output"
         x = self.fc4(x)
+        assert not torch.isnan(x).any(), "Nan in fc4 output"
         x = torch.squeeze(x, 2)
         self._features = x.clone().detach()
         
@@ -93,6 +100,7 @@ class ColorNetwork(TorchModelV2, nn.Module):
         colour_mask = input_dict["obs"]["colour_mask"]
                 
         mask = colour_mask*node_mask[:, :, None]
+        assert not torch.isnan(mask).any(), "Nan in mask output"        
                 
         inf_mask = torch.clamp(torch.log(mask), min=FLOAT_MIN)
         
@@ -165,7 +173,6 @@ class SplitNetwork(TorchModelV2, nn.Module):
         x = x + inf_mask
         # assert not torch.isnan(x).any(), "Nan in split node model output"
         x = x.reshape(x.shape[0], x.shape[1]*x.shape[2])
-        
         self._features = self._features.flatten(start_dim=1)
         
         return x, state, self._features
