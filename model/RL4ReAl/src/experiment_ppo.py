@@ -56,11 +56,14 @@ def experiment(config):
         print("Checkpoint restored")            
 
     last_checkpoint = 0
+    last_reported = 0
     for i in range(iterations):
         train_results = train_agent.train()
         if i == iterations - 1 or (train_results['episodes_total'] - last_checkpoint) > 499:
             last_checkpoint = train_results['episodes_total']
             checkpoint = train_agent.save(tune.get_trial_dir())
+        if (train_results['episodes_total'] - last_reported) > 49:
+            last_reported = train_results['episodes_total']
             tune.report(**train_results)
         if train_results['episodes_total'] > config["env_config"]["episode_number"]:
             print("Traning Ended")
@@ -151,7 +154,7 @@ if __name__ == "__main__":
     logging.info('Starting training')
     logging.info(args)
 
-    ray.init(object_store_memory=10000000000, local_mode=False)
+    ray.init(object_store_memory=10000000000, local_mode=False, _temp_dir="/home/cs20mtech12003/ray_log")
     
 
     config["train-iterations"] = args.train_iterations
@@ -282,7 +285,7 @@ if __name__ == "__main__":
         config["num_gpus_per_worker"] = 0.05
         config["self.num_gpus"] = 0.5
 
-    config["env_config"]["current_batch"] = (int)(100/args.workers)
+    # config["env_config"]["current_batch"] = (int)(100/args.workers)
     experiment_name = f"w{args.workers}_{args.mode}"
         
     def trail_name_fun(self):

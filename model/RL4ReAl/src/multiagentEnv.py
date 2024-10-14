@@ -155,6 +155,9 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.annotation_size = env_config["annotations"]
         self.Phy_registers_of_GRtype = self.list_of_phy_registers()
         self.remove_GR_NonGR_edge = env_config["remove_GR_NonGR_edge"]
+        self.greedy_spillcost_map_file_path = env_config["greedy_spillcost_map_file_path"]
+        with open(self.greedy_spillcost_map_file_path) as f:
+            self.greedy_spillcost_map = json.load(f) 
         random.seed(123)
         np.random.seed(123)
   
@@ -908,21 +911,33 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                     current_cost = exit_response.cost
                 key = os.path.basename(self.fileName) + "_" + self.functionName
                 if self.use_costbased_reward:
-                    if key not in self.best_allocation_cost.keys():
-                        self.best_allocation_cost[key] = current_cost
-                    best_cost = self.best_allocation_cost[key]
-                    if best_cost > current_cost:
-                        self.best_allocation_cost[key] = current_cost
-                        reward = 10
-                    elif best_cost == current_cost:
-                        reward = 0
+                    # if key not in self.best_allocation_cost.keys():
+                    #     self.best_allocation_cost[key] = current_cost
+                    # best_cost = self.best_allocation_cost[key]
+                    # if best_cost > current_cost:
+                    #     self.best_allocation_cost[key] = current_cost
+                    #     reward = 10
+                    # elif best_cost == current_cost:
+                    #     reward = 0
+                    # else:
+                    #     reward = -10
+                    
+                    if key in self.greedy_spillcost_map.keys():
+                        greedy_cost = self.greedy_spillcost_map[key]
+                        if greedy_cost >= current_cost:
+                            reward = 10
+                        # elif greedy_cost == current_cost:
+                        #     reward = 0
+                        else:
+                            reward = -10
+                        print("Cost based reward is", greedy_cost, current_cost, reward)
                     else:
-                        reward = -10
+                        print("key not found in greedy spillcost map:", key)   
                     # print("Cost based reward is", best_cost, current_cost, reward)
                 elif self.use_mca_reward:
                     mlra_throughput = 0
                     mlra_cycles = 0                  
-                    print("Clang process finished")
+                    # print("Clang process finished")
                     build_path = self.env_config["build_path"]
                     if self.env_config["target"] == 'X86':
                         cflags = "-mcpu=core2"
@@ -1037,16 +1052,16 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                         # print("Adding function to iteration map", key, self.iter.ation_number)
                         json.dump(mlra_cycle_map, f)
                         f.close()
-                # else:
-                #     # print("Killing Server pid", self.server_pid.pid)         
-                #     # os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
-                #     self.stopServer()
+                    # else:
+                    #     # print("Killing Server pid", self.server_pid.pid)         
+                    #     # os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
+                    #     self.stopServer()
 
-                # if self.server_pid.poll() is None:
-                #     # os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
-                #     self.server_pid.kill()
-                #     print('Force stop')
-                # self.server_pid = None                
+                    # if self.server_pid.poll() is None:
+                    #     # os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
+                    #     self.server_pid.kill()
+                    #     print('Force stop')
+                    # self.server_pid = None                
             
             logging.debug('All visited and colored graph visisted')
             return reward, done, response
@@ -1128,7 +1143,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
     def stable_grpc(self, op, register_id, split_point):
         attempt = 0
-        max_retries=6
+        max_retries=7
         retry_wait_seconds=0.0625
         retry_wait_backoff_exponent=2
         while True:
@@ -1147,7 +1162,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 if e.code() == grpc.StatusCode.UNAVAILABLE:
                     attempt += 1
                     if attempt > max_retries:
-                        print("Maximum attempts completed")
+                        print("Maximum attempts completed", op)
                         return None
                         # exit(0)
                     remaining = max_retries - attempt
@@ -1156,8 +1171,9 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 else:
                     attempt += 1
                     if self.mode != 'inference':
+                        attempt += 1
                         if attempt > max_retries:
-                            print("Unknown error", e.code())
+                            print("Unknown error", e.code(), op)
                             return None
                         remaining = max_retries - attempt
                         time.sleep(retry_wait_seconds)

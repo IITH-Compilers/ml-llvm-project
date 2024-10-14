@@ -92,24 +92,24 @@ class PPOConfig(PGConfig):
         self.use_critic = True
         self.use_gae = True
         self.lambda_ = 1.0
-        self.kl_coeff = 0.6
-        self.sgd_minibatch_size = 128
-        self.num_sgd_iter = 1
+        self.kl_coeff = 0.2
+        self.sgd_minibatch_size = 64
+        self.num_sgd_iter = 3
         self.shuffle_sequences = True
         self.vf_loss_coeff = 1.0
-        self.entropy_coeff = 0.01
+        self.entropy_coeff = 0.0
         self.entropy_coeff_schedule = None
-        self.clip_param = 10.0
+        self.clip_param = 0.2
         self.vf_clip_param = 10.0
-        self.grad_clip = 40
-        self.kl_target = 0.003
+        self.grad_clip = 10
+        self.kl_target = 0.01
         self.num_rollout_workers = 1
-        self.train_batch_size = 256
-        self.lr = 0.00001
+        self.train_batch_size = 192
+        self.lr = 5e-4
         self.model["vf_share_layers"] = False
         self._disable_preprocessor_api = False
 
-        self.num_gpus = 0
+        self.num_gpus = 1
         self.num_cpus_per_worker = 1
         self.num_gpus_per_worker = 0
         self.num_envs_per_worker = 1
@@ -139,29 +139,34 @@ class PPOConfig(PGConfig):
             "dataset": f"{DATA_DIR}",
             "graphs_num": 10000,
             "action_space_size": RegisterActionSpace("X86", CONFIG_DIR).ac_sp_normlize_size,
-            "check_point": None,
-            "episode_number": 10000,
+            "check_point": "/home/cs20mtech12003/RL4ReAl-2.0/model/RL4ReAl/src/checkpoint_dir/experiment_2024-08-12_13-29-42/experiment_HierarchicalGraphColorEnv_d5251_00000_0_2024-08-12_13-29-42/checkpoint_001300/",
+            "episode_number": 100000,
             "GPU_ID": '0',
             "X86_CFLAGS": "-mllvm -regalloc=greedy  -march=core2",
             "AArch64_CFLAGS": "-mllvm -regalloc=greedy  -mcpu=cortex-a72",
-            "dataset_bucket": "set_5000",
+            # "dataset_bucket": "set_120-500",
+            "dataset_bucket": "set_2000",
             "enable_GGNN": True,
-            "remove_GR_NonGR_edge": True,
+            "remove_GR_NonGR_edge": False,
             "file_repeat_frequency": 1,
-            "current_batch": 100, 
-            "Workers_starting_port": "52147",
+            "current_batch": 200, 
+            "Workers_starting_port": "54204",
             "disable_spliting": False,
             "use_costbased_reward": True,
-            "use_local_reward": False,
+            "use_local_reward": True,
             "use_mca_reward": False,
             "use_mca_self_play_reward": False,
             "mca_reward_clip": 10,
             "mca_timeout": 30,
-            "greedy_mca_throughput_file_path": f"{MODEL_DIR}/LTS_x86_greedy-throughput_set_120-500.json",
-            "mca_cycles_file_path": f"{MODEL_DIR}/LTS_x86_greedy-cycles_set_120-500.json"
+            "greedy_mca_throughput_file_path": f"{MODEL_DIR}/greedy-throughput_set_120-500.json",
+            "mca_cycles_file_path": f"{MODEL_DIR}/greedy-cycles_set_120-500.json",
+            # "greedy_spillcost_map_file_path": f"{MODEL_DIR}/spillcost-spec17-profile-data.json"
+            "greedy_spillcost_map_file_path": f"{MODEL_DIR}/greedy-spillcost-spec17-set-120-500.json"
         }
 
         self.horizon = 1000
+        
+        self.seed = 123
 
     @override(AlgorithmConfig)
     def training(

@@ -148,6 +148,8 @@ static cl::opt<bool> ConsiderLocalIntervalCost(
 cl::opt<std::string> statsFPGreedy("stats-path-greedy", cl::Hidden,
                                    cl::init("/home/"));
 
+cl::opt<std::string> gfuncID("greedy-funcID", cl::Hidden, cl::desc("Run MLRA only on this func"), cl::init(""));
+
 static RegisterRegAlloc greedyRegAlloc("greedy", "greedy register allocator",
                                        createGreedyRegisterAllocator);
 
@@ -3135,6 +3137,7 @@ unsigned RAGreedy::selectOrSplitImpl(LiveInterval &VirtReg,
     NamedRegionTimer T("spill", "Spiller", TimerGroupName,
                        TimerGroupDescription, TimePassesIsEnabled);
     LiveRangeEdit LRE(&VirtReg, NewVRegs, *MF, *LIS, VRM, this, &DeadRemats);
+    spilledRegs.push_back(&VirtReg);
     spiller().spill(LRE);
     setStage(NewVRegs.begin(), NewVRegs.end(), RS_Done);
 
@@ -3227,12 +3230,12 @@ void RAGreedy::reportNumberOfSplillsReloads(MachineLoop *L, unsigned &Reloads,
 bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
   LLVM_DEBUG(dbgs() << "********** GREEDY REGISTER ALLOCATION **********\n"
                     << "********** Function: " << mf.getName() << '\n');
-
+  
   MF = &mf;
   TRI = MF->getSubtarget().getRegisterInfo();
   TII = MF->getSubtarget().getInstrInfo();
   RCI.runOnMachineFunction(mf);
-
+  
   EnableLocalReassign =
       EnableLocalReassignment || MF->getSubtarget().enableRALocalReassignment(
                                      MF->getTarget().getOptLevel());
@@ -3315,11 +3318,13 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
   postOptimization();
   reportNumberOfSplillsReloads();
   float moveCostAfter = countCopyAndMoveInstructions(mf);
-
+  MF->dump();
   float movesCost = moveCostAfter - moveCostBefore;
   float totalCost = computeAllocationCost(movesCost);
   LLVM_DEBUG(errs() << "Computed cost score is: " << totalCost << "\n");
-
+  if(gfuncID == MF->getName().str()) {
+    errs() << "Computed Greedy cost score is: " << totalCost << "\n";
+  }
   std::ofstream outfile;
   int numAlloc = 0;
   VRM->getStats(numAlloc);
