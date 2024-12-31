@@ -106,7 +106,10 @@ class RegisterActionSpace:
             overlapfile = os.path.join(baseDir, 'regalloc/X86_overlaps_info.json')
         elif target == "AArch64":
             fileName= os.path.join(baseDir, 'regalloc/AArch64_supported_RegClasses.json')
-            overlapfile = os.path.join(baseDir, 'regalloc/AArch64_overlaps_info.json')
+            overlapfile = os.path.join(baseDir, 'AArch64_overlaps_info.json')
+        elif target == "riscv64":
+            fileName= os.path.join(baseDir, 'regalloc/riscv64_supported_RegClasses.json')
+            overlapfile = os.path.join(baseDir, 'riscv64_overlaps_info.json')
         else:
             assert False, "Not valid architecture name"
 
@@ -127,3 +130,6 @@ class RegisterActionSpace:
             overlaps = json.load(f)
         print("suppcls_regs_map", len(suppcls_regs_map.values()))
         return supported_regClass, suppcls_regs_map, reg_idname_map, overlaps 
+
+if __name__ == "__main__":
+    RegisterActionSpace("riscv64", "/home/cs20btech11024/repos/ml-llvm-project/llvm/lib/CodeGen/MLRegAlloc/config_json")

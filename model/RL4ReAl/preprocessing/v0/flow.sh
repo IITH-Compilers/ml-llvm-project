@@ -2,7 +2,6 @@ echo "Start flow script."
 
 
 PWD=`pwd`
-HOME=`realpath ${PWD}/../../../..`
 
 TARGET=$1
 if [ -z ${TARGET} ];
@@ -11,22 +10,21 @@ then
     exit
 fi
 
-if [[ $TARGET != "x86" && $TARGET != "aarch64" ]];
+if [[ $TARGET != "x86" && $TARGET != "aarch64" && $TARGET != "riscv64" ]];
 then
-    echo "TARGET should be x86 or aarch64."
+    echo "TARGET should be x86 or aarch64 or riscv64."
     exit
   
 fi
 
-BUILD_TYPE="build"
-
-LLVM_BUILD="${HOME}/${BUILD_TYPE}"
+LLVM_BUILD="$HOME/repos/ml-llvm-project/build_release_riscv64_glibc_2.33"
 echo "LLVM Build used for the data generation: ${LLVM_BUILD}"
 [[ ! -d ${LLVM_BUILD} ]] && echo "LLVM build directory does not exist" && exit
 
 # INP_DIR=${HOME}/data/gcc-c-torture
 # INP_DIR=${HOME}/data/PE-benchmarks
 INP_DIR=/home/cs20mtech12003/ML-Register-Allocation/data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON
+INP_DIR=${HOME}/spec_results/spec06
 
 # PE-benchmarks
 # gcc-c-torture
@@ -62,8 +60,8 @@ fi
 
 # IP_FLR_NAME=execute
 # IP_FLR_NAME=execute_basic_filter_timeout
-IP_FLR_NAME=level-O0-llfiles
-INP_TYPE=llfiles
+INP_TYPE=ll-files
+IP_FLR_NAME=${INP_TYPE}
 # INP_TYPE=src
 SRCH_FLR=${INP_DIR}/${IP_FLR_NAME}
 [[ ! -d ${SRCH_FLR} ]] && echo " directory does not exist : ${SRCH_FLR}" && exit
@@ -71,7 +69,7 @@ SRCH_FLR=${INP_DIR}/${IP_FLR_NAME}
 echo "Data will generated from ${SRCH_FLR}"
 echo ""
 
-WD=${SRCH_FLR}_${MODE}_${MODEL}_${TARGET}_split_data
+WD=${SRCH_FLR}_${MODE}_${MODEL}_${TARGET}
 echo "Data will generated at : ${WD}"
 
 mkdir -p "${WD}"
@@ -83,6 +81,7 @@ TIME_OUT= # "timeout --kill-after=2m 2m "
 REMARKS=
 
 OPT_PASSES_SEQ=" -O3 "
+ADDITIONAL_FLAGS=" -gcc-toolchain /home/cs20btech11024/repos/riscv64-2.33/riscv -mllvm -ml-config-path=/Pramana/ML_LLVM_Tools/AE/config "
 MODEL_ARGS=" ${MODELS[${MODEL}]} "
 echo "${MODEL_ARGS}"
 echo "Type of input : ${INP_TYPE}"
@@ -92,13 +91,13 @@ then
     rm  ${WD}/run.log
 fi
 
-echo "Opt. Pass seq used to generate data : ${OPT_PASSES_SEQ}"
-(${LLVM_BUILD}/bin/llvm-as < /dev/null | ${LLVM_BUILD}/bin/clang ${OPT_PASSES_SEQ}  -mllvm -regalloc=greedy -debug-pass=Arguments ../../sample/bublesort.c
-echo "\n"
-${LLVM_BUILD}/bin/llvm-as < /dev/null | ${LLVM_BUILD}/bin/opt ${OPT_PASSES_SEQ}  -regalloc=greedy -debug-pass=Arguments
-echo "\n"
-${LLVM_BUILD}/bin/llvm-as < /dev/null | ${LLVM_BUILD}/bin/llc ${OPT_PASSES_SEQ}  -regalloc=greedy -debug-pass=Arguments
-)  &>> ${WD}/run.log
+# echo "Opt. Pass seq used to generate data : ${OPT_PASSES_SEQ}"
+# (${LLVM_BUILD}/bin/llvm-as < /dev/null | ${LLVM_BUILD}/bin/clang ${OPT_PASSES_SEQ}  -mllvm -regalloc=greedy -debug-pass=Arguments ../../sample/bublesort.c
+# echo "\n"
+# ${LLVM_BUILD}/bin/llvm-as < /dev/null | ${LLVM_BUILD}/bin/opt ${OPT_PASSES_SEQ}  -regalloc=greedy -debug-pass=Arguments
+# echo "\n"
+# ${LLVM_BUILD}/bin/llvm-as < /dev/null | ${LLVM_BUILD}/bin/llc ${OPT_PASSES_SEQ}  -regalloc=greedy -debug-pass=Arguments
+# )  &>> ${WD}/run.log
 
 
 # source config.sh $1 $2
@@ -125,12 +124,16 @@ mkdir -p ${IG_DOT} ${IG_JSON}
 #   }
 
 
-if [ ${INP_TYPE} == "llfiles" ];
+if [ ${INP_TYPE} == "ll-files" ];
 then   
  INP_REGEX=*.ll
  for d in ${INP_DIR}/${IP_FLR_NAME}/*.ll; do 
           # generate "$d" " " &
-      name=`basename ${d}` && oname=${name%.*} && rfile= && if [ ! -z "${REMARKS}" ]; then rfile="-pass-remarks-output=${oname}_${G_TYPE}.yaml"; fi &&  cd ${IG_DOT} && ${TIME_OUT} ${LLVM_BUILD}/bin/clang ${INCLUDE} ${OPT_PASSES_SEQ} ${MODEL_ARGS} ${USE_MCA} -S ${REMARKS} ${rfile}  ${d} -o /dev/null && ${LLVM_BUILD}/bin/clang ${INCLUDE} ${OPT_PASSES_SEQ} -S  ${d} -o ${ASM_DIR}/${oname}.s &&  ${LLVM_BUILD}/bin/clang ${INCLUDE} ${ASM_DIR}/${oname}.s -o ${BIN_DIR}/${oname}.out &
+      name=`basename ${d}` && oname=${name%.*} && rfile= && if [ ! -z "${REMARKS}" ]; then rfile="-pass-remarks-output=${oname}_${G_TYPE}.yaml"; fi
+      # ${TIME_OUT} ${LLVM_BUILD}/bin/clang ${INCLUDE} ${OPT_PASSES_SEQ} ${MODEL_ARGS} ${USE_MCA} -S ${REMARKS} ${rfile}  ${d} -o /dev/null 
+      cd ${IG_DOT}
+      ${LLVM_BUILD}/bin/clang ${INCLUDE} ${OPT_PASSES_SEQ} ${ADDITIONAL_FLAGS} ${MODEL_ARGS} -S  ${d} -o ${ASM_DIR}/${oname}.s
+      # ${LLVM_BUILD}/bin/clang ${ADDITIONAL_FLAGS} ${INCLUDE} ${ASM_DIR}/${oname}.s -o ${BIN_DIR}/${oname}.out &
           # pids[${i}]=$!
  done 
 # wait for all pids

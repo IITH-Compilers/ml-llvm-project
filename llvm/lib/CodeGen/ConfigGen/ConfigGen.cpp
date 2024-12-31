@@ -45,6 +45,7 @@
 #include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/MC/MCRegister.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/BlockFrequency.h"
@@ -63,25 +64,27 @@ using namespace llvm;
 
 #define PASS_DISCRIPTION "Dump Config files in form of JSON."
 
-char ConfigGen::ID = 0;
+char ConfigGen::ID = 23;
 char &llvm::ConfigGenID = ConfigGen::ID;
 
 INITIALIZE_PASS_BEGIN(ConfigGen, "mlra-config-gen", PASS_DISCRIPTION,
                       false, // is CFG only?
-                      false   // is analysis?
+                      false  // is analysis?
 )
 // INITIALIZE_PASS_DEPENDENCY(LiveRegMatrix)
 INITIALIZE_PASS_END(ConfigGen, "mlra-config-gen", PASS_DISCRIPTION,
                     false, // is CFG only?
-                    false   // is analysis?
+                    false  // is analysis?
 )
 
 FunctionPass *llvm::createConfigGenPass() { return new ConfigGen(); }
 
 void ConfigGen::dumpTargetRegisterClasssConfig() {
-  LLVM_DEBUG(errs() << "getNumRegUnits  Registers=" << TRI->getNumRegUnits() << ";\n");
+  LLVM_DEBUG(errs() << "getNumRegUnits  Registers=" << TRI->getNumRegUnits()
+                    << ";\n");
   LLVM_DEBUG(errs() << "Num  Registers=" << TRI->getNumRegs() << ";\n");
-  LLVM_DEBUG(errs() << "getNumRegClasses() " << TRI->getNumRegClasses() << " \n");
+  LLVM_DEBUG(errs() << "getNumRegClasses() " << TRI->getNumRegClasses()
+                    << " \n");
 
   std::string jsonreg = "{\n";
   std::string eachreg = "";
@@ -121,8 +124,9 @@ void ConfigGen::dumpTargetRegisterClasssConfig() {
 
   // errs () << jsonreg << "\n";
   std::error_code EC2;
-  raw_fd_ostream regInfo_file(this->targetName + "_reg_info" + ".json",
-                              EC2, sys::fs::F_Text);
+  errs() << "TargetName " << this->targetName << "\n";
+  raw_fd_ostream regInfo_file(this->targetName + "_reg_info" + ".json", EC2,
+                              sys::fs::F_Text);
   regInfo_file << jsonreg;
   // exit(0);
 }
@@ -136,9 +140,9 @@ void ConfigGen::dumpRegisterOverlapInfo() {
     std::string colreg = "";
     for (unsigned j = 1, e1 = TRI->getNumRegs(); j != e1; ++j) {
       if (i != j && TRI->regsOverlap(i, j)) {
-        LLVM_DEBUG(errs() << "Register - " << printReg(i, TRI) << "and Register - "
-               << printReg(j, TRI) << "overlap? -->" << TRI->regsOverlap(i, j)
-               << "\n");
+        LLVM_DEBUG(errs() << "Register - " << printReg(i, TRI)
+                          << "and Register - " << printReg(j, TRI)
+                          << "overlap? -->" << TRI->regsOverlap(i, j) << "\n");
         if (col) {
           colreg = colreg + ", " + std::to_string(j);
         } else {
@@ -161,18 +165,26 @@ void ConfigGen::dumpRegisterOverlapInfo() {
   }
   std::string jsonreg = "{\n" + collist + "\n}";
   std::error_code EC2;
-  raw_fd_ostream regInfo_file(this->targetName + "_ovlap_info" + ".json",
-                              EC2, sys::fs::F_Text);
+  raw_fd_ostream regInfo_file(this->targetName + "_ovlap_info" + ".json", EC2,
+                              sys::fs::F_Text);
   regInfo_file << jsonreg;
+}
 
+void ConfigGen::dumpMCRegisterClassesJson() {
+  for(MCRegisterClass RegClass : MCRI->regclasses()) {
+    outs() << MCRI->getRegClassName(&RegClass) << "\n";
+    for(MCPhysReg Reg : RegClass) {
+        outs() << MCRI->getName(Reg) << " " << Reg << "\n";
+    }
+    outs() << "\n";
+  }
 }
 
 bool ConfigGen::runOnMachineFunction(MachineFunction &mf) {
-
   MF = &mf;
 
   TRI = MF->getSubtarget().getRegisterInfo();
-
+  MCRI = MF->getTarget().getMCRegisterInfo();
   RCI.runOnMachineFunction(mf);
 
   FunctionCounter++;
@@ -187,16 +199,22 @@ bool ConfigGen::runOnMachineFunction(MachineFunction &mf) {
     this->targetName = "X86";
     break;
   }
+  case Triple::ArchType::riscv64:
+  case Triple::ArchType::riscv32: {
+    this->targetName = "RISCV";
+    break;
+  }
   default:
     this->targetName = "UnKnown";
   }
   // Called by first function in the file
-  if(FunctionCounter == 1) {
-    dumpTargetRegisterClasssConfig();
+  if (FunctionCounter == 1) {
+    // dumpTargetRegisterClasssConfig();
 
-    dumpRegisterOverlapInfo();
+    // dumpRegisterOverlapInfo();
+
+    dumpMCRegisterClassesJson();
   }
-  
 
   return false;
 }

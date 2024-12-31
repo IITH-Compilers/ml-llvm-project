@@ -1769,6 +1769,505 @@
           "phyReg": 244
         }
       ]
+    },
+    {
+      "name": "riscv64",
+      "regclasses": [
+        "FPR32",
+        "GPR",
+        "GPRNoX0",
+        "GPRNoX0X2",
+        "GPRTC",
+        "FPR32C",
+        "GPRC",
+        "GPRC_and_GPRTC",
+        "GPRX0",
+        "SP",
+        "FPR64",
+        "FPR64C"
+      ],
+      "register": [
+        {
+          "color": 1,
+          "name": "X0",
+          "phyReg": 1
+        },
+        {
+          "color": 2,
+          "name": "X1",
+          "phyReg": 2
+        },
+        {
+          "color": 3,
+          "name": "X2",
+          "phyReg": 3
+        },
+        {
+          "color": 4,
+          "name": "X3",
+          "phyReg": 4
+        },
+        {
+          "color": 5,
+          "name": "X4",
+          "phyReg": 5
+        },
+        {
+          "color": 6,
+          "name": "X5",
+          "phyReg": 6
+        },
+        {
+          "color": 7,
+          "name": "X6",
+          "phyReg": 7
+        },
+        {
+          "color": 8,
+          "name": "X7",
+          "phyReg": 8
+        },
+        {
+          "color": 9,
+          "name": "X8",
+          "phyReg": 9
+        },
+        {
+          "color": 10,
+          "name": "X9",
+          "phyReg": 10
+        },
+        {
+          "color": 11,
+          "name": "X10",
+          "phyReg": 11
+        },
+        {
+          "color": 12,
+          "name": "X11",
+          "phyReg": 12
+        },
+        {
+          "color": 13,
+          "name": "X12",
+          "phyReg": 13
+        },
+        {
+          "color": 14,
+          "name": "X13",
+          "phyReg": 14
+        },
+        {
+          "color": 15,
+          "name": "X14",
+          "phyReg": 15
+        },
+        {
+          "color": 16,
+          "name": "X15",
+          "phyReg": 16
+        },
+        {
+          "color": 17,
+          "name": "X16",
+          "phyReg": 17
+        },
+        {
+          "color": 18,
+          "name": "X17",
+          "phyReg": 18
+        },
+        {
+          "color": 19,
+          "name": "X18",
+          "phyReg": 19
+        },
+        {
+          "color": 20,
+          "name": "X19",
+          "phyReg": 20
+        },
+        {
+          "color": 21,
+          "name": "X20",
+          "phyReg": 21
+        },
+        {
+          "color": 22,
+          "name": "X21",
+          "phyReg": 22
+        },
+        {
+          "color": 23,
+          "name": "X22",
+          "phyReg": 23
+        },
+        {
+          "color": 24,
+          "name": "X23",
+          "phyReg": 24
+        },
+        {
+          "color": 25,
+          "name": "X24",
+          "phyReg": 25
+        },
+        {
+          "color": 26,
+          "name": "X25",
+          "phyReg": 26
+        },
+        {
+          "color": 27,
+          "name": "X26",
+          "phyReg": 27
+        },
+        {
+          "color": 28,
+          "name": "X27",
+          "phyReg": 28
+        },
+        {
+          "color": 29,
+          "name": "X28",
+          "phyReg": 29
+        },
+        {
+          "color": 30,
+          "name": "X29",
+          "phyReg": 30
+        },
+        {
+          "color": 31,
+          "name": "X30",
+          "phyReg": 31
+        },
+        {
+          "color": 32,
+          "name": "X31",
+          "phyReg": 32
+        },
+        {
+          "color": 33,
+          "name": "F0_D",
+          "phyReg": 33
+        },
+        {
+          "color": 34,
+          "name": "F1_D",
+          "phyReg": 34
+        },
+        {
+          "color": 35,
+          "name": "F2_D",
+          "phyReg": 35
+        },
+        {
+          "color": 36,
+          "name": "F3_D",
+          "phyReg": 36
+        },
+        {
+          "color": 37,
+          "name": "F4_D",
+          "phyReg": 37
+        },
+        {
+          "color": 38,
+          "name": "F5_D",
+          "phyReg": 38
+        },
+        {
+          "color": 39,
+          "name": "F6_D",
+          "phyReg": 39
+        },
+        {
+          "color": 40,
+          "name": "F7_D",
+          "phyReg": 40
+        },
+        {
+          "color": 41,
+          "name": "F8_D",
+          "phyReg": 41
+        },
+        {
+          "color": 42,
+          "name": "F9_D",
+          "phyReg": 42
+        },
+        {
+          "color": 43,
+          "name": "F10_D",
+          "phyReg": 43
+        },
+        {
+          "color": 44,
+          "name": "F11_D",
+          "phyReg": 44
+        },
+        {
+          "color": 45,
+          "name": "F12_D",
+          "phyReg": 45
+        },
+        {
+          "color": 46,
+          "name": "F13_D",
+          "phyReg": 46
+        },
+        {
+          "color": 47,
+          "name": "F14_D",
+          "phyReg": 47
+        },
+        {
+          "color": 48,
+          "name": "F15_D",
+          "phyReg": 48
+        },
+        {
+          "color": 49,
+          "name": "F16_D",
+          "phyReg": 49
+        },
+        {
+          "color": 50,
+          "name": "F17_D",
+          "phyReg": 50
+        },
+        {
+          "color": 51,
+          "name": "F18_D",
+          "phyReg": 51
+        },
+        {
+          "color": 52,
+          "name": "F19_D",
+          "phyReg": 52
+        },
+        {
+          "color": 53,
+          "name": "F20_D",
+          "phyReg": 53
+        },
+        {
+          "color": 54,
+          "name": "F21_D",
+          "phyReg": 54
+        },
+        {
+          "color": 55,
+          "name": "F22_D",
+          "phyReg": 55
+        },
+        {
+          "color": 56,
+          "name": "F23_D",
+          "phyReg": 56
+        },
+        {
+          "color": 57,
+          "name": "F24_D",
+          "phyReg": 57
+        },
+        {
+          "color": 58,
+          "name": "F25_D",
+          "phyReg": 58
+        },
+        {
+          "color": 59,
+          "name": "F26_D",
+          "phyReg": 59
+        },
+        {
+          "color": 60,
+          "name": "F27_D",
+          "phyReg": 60
+        },
+        {
+          "color": 61,
+          "name": "F28_D",
+          "phyReg": 61
+        },
+        {
+          "color": 62,
+          "name": "F29_D",
+          "phyReg": 62
+        },
+        {
+          "color": 63,
+          "name": "F30_D",
+          "phyReg": 63
+        },
+        {
+          "color": 64,
+          "name": "F31_D",
+          "phyReg": 64
+        },
+        {
+          "color": 65,
+          "name": "F0_F",
+          "phyReg": 65
+        },
+        {
+          "color": 66,
+          "name": "F1_F",
+          "phyReg": 66
+        },
+        {
+          "color": 67,
+          "name": "F2_F",
+          "phyReg": 67
+        },
+        {
+          "color": 68,
+          "name": "F3_F",
+          "phyReg": 68
+        },
+        {
+          "color": 69,
+          "name": "F4_F",
+          "phyReg": 69
+        },
+        {
+          "color": 70,
+          "name": "F5_F",
+          "phyReg": 70
+        },
+        {
+          "color": 71,
+          "name": "F6_F",
+          "phyReg": 71
+        },
+        {
+          "color": 72,
+          "name": "F7_F",
+          "phyReg": 72
+        },
+        {
+          "color": 73,
+          "name": "F8_F",
+          "phyReg": 73
+        },
+        {
+          "color": 74,
+          "name": "F9_F",
+          "phyReg": 74
+        },
+        {
+          "color": 75,
+          "name": "F10_F",
+          "phyReg": 75
+        },
+        {
+          "color": 76,
+          "name": "F11_F",
+          "phyReg": 76
+        },
+        {
+          "color": 77,
+          "name": "F12_F",
+          "phyReg": 77
+        },
+        {
+          "color": 78,
+          "name": "F13_F",
+          "phyReg": 78
+        },
+        {
+          "color": 79,
+          "name": "F14_F",
+          "phyReg": 79
+        },
+        {
+          "color": 80,
+          "name": "F15_F",
+          "phyReg": 80
+        },
+        {
+          "color": 81,
+          "name": "F16_F",
+          "phyReg": 81
+        },
+        {
+          "color": 82,
+          "name": "F17_F",
+          "phyReg": 82
+        },
+        {
+          "color": 83,
+          "name": "F18_F",
+          "phyReg": 83
+        },
+        {
+          "color": 84,
+          "name": "F19_F",
+          "phyReg": 84
+        },
+        {
+          "color": 85,
+          "name": "F20_F",
+          "phyReg": 85
+        },
+        {
+          "color": 86,
+          "name": "F21_F",
+          "phyReg": 86
+        },
+        {
+          "color": 87,
+          "name": "F22_F",
+          "phyReg": 87
+        },
+        {
+          "color": 88,
+          "name": "F23_F",
+          "phyReg": 88
+        },
+        {
+          "color": 89,
+          "name": "F24_F",
+          "phyReg": 89
+        },
+        {
+          "color": 90,
+          "name": "F25_F",
+          "phyReg": 90
+        },
+        {
+          "color": 91,
+          "name": "F26_F",
+          "phyReg": 91
+        },
+        {
+          "color": 92,
+          "name": "F27_F",
+          "phyReg": 92
+        },
+        {
+          "color": 93,
+          "name": "F28_F",
+          "phyReg": 93
+        },
+        {
+          "color": 94,
+          "name": "F29_F",
+          "phyReg": 94
+        },
+        {
+          "color": 95,
+          "name": "F30_F",
+          "phyReg": 95
+        },
+        {
+          "color": 96,
+          "name": "F31_F",
+          "phyReg": 96
+        }
+      ]
     }
   ]
 }
