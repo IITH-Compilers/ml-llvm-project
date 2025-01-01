@@ -125,7 +125,7 @@ void ConfigGen::dumpTargetRegisterClasssConfig() {
   // errs () << jsonreg << "\n";
   std::error_code EC2;
   errs() << "TargetName " << this->targetName << "\n";
-  raw_fd_ostream regInfo_file(this->targetName + "_reg_info" + ".json", EC2,
+  raw_fd_ostream regInfo_file(this->targetName + "_RegClasses.json" + ".json", EC2,
                               sys::fs::F_Text);
   regInfo_file << jsonreg;
   // exit(0);
@@ -165,7 +165,7 @@ void ConfigGen::dumpRegisterOverlapInfo() {
   }
   std::string jsonreg = "{\n" + collist + "\n}";
   std::error_code EC2;
-  raw_fd_ostream regInfo_file(this->targetName + "_ovlap_info" + ".json", EC2,
+  raw_fd_ostream regInfo_file(this->targetName + "_overlaps_info" + ".json", EC2,
                               sys::fs::F_Text);
   regInfo_file << jsonreg;
 }
@@ -209,9 +209,9 @@ bool ConfigGen::runOnMachineFunction(MachineFunction &mf) {
   }
   // Called by first function in the file
   if (FunctionCounter == 1) {
-    // dumpTargetRegisterClasssConfig();
+    dumpTargetRegisterClasssConfig();
 
-    // dumpRegisterOverlapInfo();
+    dumpRegisterOverlapInfo();
 
     dumpMCRegisterClassesJson();
   }
