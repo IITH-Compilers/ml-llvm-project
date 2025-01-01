@@ -3318,7 +3318,7 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
   postOptimization();
   reportNumberOfSplillsReloads();
   float moveCostAfter = countCopyAndMoveInstructions(mf);
-  MF->dump();
+  // MF->dump();
   float movesCost = moveCostAfter - moveCostBefore;
   float totalCost = computeAllocationCost(movesCost);
   LLVM_DEBUG(errs() << "Computed cost score is: " << totalCost << "\n");

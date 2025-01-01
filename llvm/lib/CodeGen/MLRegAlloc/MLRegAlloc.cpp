@@ -297,7 +297,7 @@ grpc::Status MLRA::codeGen(grpc::ServerContext *context,
     SmallVector<unsigned, 2> NewVRegs;
     LLVM_DEBUG(errs() << "==========================BEFORE "
                          "SPLITTING==================================\n");
-    MF->dump();
+    // MF->dump();
     LLVM_DEBUG(
         errs()
         << "============================================================\n");

@@ -59,6 +59,7 @@ def experiment(config):
         print("Checkpoint restored")            
 
     last_checkpoint = 0
+    last_report = 0
     for i in range(iterations):
         train_results = train_agent.train()
         # auto_garbage_collect()
@@ -66,7 +67,10 @@ def experiment(config):
             last_checkpoint = train_results['episodes_total']
             checkpoint = train_agent.save(tune.get_trial_dir())
             # print("***************Checkpoint****************", checkpoint)
-        tune.report(**train_results)
+            # tune.report(**train_results)
+        if (train_results['episodes_total'] - last_report) > 99:
+            last_report = train_results['episodes_total']
+            tune.report(**train_results)
         if train_results['episodes_total'] > config["env_config"]["episode_number"]:
             print("Traning Ended")
             checkpoint = train_agent.save(tune.get_trial_dir())
@@ -141,7 +145,7 @@ if __name__ == "__main__":
     config = DEFAULT_CONFIG.copy()
 
     # os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
-    # os.environ["CUDA_VISIBLE_DEVICES"]= config["env_config"]["GPU_ID"]
+    os.environ["CUDA_VISIBLE_DEVICES"]= config["env_config"]["GPU_ID"]
 
     # os.environ['GRPC_VERBOSITY']='DEBUG'
 
@@ -239,7 +243,7 @@ if __name__ == "__main__":
                                         "custom_model": "select_node_model",
                                         "custom_model_config": {
                                             "state_size": config["env_config"]["state_size"],
-                                            "fc1_units": 256,
+                                            "fc1_units": 128,
                                             "fc2_units": 128,
                                             "fc3_units": 64,
                                             "max_number_nodes": config["env_config"]["max_number_nodes"],
@@ -315,6 +319,7 @@ if __name__ == "__main__":
         resources_per_trial=APPO.default_resource_request(config),
         # fail_fast=True,
         # max_failures=10,
+        local_dir=(MODEL_DIR + "/checkpoint_dir")
         )
         # resources_per_trial={"cpu": 16, "gpu": 2})
         # file_count += 1
