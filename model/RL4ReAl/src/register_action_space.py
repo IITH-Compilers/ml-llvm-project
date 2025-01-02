@@ -8,6 +8,7 @@ logger = logging.getLogger(__file__)
 class RegisterActionSpace:
 
     def __init__(self, target, config_path):
+        self.dump_color_map = False
         self.spill = 0
         self.supported_regclasses, self.suppcls_regs_map, self.reg_idname_map, self.overlaps = RegisterActionSpace.loadRegConfig(target, config_path)
         
@@ -26,13 +27,14 @@ class RegisterActionSpace:
         supp_regs_normal_values_map = list(map(lambda y: list(map(lambda reg: self.org_normal_map[reg],  y)), self.suppcls_regs_map.values()))
         self.suppcls_regs_normalize_map  = dict(zip(self.supported_regclasses, supp_regs_normal_values_map))
 
-        # reg_target = {"name":target, "regclasses" : self.supported_regclasses,"register" : [ {"color": int(self.org_normal_map[reg]), "name" : self.reg_idname_map[reg], "phyReg" : int(reg) } for reg in self.regs_supp] }
+        if self.dump_color_map:
+            reg_target = {"name":target, "regclasses" : self.supported_regclasses,"register" : [ {"color": int(self.org_normal_map[reg]), "name" : self.reg_idname_map[reg], "phyReg" : int(reg) } for reg in self.regs_supp] }
 
-        # color2regmap = { "targets" : [reg_target]}
-        # 
+            color2regmap = { "targets" : [reg_target]}
 
-        # with open("RegColorMap_{}.json".format(target), "w") as f:
-        #     json.dump(color2regmap, f, indent=4)
+
+            with open("RegColorMap_{}.json".format(target), "w") as f:
+                json.dump(color2regmap, f, indent=4)
         
 
 
@@ -106,7 +108,10 @@ class RegisterActionSpace:
             overlapfile = os.path.join(baseDir, 'regalloc/X86_overlaps_info.json')
         elif target == "AArch64":
             fileName= os.path.join(baseDir, 'regalloc/AArch64_supported_RegClasses.json')
-            overlapfile = os.path.join(baseDir, 'regalloc/AArch64_overlaps_info.json')
+            overlapfile = os.path.join(baseDir, 'AArch64_overlaps_info.json')
+        elif target == "riscv64":
+            fileName= os.path.join(baseDir, 'regalloc/riscv64_supported_RegClasses.json')
+            overlapfile = os.path.join(baseDir, 'riscv64_overlaps_info.json')
         else:
             assert False, "Not valid architecture name"
 
@@ -127,3 +132,6 @@ class RegisterActionSpace:
             overlaps = json.load(f)
         print("suppcls_regs_map", len(suppcls_regs_map.values()))
         return supported_regClass, suppcls_regs_map, reg_idname_map, overlaps 
+
+if __name__ == "__main__":
+    RegisterActionSpace("riscv64", "/home/cs20btech11024/repos/ml-llvm-project/llvm/lib/CodeGen/MLRegAlloc/config_json")

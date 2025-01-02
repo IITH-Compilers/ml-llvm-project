@@ -81,14 +81,15 @@ bool CollectMachineIR::runOnMachineFunction(MachineFunction &MF) {
 }
 
 void CollectMachineIR::traverseBasicBlock(MachineBasicBlock &MB) {
+  std::string PrevInst = "";
   for (MachineInstr &I : MB) {
     std::string temp;
     // errs() << "----------------------------------------\n";
     // I.dump();
     // errs() << I.getDesc().getFlags() << "\n";
     // errs() << "----------------------------------------\n";
-
-    temp += "\n " + opcDescMap[I.getOpcode()] + " ";
+    std::string CurrInst = opcDescMap[I.getOpcode()];
+    temp += "\n " + CurrInst + " ";
 
     for (unsigned i = 0; i < I.getNumOperands(); i++) {
       auto MO = I.getOperand(i);
@@ -164,5 +165,10 @@ void CollectMachineIR::traverseBasicBlock(MachineBasicBlock &MB) {
     }
     // errs() << temp << "\n";
     res += temp;
+    if(PrevInst != "") {
+      temp = "\n: " + PrevInst + "  " + CurrInst;
+    }
+    res += temp;
+    PrevInst = CurrInst;
   }
 }
