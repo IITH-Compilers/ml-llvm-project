@@ -11,7 +11,7 @@ from config import DATA_DIR, BUILD_DIR
 
 def startServer(filename, fun_name, fun_id, worker_index):
     def run(filename, fun_id, worker_index):
-        cmd = "{clang} -S -Xclang -load -Xclang " + BUILD_DIR + "/lib/MCAInstrument.so -O3 -mcpu=core2 -mllvm -mca-funcID={fun_name} -mllvm -regalloc=greedy -mllvm -mlra-funcID={fun_id} {src_file} -o - | {mca} -mcpu=core2".format(clang=os.environ['CLANG'], src_file=filename, fun_name=fun_name, fun_id=fun_id, worker_index=worker_index, mca=os.environ['MCA'])
+        cmd = "{clang} -S -Xclang -load -Xclang {BUILD_DIR}/lib/MCAInstrument.so -O3 -mcpu=skylake -mllvm -mca-funcID={fun_name} -mllvm -regalloc=greedy -mllvm -mlra-funcID={fun_id} {src_file} -o - | {mca} -mcpu=skylake".format(clang=os.environ['CLANG'], src_file=filename, fun_name=fun_name, fun_id=fun_id, worker_index=worker_index, mca=os.environ['MCA'], BUILD_DIR=BUILD_DIR)
         print("Clang command:", cmd)
         #os.system(cmd)
         pid = subprocess.Popen(cmd, executable='/bin/bash', shell=True, preexec_fn=os.setsid, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
@@ -77,17 +77,17 @@ def run(path):
         print("MCA timeout")
     if outs != "":
         try:
-            cycles = re.search('Total Cycles:      [0-9]+', outs).group()
-            cycles = int(re.search('[0-9]+', cycles).group())
+            # cycles = re.search('Total Cycles:      [0-9]+', outs).group()
+            # cycles = int(re.search('[0-9]+', cycles).group())
             throughput = re.search('Block RThroughput: [0-9]+.[0-9]+', outs).group()
             throughput = float(re.search('[0-9]+.[0-9]+', throughput).group())
             fileName = os.path.basename(fileName)
             throughput_map[fileName + "_" + functionName] = throughput
-            cycle_map[fileName + "_" + functionName] = cycles
+            # cycle_map[fileName + "_" + functionName] = cycles
             print(fileName + "___" + functionName)
             print("Throughput:", throughput, type(throughput))
-            print("Cycle:", cycles, type(cycles))
-            return fileName + "_" + functionName, cycles, throughput
+            # print("Cycle:", cycles, type(cycles))
+            return fileName + "_" + functionName, throughput
         except AttributeError:
             pass
     else:
@@ -103,18 +103,20 @@ def run(path):
     
 
 start_time = time.time()
-dataset = f'{DATA_DIR}/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/LTS-ll-files_train_mlra_x86_split_data/'
-training_graphs = glob.glob(os.path.join(dataset, 'graphs/IG/set_120-500/*.json'))
+dataset = '/mnt/disks/data/Training_data/wo_profiling/level-O0-llfiles_train_mlra_x86_training_data_without_profiling_31-12-2024/'
+training_graphs = glob.glob(os.path.join(dataset, 'graphs/IG/set_2000/*.json'))
 throughput_map = {}
-cycle_map = {}
+# cycle_map = {}
+os.environ['CLANG'] = BUILD_DIR + '/bin/clang'
+os.environ['MCA'] = BUILD_DIR + '/bin/llvm-mca'
 results = Parallel(n_jobs=50)(delayed(run)(path) for path in training_graphs)
 print("Results", results)
 for t in results:
     if t is not None:
-        cycle_map[t[0]] = t[1]
-        throughput_map[t[0]] = t[2]
-with open('LTS_x86_greedy-cycles_set_120-500.json', 'w') as fp:
-    json.dump(cycle_map, fp)
-with open('LTS_x86_greedy-throughput_set_120-500.json', 'w') as fp:
+        # cycle_map[t[0]] = t[1]
+        throughput_map[t[0]] = t[1]
+# with open('LTS_x86_greedy-cycles_set_120-500.json', 'w') as fp:
+#     json.dump(cycle_map, fp)
+with open('spec17_x86_greedy-throughput_wo_profile_set_2000.json', 'w') as fp:
     json.dump(throughput_map, fp)
 print("Total time in seconds is: ", (time.time() - start_time))

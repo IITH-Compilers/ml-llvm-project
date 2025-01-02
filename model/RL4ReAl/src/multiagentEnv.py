@@ -158,6 +158,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.greedy_spillcost_map_file_path = env_config["greedy_spillcost_map_file_path"]
         with open(self.greedy_spillcost_map_file_path) as f:
             self.greedy_spillcost_map = json.load(f) 
+        self.update_node_representaion=env_config["update_node_representaion"]
         random.seed(123)
         np.random.seed(123)
   
@@ -276,11 +277,23 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
     def step(self, action_dict, extra_info=None):
         if self.mode != 'inference':
-            if extra_info and 'select_node_policy' in extra_info.keys():
-                self.obs.initial_node_representation = extra_info['select_node_policy'][0, :, :]                   
+            if extra_info and 'select_node_policy' in extra_info.keys() and self.update_node_representaion:
+                self.obs.initial_node_representation = extra_info['select_node_policy'][0, :, :]
+            
+            if not self.update_node_representaion:
+                current_obs_shape = self.obs.initial_node_representation.shape
+                padded_representation = torch.zeros((self.max_number_nodes, self.env_config["state_size"]), dtype=self.obs.initial_node_representation.dtype, device=self.obs.initial_node_representation.device)
+                
+                rows_to_pad = min(current_obs_shape[0], self.max_number_nodes)
+                cols_to_pad = min(current_obs_shape[1], self.env_config["state_size"])   
+                
+                padded_representation[:rows_to_pad, :cols_to_pad] = self.obs.initial_node_representation[:rows_to_pad, :cols_to_pad]
+                
+                self.obs.initial_node_representation = padded_representation
+                #print("Padded shape of initial_node_representation:", self.obs.initial_node_representation.shape)                   
         else:
             if extra_info is not None:
-                if len(extra_info.shape) == 3:
+                if len(extra_info.shape) == 3 and self.update_node_representaion:
                     self.obs.initial_node_representation = torch.from_numpy(extra_info[0, :, :])                         
         if self.select_node_agent_id in action_dict:
             return self._select_node_step(action_dict[self.select_node_agent_id])
@@ -889,7 +902,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         reward = 0
         done = False
         
-        reward = self.getReward(reg_allocated)
+        if self.use_local_reward:
+            reward = self.getReward(reg_allocated)
         response = None 
         if False not in self.obs.graph_topology.discovered:
             if self.mode != 'inference': 
@@ -940,7 +954,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                     # print("Clang process finished")
                     build_path = self.env_config["build_path"]
                     if self.env_config["target"] == 'X86':
-                        cflags = "-mcpu=core2"
+                        cflags = "-mcpu=skylake"
                     else:
                         cflags = "-mcpu=cortex-a72"
                     self.mca_pid = utils_1.runMCA(self.functionName, self.worker_index, build_path, cflags, self.env_config["log_dir"])

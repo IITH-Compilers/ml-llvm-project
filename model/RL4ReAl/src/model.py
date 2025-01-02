@@ -103,8 +103,9 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
         # self.fc4 = nn.Linear( custom_config["fc3_units"], 1)
         
         self.ggnn1 = GCNConv(in_channels=103, out_channels=custom_config["fc1_units"], improved=True, normalize=True)
-        self.ggnn2 = GCNConv(in_channels=custom_config["fc1_units"], out_channels=1, improved=True, normalize=True)
-        
+        self.ggnn2 = GCNConv(in_channels=custom_config["fc1_units"], out_channels=custom_config["fc2_units"], improved=True, normalize=True)
+        self.ggnn3 = GCNConv(in_channels=custom_config["fc2_units"], out_channels=custom_config["fc3_units"], improved=True, normalize=True)
+        self.fc = nn.Linear(custom_config["fc3_units"]*custom_config["max_number_nodes"], custom_config["max_number_nodes"])
         self._value_branch = SlimFC(
             in_size=custom_config["max_number_nodes"],
             out_size=1,
@@ -140,19 +141,23 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
         
         batch_data = Batch.from_data_list(data_list=data_list)
         
+        # print("Data bash sizes:", type(batch_data.x), batch_data.x.shape, type(batch_data.edge_index), batch_data.edge_index.shape)
         # batch_data = Data(x=ggnn_input_x, edge_index=edge_index.long().T)
-        node_mat = F.relu(self.ggnn1(batch_data.x, batch_data.edge_index).reshape(batch_size, -1, 128))
+        node_mat = F.relu(self.ggnn1(batch_data.x, batch_data.edge_index))
         
         # print("ggnn1 output:", node_mat.shape)
         
-        data_list = []
+        # data_list = []
 
-        data_list = [Data(x=node_mat[i], edge_index=edge_index[i].long().T) for i in range(batch_size)]
+        # data_list = [Data(x=node_mat[i], edge_index=edge_index[i].long().T) for i in range(batch_size)]
         
-        batch_data = Batch.from_data_list(data_list=data_list)
+        # batch_data = Batch.from_data_list(data_list=data_list)
         
-        x = self.ggnn2(batch_data.x, batch_data.edge_index).reshape(batch_size, -1)
-        
+        # x = self.ggnn2(batch_data.x, batch_data.edge_index).reshape(batch_size, -1)
+        node_mat = F.relu(self.ggnn2(node_mat, batch_data.edge_index))
+        x = F.relu(self.ggnn3(node_mat, batch_data.edge_index)).reshape(batch_size, -1)
+        # print("ggnn3 output:", x.shape)
+        x = self.fc(x)
         self._features = x.clone().detach()
         mask = input_dict["obs"]["action_mask"]
         inf_mask = torch.clamp(torch.log(mask), min=FLOAT_MIN)
