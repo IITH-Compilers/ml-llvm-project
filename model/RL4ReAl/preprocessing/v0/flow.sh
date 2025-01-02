@@ -81,7 +81,12 @@ TIME_OUT= # "timeout --kill-after=2m 2m "
 REMARKS=
 
 OPT_PASSES_SEQ=" -O3 "
-ADDITIONAL_FLAGS=" -gcc-toolchain /home/cs20btech11024/repos/riscv64-2.33/riscv -mllvm -ml-config-path=/Pramana/ML_LLVM_Tools/AE/config "
+if [[ $TARGET == "riscv64" ]];
+then
+    ADDITIONAL_FLAGS=" -gcc-toolchain /home/cs20btech11024/repos/riscv64-2.33/riscv -mllvm -ml-config-path=/Pramana/ML_LLVM_Tools/AE/config "
+else
+    ADDITIONAL_FLAGS=" -mllvm -ml-config-path=/Pramana/ML_LLVM_Tools/AE/config "
+fi
 MODEL_ARGS=" ${MODELS[${MODEL}]} "
 echo "${MODEL_ARGS}"
 echo "Type of input : ${INP_TYPE}"
@@ -132,7 +137,7 @@ then
       name=`basename ${d}` && oname=${name%.*} && rfile= && if [ ! -z "${REMARKS}" ]; then rfile="-pass-remarks-output=${oname}_${G_TYPE}.yaml"; fi
       # ${TIME_OUT} ${LLVM_BUILD}/bin/clang ${INCLUDE} ${OPT_PASSES_SEQ} ${MODEL_ARGS} ${USE_MCA} -S ${REMARKS} ${rfile}  ${d} -o /dev/null 
       cd ${IG_DOT}
-      ${LLVM_BUILD}/bin/clang ${INCLUDE} ${OPT_PASSES_SEQ} ${ADDITIONAL_FLAGS} ${MODEL_ARGS} -S  ${d} -o ${ASM_DIR}/${oname}.s
+      ${LLVM_BUILD}/bin/clang ${INCLUDE} ${OPT_PASSES_SEQ} ${ADDITIONAL_FLAGS} ${MODEL_ARGS} -S  ${d} -o ${ASM_DIR}/${oname}.s &
       # ${LLVM_BUILD}/bin/clang ${ADDITIONAL_FLAGS} ${INCLUDE} ${ASM_DIR}/${oname}.s -o ${BIN_DIR}/${oname}.out &
           # pids[${i}]=$!
  done 
