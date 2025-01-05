@@ -1009,7 +1009,11 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                                 elif throughput_diff == 0:
                                     reward = 0
                                 else:
-                                    reward = -10
+                                    per_diff = ((mlra_throughput - greedy_throughput)/greedy_throughput)*100
+                                    if per_diff < 10 and per_diff > 0:
+                                        reward = -1 * per_diff
+                                    else:
+                                        reward = -10
                                 print("Throughput:", mlra_throughput, greedy_throughput)
                                 print("Reward in compare to greedy throughput:", reward)
 

@@ -68,7 +68,7 @@ def experiment(config):
             checkpoint = train_agent.save(tune.get_trial_dir())
             # print("***************Checkpoint****************", checkpoint)
             # tune.report(**train_results)
-        if (train_results['episodes_total'] - last_report) > 49:
+        if (train_results['episodes_total'] - last_report) > 99:
             last_report = train_results['episodes_total']
             tune.report(**train_results)
         if train_results['episodes_total'] > config["env_config"]["episode_number"]:
@@ -171,7 +171,7 @@ if __name__ == "__main__":
     logging.basicConfig(filename='running.log', format='%(thread)d - %(threadName)s - %(levelname)s - %(filename)s - %(message)s', level=log_level, force=True)
     logging.info('Starting training')
     logging.info(args)
-
+    os.environ["TUNE_RESULT_DIR"] = "/mnt/disks/data/ray_results/"
     ray.init(object_store_memory=10000000000, local_mode=False, _temp_dir="/mnt/disks/data/ray_results/")
     
     # c = Counter.remote()

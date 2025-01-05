@@ -101,11 +101,14 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
         # # self.attention = nn.Linear(custom_config["max_number_nodes"], 1)
         # self.fc3 = nn.Linear( custom_config["fc2_units"], custom_config["fc3_units"])
         # self.fc4 = nn.Linear( custom_config["fc3_units"], 1)
-        
+                
         self.ggnn1 = GCNConv(in_channels=103, out_channels=custom_config["fc1_units"], improved=True, normalize=True)
         self.ggnn2 = GCNConv(in_channels=custom_config["fc1_units"], out_channels=custom_config["fc2_units"], improved=True, normalize=True)
         self.ggnn3 = GCNConv(in_channels=custom_config["fc2_units"], out_channels=custom_config["fc3_units"], improved=True, normalize=True)
         self.fc = nn.Linear(custom_config["fc3_units"]*custom_config["max_number_nodes"], custom_config["max_number_nodes"])
+        self.bn1 = nn.BatchNorm1d(custom_config["max_number_nodes"]*custom_config["fc1_units"])
+        self.bn2 = nn.BatchNorm1d(custom_config["max_number_nodes"]*custom_config["fc2_units"])
+        self.bn3 = nn.BatchNorm1d(custom_config["max_number_nodes"]*custom_config["fc3_units"])
         self._value_branch = SlimFC(
             in_size=custom_config["max_number_nodes"],
             out_size=1,
@@ -127,11 +130,13 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
                 
         assert not torch.isnan(input_dict["obs"]["state"]).any(), "Nan in select node model obs:state"
         assert not torch.isnan(input_dict['obs']['adjacency_lists']['data'].values).any(), "Nan in select node model adjlist"
-        
-        ggnn_input_x = torch.dstack((input_dict["obs"]["state"], input_dict["obs"]["annotations"]))
+        # print("node_embeddings before", input_dict["obs"]["state"].shape)
+        node_embeddings = F.normalize(input_dict["obs"]["state"], dim=2)
+        # print("node_embeddings after", node_embeddings.shape)
+        ggnn_input_x = torch.dstack((node_embeddings, input_dict["obs"]["annotations"]))
         edge_index = input_dict['obs']['adjacency_lists']['data'].values
 
-        # print("ggnn_input_x.device = ", ggnn_input_x.device)
+        # print("ggnn_input_x shape = ", ggnn_input_x.shape)
         # print("edge_index.device = ", edge_index.device)
         batch_size = ggnn_input_x.shape[0]
         # #################### batch method #######################
@@ -143,19 +148,14 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
         
         # print("Data bash sizes:", type(batch_data.x), batch_data.x.shape, type(batch_data.edge_index), batch_data.edge_index.shape)
         # batch_data = Data(x=ggnn_input_x, edge_index=edge_index.long().T)
-        node_mat = F.relu(self.ggnn1(batch_data.x, batch_data.edge_index))
+        node_mat = F.relu(self.ggnn1(batch_data.x, batch_data.edge_index)).reshape(batch_size, -1)        
+        node_mat = self.bn1(node_mat).reshape(batch_size*self.max_number_nodes, -1)        
         
-        # print("ggnn1 output:", node_mat.shape)
+        node_mat = F.relu(self.ggnn2(node_mat, batch_data.edge_index)).reshape(batch_size, -1)
+        node_mat = self.bn2(node_mat).reshape(batch_size*self.max_number_nodes, -1)
         
-        # data_list = []
-
-        # data_list = [Data(x=node_mat[i], edge_index=edge_index[i].long().T) for i in range(batch_size)]
-        
-        # batch_data = Batch.from_data_list(data_list=data_list)
-        
-        # x = self.ggnn2(batch_data.x, batch_data.edge_index).reshape(batch_size, -1)
-        node_mat = F.relu(self.ggnn2(node_mat, batch_data.edge_index))
         x = F.relu(self.ggnn3(node_mat, batch_data.edge_index)).reshape(batch_size, -1)
+        x= self.bn3(x)
         # print("ggnn3 output:", x.shape)
         x = self.fc(x)
         self._features = x.clone().detach()
