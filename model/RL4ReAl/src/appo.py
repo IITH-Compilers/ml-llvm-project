@@ -90,12 +90,12 @@ class APPOConfig(ImpalaConfig):
         # Override some of ImpalaConfig's default values with APPO-specific values.
         self.num_rollout_workers = 10
         self.rollout_fragment_length = 8
-        self.train_batch_size = 32
+        self.train_batch_size = 16
+        
         self.sample_async = False
-        self.num_gpus = 1
         # self.num_multi_gpu_tower_stacks = 2
         self.minibatch_buffer_size = 1
-        self.num_sgd_iter = 1
+        self.num_sgd_iter = 3
         self.replay_proportion = 0.0
         self.replay_buffer_num_slots = 100
         self.learner_queue_size = 8
@@ -112,6 +112,7 @@ class APPOConfig(ImpalaConfig):
         self.vf_loss_coeff = 1.0
         self.entropy_coeff = 0.01
         self.entropy_coeff_schedule = None
+        self.num_gpus = 0.1
 
         self.num_envs_per_worker = 1
         self.num_cpus_per_worker = 1
@@ -140,28 +141,34 @@ class APPOConfig(ImpalaConfig):
             "dataset": f"{DATA_DIR}",
             "graphs_num": 10000,
             "action_space_size": RegisterActionSpace("X86", CONFIG_DIR).ac_sp_normlize_size,
-            "check_point": None,
-            "episode_number": 5,
-            "GPU_ID": 0,
+            # "check_point":"/home/intern24002/ray_results/experiment_2025-01-15_00-01-53/experiment_HierarchicalGraphColorEnv_d3d32_00000_0_2025-01-15_00-01-53/checkpoint_000359",
+            "check_point":None,
+            "episode_number": 100,
+            "GPU_ID": "0,1",
             "X86_CFLAGS": "-mllvm -regalloc=greedy  -march=core2",
             "AArch64_CFLAGS": "-mllvm -regalloc=greedy  -mcpu=cortex-a72",
-            "dataset_bucket": "set_5000",
+            "dataset_bucket": "set_100",
             "enable_GGNN": True,
+            "remove_GR_NonGR_edge": False,
             "file_repeat_frequency": 1,
-            "current_batch": 500,
-            "Workers_starting_port": "50045",
+            "current_batch": 100,
+            "Workers_starting_port": "50145",
             "disable_spliting": False,
-            "use_costbased_reward":True,
-            "use_local_reward": False,
-            "use_mca_reward": False,
+            "use_costbased_reward":False,
+            "use_local_reward": True,
+            "use_mca_reward": True,
             "disable_spliting":False,
             "use_mca_self_play_reward": False,
             "mca_reward_clip": 10,
             "mca_timeout": 30,
-            "greedy_mca_throughput_file_path": f"{MODEL_DIR}/greedy-throughput_set_120-500.json",
-            "mca_cycles_file_path": f"{MODEL_DIR}/greedy-cycles_set_120-500.json"
+            "greedy_mca_throughput_file_path": f"{MODEL_DIR}/spec17_x86_greedy-throughput_wo_profile_set_120-500.json",
+            "mca_cycles_file_path": f"{MODEL_DIR}/greedy-cycles_set_120-500.json",
+            # "greedy_spillcost_map_file_path": f"{MODEL_DIR}/greedy-spillcost-spec17-set-120-500.json"
+            "greedy_spillcost_map_file_path": f"{MODEL_DIR}/greedy-spillcost-spec17-profiled-set-120-500.json",
+            "update_node_representaion": False
         }
         self.horizon = 1000
+        self.seed = 123
 
     @override(ImpalaConfig)
     def training(

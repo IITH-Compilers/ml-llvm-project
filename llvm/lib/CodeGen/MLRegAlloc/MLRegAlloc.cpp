@@ -201,10 +201,10 @@ MLRA::MLRA() {
   // }
   if (enable_dump_ig_dot || enable_mlra_inference || enable_mlra_training) {
     loadTargetRegisterConfig(MLConfig::mlconfig +
-                             "/regalloc/RegColorMap_Both_riscv64.json");
+                             "/regalloc/RegColorMap_Both.json");
     symbolic = new MIR2Vec_Symbolic(MLConfig::mlconfig +
 
-                                    "/ir2vec/seedEmbedding_1500E_300D_riscv64.txt");
+                                    "/ir2vec/seedEmbedding_5000E_100D_256batches3.0margin_formatted.txt");
   }
   //???
   // SetStub<registerallocationinference::RegisterAllocationInference>(

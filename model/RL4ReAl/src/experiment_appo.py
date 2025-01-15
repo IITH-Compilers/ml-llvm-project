@@ -139,9 +139,9 @@ class Counter:
 if __name__ == "__main__":
 
     config = DEFAULT_CONFIG.copy()
-
+    print("config in exp: ",config)
     # os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
-    # os.environ["CUDA_VISIBLE_DEVICES"]= config["env_config"]["GPU_ID"]
+    os.environ["CUDA_VISIBLE_DEVICES"]= config["env_config"]["GPU_ID"]
 
     # os.environ['GRPC_VERBOSITY']='DEBUG'
 
@@ -192,9 +192,13 @@ if __name__ == "__main__":
     # tuple_adjacency_lists = Tuple((Discrete(config["env_config"]["max_number_nodes"]), repeat_tuple_edges))
     max_edge_count = config["env_config"]["max_edge_count"]
     adjacency_lists = Dict({
-        "node_num": Discrete(config["env_config"]["max_number_nodes"]),
-        "edge_num": Discrete(max_edge_count),
-        "data": Repeated(Box(0.0, config["env_config"]["max_number_nodes"], shape=(2,)), max_len = max_edge_count)
+        # "node_num": Discrete(config["env_config"]["max_number_nodes"]),
+        # "edge_num": Discrete(max_edge_count),
+        "node_num": Box(0.0,config["env_config"]["max_number_nodes"],shape=(config["env_config"]["max_number_nodes"],)),
+        "edge_num": Box(0.0,config["env_config"]["max_edge_count"],shape=(config["env_config"]["max_edge_count"],)),
+        # "data": Repeated(Box(0.0, config["env_config"]["max_number_nodes"], shape=(2,)), max_len = max_edge_count)
+        "data": Box(0.0, config["env_config"]["max_number_nodes"], shape=(2,max_edge_count))
+        #"data": Box(0.0, config["env_config"]["max_number_nodes"], shape=(max_edge_count,2))
     })
     obs_colour_node = Dict({
         "action_mask": Box(0, 1, shape=(config["env_config"]["action_space_size"],)),
@@ -301,6 +305,7 @@ if __name__ == "__main__":
         config["self.num_gpus"] = 0.5
 
     config["env_config"]["current_batch"] = (int)(100/args.workers)
+   
     experiment_name = f"w{args.workers}_{args.mode}"
         
     def trail_name_fun(self):

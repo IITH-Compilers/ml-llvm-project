@@ -77,6 +77,8 @@ def enablePrint():
 class HierarchicalGraphColorEnv(MultiAgentEnv):
     def __init__(self, env_config):
         self.env_config = env_config
+        self.observation_space = None
+        self._obs_space_in_preferred_format = True
         self.colormap = None
         self.split_point = None
         self.new_obs = None
@@ -241,28 +243,56 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         spill_weight_list = annotations[:, 0]  # Annotations first element is spill weights 
         adjacency_lists = (state.adjacency_lists[0].getNodeNum(), np.array(state.adjacency_lists[0].getData()))
         result = None
-        for inx, i in enumerate(state.adjacency_lists[0].getData()):
-            flag = True
-            if inx ==0:
-                result = i
-            else:
-                result = torch.cat([result, i], dim=0)
-              
+        
+        # for inx, i in enumerate(state.adjacency_lists[0].getData()): #concatenate adj list as 1D tensor 
+        #     flag = True
+        #     if inx ==0:
+        #         result = i
+        #     else:
+        #         result = torch.cat([result, i], dim=0)
+        
+        adjacency_data = state.adjacency_lists[0].getData() #(2966,2)
+        
+        #print("shape of adjacency_data: ",adjacency_data.shape)
+        #print("shape of adjacency_data: ",type(adjacency_data),) #torch
+        #print("adjacency_data: ",adjacency_data,type(adjacency_data))
+        
+        # result = torch.transpose(adjacency_data,0,1)  #(2,2966)
+        
+        # print("result is: ",result,"shape of result: ",result.shape)
+        
+        # print("result.shape[0]: ",result.shape[0],"result.shape[1]: ",result.shape[1])
+        
         max_edge_count = self.max_edge_count
-        edges_unroll = np.zeros((2*max_edge_count,))
+        
+        edges_unroll = np.zeros((max_edge_count, 2)) #(30000,2)
+        edges_unroll[:adjacency_data.shape[0], :] = adjacency_data
+        
+        print("shape of edges_unroll: ",edges_unroll.shape,"type of edges_unroll: ",type(edges_unroll))
         if self.mode == 'inference':
-            if result is None or result.shape[0] > 2*max_edge_count:
+            if result is None or result.shape[1] > max_edge_count: #here 2* is not needed because now result is not being flattened
                 print("Exiting inference due to no edge or more then max edge:", result)
                 return None
             
-        if result is not None:
-            edges_unroll[0:result.shape[0]] = result
+        # if result is not None:
+        #     print("result.shape[0]: ",result.shape[0])
+        #     edges_unroll[:, :result.shape[1]] = result.numpy() #(2,2966)
+            
+        node_num = state.adjacency_lists[0].getNodeNum()
+        node_num_one_hot = np.zeros(self.max_number_nodes)
+        node_num_one_hot[node_num] = 1
         
+        edge_num = state.adjacency_lists[0].getData().shape[0]
+        edge_num_one_hot = np.zeros(self.max_edge_count)
+        edge_num_one_hot[edge_num]=1
         
         adjacency_lists = {
-            "node_num": state.adjacency_lists[0].getNodeNum(),
-            "edge_num": state.adjacency_lists[0].getData().shape[0],
-            "data": state.adjacency_lists[0].getData().tolist()
+            # "node_num": state.adjacency_lists[0].getNodeNum(),
+            # "edge_num": state.adjacency_lists[0].getData().shape[0],
+            # "data": state.adjacency_lists[0].getData().tolist()
+            "node_num": node_num_one_hot,
+            "edge_num": edge_num_one_hot,
+            "data": edges_unroll.T #result.numpy().tolist() 
         }
         obs = {
             # self.select_node_agent_id: { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(select_node_mask), 'state' : cur_obs}
@@ -271,10 +301,13 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.spill_successful = 0
         self.split_successful = 0
         self.colour_successful = 0
-
+        print("returning obs in reset for first time...")
+        print("keys in obs: ",obs.keys(),"type of obs: ",type(obs))
+        #print("obs is: ",obs)
         return obs
 
     def step(self, action_dict, extra_info=None):
+        print("Inside step........:")
         if self.mode != 'inference':
             if extra_info and 'select_node_policy' in extra_info.keys():
                 self.obs.initial_node_representation = extra_info['select_node_policy'][0, :, :]                   
@@ -283,12 +316,16 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 if len(extra_info.shape) == 3:
                     self.obs.initial_node_representation = torch.from_numpy(extra_info[0, :, :])                         
         if self.select_node_agent_id in action_dict:
+            print("Entered select node step.....")
             return self._select_node_step(action_dict[self.select_node_agent_id])
         if self.select_task_agent_id in action_dict:
+            print("Enterd task select step....")
             return self._select_task_step(action_dict[self.select_task_agent_id])
         if self.colour_node_agent_id in action_dict:
+            print("Entered colour_node_step..........")
             return self._colour_node_step(action_dict[self.colour_node_agent_id])
         if self.split_node_agent_id in action_dict:
+            print("Entered split_node_step...............")
             return self._split_node_step(action_dict[self.split_node_agent_id])
     
     def createNodeSelectMask(self):
@@ -406,8 +443,10 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         return prop
 
     def _select_node_step(self, action):        
-        logging.debug("Enter _select_node_step")                
+        logging.debug("Enter _select_node_step")        
+        print("inside select node step.......")        
         self.cur_node = action
+        print("Node selected: ",action)
         update_status = self.obs.graph_topology.UpdateVisitList(self.cur_node)
         if not update_status:
             print("UpdateVisitList failed for {} graph at {} node".format(self.path, self.cur_node))
@@ -435,12 +474,15 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
     def _select_task_step(self, action):
         logging.debug("Enter _select_task_step")
+        print("Inside select task step.......")
         done = {"__all__": False}
         splitpoints = self.obs.split_points[self.cur_node]
         self.task_selected = action
         if type(splitpoints) == np.ndarray:
             splitpoints = splitpoints.tolist()
+            
         if action == 0 or len(splitpoints) < 1 or self.split_steps >= self.split_threshold: # Colour node
+            print("action choosen is 0 hence predicting color agent......")
             self.last_task_done = 0
             self.colour_steps += 1
             if self.task_selected == 1:
@@ -475,6 +517,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 self.colour_node_agent_id : { 'action_mask': np.array(colour_node_mask),'node_properties': np.array(prop_value_list_colouring), 'state' : self.cur_obs},
             }
         else:
+            print("action choosen is 1 hence predicting split agent...............")
             self.last_task_done = 1
             self.split_steps += 1
             usepoint_prop = self.getUsepointProperties()
@@ -506,6 +549,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
     def _colour_node_step(self, action):
         logging.debug("Enter _colour_node_step")
+        print("Node selected: ",self.cur_node,"action is: ",action)
         colour_reward, done_all, response  = self.step_colorTask(action)
         state = self.obs
         self.cur_obs = self.obs.initial_node_representation[self.cur_node][0:self.emb_size]
@@ -538,23 +582,38 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         annotations[0:state.annotations.shape[0], :] = state.annotations
         spill_weight_list = annotations[:, 0]  # Annotations first element is spill weights 
         adjacency_lists = (state.adjacency_lists[0].getNodeNum(), np.array(state.adjacency_lists[0].getData()))
-       
-        result = None
-        for inx, i in enumerate(state.adjacency_lists[0].getData()):
+        
+        
+        # result = None
+        # for inx, i in enumerate(state.adjacency_lists[0].getData()):
             
-            if inx ==0:
-                result = i
-            else:
-                result = torch.cat([result, i], dim=0)
-        max_edge_count = self.max_edge_count
-        edges_unroll = np.zeros((2*max_edge_count,))
-        if result is not None:
-            edges_unroll[0:result.shape[0]] = result
+        #     if inx ==0:
+        #         result = i
+        #     else:
+        #         result = torch.cat([result, i], dim=0)
+        # max_edge_count = self.max_edge_count
+        # edges_unroll = np.zeros((2*max_edge_count,))
+        # if result is not None:
+        #     edges_unroll[0:result.shape[0]] = result
+        
+        adjacency_data = state.adjacency_lists[0].getData()
+        edges_unroll = np.zeros((self.max_edge_count, 2)) #(2,30000)
+        edges_unroll[:adjacency_data.shape[0], :] = adjacency_data
+        
+        node_num = state.adjacency_lists[0].getNodeNum()- self.split_successful
+        node_num_one_hot = np.zeros(self.max_number_nodes)
+        node_num_one_hot[node_num] = 1
+        
+        edge_num = state.adjacency_lists[0].getData().shape[0]
+        edge_num_one_hot = np.zeros(self.max_edge_count)
+        edge_num_one_hot[edge_num]=1
         
         adjacency_lists = {
-            "node_num": state.adjacency_lists[0].getNodeNum() - self.split_successful,
-            "edge_num": state.adjacency_lists[0].getData().shape[0],
-            "data": state.adjacency_lists[0].getData().tolist()
+            #"node_num": state.adjacency_lists[0].getNodeNum() - self.split_successful,
+            "edge_num": edge_num_one_hot,
+            # "data": state.adjacency_lists[0].getData().tolist()
+            "node_num": node_num_one_hot,
+            "data": edges_unroll.T #result.numpy().tolist() 
         }
         
         discount_factor = 0
@@ -710,22 +769,37 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         spill_weight_list = annotations[:, 0]  # Annotations first element is spill weights 
         # annotations = state.annotations
         adjacency_lists = (state.adjacency_lists[0].getNodeNum(), np.array(state.adjacency_lists[0].getData()))
-        result = None
-        for inx, i in enumerate(state.adjacency_lists[0].getData()):
+        # result = None
+        # for inx, i in enumerate(state.adjacency_lists[0].getData()):
             
-            if inx ==0:
-                result = i
-            else:
-                result = torch.cat([result, i], dim=0)
-        max_edge_count = self.max_edge_count
-        edges_unroll = np.zeros((2*max_edge_count,))
-        if result is not None:
-            edges_unroll[0:result.shape[0]] = result
+        #     if inx ==0:
+        #         result = i
+        #     else:
+        #         result = torch.cat([result, i], dim=0)
+        # max_edge_count = self.max_edge_count
+        # edges_unroll = np.zeros((2*max_edge_count,))
+        # if result is not None:
+        #     edges_unroll[0:result.shape[0]] = result
+            
+        adjacency_data = state.adjacency_lists[0].getData()
+        print("shape of adjacency_data: ",adjacency_data.shape)
+        edges_unroll = np.zeros((self.max_edge_count, 2)) #(2,30000)
+        edges_unroll[:adjacency_data.shape[0], :] = adjacency_data
+        
+        node_num = state.adjacency_lists[0].getNodeNum() - self.split_successful
+        node_num_one_hot = np.zeros(self.max_number_nodes)
+        node_num_one_hot[node_num] = 1
+        
+        edge_num = state.adjacency_lists[0].getData().shape[0]
+        edge_num_one_hot = np.zeros(self.max_edge_count)
+        edge_num_one_hot[edge_num]=1
+        
         #apr12
         adjacency_lists = {
-            "node_num": state.adjacency_lists[0].getNodeNum() - self.split_successful,
-            "edge_num": state.adjacency_lists[0].getData().shape[0],
-            "data": state.adjacency_lists[0].getData().tolist()
+            "node_num": node_num_one_hot,
+            "edge_num": edge_num_one_hot,
+            # "data": state.adjacency_lists[0].getData().tolist()
+            "data": edges_unroll.T #result.numpy().tolist() 
         }
 
         prop = self.getNodeProperties()
@@ -844,14 +918,18 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         if self.mode != 'inference':   
             updated_graphs = self.stable_grpc('Split', int(node_id), int(split_point))
             if updated_graphs is None:
+                print("updated graphs is None.........")
                 self.obs.graph_topology.markNodeAsNotVisited(nodeChoosen)
                 return reward, False
             update_obs_result = self.update_obs(updated_graphs, int(node_id), int(split_point))
             if not update_obs_result:
+                print("update_obs_result from update_obs is False...so failed at python side.....")
                 self.obs.graph_topology.markNodeAsNotVisited(nodeChoosen)
             elif update_obs_result == "error":
+                print("update obs result is error which may be due to max edges............")
                 done = True
             else:
+                print("split successfull......")
                 self.split_successful += 1
         else:
             done = True
@@ -892,6 +970,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         reward = self.getReward(reg_allocated)
         response = None 
         if False not in self.obs.graph_topology.discovered:
+            print("color assignemtn map is: ",self.color_assignment_map)
             if self.mode != 'inference': 
                 response = self.color_assignment_map
                 self.colormap = response
@@ -1072,8 +1151,11 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
     def reset_env(self, graph=None):
         if graph is None:
             inx = (((self.worker_index-1) * self.env_config['current_batch']) + self.graph_counter)
-            path=self.training_graphs[inx]
+            #path=self.training_graphs[inx]
+            path="/Pramana/RL4Real/Training-data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_training_data_without_profiling_31-12-2024/graphs/IG/set_100/502.gcc_r_141.ll_F2.json"
+            
             logging.debug('Graphs selected : {}'.format(path))
+            print("Graph selected: ",path)
             self.reset_count+=1
             if self.reset_count % self.repeat_freq == 0:
                 self.graph_counter+=1
@@ -1142,6 +1224,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         self.colour_steps = 0
 
     def stable_grpc(self, op, register_id, split_point):
+        print("Inside stable_grpc.............")
         attempt = 0
         max_retries=7
         retry_wait_seconds=0.0625

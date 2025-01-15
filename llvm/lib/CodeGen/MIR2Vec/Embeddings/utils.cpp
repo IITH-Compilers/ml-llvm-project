@@ -59,7 +59,7 @@ IR2Vec::createOpcodeMap(llvm::Triple::ArchType archType) {
   }
   case Triple::ArchType::x86:
   case Triple::ArchType::x86_64: {
-    extFile += "/regalloc/extracted_x86_updated.csv";
+    extFile += "/regalloc/extracted_x86.csv";
     break;
   }
   case Triple::ArchType::riscv64: {
