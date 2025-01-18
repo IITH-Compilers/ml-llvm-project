@@ -123,7 +123,10 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
         if self.enable_ggnn:
             # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
             ggnn_input_x = torch.dstack((input_dict["obs"]["state"], input_dict["obs"]["annotations"]))
-            edge_index = input_dict['obs']['adjacency_lists']['data'].values.mT
+            #edge_index = input_dict['obs']['adjacency_lists']['data'].values.mT
+            
+            edge_values = input_dict['obs']['adjacency_lists']['data']
+            edge_index =  edge_values.permute(*torch.arange(edge_values.ndim - 1, -1, -1))
             
             assert not torch.isnan(ggnn_input_x).any(), "Nan in select node model input embedding"
             assert not torch.isnan(edge_index).any(), "Nan in select node model edge data"

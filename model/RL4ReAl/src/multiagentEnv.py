@@ -78,7 +78,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
     def __init__(self, env_config):
         self.env_config = env_config
         self.observation_space = None
-        self._obs_space_in_preferred_format = True
+        #self._obs_space_in_preferred_format = True
         self.colormap = None
         self.split_point = None
         self.new_obs = None
@@ -1151,8 +1151,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
     def reset_env(self, graph=None):
         if graph is None:
             inx = (((self.worker_index-1) * self.env_config['current_batch']) + self.graph_counter)
-            #path=self.training_graphs[inx]
-            path="/Pramana/RL4Real/Training-data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_training_data_without_profiling_31-12-2024/graphs/IG/set_100/502.gcc_r_141.ll_F2.json"
+            path=self.training_graphs[inx]
+            #path="/Pramana/RL4Real/Training-data/SPEC_NEW_UNLINK_Ind_iv_REL_AsrtON/level-O0-llfiles_train_mlra_x86_training_data_without_profiling_31-12-2024/graphs/IG/set_100/502.gcc_r_141.ll_F2.json"
             
             logging.debug('Graphs selected : {}'.format(path))
             print("Graph selected: ",path)
