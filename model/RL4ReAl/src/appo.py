@@ -112,7 +112,7 @@ class APPOConfig(ImpalaConfig):
         self.vf_loss_coeff = 1.0
         self.entropy_coeff = 0.01
         self.entropy_coeff_schedule = None
-        self.num_gpus = 0.1
+        self.num_gpus = 0
 
         self.num_envs_per_worker = 1
         self.num_cpus_per_worker = 1
@@ -142,8 +142,9 @@ class APPOConfig(ImpalaConfig):
             "graphs_num": 10000,
             "action_space_size": RegisterActionSpace("X86", CONFIG_DIR).ac_sp_normlize_size,
             # "check_point":"/home/intern24002/ray_results/experiment_2025-01-15_00-01-53/experiment_HierarchicalGraphColorEnv_d3d32_00000_0_2025-01-15_00-01-53/checkpoint_000359",
-            "check_point":None,
-            "episode_number": 100,
+            "check_point":"/Pramana/RL4Real/harika_throughput_analysis/updated_env_tarining/checkpoint_005525",
+            #"check_point":"/home/intern24002/ray_results/experiment_2025-01-20_18-40-39/experiment_HierarchicalGraphColorEnv_f1dea_00000_0_2025-01-20_18-40-39/checkpoint_000003",
+            "episode_number": 10,
             "GPU_ID": "0,1",
             "X86_CFLAGS": "-mllvm -regalloc=greedy  -march=core2",
             "AArch64_CFLAGS": "-mllvm -regalloc=greedy  -mcpu=cortex-a72",

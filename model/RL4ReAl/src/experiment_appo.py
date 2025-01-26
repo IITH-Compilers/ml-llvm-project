@@ -29,11 +29,11 @@ from appo import APPO, DEFAULT_CONFIG
 from multiagentEnv import HierarchicalGraphColorEnv
 from register_action_space import RegisterActionSpace
 from ray.rllib.models import ModelCatalog
+from config import MODEL_DIR,AOT_DIR
 from model import SelectTaskNetwork, SelectNodeNetwork, ColorNetwork, SplitNodeNetwork
 import logging
 from ray.rllib.utils.torch_utils import FLOAT_MIN, FLOAT_MAX
 from ray.rllib.utils.spaces.repeated import Repeated
-from config import MODEL_DIR,AOT_DIR
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--train-iterations", type=int, default=100000)
@@ -60,37 +60,31 @@ def experiment(config):
         print("Checkpoint restored")            
 
     last_checkpoint = 0
-    for i in range(iterations):
-        train_results = train_agent.train()
-        # auto_garbage_collect()
-        if i == iterations - 1 or (train_results['episodes_total'] - last_checkpoint) > 499:
-            last_checkpoint = train_results['episodes_total']
-            checkpoint = train_agent.save(tune.get_trial_dir())
-            # print("***************Checkpoint****************", checkpoint)
-        tune.report(**train_results)
-        if train_results['episodes_total'] > config["env_config"]["episode_number"]:
-            print("Traning Ended")
-            checkpoint = train_agent.save(tune.get_trial_dir())
-            break
     
-    # if config['dump_AOT_model']:
-    #     train_agent.export_policy_model(export_dir=MODEL_DIR + "/select_node", policy_id="select_node_policy", onnx=11)
-    #     train_agent.export_policy_model(export_dir=MODEL_DIR + "/select_task", policy_id="select_task_policy", onnx=11)
-    #     train_agent.export_policy_model(export_dir=MODEL_DIR + "/color_node", policy_id="colour_node_policy", onnx=11)
-    #     train_agent.export_policy_model(export_dir=MODEL_DIR + "/split_node", policy_id="split_node_policy", onnx=11)
+    # for i in range(iterations):
+    #     train_results = train_agent.train()
+    #     # auto_garbage_collect()
+    #     if i == iterations - 1 or (train_results['episodes_total'] - last_checkpoint) > 499:
+    #         last_checkpoint = train_results['episodes_total']
+    #         checkpoint = train_agent.save(tune.get_trial_dir())
+    #         # print("***************Checkpoint****************", checkpoint)
+    #     tune.report(**train_results)
+    #     if train_results['episodes_total'] > config["env_config"]["episode_number"]:
+    #         print("Traning Ended")
+    #         checkpoint = train_agent.save(tune.get_trial_dir())
+    #         break
     
-    # node_selection_so_path = torch._export.aot_compile(
-    #         train_agent.export_policy_model(export_dir=AOT_DIR + "/select_node" , policy_id="select_node_policy")
-    #         train_agent.export_policy_model(export_dir=AOT_DIR + "/select_task" , policy_id="select_task_policy")
-    #         train_agent.export_policy_model(export_dir=AOT_DIR + "/color_node" , policy_id="colour_node_policy")
-    #         train_agent.export_policy_model(export_dir=AOT_DIR + "/split_node" , policy_id="split_node_policy")
-    #     )
-    
+    if config['dump_onnx_model']:   
+        train_agent.export_policy_model(export_dir=MODEL_DIR + "/select_node", policy_id="select_node_policy", onnx=11)
+        train_agent.export_policy_model(export_dir=MODEL_DIR + "/select_task", policy_id="select_task_policy", onnx=11)
+        train_agent.export_policy_model(export_dir=MODEL_DIR + "/color_node", policy_id="colour_node_policy", onnx=11)
+        train_agent.export_policy_model(export_dir=MODEL_DIR + "/split_node", policy_id="split_node_policy", onnx=11)
+   
     if config['dump_AOT_model']:
-        node_selection_so_path = torch._export.aot_compile(
-            train_agent.export_policy_model(export_dir=AOT_DIR + "/select_node" , policy_id="select_node_policy"),
-            
-        )
+        train_agent.export_policy_model(export_dir=AOT_DIR + "/select_node", policy_id="select_node_policy", so=True)
+        train_agent.export_policy_model(export_dir=AOT_DIR + "/select_task", policy_id="select_task_policy", so=True)
+        train_agent.export_policy_model(export_dir=AOT_DIR + "/color_node", policy_id="colour_node_policy", so=True)
+        train_agent.export_policy_model(export_dir=AOT_DIR + "/split_node", policy_id="split_node_policy", so=True)
         
     train_agent.stop()
 
@@ -199,6 +193,7 @@ if __name__ == "__main__":
     config["env"] = HierarchicalGraphColorEnv    
     config["callbacks"] = MyCallbacks
     config["dump_AOT_model"] = args.dump_AOT_model
+    config["dump_onnx_model"] = args.dump_onnx_model
 
     ModelCatalog.register_custom_model("select_node_model", SelectNodeNetwork)
     ModelCatalog.register_custom_model("select_task_model", SelectTaskNetwork)
