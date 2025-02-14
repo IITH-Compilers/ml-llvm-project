@@ -204,7 +204,7 @@ MLRA::MLRA() {
                              "/regalloc/RegColorMap_Both.json");
     symbolic = new MIR2Vec_Symbolic(MLConfig::mlconfig +
 
-                                    "/ir2vec/seedEmbedding_5500E_100D.txt");
+                                    "/ir2vec/seedEmbedding_5000E_100D_256batches3.0margin_formatted.txt");
   }
   //???
   // SetStub<registerallocationinference::RegisterAllocationInference>(
