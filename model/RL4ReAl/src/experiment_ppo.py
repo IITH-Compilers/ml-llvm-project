@@ -154,7 +154,7 @@ if __name__ == "__main__":
     logging.info('Starting training')
     logging.info(args)
 
-    ray.init(object_store_memory=10000000000, local_mode=False, _temp_dir="/home/cs20mtech12003/ray_log")
+    ray.init(object_store_memory=10000000000, local_mode=False)
     
 
     config["train-iterations"] = args.train_iterations

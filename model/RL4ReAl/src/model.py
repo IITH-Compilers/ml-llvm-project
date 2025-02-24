@@ -314,12 +314,14 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
     def forward(self, input_dict, state, seq_lens):
         """Build a network that maps state -> action values."""
         input_state_list = torch.zeros(input_dict["obs"]["state"].shape[0], self.max_number_nodes, self.emb_size)
+        print("Keys in select Node obs forward function: ",input_dict["obs"].keys())
         if self.enable_ggnn:
             # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
             ggnn_input_x = torch.dstack((input_dict["obs"]["state"], input_dict["obs"]["annotations"]))
             #edge_index = input_dict['obs']['adjacency_lists']['data'].values.mT
             
-            edge_values = input_dict['obs']['adjacency_lists']['data']
+            # edge_values = input_dict['obs']['adjacency_lists']['data']
+            edge_values = input_dict['obs']['adjacency_lists_data']
             # print("edge_values.ndim in forward: ",edge_values.ndim)
             # print("shape of edge_values is: ",edge_values.shape)
             
@@ -510,6 +512,7 @@ class ColorNetwork(TorchModelV2, nn.Module):
         # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         # print("from colour node forward func : ", device)
         # print("Colour  node input device", input_dict["obs"]["state"].device)
+        print("type of input_dict in forward: ",type(input_dict))
         x = F.relu(self.fc1(input_dict["obs"]["state"]))
         x = F.relu(self.fc2(x))
         x = torch.cat((x, input_dict["obs"]["node_properties"]), 1)

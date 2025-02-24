@@ -294,10 +294,15 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             "edge_num": edge_num_one_hot,
             "data": edges_unroll.T #result.numpy().tolist() 
         }
+        # obs = {
+        #     # self.select_node_agent_id: { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(select_node_mask), 'state' : cur_obs}
+        #     self.select_node_agent_id: { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(select_node_mask), 'state' : cur_obs, 'annotations': np.array(annotations) ,'adjacency_lists': adjacency_lists}
+        # }
         obs = {
             # self.select_node_agent_id: { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(select_node_mask), 'state' : cur_obs}
-            self.select_node_agent_id: { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(select_node_mask), 'state' : cur_obs, 'annotations': np.array(annotations) ,'adjacency_lists': adjacency_lists}
+            self.select_node_agent_id: { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(select_node_mask), 'state' : cur_obs, 'annotations': np.array(annotations) ,'adjacency_lists_node_num': node_num_one_hot, 'adjacency_lists_edge_num': edge_num_one_hot, 'adjacency_lists_data': edges_unroll.T}
         }
+        
         self.spill_successful = 0
         self.split_successful = 0
         self.colour_successful = 0
@@ -639,7 +644,9 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         prop_value_list_colouring = list(node_properties.values())
 
         colour_node_obs = { 'action_mask': np.array(colour_node_mask),'node_properties': np.array(prop_value_list_colouring), 'state' : self.cur_obs}
-        select_node_obs = { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(select_node_mask), 'state' : cur_obs, 'annotations': np.array(annotations) ,'adjacency_lists': adjacency_lists}
+        # select_node_obs = { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(select_node_mask), 'state' : cur_obs, 'annotations': np.array(annotations) ,'adjacency_lists': adjacency_lists}
+        select_node_obs = { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(select_node_mask), 'state' : cur_obs, 'annotations': np.array(annotations) ,'adjacency_lists_edge_num': edge_num_one_hot, 'adjacency_lists_node_num':node_num_one_hot,'adjacency_lists_data': edges_unroll.T}
+        
         select_task_obs = { 'action_mask': np.array(select_task_mask), 'node_properties': np.array(prop_value_list, dtype=np.float), 'state' : self.cur_obs}
         split_node_obs = { 'action_mask': np.array(split_node_mask), 'state' : self.cur_obs, "usepoint_properties": usepoint_prop_mat}
         
@@ -709,7 +716,9 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             self.select_task_agent_id = "select_task_agent_{}".format(self.agent_count)
             self.split_node_agent_id = "split_node_agent_{}".format(self.agent_count)
             self.colour_node_agent_id = "colour_node_agent_{}".format(self.agent_count)
-            obs[self.select_node_agent_id] = { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(select_node_mask), 'state' : cur_obs, 'annotations': np.array(annotations) ,'adjacency_lists': adjacency_lists}
+            # obs[self.select_node_agent_id] = { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(select_node_mask), 'state' : cur_obs, 'annotations': np.array(annotations) ,'adjacency_lists': adjacency_lists}
+            
+            obs[self.select_node_agent_id] = {'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(select_node_mask), 'state' : cur_obs, 'annotations': np.array(annotations) ,'adjacency_lists_edge_num': edge_num_one_hot, 'adjacency_lists_node_num':node_num_one_hot,'adjacency_lists_data': edges_unroll.T}
             
             reward[self.select_node_agent_id] = 0
             done[self.select_node_agent_id] = done_all
@@ -842,7 +851,8 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             obs = {
                 self.colour_node_agent_id: { 'action_mask': np.array(colour_node_mask),'node_properties': np.array(prop_value_list_colouring), 'state' : self.cur_obs},
                 # self.select_node_agent_id: { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(select_node_mask), 'state' : cur_obs},
-                self.select_node_agent_id: { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(select_node_mask), 'state' : cur_obs, 'annotations': np.array(annotations) ,'adjacency_lists': adjacency_lists},
+                # self.select_node_agent_id: { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(select_node_mask), 'state' : cur_obs, 'annotations': np.array(annotations) ,'adjacency_lists': adjacency_lists},
+                self.select_node_agent_id: { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(select_node_mask), 'state' : cur_obs, 'annotations': np.array(annotations) ,'adjacency_lists_node_num':node_num_one_hot, 'adjacency_lists_edge_num':edge_num_one_hot,'adjacency_lists_data':edges_unroll.T},
                 self.select_task_agent_id: { 'action_mask': np.array(select_task_mask), 'node_properties': np.array(prop_value_list, dtype=np.float), 'state' : self.cur_obs},
                 self.split_node_agent_id: { 'action_mask': np.array(split_node_mask), 'state' : self.cur_obs, "usepoint_properties": usepoint_prop_mat},
             }
@@ -875,7 +885,9 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             
 
             # obs[self.select_node_agent_id] = { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(select_node_mask), 'state' : cur_obs}
-            obs[self.select_node_agent_id] = { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(select_node_mask), 'state' : cur_obs, 'annotations': np.array(annotations) ,'adjacency_lists': adjacency_lists}
+            # obs[self.select_node_agent_id] = { 'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(select_node_mask), 'state' : cur_obs, 'annotations': np.array(annotations) ,'adjacency_lists': adjacency_lists}
+            
+            obs[self.select_node_agent_id] = {'spill_weights': np.array(spill_weight_list), 'action_mask': np.array(select_node_mask), 'state' : cur_obs, 'annotations': np.array(annotations) ,'adjacency_lists_node_num':node_num_one_hot, 'adjacency_lists_edge_num':edge_num_one_hot,'adjacency_lists_data':edges_unroll.T}
 
             # obs[self.select_node_agent_id] = self.cur_obs
             reward[self.select_node_agent_id] = 0

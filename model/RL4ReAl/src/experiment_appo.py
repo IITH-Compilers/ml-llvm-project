@@ -228,7 +228,10 @@ if __name__ == "__main__":
         "action_mask": Box(0, 1, shape=(config["env_config"]["max_number_nodes"],)),
         "state": box_obs_select_node,
         "annotations": Box(FLOAT_MIN, FLOAT_MAX, shape=(config["env_config"]["max_number_nodes"], config["env_config"]["annotations"]), dtype=np.float32),
-        "adjacency_lists": adjacency_lists,
+        "adjacency_lists_node_num": Box(0.0,config["env_config"]["max_number_nodes"],shape=(config["env_config"]["max_number_nodes"],)),
+        "adjacency_lists_edge_num": Box(0.0,config["env_config"]["max_edge_count"],shape=(config["env_config"]["max_edge_count"],)),
+        "adjacency_lists_data": Box(0.0, config["env_config"]["max_number_nodes"], shape=(2,max_edge_count))
+        #"adjacency_lists": adjacency_lists,
         }) 
     obs_select_task = Dict({
         "node_properties": Box(FLOAT_MIN, FLOAT_MAX, shape=(4,), dtype=np.float32),
