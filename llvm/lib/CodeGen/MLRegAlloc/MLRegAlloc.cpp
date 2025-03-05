@@ -204,7 +204,7 @@ MLRA::MLRA() {
                              "/regalloc/RegColorMap_Both_riscv64.json");
     symbolic = new MIR2Vec_Symbolic(MLConfig::mlconfig +
 
-                                    "/ir2vec/seedEmbedding_1500E_300D_riscv64.txt");
+                                    "/ir2vec/seedEmbedding_5000E_100D_256batches3.0margin_formatted.txt");
   }
   //???
   // SetStub<registerallocationinference::RegisterAllocationInference>(
@@ -297,7 +297,7 @@ grpc::Status MLRA::codeGen(grpc::ServerContext *context,
     SmallVector<unsigned, 2> NewVRegs;
     LLVM_DEBUG(errs() << "==========================BEFORE "
                          "SPLITTING==================================\n");
-    MF->dump();
+    // MF->dump();
     LLVM_DEBUG(
         errs()
         << "============================================================\n");

@@ -589,7 +589,8 @@ def get_observations(graph, Phy_registers_of_GRtype, remove_GR_NonGR_edge):
     return obs
 
 def constructVectorFromMatrix(node_tansor_matrix):
-    vector = torch.mean(node_tansor_matrix, 0)
+    # vector = torch.mean(node_tansor_matrix, 0)
+    vector = torch.sum(node_tansor_matrix, 0)
     return vector
 
 def main():

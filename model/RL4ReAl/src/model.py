@@ -9,7 +9,7 @@ from ray.rllib.models.torch.misc import SlimFC, normc_initializer
 import numpy as np
 from ggnn_1 import get_observations, get_observationsInf, GatedGraphNeuralNetwork, constructVectorFromMatrix, AdjacencyList
 import random
-from torch_geometric.nn import GCN
+from torch_geometric.nn import GCN, GCNConv
 from torch_geometric.data import Data, Batch
 logger = logging.getLogger(__file__) 
 random.seed(123)
@@ -96,12 +96,19 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
         # self.attention = nn.Linear(custom_config["max_number_nodes"], 1)
         # self.fc3 = nn.Linear( custom_config["fc2_units"], custom_config["max_number_nodes"])
         self.enable_ggnn = custom_config["enable_GGNN"]
-        self.fc1 = nn.Linear(custom_config["state_size"], custom_config["fc1_units"])
-        self.fc2 = nn.Linear(custom_config["fc1_units"] + 1, custom_config["fc2_units"])
-        # self.attention = nn.Linear(custom_config["max_number_nodes"], 1)
-        self.fc3 = nn.Linear( custom_config["fc2_units"], custom_config["fc3_units"])
-        self.fc4 = nn.Linear( custom_config["fc3_units"], 1)
-        
+        # self.fc1 = nn.Linear(custom_config["state_size"], custom_config["fc1_units"])
+        # self.fc2 = nn.Linear(custom_config["fc1_units"] + 1, custom_config["fc2_units"])
+        # # self.attention = nn.Linear(custom_config["max_number_nodes"], 1)
+        # self.fc3 = nn.Linear( custom_config["fc2_units"], custom_config["fc3_units"])
+        # self.fc4 = nn.Linear( custom_config["fc3_units"], 1)
+                
+        self.ggnn1 = GCNConv(in_channels=103, out_channels=custom_config["fc1_units"], improved=True, normalize=True)
+        self.ggnn2 = GCNConv(in_channels=custom_config["fc1_units"], out_channels=custom_config["fc2_units"], improved=True, normalize=True)
+        self.ggnn3 = GCNConv(in_channels=custom_config["fc2_units"], out_channels=custom_config["fc3_units"], improved=True, normalize=True)
+        self.fc = nn.Linear(custom_config["fc3_units"]*custom_config["max_number_nodes"], custom_config["max_number_nodes"])
+        self.bn1 = nn.BatchNorm1d(custom_config["max_number_nodes"]*custom_config["fc1_units"])
+        self.bn2 = nn.BatchNorm1d(custom_config["max_number_nodes"]*custom_config["fc2_units"])
+        self.bn3 = nn.BatchNorm1d(custom_config["max_number_nodes"]*custom_config["fc3_units"])
         self._value_branch = SlimFC(
             in_size=custom_config["max_number_nodes"],
             out_size=1,
@@ -115,81 +122,44 @@ class SelectNodeNetwork(TorchModelV2, nn.Module):
         self.emb_size = custom_config["state_size"]
         # self.ggnn = GatedGraphNeuralNetwork(hidden_size=state_size, annotation_size=annotations_size, num_edge_types=1, layer_timesteps=[5], residual_connections={}, nodelevel=True, batch_norm_param=self.max_number_nodes, max_edge_count=custom_config["max_edge_count"])
 
-        self.ggnn = GCN(in_channels=103, hidden_channels=100, out_channels=100, num_layers=2, norm='BatchNorm', dropout=0.2)
+        # self.ggnn = GCN(in_channels=103, hidden_channels=100, out_channels=100, num_layers=2, norm='BatchNorm', dropout=0.2)
         
     def forward(self, input_dict, state, seq_lens):
         """Build a network that maps state -> action values."""
         input_state_list = torch.zeros(input_dict["obs"]["state"].shape[0], self.max_number_nodes, self.emb_size)
-        if self.enable_ggnn:
-            # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-            ggnn_input_x = torch.dstack((input_dict["obs"]["state"], input_dict["obs"]["annotations"]))
-            edge_index = input_dict['obs']['adjacency_lists']['data'].values.mT
-            
-            assert not torch.isnan(ggnn_input_x).any(), "Nan in select node model input embedding"
-            assert not torch.isnan(edge_index).any(), "Nan in select node model edge data"
-            # assert not torch.isnan(input_dict["obs"]['annotations']).any(), "Nan in select node model annotations data"
-            batch_size = ggnn_input_x.shape[0]
-            # #################### batch method #######################
-            data_list = []
+                
+        assert not torch.isnan(input_dict["obs"]["state"]).any(), "Nan in select node model obs:state"
+        assert not torch.isnan(input_dict['obs']['adjacency_lists']['data'].values).any(), "Nan in select node model adjlist"
+        # print("node_embeddings before", input_dict["obs"]["state"].shape)
+        node_embeddings = F.normalize(input_dict["obs"]["state"], dim=2)
+        # print("node_embeddings after", node_embeddings.shape)
+        ggnn_input_x = torch.dstack((node_embeddings, input_dict["obs"]["annotations"]))
+        edge_index = input_dict['obs']['adjacency_lists']['data'].values
 
-            data_list = [Data(x=ggnn_input_x[i], edge_index=edge_index[i].long()) for i in range(batch_size)]
-            batch_data = Batch.from_data_list(data_list=data_list)
+        # print("ggnn_input_x shape = ", ggnn_input_x.shape)
+        # print("edge_index.device = ", edge_index.device)
+        batch_size = ggnn_input_x.shape[0]
+        # #################### batch method #######################
+        data_list = []
 
-            node_mat = self.ggnn(batch_data.x, batch_data.edge_index).reshape(batch_size, -1, 100)
-            
-            if torch.isnan(node_mat).any():
-                for name, p in self.ggnn.named_parameters():
-                    print("Parameter {} nan flag value is {}".format(name, torch.isnan(p.data).any()))
-            assert not torch.isnan(node_mat).any(), "Nan in select node model input after ggnn"                       
-            # outs = [self.ggnn(ggnn_input_x[i], edge_index[i].long()) for i in range(batch_size)]
-            # node_mat = torch.stack(outs)
-            # print("GOT NODE_MAT!!!!!!!!!!!!", node_mat.shape)
-            # return
-            # node_mat = self.ggnn(initial_node_representation=input_dict["obs"]["state"], annotations=input_dict["obs"]["annotations"], adjacency_lists=input_dict["obs"]["adjacency_lists"])
-
-            # print("node_mat device = ", node_mat.device)
-            # print("-----------------AFTER GGNN-------------")
-            # print("node mat shape - ", node_mat.shape)
-            # return
-            
-            input_state_list = node_mat
-        else:
-            input_state_list = initial_node_representation=input_dict["obs"]["state"]
+        data_list = [Data(x=ggnn_input_x[i], edge_index=edge_index[i].long().T) for i in range(batch_size)]
         
-        # input_state_list = input_dict["obs"]["state"] 
-        input_state_list = input_state_list.to(input_dict["obs"]["state"].device)  
-        assert not torch.isnan(input_state_list).any(), "Nan in select node model input"
-        x = F.relu(self.fc1(input_state_list))
-        if torch.isnan(x).any():
-            print("Task select model input max value: ", torch.max(input_state_list))
-            print("FC1 layers weights", torch.isnan(self.fc1.state_dict()['weight']).any())
-            print("FC1 layers bias", torch.isnan(self.fc1.state_dict()['bias']).any())
-        assert not torch.isnan(x).any(), "Nan in select node model after fc1"
-        spill_weights = input_dict["obs"]["spill_weights"]
-        assert not torch.isnan(spill_weights).any(), "Spill weight is nan for select node model"
-        spill_weights = (spill_weights).reshape(spill_weights.shape[0], spill_weights.shape[1], 1)
-        x = torch.cat((spill_weights, x), 2)
-        x = F.relu(self.fc2(x))
-        if torch.isnan(x).any():
-            print("Task select model input max value: ", torch.max(input_state_list))
-            print("FC2 layers weights", torch.isnan(self.fc1.state_dict()['weight']).any())
-            print("FC2 layers bias", torch.isnan(self.fc1.state_dict()['bias']).any())
-        #print("FC2 layer weights max and min value", torch.max(self.fc2.state_dict()['weight']), torch.min(self.fc2.state_dict()['weight']))
-        #print("FC2 layer bias max and min value", torch.max(self.fc2.state_dict()['bias']), torch.min(self.fc2.state_dict()['bias']))
-        assert not torch.isnan(x).any(), "Nan in select node model after fc2"
-        # x = torch.transpose(x, 1, 2)
-        # x = self.attention(x)        
-        # assert not torch.isnan(x).any(), "Nan in select node model after attension layer"
-        x = F.relu(self.fc3(x))
-        assert not torch.isnan(x).any(), "Nan in select node model after fc3"        
-        x = self.fc4(x)
-        x = torch.squeeze(x, 2)
-        assert not torch.isnan(x).any(), "Nan in select node model after fc4"
+        batch_data = Batch.from_data_list(data_list=data_list)
+        
+        # print("Data bash sizes:", type(batch_data.x), batch_data.x.shape, type(batch_data.edge_index), batch_data.edge_index.shape)
+        # batch_data = Data(x=ggnn_input_x, edge_index=edge_index.long().T)
+        node_mat = F.relu(self.ggnn1(batch_data.x, batch_data.edge_index)).reshape(batch_size, -1)        
+        node_mat = self.bn1(node_mat).reshape(batch_size*self.max_number_nodes, -1)        
+        
+        node_mat = F.relu(self.ggnn2(node_mat, batch_data.edge_index)).reshape(batch_size, -1)
+        node_mat = self.bn2(node_mat).reshape(batch_size*self.max_number_nodes, -1)
+        
+        x = F.relu(self.ggnn3(node_mat, batch_data.edge_index)).reshape(batch_size, -1)
+        x= self.bn3(x)
+        # print("ggnn3 output:", x.shape)
+        x = self.fc(x)
         self._features = x.clone().detach()
-        # x=self.softmax(x)
         mask = input_dict["obs"]["action_mask"]
-        # masking_value = -1e6
-        # masking_value = FLOAT_MIN
         inf_mask = torch.clamp(torch.log(mask), min=FLOAT_MIN)
         x = x + inf_mask 
         # x = torch.where(mask, x, torch.tensor(masking_value).to(x.device))
