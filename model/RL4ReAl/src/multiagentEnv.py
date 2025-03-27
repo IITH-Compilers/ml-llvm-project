@@ -856,15 +856,23 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
         
         if self.mode != 'inference':   
             updated_graphs = self.stable_grpc('Split', int(node_id), int(split_point))
+            #print("updated_graphs.result in splitting: ",updated_graphs.result)
+            #print("updated_graphs in split_task: ",updated_graphs)
             if updated_graphs is None:
+                print("Updated graphs is None some error happened at LLVM.....")
                 self.obs.graph_topology.markNodeAsNotVisited(nodeChoosen)
                 return reward, False
+            
+            print("sending split point to LLVM: ","Node id: ",int(node_id),"split point is: ",int(split_point))
             update_obs_result = self.update_obs(updated_graphs, int(node_id), int(split_point))
             if not update_obs_result:
+                print("updated_graphs.result is None hence returned false from update_obs....")
                 self.obs.graph_topology.markNodeAsNotVisited(nodeChoosen)
             elif update_obs_result == "error":
+                print("Update_obs_result from python update_obs is returned error... which means more than max_nodes or max_edges...")
                 done = True
             else:
+                print("splitted successfullt....")
                 self.split_successful += 1
         else:
             done = True
@@ -1022,54 +1030,60 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                         
                     else:
                         print("MCA timeout happned")                    
-                
-                    logdir = self.env_config["log_dir"]
-                    mlra_mca_throughput_file_path = os.path.join(logdir, str(self.worker_index) + '_mlra_throughput.json')
-                    if os.path.exists(mlra_mca_throughput_file_path):
-                        with open(mlra_mca_throughput_file_path) as f:
-                            mlra_throughput_map = json.load(f)
-                            f.close()
-                    else:
-                        mlra_throughput_map = {}
-                    
-                    with open(mlra_mca_throughput_file_path, 'w') as f:
-                        fileName = os.path.basename(self.fileName)
-                        if str(self.iteration_number) not in mlra_throughput_map.keys():
-                            mlra_throughput_map[str(self.iteration_number)] = {}
-                        key = fileName + "_" + self.functionName
-                        # if key not in mlra_throughput_map.keys():
-                        #     mlra_throughput_map[key] = []
-                        if key in mlra_throughput_map[str(self.iteration_number)]:
-                            (mlra_throughput_map[str(self.iteration_number)][key]).append(mlra_throughput)
-                        else:
-                            mlra_throughput_map[str(self.iteration_number)][key] = [mlra_throughput]
-                        # print("Adding function to iteration map", key, self.iteration_number)
-                        json.dump(mlra_throughput_map, f)
-                        f.close()
 
-                    mlra_mca_cycle_file_path = os.path.join(logdir, str(self.worker_index) + '_mlra_cycle.json')
-                    if os.path.exists(mlra_mca_cycle_file_path):
-                        with open(mlra_mca_cycle_file_path) as f:
-                            mlra_cycle_map = json.load(f)
-                            f.close()
-                    else:
-                        mlra_cycle_map = {}
+                    print("self.env_config['log_dir']: ",self.env_config["log_dir"])
+                    logdir = self.env_config["log_dir"]
                     
-                    with open(mlra_mca_cycle_file_path, 'w') as f:
-                        fileName = os.path.basename(self.fileName)
-                        if str(self.iteration_number) not in mlra_cycle_map.keys():
-                            mlra_cycle_map[str(self.iteration_number)] = {}
-                            # print("Adding iteration key to map", self.iteration_number, mlra_cycle_map.keys())
-                        key = fileName + "_" + self.functionName
-                        # if key not in mlra_cycle_map.keys():
-                        #     mlra_cycle_map[key] = []
-                        if key in mlra_cycle_map[str(self.iteration_number)]:
-                            (mlra_cycle_map[str(self.iteration_number)][key]).append(mlra_cycles)
-                        else:
-                            mlra_cycle_map[str(self.iteration_number)][key] = [mlra_cycles]
-                        # print("Adding function to iteration map", key, self.iter.ation_number)
-                        json.dump(mlra_cycle_map, f)
-                        f.close()
+                    # mlra_mca_throughput_file_path = os.path.join(logdir, str(self.worker_index) + '_mlra_throughput.json')
+                    # print("mlra_mca_throughput_file_path: ",mlra_mca_throughput_file_path)
+                    
+                    # if os.path.exists(mlra_mca_throughput_file_path):
+                    #     with open(mlra_mca_throughput_file_path) as f:
+                    #         print("Opening mlra_mca_throughput_file_path...")
+                    #         mlra_throughput_map = json.load(f)
+                    #         f.close()
+                    # else:
+                    #     print()
+                    #     mlra_throughput_map = {}
+                    
+                    # with open(mlra_mca_throughput_file_path, 'w') as f:
+                    #     fileName = os.path.basename(self.fileName)
+                    #     if str(self.iteration_number) not in mlra_throughput_map.keys():
+                    #         mlra_throughput_map[str(self.iteration_number)] = {}
+                    #     key = fileName + "_" + self.functionName
+                    #     # if key not in mlra_throughput_map.keys():
+                    #     #     mlra_throughput_map[key] = []
+                    #     if key in mlra_throughput_map[str(self.iteration_number)]:
+                    #         (mlra_throughput_map[str(self.iteration_number)][key]).append(mlra_throughput)
+                    #     else:
+                    #         mlra_throughput_map[str(self.iteration_number)][key] = [mlra_throughput]
+                    #     # print("Adding function to iteration map", key, self.iteration_number)
+                    #     json.dump(mlra_throughput_map, f)
+                    #     f.close()
+
+                    # mlra_mca_cycle_file_path = os.path.join(logdir, str(self.worker_index) + '_mlra_cycle.json')
+                    # if os.path.exists(mlra_mca_cycle_file_path):
+                    #     with open(mlra_mca_cycle_file_path) as f:
+                    #         mlra_cycle_map = json.load(f)
+                    #         f.close()
+                    # else:
+                    #     mlra_cycle_map = {}
+                    
+                    # with open(mlra_mca_cycle_file_path, 'w') as f:
+                    #     fileName = os.path.basename(self.fileName)
+                    #     if str(self.iteration_number) not in mlra_cycle_map.keys():
+                    #         mlra_cycle_map[str(self.iteration_number)] = {}
+                    #         # print("Adding iteration key to map", self.iteration_number, mlra_cycle_map.keys())
+                    #     key = fileName + "_" + self.functionName
+                    #     # if key not in mlra_cycle_map.keys():
+                    #     #     mlra_cycle_map[key] = []
+                    #     if key in mlra_cycle_map[str(self.iteration_number)]:
+                    #         (mlra_cycle_map[str(self.iteration_number)][key]).append(mlra_cycles)
+                    #     else:
+                    #         mlra_cycle_map[str(self.iteration_number)][key] = [mlra_cycles]
+                    #     # print("Adding function to iteration map", key, self.iter.ation_number)
+                    #     json.dump(mlra_cycle_map, f)
+                    #     f.close()
                     # else:
                     #     # print("Killing Server pid", self.server_pid.pid)         
                     #     # os.killpg(os.getpgid(self.server_pid.pid), signal.SIGKILL)
@@ -1092,19 +1106,40 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
             inx = (((self.worker_index-1) * self.env_config['current_batch']) + self.graph_counter)
             path=self.training_graphs[inx]
             logging.debug('Graphs selected : {}'.format(path))
-            self.reset_count+=1
-            if self.reset_count % self.repeat_freq == 0:
-                self.graph_counter+=1
-                self.graph_counter = self.graph_counter % self.env_config['current_batch']
-                if self.graph_counter == 0:
-                    self.iteration_number += 1
-            try:
+
+            try: 
+                
+                if os.path.getsize(path) == 0:
+                    while os.path.getsize(path) == 0:
+                        logging.warning(f"Skipping empty JSON file: {path}")
+                        self.reset_count+=1
+                        if self.reset_count % self.repeat_freq == 0:
+                            self.graph_counter+=1
+                            self.graph_counter = self.graph_counter % self.env_config['current_batch']
+                            if self.graph_counter == 0:
+                                self.iteration_number += 1
+                                
+                        inx = (((self.worker_index-1) * self.env_config['current_batch']) + self.graph_counter)
+                        path=self.training_graphs[inx]
+                    
+                        #return None
+                    print("Found a Non empty json file.....")
+                else:         
+                    self.reset_count+=1
+                    if self.reset_count % self.repeat_freq == 0:
+                        self.graph_counter+=1
+                        self.graph_counter = self.graph_counter % self.env_config['current_batch']
+                        if self.graph_counter == 0:
+                            self.iteration_number += 1
+                            
                 with open(path) as f:
                    graph = json.load(f)
+                    
             except Exception as ex:
                 logging.error(path)
                 logging.error(traceback.format_exc())                
                 return None
+            
             
             if path is not None:
                 attr = utils_1.getllFileAttributes(path)
@@ -1176,8 +1211,9 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                 self.grpc_rtt += t2-t1
                 break
             except grpc.RpcError as e:
-                
+                print("Entered except cond....")
                 if e.code() == grpc.StatusCode.UNAVAILABLE:
+                    print("grpc.StatusCode.UNAVAILABLE...")
                     attempt += 1
                     if attempt > max_retries:
                         print("Maximum attempts completed", op)
@@ -1187,6 +1223,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
                     time.sleep(retry_wait_seconds)
                     retry_wait_seconds *= retry_wait_backoff_exponent
                 else:
+                    print("grpc.StatusCode.UNAVAILABLE.....")
                     attempt += 1
                     if self.mode != 'inference':
                         attempt += 1
@@ -1219,6 +1256,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
     def update_obs(self, updated_graphs, register_id, split_point):
         if updated_graphs.result:
+            print("Entered updated_graphs.result:....")
             num_edges = 0
             new_node_count = 0
             for node_prof in updated_graphs.regProf:  
@@ -1427,6 +1465,7 @@ class HierarchicalGraphColorEnv(MultiAgentEnv):
 
             self.obs.adjacency_lists = [ AdjacencyList(node_num=self.obs.graph_topology.num_nodes, adj_list=edges, device=self.obs.adjacency_lists[0].device)]
         else:
+            print("updated_graphs= ",type(updated_graphs),"result: ",updated_graphs.result)
             self.spill_weight_diff = 0
             self.interference_difference = 0
             logging.debug("updated_graphs= type:{} result:{}".format(type(updated_graphs), updated_graphs.result))

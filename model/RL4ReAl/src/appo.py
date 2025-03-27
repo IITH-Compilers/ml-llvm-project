@@ -112,10 +112,10 @@ class APPOConfig(ImpalaConfig):
         self.entropy_coeff = 0.01
         self.entropy_coeff_schedule = None
 
-        self.num_gpus = 0.5
+        self.num_gpus = 0.4
         self.num_envs_per_worker = 1
         self.num_cpus_per_worker = 1
-        self.num_gpus_per_worker = 0.05
+        self.num_gpus_per_worker = 0
 
 
         # __sphinx_doc_end__
@@ -141,24 +141,24 @@ class APPOConfig(ImpalaConfig):
             "graphs_num": 10000,
             "action_space_size": RegisterActionSpace("X86", CONFIG_DIR).ac_sp_normlize_size,
             "check_point": None,
-            "episode_number": 300000,
-            "GPU_ID": "1",
+            "episode_number": 2000, #1500
+            "GPU_ID": "3,4,5,7",
             "X86_CFLAGS": "-mllvm -regalloc=greedy  -march=skylake",
             "AArch64_CFLAGS": "-mllvm -regalloc=greedy  -mcpu=cortex-a72",
-            "dataset_bucket": "set_500",
+            "dataset_bucket": "gprof/set_120-150_filtered_gprof",
             "enable_GGNN": True,
             "remove_GR_NonGR_edge": False,
             "file_repeat_frequency": 1,
-            "current_batch": 50,
+            "current_batch": 497,
             "Workers_starting_port": "50075",
             "disable_spliting": False,
             "use_costbased_reward": False,
-            "use_local_reward": False,
+            "use_local_reward": True,
             "use_mca_reward": True,
             "use_mca_self_play_reward": False,
             "mca_reward_clip": 10,
             "mca_timeout": 30,
-            "greedy_mca_throughput_file_path": f"{MODEL_DIR}/spec17_x86_greedy-throughput_wo_profile_set_120-500.json",
+            "greedy_mca_throughput_file_path": f"{MODEL_DIR}/spec17_x86_greedy-throughput_wo_profile_set_120-500_mca_vec_8feb.json",
             "mca_cycles_file_path": f"{MODEL_DIR}/greedy-cycles_set_120-500.json",
             # "greedy_spillcost_map_file_path": f"{MODEL_DIR}/greedy-spillcost-spec17-set-120-500.json"
             "greedy_spillcost_map_file_path": f"{MODEL_DIR}/greedy-spillcost-spec17-profiled-set-120-500.json",

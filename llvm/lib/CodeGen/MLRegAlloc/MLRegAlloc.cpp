@@ -201,7 +201,7 @@ MLRA::MLRA() {
   // }
   if (enable_dump_ig_dot || enable_mlra_inference || enable_mlra_training) {
     loadTargetRegisterConfig(MLConfig::mlconfig +
-                             "/regalloc/RegColorMap_Both_riscv64.json");
+                             "/regalloc/RegColorMap_Both.json");
     symbolic = new MIR2Vec_Symbolic(MLConfig::mlconfig +
 
                                     "/ir2vec/seedEmbedding_5000E_100D_256batches3.0margin_formatted.txt");
@@ -255,6 +255,8 @@ grpc::Status MLRA::codeGen(grpc::ServerContext *context,
                            const registerallocation::Data *request,
                            registerallocation::RegisterProfileList *response) {
   LLVM_DEBUG(errs() << "Inside Codegen\n");
+  errs() << "Inside Codegen"<<"\n";
+
   LLVM_DEBUG(errs() << request->message());
   SmallVector<std::string, 8> spilledRegIds;
   // std::string str = "LLVM\n";
@@ -264,6 +266,8 @@ grpc::Status MLRA::codeGen(grpc::ServerContext *context,
     unsigned numSpills = 0;
     for (auto i : request->color()) {
       colorMap[i.key()] = i.value();
+      errs()<<"Key: "<<i.key()<<" "<<"Value is: "<<i.value()<<"\n";
+
       if (i.value() == 0) {
         numSpills++;
         spilledRegIds.push_back(i.key());
@@ -294,6 +298,9 @@ grpc::Status MLRA::codeGen(grpc::ServerContext *context,
       request->message() == "SplitAndCapture") {
     unsigned splitRegIdx = request->regidx();
     int splitPoint = request->payload();
+
+    errs()<<"Split point: "<<splitPoint<<" "<<"splitRegIdx: "<<splitRegIdx<<"\n";
+
     SmallVector<unsigned, 2> NewVRegs;
     LLVM_DEBUG(errs() << "==========================BEFORE "
                          "SPLITTING==================================\n");
@@ -303,18 +310,43 @@ grpc::Status MLRA::codeGen(grpc::ServerContext *context,
         << "============================================================\n");
 
     if (splitVirtReg(splitRegIdx, splitPoint, NewVRegs)) {
+
+      errs() << "******************************NewVRegs: ****************************************"<<"\n";
+      for (unsigned reg : NewVRegs) {
+          errs() << reg << " ";
+      }
+      errs() << "\n";
+
+
+      errs()<<"Came out of splitVirtReg..."<<"\n";
       SmallSetVector<unsigned, 8> updatedRegIdxs;
       updateRegisterProfileAfterSplit(splitRegIdx, NewVRegs, updatedRegIdxs);
+
+      errs() << "********************************updatedRegIdxs: *************************************"<<"\n";
+      for (unsigned reg : updatedRegIdxs) {
+          errs() << reg << " ";
+      }
+      errs() << "\n";
+
+
       if (enable_dump_ig_dot)
         dumpInterferenceGraph(std::to_string(SplitCounter));
       if (enable_mlra_checks)
         verifyRegisterProfile();
-      if (request->message() == "Split")
-        sendRegProfData<registerallocation::RegisterProfileList>(
+      if (request->message() == "Split"){
+
+          errs()<<"Before senfing regprof data..."<<"\n";
+          
+          sendRegProfData<registerallocation::RegisterProfileList>(
             response, &updatedRegIdxs);
+          
+          errs()<<"After sending regprof data...."<<"\n";
+      }
+        
       else
         sendRegProfData<registerallocation::RegisterProfileList>(response);
     } else {
+      errs()<<"Sending False to python because splitVirtReg has failed...."<<"\n";
       response->set_result(false);
     }
   }
@@ -725,6 +757,8 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
   assert(LIS->hasInterval(splitReg) && "VirtReg should be present");
   LLVM_DEBUG(errs() << "Virtreg to split = " << printReg(splitReg, TRI)
                     << "\n");
+  // errs() << "Virtreg to split = " << printReg(splitReg, TRI)<< "\n";
+                    
 
   LiveInterval *VirtReg = &LIS->getInterval(splitReg);
   LLVM_DEBUG(VirtReg->dump());
@@ -735,12 +769,14 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
     LLVM_DEBUG(dbgs() << "not queueing unused  " << '\n');
     // aboutToRemoveInterval(*VirtReg);
     // LIS->removeInterval(VirtReg->reg);
+    errs()<<"returning false from splitVirtReg..."<<"\n";
     return false;
   }
 
   if (std::find(mlSpilledRegs.begin(), mlSpilledRegs.end(), VirtReg) !=
       mlSpilledRegs.end()) {
     LLVM_DEBUG(dbgs() << "Reg masked as spilled" << '\n');
+    errs()<<"returning false from splitVirtReg..."<<"\n";
     return false;
   }
 
@@ -777,10 +813,17 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
       idx = use;
       idxPos = pos - 1;
       LLVM_DEBUG(errs() << "UseSlot size: " << useSlots.size() << "\n");
+      errs()<<"*************************************************"<<"\n";
+      errs() << "UseSlot size: " << useSlots.size() << "\n";
       if (use.getBoundaryIndex() >= useSlots.back().getBoundaryIndex()) {
         LLVM_DEBUG(errs() << "No use of splitting at/after the last use "
                              "slot -- exiting\n");
+        errs()<<"++++++++++++++++++++++++++++++++++++++++++++++++++++"<<"\n";
+        errs() << "No use of splitting at/after the last use "
+                             "slot -- exiting\n";
         llvm_unreachable("No use of splitting at/after the last use slot");
+
+        errs()<<"returning false from splitVirtReg..."<<"\n";
         return false;
       }
       found = true;
@@ -791,7 +834,9 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
   assert(found && "Invalid split point");
   // if (idxPos == 0 || idxPos >= useSlots.size() - 1)
   if (idxPos >= useSlots.size() - 1) {
+    errs()<<"trying to split at last split point..."<<"\n";
     LLVM_DEBUG(dbgs() << "trying to split at last split point" << '\n');
+    errs()<<"returning false from splitVirtReg..."<<"\n";
     return false;
   }
 
@@ -896,7 +941,9 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
   // }
 
   if (MI->registerDefIsDead(splitReg)) {
+    errs() << "No use of splitting after the dead register"<<"\n";
     LLVM_DEBUG(errs() << "No use of splitting after the dead register\n");
+    errs()<<"returning false from splitVirtReg..."<<"\n";
     return false;
   }
 
@@ -927,6 +974,7 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
       RM.OrigMI = LIS->getInstructionFromIndex(OrigVNI->def);
       if (LREdit.canRematerializeAt(RM, OrigVNI, baseIdx, true)) {
         LLVM_DEBUG(dbgs() << "Splitting at this point would not be useful");
+        errs()<<"returning false from splitVirtReg..."<<"\n";
         return false;
       }
     }
@@ -953,8 +1001,11 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
       auto endIdx = UB.LastInstr;
       auto startIdx = MBB == UB.MBB ? baseIdx : UB.FirstInstr;
       if (LIS->getInstructionFromIndex(startIdx)->isCopy()) {
+        errs() << "No use of splitting at copy -- returning false\n";
         LLVM_DEBUG(
             errs() << "No use of splitting at copy -- returning false\n");
+
+        errs()<<"returning false from splitVirtReg..."<<"\n";
         return false;
       }
 
@@ -1025,6 +1076,7 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
       // errs() << "Slot index for current valid splitpoint: ";
       // i.first.dump();
       LLVM_DEBUG(dbgs() << "tring to split after last split point" << '\n');
+      errs()<<"returning false from splitVirtReg..."<<"\n";
       return false;
     }
   }
@@ -1067,6 +1119,7 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
 
   if (LREdit.empty()) {
     LLVM_DEBUG(dbgs() << "All uses were copies.\n");
+    errs()<<"returning false from splitVirtReg..."<<"\n";
     return false;
   }
 
@@ -1144,6 +1197,7 @@ bool MLRA::splitVirtReg(unsigned splitRegIdx, int splitPoint,
   //   }
   // } dbgs() << "------------------------------------------\n");
   // captureRegisterProfile();
+  errs()<<"returning true from splitVirtReg..."<<"\n";
   return true;
 }
 
