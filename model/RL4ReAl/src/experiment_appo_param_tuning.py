@@ -65,7 +65,6 @@ import socket
 
 from ray import tune, air
 from ray.air import session
-from ray.tune.search.optuna import OptunaSearch
 from ray import air
 from ray.air.config import CheckpointConfig
 
@@ -78,7 +77,7 @@ torch.autograd.set_detect_anomaly(True)
 
 checkpoint = None
 
-'''
+
 #hyper
 def is_port_available(port):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -103,16 +102,17 @@ def extract_numeric_trial_id(trial_id):
         return match.group(0)
     else:
         return None
-'''
+
 def experiment(config):
+    print("config passed to trainable in experiment_appo.py: ",config)
     iterations = config.pop("train-iterations") 
     global checkpoint
     train_results = {}
-    
-    '''
+       
     #hypertuning
     trial_id = tune.get_trial_id()
     numeric_trial_id = extract_numeric_trial_id(trial_id)
+    # print("Numeric trial id for this trial: ",numeric_trial_id)
     try:
         numeric_trial_id_decimal = int(numeric_trial_id, 16)
     except ValueError:
@@ -120,16 +120,20 @@ def experiment(config):
         return -2.8
     
     print("numeric_trial_id: ",numeric_trial_id_decimal)
-    starting_port = int(config["env_config"]["Workers_starting_port_placeholder"]) + int(numeric_trial_id_decimal)
-    print("starting port: ",starting_port)
-    config["env_config"]["Workers_starting_port_placeholder"] = int(starting_port)+int(config["num_rollout_workers"])
     trial_port = find_open_ports(numeric_trial_id_decimal)
+    
+    # starting_port = int(config["env_config"]["Workers_starting_port_placeholder"]) + int(trial_port)
+    # print("starting port: ",starting_port)
+    
+    config["env_config"]["Workers_starting_port_placeholder"] = int(trial_port)
     config["env_config"]["trial_ports"] = trial_port
     print("trial_port: ",config["env_config"]["trial_ports"])
-    '''
+    
     
     # config["env_config"]["path"] = path
     # train_agent = SimpleQTrainer(config=config, env=HierarchicalGraphColorEnv)
+    print("config passed to trainable in experiment_appo.py: ",config)
+
     train_agent = APPO(config=config, env=HierarchicalGraphColorEnv)
     #print('Training agent used:', train_agent)
     print('------------------------ aegent --------------------------------- ', train_agent)
@@ -166,17 +170,17 @@ def experiment(config):
             last_report = train_results['episodes_total']
             tune.report(**train_results)
 
-        # tune.report(episode_reward_mean=train_results['sampler_results']['episode_reward_mean'],episode_reward_min=train_results['sampler_results']['episode_reward_min'],
-        #                 episode_len_mean=train_results['sampler_results']['episode_len_mean'],episode_reward_max=train_results['sampler_results']['episode_reward_max'],)
+            #tune.report(episode_reward_mean=train_results['sampler_results']['episode_reward_mean'],episode_reward_min=train_results['sampler_results']['episode_reward_min'],
+                        #episode_len_mean=train_results['sampler_results']['episode_len_mean'],episode_reward_max=train_results['sampler_results']['episode_reward_max'],)
 
         if train_results['episodes_total'] > config["env_config"]["episode_number"]:
             # print("555555555555555555555555555555555555555555555555")
             print("Traning Ended")
             checkpoint = train_agent.save(tune.get_trial_dir())
-            #tune.report(**train_results)  #here
+            tune.report(**train_results)  #here
+            #tune.report(episode_reward_mean=train_results['sampler_results']['episode_reward_mean'])
             break
-        
-        
+      
         #????? needed?
         #tune.report(episode_reward_mean=train_results['sampler_results']['episode_reward_mean'])
     train_agent.stop()
@@ -417,17 +421,17 @@ if __name__ == "__main__":
     
     #hypertuning
     
-    config.update({
-        "lr": tune.choice([5e-4, 5e-5]),  #tune.loguniform(1e-4, 1e-1)
-        #"train_batch_size": tune.choice([32, 64]),
-        # "sgd_minibatch_size": tune.choice([64, 128, 32]),
-        "num_sgd_iter": tune.choice([1, 3, 5]),
-        # "kl_coeff": tune.uniform(0.6, 1.2),
-        # "kl_target": tune.uniform(0.003, 0.01),
-        "vf_loss_coeff": tune.uniform(0.5, 1.0),
-        "entropy_coeff": tune.uniform(0.001, 0.01),
-        "grad_clip": tune.choice([10, 40, 100])
-    })
+    # config.update({
+    #     "lr": tune.choice([5e-4, 5e-5]),  #tune.loguniform(1e-4, 1e-1)
+    #     #"train_batch_size": tune.choice([32, 64]),
+    #     # "sgd_minibatch_size": tune.choice([64, 128, 32]),
+    #     "num_sgd_iter": tune.choice([1, 3, 5]),
+    #     # "kl_coeff": tune.uniform(0.6, 1.2),
+    #     # "kl_target": tune.uniform(0.003, 0.01),
+    #     "vf_loss_coeff": tune.uniform(0.5, 1.0),
+    #     "entropy_coeff": tune.uniform(0.001, 0.01),
+    #     "grad_clip": tune.choice([10, 40, 100])
+    # })
     experiment_name = f"w{args.workers}_{args.mode}"
     
     print("config in experiment: ",config)
@@ -439,8 +443,10 @@ if __name__ == "__main__":
         # metric="episode_reward_mean",
         # mode="max",
         time_attr="episodes_total",
+        metric="episode_reward_mean",
+        mode="max",
         max_t = config["env_config"]['episode_number'],
-        grace_period = 500 #500  #iterations   #each trial actually runs for 1000 eps but it should be killed at 150 eps if its performance is not good. performance is measured based on episode_reward_mean
+        grace_period = 5 #500  #iterations   #each trial actually runs for 1000 eps but it should be killed at 150 eps if its performance is not good. performance is measured based on episode_reward_mean
         #reduction_factor=5
     )
     
@@ -458,15 +464,15 @@ if __name__ == "__main__":
     search_space = {
         "lr": optuna.distributions.CategoricalDistribution([0.001, 0.0001, 0.00001]),
         #"sgd_minibatch_size": optuna.distributions.CategoricalDistribution([32, 64, 128]),
-        #"train_batch_size": optuna.distributions.CategoricalDistribution([32, 64, 128]),
-        "num_sgd_iter": optuna.distributions.CategoricalDistribution([1, 3, 10]),
+        "train_batch_size": optuna.distributions.CategoricalDistribution([852, 987, 456]),
+        "num_sgd_iter": optuna.distributions.CategoricalDistribution([1, 7, 5]),
         "clip_param": optuna.distributions.CategoricalDistribution([0.1, 0.2, 0.3]),
-        "kl_coeff": optuna.distributions.CategoricalDistribution([0.3, 0.6, 1.0]),
-        "kl_target": optuna.distributions.CategoricalDistribution([0.003, 0.016, 0.03]),
+        "kl_coeff": optuna.distributions.FloatDistribution(0.3,1.0),
+        "kl_target": optuna.distributions.FloatDistribution(0.003,0.03),
     }
     
     optuna_search = OptunaSearch(
-        #space= search_space,497
+        space= search_space,
         metric="episode_reward_mean",
         mode="max",
     )
@@ -508,14 +514,13 @@ if __name__ == "__main__":
 
         exeriment_with_resource,
         tune_config=tune.TuneConfig(
-            search_alg=OptunaSearch(),
+
+            search_alg=optuna_search,
             #search_alg=optuna_search,
-            metric="episode_reward_mean",
-            mode="max",
             scheduler=asha_scheduler,
-            num_samples=200,  #200
+            num_samples=2,  #200
             reuse_actors=True,
-            max_concurrent_trials=8, #10
+            max_concurrent_trials=1, #10
         ),
         run_config=air.RunConfig(
             checkpoint_config=CheckpointConfig(
@@ -523,8 +528,10 @@ if __name__ == "__main__":
                 checkpoint_score_attribute="episode_reward_mean",
                 checkpoint_score_order="max",
             ),
+            local_dir="/home/intern24002/ml-llvm-project_backup/ml-llvm-project/model/RL4ReAl/src/errors",
         ),
         param_space=config,
+        #param_space=search_space
     )
 
     results = tuner.fit()
@@ -536,10 +543,10 @@ if __name__ == "__main__":
 
     # Get a dataframe of results for a specific score or mode
     df = results.get_dataframe()
-    print(df.columns)
+    print("columns: ",df.columns)
     sorted_df = df[["episode_reward_mean", "episode_reward_max", "episode_reward_min", "episode_len_mean", "logdir"]].sort_values(by="episode_reward_mean", ascending=True)
-    sorted_df.to_csv("/u/student/2025/cs25mtech02001/RL4ReAl-2.0_backup/RL4ReAl-2.0/model/RL4ReAl/src/sorted_set_120-150.csv", index=False)
-    df.to_csv("/u/student/2025/cs25mtech02001/RL4ReAl-2.0_backup/RL4ReAl-2.0/model/RL4ReAl/src/param_tuning_set_120-150.csv", index=False)
+    sorted_df.to_csv("/home/intern24002/ml-llvm-project_backup/ml-llvm-project/model/RL4ReAl/src/sorted_set_120-150.csv",index=False)
+    df.to_csv("/home/intern24002/ml-llvm-project_backup/ml-llvm-project/model/RL4ReAl/src/param_tuning_set_120-150.csv",index=False)
     print(sorted_df)
     
     best_result = results.get_best_result("episode_reward_mean", "max")

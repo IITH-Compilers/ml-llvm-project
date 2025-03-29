@@ -112,7 +112,7 @@ class APPOConfig(ImpalaConfig):
         self.entropy_coeff = 0.01
         self.entropy_coeff_schedule = None
 
-        self.num_gpus = 0.4
+        self.num_gpus = 0
         self.num_envs_per_worker = 1
         self.num_cpus_per_worker = 1
         self.num_gpus_per_worker = 0
@@ -141,16 +141,17 @@ class APPOConfig(ImpalaConfig):
             "graphs_num": 10000,
             "action_space_size": RegisterActionSpace("X86", CONFIG_DIR).ac_sp_normlize_size,
             "check_point": None,
-            "episode_number": 2000, #1500
+            "episode_number": 20, #1500
             "GPU_ID": "3,4,5,7",
             "X86_CFLAGS": "-mllvm -regalloc=greedy  -march=skylake",
             "AArch64_CFLAGS": "-mllvm -regalloc=greedy  -mcpu=cortex-a72",
-            "dataset_bucket": "gprof/set_120-150_filtered_gprof",
+            "dataset_bucket": "set_120-150_filtered_gprof",
             "enable_GGNN": True,
             "remove_GR_NonGR_edge": False,
             "file_repeat_frequency": 1,
             "current_batch": 497,
-            "Workers_starting_port": "50075",
+            "Workers_starting_port_placeholder": "50175",
+            "trial_ports":None,
             "disable_spliting": False,
             "use_costbased_reward": False,
             "use_local_reward": True,
