@@ -42,9 +42,11 @@ public:
 private:
   void canonicalizeLoopsWithLoads();
 
-  void initPipeCommunication(const std::vector<std::string> &RDG_List);
+  template <typename T>
+  void initCommunication(T &MLRunner,
+                             const std::vector<std::string> &RDG_List);
 
-  std::unique_ptr<MLModelRunner> MLRunner;
+  // std::unique_ptr<MLModelRunner> MLRunner;
   std::ofstream outfile;
 };
 

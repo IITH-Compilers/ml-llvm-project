@@ -301,7 +301,7 @@ struct HelloMLBridge : public ModulePass,
 
     auto StartTime = std::chrono::high_resolution_clock::now();
 
-    MLRunner = std::make_unique<PipeModelRunner>(
+    auto MLRunner = std::make_unique<PipeModelRunner>(
         basename + ".out", basename + ".in", SerDesType, &M->getContext());
 
     std::pair<std::string, std::vector<float>> p1("tensor", FeatureVector);
@@ -325,24 +325,12 @@ struct HelloMLBridge : public ModulePass,
     }
   }
   
-  void setTFModelRunner(int n) {
-    switch (n) {
-#define M(x)                                                                   \
-  case x:                                                                      \
-    MLRunner = std::make_unique<TFModelRunner<LinearModel##x>>(("output"));     \
-    break;
-      MODELS(M)
-#undef M
-    }
-    // MLRunner = std::make_unique<TFModelRunner<LinearModel1000>>("output");
-  }
-
   void TFinitCommunication() {
     auto StartTime = std::chrono::high_resolution_clock::now();
 
     std::pair<std::string, std::vector<float>> p1("x", FeatureVector);
 
-    setTFModelRunner(n);
+    auto MLRunner = std::make_unique<TFModelRunner<LinearModel1000>>("output");
     MLRunner->populateFeatures(p1);
     double Out = MLRunner->evaluate<float>();
 
@@ -368,11 +356,11 @@ struct HelloMLBridge : public ModulePass,
     if (usePipe) {
       basename = "/tmp/" + pipe_name;
       if (data_format == "json")
-        SerDesType = BaseSerDes::Kind::Json;
+        SerDesType = SerDesKind::Json;
       else if (data_format == "protobuf")
-        SerDesType = BaseSerDes::Kind::Protobuf;
+        SerDesType = SerDesKind::Protobuf;
       else if (data_format == "bytes")
-        SerDesType = BaseSerDes::Kind::Bitstream;
+        SerDesType = SerDesKind::Bitstream;
       else {
         errs() << "Invalid data format\n";
         exit(1);
@@ -382,7 +370,7 @@ struct HelloMLBridge : public ModulePass,
     } else {
       if (training) {
         errs() << "Using 1st gRPC flow...\n";
-        MLRunner = std::make_unique<
+        auto MLRunner = std::make_unique<
             gRPCModelRunner<helloMLBridgegRPC::HelloMLBridgeService::Service,
                             helloMLBridgegRPC::HelloMLBridgeService::Stub,
                             helloMLBridgegRPC::TensorResponse,
@@ -395,7 +383,7 @@ struct HelloMLBridge : public ModulePass,
         std::map<std::string, Agent *> agents;
         agents["agent"] = agent;
         auto StartTime = std::chrono::high_resolution_clock::now();
-        MLRunner = std::make_unique<ONNXModelRunner>(this, agents,
+        auto MLRunner = std::make_unique<ONNXModelRunner>(this, agents,
                                                      &this->M->getContext());
         populateFeatureVector();
         int Out = MLRunner->evaluate<int>();
@@ -412,7 +400,7 @@ struct HelloMLBridge : public ModulePass,
 
         helloMLBridgegRPC::TensorResponse request;
         helloMLBridgegRPC::ActionRequest response;
-        MLRunner = std::make_unique<
+        auto MLRunner = std::make_unique<
             gRPCModelRunner<helloMLBridgegRPC::HelloMLBridgeService,
                             helloMLBridgegRPC::HelloMLBridgeService::Stub,
                             helloMLBridgegRPC::TensorResponse,
@@ -456,9 +444,8 @@ struct HelloMLBridge : public ModulePass,
   }
 
 private:
-  std::unique_ptr<MLModelRunner> MLRunner;
   std::string basename;
-  BaseSerDes::Kind SerDesType;
+  SerDesKind SerDesType;
   Module *M;
 };
 

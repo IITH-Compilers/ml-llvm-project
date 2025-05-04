@@ -228,48 +228,45 @@
   M(49500)                                                                     \
   M(50000)
 
-static llvm::cl::opt<bool>
-    training("mlir-hello-training", llvm::cl::Hidden,
-             llvm::cl::desc("whether it is training or inference"),
-             llvm::cl::init(false));
-static llvm::cl::opt<std::string> server_address(
-    "mlir-hello-server-address", llvm::cl::Hidden,
-    llvm::cl::desc(
-        "Starts the server in the given address, format <ip>:<port>"),
-    llvm::cl::init("localhost:5050"));
-
-static llvm::cl::opt<std::string> data_format(
-    "mlir-hello-data-format", llvm::cl::Hidden, llvm::cl::init("json"),
-    llvm::cl::desc("Data format to use for communication with python model"));
-
-static llvm::cl::opt<bool>
-    useONNX("mlir-hello-use-onnx", llvm::cl::Hidden,
-            llvm::cl::desc("Use ONNX for inferencing model"),
-            llvm::cl::init(false));
-
-static llvm::cl::opt<bool>
-    usePipe("mlir-hello-use-pipe", llvm::cl::Hidden,
-            llvm::cl::desc("Use pipe based interation with python model"),
-            llvm::cl::init(false));
-
-static llvm::cl::opt<std::string>
-    pipe_name("mlir-hello-pipe-name", llvm::cl::Hidden, llvm::cl::init("dummy"),
-              llvm::cl::desc("Name for pipe file"));
-static llvm::cl::opt<int> n("mlir-hello-data-size", llvm::cl::Hidden,
-                            llvm::cl::init(1000),
-                            llvm::cl::desc("Size of input vector"));
-
-static llvm::cl::opt<bool>
-    useTF("mlir-hello-use-tf", llvm::cl::Hidden,
-          llvm::cl::desc("Use TF AOT for inferencing model"),
-          llvm::cl::init(false));
-
 using namespace mlir;
 using namespace grpc;
 using namespace MLBridge;
 using namespace helloMLBridgegRPC;
 
 namespace {
+llvm::cl::opt<bool>
+    training("mlir-hello-training", llvm::cl::Hidden,
+             llvm::cl::desc("whether it is training or inference"),
+             llvm::cl::init(false));
+llvm::cl::opt<std::string> server_address(
+    "mlir-hello-server-address", llvm::cl::Hidden,
+    llvm::cl::desc(
+        "Starts the server in the given address, format <ip>:<port>"),
+    llvm::cl::init("localhost:5050"));
+
+llvm::cl::opt<std::string> data_format(
+    "mlir-hello-data-format", llvm::cl::Hidden, llvm::cl::init("json"),
+    llvm::cl::desc("Data format to use for communication with python model"));
+
+llvm::cl::opt<bool> useONNX("mlir-hello-use-onnx", llvm::cl::Hidden,
+                            llvm::cl::desc("Use ONNX for inferencing model"),
+                            llvm::cl::init(false));
+
+llvm::cl::opt<bool>
+    usePipe("mlir-hello-use-pipe", llvm::cl::Hidden,
+            llvm::cl::desc("Use pipe based interation with python model"),
+            llvm::cl::init(false));
+
+llvm::cl::opt<std::string> pipe_name("mlir-hello-pipe-name", llvm::cl::Hidden,
+                                     llvm::cl::init("dummy"),
+                                     llvm::cl::desc("Name for pipe file"));
+llvm::cl::opt<int> n("mlir-hello-data-size", llvm::cl::Hidden,
+                     llvm::cl::init(1000),
+                     llvm::cl::desc("Size of input vector"));
+
+llvm::cl::opt<bool> useTF("mlir-hello-use-tf", llvm::cl::Hidden,
+                          llvm::cl::desc("Use TF AOT for inferencing model"),
+                          llvm::cl::init(false));
 
 std::random_device rd;
 std::mt19937 gen(5);
@@ -329,24 +326,12 @@ public:
     }
   };
 
-  void setTFModelRunner(int n) {
-    switch (n) {
-#define M(x)                                                                   \
-  case x:                                                                      \
-    MLRunner = new TFModelRunner<LinearModel##x>("output");                    \
-    break;
-      MODELS(M)
-#undef M
-    }
-    // MLRunner = new TFModelRunner<LinearModel1000>("output");
-  }
-
   void TFinitCommunication() {
     auto StartTime = std::chrono::high_resolution_clock::now();
 
     std::pair<std::string, std::vector<float>> p1("x", FeatureVector);
 
-    setTFModelRunner(n);
+    auto MLRunner = new TFModelRunner<LinearModel1000>("output");
     MLRunner->populateFeatures(p1);
     double Out = MLRunner->evaluate<float>();
 
@@ -378,7 +363,7 @@ public:
     } else {
       if (training) {
         HelloMLIRTraining *gRPCTrainer = new HelloMLIRTraining();
-        MLRunner = new gRPCModelRunner<
+        auto MLRunner = new gRPCModelRunner<
             helloMLBridgegRPC::HelloMLBridgeService::Service,
             helloMLBridgegRPC::HelloMLBridgeService::Stub,
             helloMLBridgegRPC::TensorResponse,
@@ -393,7 +378,7 @@ public:
         agents["agent"] = agent;
         auto StartTime = std::chrono::high_resolution_clock::now();
         Env = new HelloMLBridgeEnv();
-        MLRunner = new ONNXModelRunner(this, agents, nullptr);
+        auto MLRunner = new ONNXModelRunner(this, agents, nullptr);
         populateFeatureVector(FeatureVector);
         int Out = MLRunner->evaluate<int>();
         auto EndTime = std::chrono::high_resolution_clock::now();
@@ -409,7 +394,7 @@ public:
 
         helloMLBridgegRPC::TensorResponse request;
         helloMLBridgegRPC::ActionRequest response;
-        MLRunner =
+        auto MLRunner =
             new gRPCModelRunner<helloMLBridgegRPC::HelloMLBridgeService,
                                 helloMLBridgegRPC::HelloMLBridgeService::Stub,
                                 helloMLBridgegRPC::TensorResponse,
@@ -435,10 +420,9 @@ public:
   }
 
 private:
-  BaseSerDes::Kind SerDesType;
+  SerDesKind SerDesType;
   HelloMLBridgeEnv *Env;
   std::string basename = "/tmp/" + pipe_name;
-  MLModelRunner *MLRunner;
   static void populateFeatureVector(std::vector<float> &FeatureVector);
   void initCommunication();
   void setModelRunner(int n);
@@ -446,13 +430,13 @@ private:
 
 void MLIRHelloMLBridge::initCommunication() {
   if (data_format == "bytes") {
-    SerDesType = BaseSerDes::Kind::Bitstream;
+    SerDesType = SerDesKind::Bitstream;
   } else if (data_format == "json") {
-    SerDesType = BaseSerDes::Kind::Json;
+    SerDesType = SerDesKind::Json;
   }
   basename = "/tmp/" + pipe_name;
   auto StartTime = std::chrono::high_resolution_clock::now();
-  MLRunner =
+  auto MLRunner =
       new PipeModelRunner(basename + ".out", basename + ".in", SerDesType);
 
   std::pair<std::string, std::vector<float>> p1("tensor", FeatureVector);
@@ -478,8 +462,6 @@ void MLIRHelloMLBridge::populateFeatureVector(
     FeatureVector[i] = dis(gen);
   }
 }
-
-void MLIRHelloMLBridge::setModelRunner(int n) { MLRunner = nullptr; }
 
 } // end anonymous namespace
 

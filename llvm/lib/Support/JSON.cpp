@@ -39,30 +39,30 @@ const Value *Object::get(StringRef K) const {
     return nullptr;
   return &I->second;
 }
-std::optional<std::nullptr_t> Object::getNull(StringRef K) const {
+Optional<std::nullptr_t> Object::getNull(StringRef K) const {
   if (auto *V = get(K))
     return V->getAsNull();
-  return std::nullopt;
+  return None;
 }
-std::optional<bool> Object::getBoolean(StringRef K) const {
+Optional<bool> Object::getBoolean(StringRef K) const {
   if (auto *V = get(K))
     return V->getAsBoolean();
-  return std::nullopt;
+  return None;
 }
-std::optional<double> Object::getNumber(StringRef K) const {
+Optional<double> Object::getNumber(StringRef K) const {
   if (auto *V = get(K))
     return V->getAsNumber();
-  return std::nullopt;
+  return None;
 }
-std::optional<int64_t> Object::getInteger(StringRef K) const {
+Optional<int64_t> Object::getInteger(StringRef K) const {
   if (auto *V = get(K))
     return V->getAsInteger();
-  return std::nullopt;
+  return None;
 }
-std::optional<llvm::StringRef> Object::getString(StringRef K) const {
+Optional<llvm::StringRef> Object::getString(StringRef K) const {
   if (auto *V = get(K))
     return V->getAsString();
-  return std::nullopt;
+  return None;
 }
 const json::Object *Object::getObject(StringRef K) const {
   if (auto *V = get(K))
@@ -411,7 +411,7 @@ private:
            C == 'e' || C == 'E' || C == '+' || C == '-' || C == '.';
   }
 
-  std::optional<Error> Err;
+  Optional<Error> Err;
   const char *Start, *P, *End;
 };
 
